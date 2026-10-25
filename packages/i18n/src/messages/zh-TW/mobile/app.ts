@@ -1,0 +1,36 @@
+import type { PartialTranslation } from "../../../message";
+import type { messages as source } from "../../en/mobile/app";
+
+export const messages = {
+  "mobile.app.route.scanQrCode": "掃描二維碼",
+  "mobile.app.route.actionsNeeded": "待處理事項",
+  "mobile.app.route.newChannel": "新建頻道",
+  "mobile.app.route.createAgent": "建立助理",
+  "mobile.app.route.addSharedAgent": "新增共享助理",
+  "mobile.app.route.newSection": "新建分割槽",
+  "mobile.app.route.settings": "設定",
+  "mobile.app.route.profile": "個人資料",
+  "mobile.app.route.accountSessions": "賬號會話",
+  "mobile.app.route.about": "關於",
+  "mobile.app.route.support": "支援",
+  "mobile.app.route.hiddenChats": "隱藏的對話",
+  "mobile.app.route.share": "分享",
+  "mobile.app.route.deletedChannels": "已刪除的頻道",
+  "mobile.app.route.cropPhoto": "移動與縮放",
+  "mobile.app.route.queuedMessages": "排隊的訊息",
+  "mobile.app.route.messageOptions": "訊息選項",
+  "mobile.app.route.editMessage": "編輯訊息",
+  "mobile.app.route.serverOptions": "伺服器選項",
+  "mobile.app.route.members": "成員",
+  "mobile.app.route.hostedServerPlans": "雲伺服器",
+  "mobile.app.route.hostedServerSetup": "配置",
+  "mobile.app.route.routines": "自動化任務",
+  "mobile.app.route.routine": "自動化任務",
+  "mobile.app.route.tasks": "任務",
+  "mobile.app.route.task": "任務",
+  "mobile.app.route.usage": "用量",
+  "mobile.app.route.marketplace": "市場",
+  // The quick actions of the app icon, which the phone shows when the icon is held.
+  "mobile.app.quickAction.routines": "自動化任務",
+  "mobile.app.quickAction.search": "搜尋",
+} as const satisfies PartialTranslation<typeof source>;

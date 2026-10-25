@@ -21,6 +21,7 @@ export const APP_LANGUAGES = [
   "ru",
   "tr",
   "zh",
+  "zh-TW",
 ] as const;
 
 export type AppLanguage = (typeof APP_LANGUAGES)[number];
