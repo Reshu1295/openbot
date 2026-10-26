@@ -128,15 +128,11 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          vmstat -S M 30 > "$RUNNER_TEMP/vmstat.log" &
+          vmstat -S M 30 &
+          trap 'kill $!' EXIT
           bunx eas-cli@24.1.2 build \
             --platform android --profile production --local --non-interactive \
             --output "$AAB_PATH"
-
-      - name: Show build memory use
-        if: always()
-        shell: bash
-        run: tail -n 40 "$RUNNER_TEMP/vmstat.log" || true
 
       - name: Save signed AAB
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
