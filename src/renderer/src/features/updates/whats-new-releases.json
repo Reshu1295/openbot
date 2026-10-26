@@ -10,6 +10,7 @@
           "Add OpenRouter as a provider with an OpenRouter API key, and choose one of the models that it serves for an agent.",
           "Add DeepSeek as a provider with a DeepSeek API key, and choose DeepSeek V4 Pro or DeepSeek V4.1 Flash for an agent.",
           "On a Mac, connect Apple apps from the Apps catalog. Agents can then use Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari.",
+          "Connect Supabase from the Apps catalog. Agents can run SQL, read schemas and logs, and manage your projects.",
           "Agents use the skills in your ~/.agents/skills folder with every provider. Type $ in the message box to tag a skill.",
           "Paste an image into the message box at the cursor. It shows as a small preview with its name and size.",
           "Zoom into an image in the image viewer of a chat with a pinch, Ctrl or Command and scroll, or the zoom buttons.",
