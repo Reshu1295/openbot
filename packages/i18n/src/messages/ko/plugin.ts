@@ -7,7 +7,6 @@ export const messages = {
   "plugin.link.terms": "서비스 약관",
   "plugin.copyLink": "링크 복사",
   "plugin.askPrompt": "{name}에게 질문: {prompt}",
-  "plugin.section.apps": "앱",
   "plugin.section.skills": "스킬",
   "plugin.section.information": "정보",
   "plugin.info.developer": "개발자",

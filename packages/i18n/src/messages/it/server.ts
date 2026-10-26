@@ -216,8 +216,6 @@ export const messages = {
   "server.settings.transferTitle": "Trasferimento",
   "server.settings.transferDescription":
     "Sposta gli agenti e le impostazioni di questo server in un file o da un file.",
-  "server.settings.connectorsTitle": "Connettori",
-  "server.settings.connectorsDescription": "Connetti gli account che tutti gli agenti di questo server possono usare.",
   "server.settings.routinesTitle": "Routine",
   "server.settings.routinesDescription":
     "Mostra la pianificazione delle routine di questo computer in un'app di calendario.",

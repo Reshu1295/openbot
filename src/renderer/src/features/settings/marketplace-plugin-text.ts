@@ -273,6 +273,90 @@ const PLUGIN_TEXT = {
       "prompt-apps": "marketplace.plugin.composio.prompt.apps",
     },
   },
+  neon: {
+    tagline: "marketplace.plugin.neon.tagline",
+    description: "marketplace.plugin.neon.description",
+    apps: {
+      "app-neon-mcp": "marketplace.plugin.neon.app",
+    },
+    prompts: {
+      "prompt-projects": "marketplace.plugin.neon.prompt.projects",
+      "prompt-slow-queries": "marketplace.plugin.neon.prompt.slowQueries",
+      "prompt-migration": "marketplace.plugin.neon.prompt.migration",
+    },
+  },
+  prisma: {
+    tagline: "marketplace.plugin.prisma.tagline",
+    description: "marketplace.plugin.prisma.description",
+    apps: {
+      "app-prisma-mcp": "marketplace.plugin.prisma.app",
+    },
+    prompts: {
+      "prompt-databases": "marketplace.plugin.prisma.prompt.databases",
+      "prompt-backups": "marketplace.plugin.prisma.prompt.backups",
+      "prompt-logs": "marketplace.plugin.prisma.prompt.logs",
+    },
+  },
+  netlify: {
+    tagline: "marketplace.plugin.netlify.tagline",
+    description: "marketplace.plugin.netlify.description",
+    apps: {
+      "app-netlify-mcp": "marketplace.plugin.netlify.app",
+    },
+    prompts: {
+      "prompt-latest-deploy": "marketplace.plugin.netlify.prompt.latestDeploy",
+      "prompt-errors": "marketplace.plugin.netlify.prompt.errors",
+      "prompt-deploy": "marketplace.plugin.netlify.prompt.deploy",
+    },
+  },
+  railway: {
+    tagline: "marketplace.plugin.railway.tagline",
+    description: "marketplace.plugin.railway.description",
+    apps: {
+      "app-railway-mcp": "marketplace.plugin.railway.app",
+    },
+    prompts: {
+      "prompt-projects": "marketplace.plugin.railway.prompt.projects",
+      "prompt-crash": "marketplace.plugin.railway.prompt.crash",
+      "prompt-redeploy": "marketplace.plugin.railway.prompt.redeploy",
+    },
+  },
+  atlassian: {
+    tagline: "marketplace.plugin.atlassian.tagline",
+    description: "marketplace.plugin.atlassian.description",
+    apps: {
+      "app-atlassian-mcp": "marketplace.plugin.atlassian.app",
+    },
+    prompts: {
+      "prompt-assigned": "marketplace.plugin.atlassian.prompt.assigned",
+      "prompt-release-page": "marketplace.plugin.atlassian.prompt.releasePage",
+      "prompt-new-item": "marketplace.plugin.atlassian.prompt.newItem",
+    },
+  },
+  todoist: {
+    tagline: "marketplace.plugin.todoist.tagline",
+    description: "marketplace.plugin.todoist.description",
+    apps: {
+      "app-todoist-mcp": "marketplace.plugin.todoist.app",
+    },
+    prompts: {
+      "prompt-today": "marketplace.plugin.todoist.prompt.today",
+      "prompt-capture": "marketplace.plugin.todoist.prompt.capture",
+      "prompt-overdue": "marketplace.plugin.todoist.prompt.overdue",
+    },
+  },
+  huggingface: {
+    tagline: "marketplace.plugin.huggingface.tagline",
+    description: "marketplace.plugin.huggingface.description",
+    apps: {
+      "app-huggingface-mcp": "marketplace.plugin.huggingface.app",
+    },
+    prompts: {
+      "prompt-models": "marketplace.plugin.huggingface.prompt.models",
+      "prompt-papers": "marketplace.plugin.huggingface.prompt.papers",
+      "prompt-dataset": "marketplace.plugin.huggingface.prompt.dataset",
+    },
+  },
 } as const satisfies Record<string, PluginTextKeys>;
 
 /**

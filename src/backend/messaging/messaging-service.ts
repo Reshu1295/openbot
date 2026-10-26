@@ -332,12 +332,12 @@ export class MessagingService {
     for (const live of this.#live.values()) live.transport?.reconnect();
   }
 
-  /** The Slack workspaces of this computer, for Server settings > Connectors. A disconnected one is left out. */
+  /** The Slack workspaces of this computer, for Marketplace > Apps > Slack. A disconnected one is left out. */
   slackOverview(): MessagingOverview {
     return this.#overview("slack");
   }
 
-  /** The Discord guilds of this computer, for Server settings > Connectors. A disconnected one is left out. */
+  /** The Discord guilds of this computer, for Marketplace > Apps > Discord. A disconnected one is left out. */
   discordOverview(): MessagingOverview {
     return this.#overview("discord");
   }

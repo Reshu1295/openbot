@@ -12,7 +12,7 @@ export interface MarketplaceCalls {
   agentSkills: (hostServerId?: string) => AgentSkillCalls;
   mcp: Pick<
     SkillsPort["agent"],
-    "listMcpServers" | "removeMcpServer" | "saveMcpServer" | "signInMcpServer" | "testMcpServer"
+    "listMcpServers" | "listMcpSignIns" | "removeMcpServer" | "saveMcpServer" | "signInMcpServer" | "testMcpServer"
   >;
   /** `serverId` absent: this computer, which is also the only place an installed agent is updated. */
   addAgent: (input: InstallMarketplaceAgentInput, serverId: string | undefined) => Promise<AddedAgent>;

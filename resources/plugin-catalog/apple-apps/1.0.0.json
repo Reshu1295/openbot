@@ -4,7 +4,7 @@
   "tagline": "Mail, Calendar and more on your Mac",
   "description": "Apple apps lets agents use Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari on this Mac. It works on macOS only. OpenBot starts mcp-icloud, a community server that is not made by Apple or OpenBot. The server controls the apps through AppleScript, on this computer, and needs no account and no key. The first time an agent uses an app, macOS asks if OpenBot can control it. To change this later, open System Settings › Privacy & Security › Automation. Agents can send email and iMessages, and change or delete events, contacts and reminders, so review each write before you approve it. What the tools read, such as email text, goes to the model provider of the agent.",
   "category": "productivity",
-  "creatorName": "github.com/MrGo2",
+  "creatorName": "MrGo2",
   "iconUrl": "https://www.apple.com/favicon.ico",
   "version": "1.0.0",
   "prompts": [

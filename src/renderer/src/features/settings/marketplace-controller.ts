@@ -8,6 +8,7 @@ import type {
   MarketplaceSkillSummary,
   McpServerConfig,
   McpSignInRelayPage,
+  McpSignInState,
 } from "@openbot/contracts/ipc";
 import { mcpConfigErrors } from "@openbot/contracts/ipc";
 import type { McpConnectFlow } from "@openbot/contracts/mcp-connect-flows";
@@ -19,6 +20,7 @@ import { safeBrowserUrl } from "@openbot/ui/features/conversation/RichMessageTex
 import type {
   AgentListingState,
   MarketplaceApp,
+  MarketplaceAppConnection,
   MarketplaceAppStatus,
   MarketplaceModel,
   SkillRead,
@@ -38,6 +40,7 @@ import { createEffect, createMemo, createSignal, createStore, onCleanup, untrack
 import { desktopAnalytics } from "../../analytics";
 import { writeClipboardText } from "../../clipboard";
 import type { ConnectorRegistry } from "../connectors/connector-registry";
+import { mcpSignInRecord } from "../servers/mcp-servers";
 import { desktopMarketplaceCalls, type MarketplaceCalls, type MarketplaceSignInRelay } from "./marketplace-calls";
 import { createPluginAppConfig } from "./marketplace-plugin-catalog";
 import { localizedPlugin } from "./marketplace-plugin-text";
@@ -75,6 +78,8 @@ export interface MarketplaceControllerProps {
   connectors?: ConnectorRegistry | undefined;
   /** What the Marketplace calls. Absent: this computer's bridge. */
   calls?: MarketplaceCalls | undefined;
+  /** Opens the form that adds a custom MCP server. Absent when the user cannot add one. */
+  onAddServer?: (() => void) | undefined;
 }
 
 /** The connect step of one app. `settle(null)` is a closed dialog. */
@@ -355,11 +360,21 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   const [servers, setServers] = createSignal<readonly McpServerConfig[]>([]);
   /** The row this app installed as, or nothing: a name on its own is not enough to claim a row. */
   const heldApp = (app: MarketplacePluginApp) => servers().find((held) => isPluginAppConfig(held, app));
+  /** Which held http rows have a sign-in, by row id. Read with the rows. */
+  const [signIns, setSignIns] = createSignal<Readonly<Record<string, McpSignInState>>>({});
+  function appConnection(app: MarketplacePluginApp): MarketplaceAppConnection {
+    const held = heldApp(app);
+    return { held: Boolean(held), signInNeeded: held ? signIns()[held.id]?.needsSignIn === true : false };
+  }
   /** The agent that a plugin's skills go to: the open conversation, else the first agent. */
   const pluginAgentId = () => activeAgentId() || agents()[0]?.id || "";
   const pluginSkillHeld = (skillId: string) => Boolean(installedSkill(pluginAgentId(), skillId));
-  /** Connected when every app and skill is here. Something left from a partial install needs attention. */
+  /**
+   * Connected when every app and skill is here. Something left from a partial install needs
+   * attention, and so does an app whose server refused its sign-in.
+   */
   function pluginStatus(plugin: MarketplacePluginDetail): MarketplaceAppStatus {
+    if (plugin.apps.some((app) => appConnection(app).signInNeeded)) return "attention";
     const parts = [
       ...plugin.apps.map((app) => Boolean(heldApp(app))),
       ...plugin.skills.map((skill) => pluginSkillHeld(skill.id)),
@@ -403,6 +418,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
           category: plugin.category,
           status: pluginStatus(plugin),
           plugin,
+          connections: Object.fromEntries(plugin.apps.map((app) => [app.id, appConnection(app)])),
         }),
       ),
       // A row that no catalog app claims is a server the user added, a token plugin's row among them.
@@ -427,10 +443,28 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   async function readServers(serverId: string) {
     const request = ++serversRead;
     setServersReadFor(null);
-    const configs = await run(() => calls().mcp.listMcpServers(serverId));
+    const [configs, states] = await Promise.all([
+      run(() => calls().mcp.listMcpServers(serverId)),
+      listSignIns(serverId),
+    ]);
     if (!configs || request !== serversRead) return;
     setServers(configs);
+    setSignIns(states);
     setServersReadFor(serverId);
+  }
+  /**
+   * A sign-in state is a badge beside the app, not the app: a failed read, or a host without
+   * `mcp-sign-in-v1`, shows no badge rather than failing the read of the rows.
+   */
+  function listSignIns(serverId: string): Promise<Record<string, McpSignInState>> {
+    return calls()
+      .mcp.listMcpSignIns(serverId)
+      .then(mcpSignInRecord, () => ({}));
+  }
+  /** After a save, a new sign-in can replace a refused one. */
+  async function readSignIns(serverId: string) {
+    const states = await listSignIns(serverId);
+    if (props.pluginServerId === serverId) setSignIns(states);
   }
   /**
    * True when each app shows what the host holds: its MCP servers and, for a plugin with skills, the
@@ -549,6 +583,36 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     if (relay && current && serverId) void relay.cancel(current.url, serverId).catch(() => undefined);
   }
 
+  /**
+   * A browser sign-in saves its grant on the computer that finishes it, and a local server answers
+   * only on the computer that runs it, so an app that asks for either is connected on the host
+   * itself. A host that relays its sign-ins finishes a browser sign-in in this computer's browser
+   * and keeps the grant itself. False, with the error shown, when one of `apps` cannot connect here.
+   */
+  function canConnectHere(plugin: MarketplacePluginDetail, apps: readonly MarketplacePluginApp[]): boolean {
+    const hostOnly = apps.find((app) => {
+      const kind = app.server.auth?.[0]?.kind ?? "";
+      return kind === "local" || (kind === "link" && !signInRelay());
+    });
+    if (!props.hostServerId || !hostOnly) return true;
+    const key =
+      hostOnly.server.auth?.[0]?.kind === "local"
+        ? "marketplace.error.installLocalOnHost"
+        : "marketplace.error.installOnHost";
+    setError(t(key, { name: plugin.name }));
+    return false;
+  }
+
+  /**
+   * The configuration that the connect step of `app` starts from. An app that the host holds keeps
+   * its row id, so the save updates that row: a second row with the same name is refused.
+   */
+  function pluginAppConfig(app: MarketplacePluginApp): McpServerConfig {
+    const config = createPluginAppConfig(app);
+    const held = heldApp(app);
+    return held ? { ...config, id: held.id, enabled: held.enabled } : config;
+  }
+
   /** Takes back only what this attempt installed. A skill the agent already had is the user's. */
   async function undoSkills(agentId: string, skillIds: readonly string[]) {
     for (const skillId of skillIds)
@@ -574,22 +638,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
       setError(t("marketplace.error.installNoAgent"));
       return false;
     }
-    /* A browser sign-in saves its grant on the computer that finishes it, and a local server
-       answers only on the computer that runs it, so an app that asks for either is installed on
-       the host itself. A host that relays its sign-ins finishes a browser sign-in in this
-       computer's browser and keeps the grant itself. */
-    const hostOnly = plugin.apps.find((app) => {
-      const kind = app.server.auth?.[0]?.kind ?? "";
-      return kind === "local" || (kind === "link" && !signInRelay());
-    });
-    if (props.hostServerId && hostOnly) {
-      const key =
-        hostOnly.server.auth?.[0]?.kind === "local"
-          ? "marketplace.error.installLocalOnHost"
-          : "marketplace.error.installOnHost";
-      setError(t(key, { name: plugin.name }));
-      return false;
-    }
+    if (!canConnectHere(plugin, plugin.apps)) return false;
     const key = `app:${plugin.slug}`;
     if (busy[key]) return false;
     mark(key, true);
@@ -603,7 +652,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
           if (!held) addedSkills.push(skill.id);
         }
         for (const app of plugin.apps) {
-          const config = createPluginAppConfig(app);
+          const config = pluginAppConfig(app);
           const invalid = Object.values(mcpConfigErrors(config))[0];
           if (invalid) throw new Error(t("marketplace.error.appInvalid", { name: app.name, reason: invalid }));
           /* What is saved is the configuration that connected, not the one the listing describes:
@@ -635,9 +684,47 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     /* Only on success: a read clears the error, which would take the failure off the screen before
        the reader saw it. */
     if (installed && plugin.skills.length > 0) await readInstalled(agentId);
+    if (installed) await readSignIns(serverId);
     mark(key, false);
     if (installed) setNotice(t("marketplace.notice.appConnected", { name: plugin.name }));
     return installed === true;
+  }
+
+  /**
+   * The connect step of one held app again, saved over its row: a new key, a new sign-in, or a
+   * desktop app that answers again. The plugin's other apps and its skills do not change.
+   */
+  async function reconnectPluginApp(plugin: MarketplacePluginDetail, appId: string): Promise<boolean> {
+    const serverId = props.pluginServerId;
+    if (!serverId) {
+      setError(t("marketplace.error.connectNoServer"));
+      return false;
+    }
+    const app = plugin.apps.find((candidate) => candidate.id === appId);
+    if (!app || !heldApp(app) || !canConnectHere(plugin, [app])) return false;
+    const key = `app:${plugin.slug}`;
+    if (busy[key]) return false;
+    mark(key, true);
+    const analytics = desktopAnalytics.scope();
+    const saved = await run(async () => {
+      const connected = await connectStep(app, pluginAppConfig(app));
+      if (!connected) return false;
+      setServers(await calls().mcp.saveMcpServer({ config: connected }, serverId));
+      return true;
+    });
+    if (saved !== false) {
+      analytics.track("marketplace_action", {
+        entity: "plugin",
+        action: "update",
+        result: saved ? "succeeded" : "failed",
+        listing_slug: plugin.slug,
+        ...(saved ? {} : { failure_code: "update_failed" }),
+      });
+    }
+    if (saved) await readSignIns(serverId);
+    mark(key, false);
+    if (saved) setNotice(t("marketplace.notice.appConnected", { name: app.name }));
+    return saved === true;
   }
 
   /**
@@ -790,8 +877,15 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     canConnectApps: () => Boolean(props.pluginServerId),
     appBusy: (id) => Boolean(busy[`app:${id}`]) || connector(id)?.busy() === true,
     connectApp: (app) => installPlugin(app.plugin),
+    reconnectApp: (app, appId) => reconnectPluginApp(app.plugin, appId),
+    get appHostName() {
+      return props.pluginHostName;
+    },
     disconnectApp: (app) => setUninstalling(app.plugin),
     removeServer,
+    get addServer() {
+      return props.onAddServer;
+    },
     get runPrompt() {
       const run = props.onRunPluginPrompt;
       const agentId = pluginAgentId();

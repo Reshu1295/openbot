@@ -501,6 +501,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     return () => phoneQuery?.removeEventListener("change", update);
   });
   const compact = () => !phone() && layout.leftPanelCompact();
+  /** The Marketplace page. As on desktop, opening another page closes it. */
+  const [marketplaceOpen, setMarketplaceOpen] = createSignal(false);
   /** The Usage, Schedule or Tasks page of the connected host. As on desktop, it follows a host switch. */
   const [hostPage, setHostPage] = createSignal<{ view: HostPageView; trigger: HTMLElement | null } | null>(null);
   /** Only the connected host answers, so another host is connected first, as for its settings. */
@@ -515,6 +517,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     setMobilePane("conversation");
     setAccountSettingsOpen(false);
     serverSettings.setOpen(false);
+    setMarketplaceOpen(false);
     setHostPage({ view, trigger });
   }
   function closeHostPage() {
@@ -744,6 +747,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
   const page = createMemo<WindowPage>(() => {
     if (serverSettings.state.open && server()) return "server-settings";
     if (accountSettingsOpen()) return "settings";
+    if (marketplaceOpen()) return "marketplace";
     const host = hostPage();
     return host && server() && !blockedServer() ? host.view : "agents";
   });
@@ -771,12 +775,22 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
   function showAgents() {
     setAccountSettingsOpen(false);
     serverSettings.setOpen(false);
+    setMarketplaceOpen(false);
     setHostPage(null);
+  }
+  /** Opens the Marketplace page. It closes the other pages, as on desktop. */
+  function openMarketplace() {
+    setMobilePane("conversation");
+    setAccountSettingsOpen(false);
+    serverSettings.setOpen(false);
+    setHostPage(null);
+    setMarketplaceOpen(true);
   }
   function openAccountSettings() {
     // On a phone the page shows in the conversation pane.
     setMobilePane("conversation");
     setHostPage(null);
+    setMarketplaceOpen(false);
     serverSettings.setOpen(false);
     setAccountSettingsLoaded(true);
     setAccountSettingsOpen(true);
@@ -820,14 +834,10 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
   /** The app that a suggestion card opens in Marketplace. A plugin link from the address comes in props. */
   const [suggestedApp, setSuggestedApp] = createSignal<{ appId: string; connect: boolean } | null>(null);
   const agentTemplateCalls = createWebAgentTemplateCalls(props.accountFetch, hostRequest);
-  const [marketplaceOpen, setMarketplaceOpen] = createSignal(false);
-  // A sign-in can change in another tab, so each window reads the connectors again when it opens.
-  createEffect(
-    () => marketplaceOpen() || serverSettings.state.open,
-    (open) => {
-      if (open) connectors.reload();
-    },
-  );
+  // A sign-in can change in another tab, so the Marketplace reads the connectors again when it opens.
+  createEffect(marketplaceOpen, (open) => {
+    if (open) connectors.reload();
+  });
   // A link opens its overlay once it has arrived, which can be after sign-in.
   createEffect(
     () => props.inviteUrl,
@@ -838,7 +848,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
   createEffect(
     () => props.pluginSlug,
     (slug) => {
-      if (slug) setMarketplaceOpen(true);
+      if (slug) openMarketplace();
     },
   );
   const [billingOpen, setBillingOpen] = createSignal(false);
@@ -993,6 +1003,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       runTeamEffect(setHostAgentAccess(hostRequest(serverId), change).pipe(Effect.mapError((error) => error.cause))),
   };
   const [serverSettingsSection, setServerSettingsSection] = createSignal<ServerSettingsSection | null>(null);
+  /** Set when the Marketplace asked for the form that adds an MCP server, until the MCP section opens it. */
+  const [mcpAddRequest, setMcpAddRequest] = createSignal(false);
   async function openServerSettings(
     serverId: string,
     trigger: HTMLElement | null,
@@ -1006,8 +1018,10 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       if (server()?.id !== serverId || workspace.state.status !== "online") return;
     }
     setServerSettingsSection(section);
+    setMcpAddRequest(false);
     setMobilePane("conversation");
     setHostPage(null);
+    setMarketplaceOpen(false);
     setAccountSettingsOpen(false);
     setServerSettingsLoaded(true);
     serverSettings.open(trigger);
@@ -1577,7 +1591,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
               const id = server()?.id;
               if (id) void openHostPage(id, "usage", button);
             }}
-            onMarketplace={workspace.state.status === "online" ? () => setMarketplaceOpen(true) : undefined}
+            onMarketplace={workspace.state.status === "online" ? openMarketplace : undefined}
             onSettings={openAccountSettings}
             help={
               <RailHelpMenu
@@ -1661,7 +1675,46 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
               <Show
                 when={page() === "usage" || page() === "schedule" ? server() : undefined}
                 fallback={
-                  <Show when={settingsKind()} keyed>
+                  <Show
+                    when={settingsKind()}
+                    keyed
+                    fallback={
+                      <MarketplaceOverlay
+                        open={page() === "marketplace"}
+                        onOpenChange={setMarketplaceOpen}
+                        calls={marketplaceCalls}
+                        connectors={connectors}
+                        server={server()}
+                        agents={workspace.state.agents}
+                        activeAgentId={workspace.state.selectedId ?? ""}
+                        composerAvailable={status().phase === "ready" && !agentFormOpen()}
+                        onOpenAgent={(agentId) => {
+                          setMobilePane("conversation");
+                          if (agentId !== workspace.state.selectedId) void select(agentId);
+                          else {
+                            // The agent is already loaded; only what covers its conversation closes.
+                            userOpensChat("agent", agentId);
+                            setCreating(false);
+                            showAgents();
+                            channels.close();
+                          }
+                        }}
+                        onAgentInstalled={async (agent) => {
+                          setMarketplaceOpen(false);
+                          await openAddedAgent(agent);
+                        }}
+                        pluginSlug={suggestedApp()?.appId ?? props.pluginSlug}
+                        pluginConnect={suggestedApp()?.connect ?? false}
+                        onPluginSlugConsumed={() => {
+                          if (suggestedApp()) setSuggestedApp(null);
+                          else props.onPluginSlugConsumed?.();
+                        }}
+                        onAddServer={(serverId) => {
+                          void openServerSettings(serverId, null, "mcp").then(() => setMcpAddRequest(true));
+                        }}
+                      />
+                    }
+                  >
                     {(kind) => (
                       <SettingsPageFrame
                         heading={
@@ -1828,7 +1881,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                   compact={compact()}
                   onExpand={layout.expandSidebar}
                   onOpenSearch={() => setSearchOpen(true)}
-                  onOpenMarketplace={() => setMarketplaceOpen(true)}
+                  onOpenMarketplace={openMarketplace}
                   footer={
                     <Show when={!communityCard.dismissed()}>
                       <SidebarCommunityCard
@@ -1902,37 +1955,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                   onPreview={({ inviteUrl }) => workspace.runtime.previewInvite(inviteUrl)}
                   onJoin={({ inviteUrl }) => workspace.joinInvite(inviteUrl)}
                 />
-                <MarketplaceOverlay
-                  open={marketplaceOpen()}
-                  onOpenChange={setMarketplaceOpen}
-                  calls={marketplaceCalls}
-                  connectors={connectors}
-                  server={server()}
-                  agents={workspace.state.agents}
-                  activeAgentId={workspace.state.selectedId ?? ""}
-                  composerAvailable={status().phase === "ready" && !agentFormOpen()}
-                  onOpenAgent={(agentId) => {
-                    setMobilePane("conversation");
-                    if (agentId !== workspace.state.selectedId) void select(agentId);
-                    else {
-                      // The agent is already loaded; only what covers its conversation closes.
-                      userOpensChat("agent", agentId);
-                      setCreating(false);
-                      showAgents();
-                      channels.close();
-                    }
-                  }}
-                  onAgentInstalled={async (agent) => {
-                    setMarketplaceOpen(false);
-                    await openAddedAgent(agent);
-                  }}
-                  pluginSlug={suggestedApp()?.appId ?? props.pluginSlug}
-                  pluginConnect={suggestedApp()?.connect ?? false}
-                  onPluginSlugConsumed={() => {
-                    if (suggestedApp()) setSuggestedApp(null);
-                    else props.onPluginSlugConsumed?.();
-                  }}
-                />
                 <Show when={accountSettingsLoaded()}>
                   <Loading>
                     <WebAccountSettings
@@ -1969,7 +1991,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                       remoteDesktopSupported={false}
                       server={target()}
                       hostStatus={null}
-                      connectors={connectors}
                       members={serverSettings.state.members}
                       invites={serverSettings.state.invites}
                       loading={serverSettings.state.loading}
@@ -1995,6 +2016,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                         if (mcpSignInSupported()) void serverSettings.refreshMcpSignIns().catch(() => undefined);
                       }}
                       onRetryMcpServers={() => void serverSettings.refreshMcp()}
+                      mcpAddRequest={mcpAddRequest()}
+                      onMcpAddRequestHandled={() => setMcpAddRequest(false)}
                       onSaveMcpServer={async (config) => {
                         await serverSettings.saveMcpServer(config);
                         // A saved row can name an address the host is already signed in to.
@@ -2349,11 +2372,11 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
             <Show when={agentChatOpen()}>
               <Conversation
                 runtime={runtime}
-                onOpenMarketplace={() => setMarketplaceOpen(true)}
+                onOpenMarketplace={openMarketplace}
                 connectors={connectors}
                 onOpenMarketplaceApp={(request) => {
                   setSuggestedApp(request);
-                  setMarketplaceOpen(true);
+                  openMarketplace();
                 }}
                 agentStatus={
                   workspace.state.status === "online" && workspace.conversation()?.page

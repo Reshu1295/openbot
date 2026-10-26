@@ -19,10 +19,12 @@ export const messages = {
   "marketplace.version": "Versione {version}",
 
   "marketplace.title": "Marketplace",
-  "marketplace.close": "Chiudi il Marketplace",
   "marketplace.kinds": "Tipi di contenuto del Marketplace",
   "marketplace.tab.agents": "Agenti",
   "marketplace.tab.skills": "Skill",
+  "marketplace.description.apps": "Collega gli strumenti e i servizi con cui lavorano i tuoi agenti.",
+  "marketplace.description.agents": "Agenti pronti all’uso, con istruzioni e skill proprie.",
+  "marketplace.description.skills": "Istruzioni che insegnano a un agente un compito o uno strumento.",
 
   "marketplace.plugins.missing": "Questo plugin non è nel catalogo di OpenBot.",
 
@@ -86,17 +88,23 @@ export const messages = {
   "marketplace.app.reconnectNamed": "Riconnetti {name}",
   "marketplace.app.connected": "Connessa",
   "marketplace.app.attention": "Richiede attenzione",
+  "marketplace.app.partialTitle": "{name} non è completo",
+  "marketplace.app.partialDescription": "Alcune delle sue app o skill non sono installate. Riconnetti le installa.",
   "marketplace.app.notConnected": "Non connessa",
   "marketplace.app.custom": "Server MCP",
   "marketplace.app.githubTagline": "Repository, issue e pull request",
   "marketplace.app.onePasswordTagline": "Accedi ai siti con le credenziali che condividi",
+  "marketplace.app.slackTagline": "Menzioni e messaggi diretti in Slack",
+  "marketplace.app.discordTagline": "Menzioni e messaggi diretti in Discord",
+  "marketplace.app.telegramTagline": "Gruppi e chat dirette in Telegram",
+  "marketplace.app.bitwardenTagline": "Accedi ai siti con le credenziali di una cartella condivisa",
   "marketplace.app.onePasswordCategory": "Gestione di accessi e credenziali",
   "marketplace.app.yourApps": "Le tue app",
-  "marketplace.app.moreApps": "Altre app",
+  "marketplace.app.addCustom": "Aggiungi personalizzata",
   "marketplace.app.server": "Server",
   "marketplace.app.command": "Comando",
   "marketplace.app.address": "Indirizzo",
-  "marketplace.app.disconnect.title": "Disconnetti",
+  "marketplace.app.disconnect.title": "Disconnetti {name}",
   "marketplace.app.disconnect.description":
     "Rimuovi {name} e le sue skill da questo computer. Potrai connetterla di nuovo più tardi.",
   "marketplace.app.disconnect.action": "Disconnetti",
@@ -106,6 +114,17 @@ export const messages = {
   "marketplace.app.remove.action": "Rimuovi",
   "marketplace.app.remove.confirmTitle": "Rimuovere {name}?",
   "marketplace.app.remove.keep": "Mantieni",
+  "marketplace.app.connection": "Connessione",
+  "marketplace.app.setup.account": "Accedi con il tuo account {name} nel browser.",
+  "marketplace.app.setup.key": "Richiede una chiave API del tuo account {name}.",
+  "marketplace.app.setup.keySaved": "{field} si trova su {host}.",
+  "marketplace.app.setup.desktop": "Funziona nell'app desktop di {name} all'indirizzo {address}.",
+  "marketplace.app.setup.desktopConnected": "Connessa a {address}.",
+  "marketplace.app.setup.open": "Non servono accesso né chiave.",
+  "marketplace.app.connectAgain": "Connetti di nuovo",
+  "marketplace.app.signInTitle": "Accedi di nuovo a {name}",
+  "marketplace.app.signInDescription":
+    "{name} ha rifiutato l'accesso salvato. I tuoi agenti non possono usarla finché non accedi di nuovo.",
 
   "marketplace.plugin.aave.tagline": "Dati e transazioni di Aave",
   "marketplace.plugin.aave.description":
@@ -299,6 +318,68 @@ export const messages = {
   "marketplace.plugin.composio.prompt.apps": "Quali app e azioni puoi usare tramite Composio?",
   "marketplace.plugin.composio.hint.url": "L'URL di un server MCP nel tuo account Composio",
   "marketplace.plugin.composio.hint.apiKey": "La trovi nel tuo account Composio, in Settings > Sessions & API Key.",
+  "marketplace.plugin.neon.tagline": "Progetti, branch e migrazioni Postgres",
+  "marketplace.plugin.neon.description":
+    "Neon consente agli agenti di elencare progetti e branch, eseguire SQL, leggere gli schemi delle tabelle, provare modifiche allo schema in un branch temporaneo, trovare le query lente e cercare nella documentazione di Neon. Ogni utente accede al proprio account Neon dal browser e può scegliere l'accesso in sola lettura durante l'autorizzazione. Con l'accesso completo, gli agenti possono eseguire SQL che modifica o elimina dati e creare, reimpostare o eliminare branch, database e progetti. Neon consiglia il suo server MCP per sviluppo e test, non per i database di produzione.",
+  "marketplace.plugin.neon.app":
+    "Progetti, branch, SQL e migrazioni Postgres, tramite il server MCP di Neon con accesso dal browser.",
+  "marketplace.plugin.neon.prompt.projects": "Quali progetti e branch ci sono nel mio account Neon?",
+  "marketplace.plugin.neon.prompt.slowQueries": "Quali query sono le più lente nel mio database Neon, e perché?",
+  "marketplace.plugin.neon.prompt.migration":
+    "Aggiungi un indice alla tabella orders in un branch temporaneo e mostrami il risultato prima di applicarlo.",
+  "marketplace.plugin.prisma.tagline": "Database Postgres, backup e app Compute",
+  "marketplace.plugin.prisma.description":
+    "Prisma consente agli agenti di elencare e creare database Prisma Postgres, leggere gli schemi, eseguire SQL, elencare i backup e ripristinarli in un nuovo database, gestire i bucket di Object Storage, leggere build e log di Compute e cercare nella documentazione di Prisma. Ogni utente accede al proprio account Prisma dal browser e seleziona un workspace. Gli agenti hanno accesso completo: possono eseguire SQL che modifica o elimina dati, aggiornare gli schemi, eliminare database e bucket, e arrestare, riportare a una versione precedente o eliminare i deploy di Compute.",
+  "marketplace.plugin.prisma.app":
+    "Database, SQL, backup e app Compute, tramite il server MCP di Prisma con accesso dal browser.",
+  "marketplace.plugin.prisma.prompt.databases": "Quali database ci sono nel mio workspace Prisma?",
+  "marketplace.plugin.prisma.prompt.backups": "Mostrami tutti i backup disponibili del mio database.",
+  "marketplace.plugin.prisma.prompt.logs": "Mostra i log di runtime del mio ultimo deploy di Compute.",
+  "marketplace.plugin.netlify.tagline": "Progetti, deploy e log delle richieste",
+  "marketplace.plugin.netlify.description":
+    "Netlify consente agli agenti di elencare progetti e deploy, leggere i log delle richieste edge, creare progetti e distribuire codice in un progetto esistente. Ogni utente accede al proprio account Netlify dal browser. Gli agenti hanno lo stesso accesso dell'account dell'utente: possono modificare variabili d'ambiente, moduli e accesso dei visitatori, installare o rimuovere estensioni, ed eliminare invii dei moduli e variabili d'ambiente.",
+  "marketplace.plugin.netlify.app":
+    "Progetti, deploy, log delle richieste e impostazioni del sito, tramite il server MCP di Netlify con accesso dal browser.",
+  "marketplace.plugin.netlify.prompt.latestDeploy":
+    "Qual è lo stato dell'ultimo deploy di ciascuno dei miei progetti Netlify?",
+  "marketplace.plugin.netlify.prompt.errors":
+    "Quali URL del mio sito hanno restituito errori del server nell'ultimo giorno?",
+  "marketplace.plugin.netlify.prompt.deploy": "Fai il deploy di questa cartella nel mio progetto Netlify esistente.",
+  "marketplace.plugin.railway.tagline": "Progetti, servizi e deploy",
+  "marketplace.plugin.railway.description":
+    "Railway consente agli agenti di elencare progetti e servizi, creare progetti, ripetere il deploy dei servizi e gestire i feature flag. Gli agenti possono anche affidare un lavoro in più passaggi al Railway Agent, che legge i log, capisce perché un deploy non è riuscito, crea servizi e imposta variabili. Ogni utente accede al proprio account Railway dal browser e sceglie gli spazi di lavoro e i progetti che gli agenti possono usare. In quei progetti gli agenti hanno accesso completo: possono pubblicare le modifiche in attesa, eliminare feature flag e modificare servizi, variabili, database e rete tramite il Railway Agent.",
+  "marketplace.plugin.railway.app":
+    "Progetti, servizi e deploy, tramite il server MCP di Railway con accesso dal browser.",
+  "marketplace.plugin.railway.prompt.projects": "Quali progetti e servizi ci sono nel mio spazio di lavoro Railway?",
+  "marketplace.plugin.railway.prompt.crash": "Perché il mio servizio backend su Railway va in crash durante il deploy?",
+  "marketplace.plugin.railway.prompt.redeploy": "Ripeti il deploy del servizio API nel mio progetto Railway.",
+  "marketplace.plugin.atlassian.tagline": "Elementi di lavoro Jira e pagine Confluence",
+  "marketplace.plugin.atlassian.description":
+    "Atlassian consente agli agenti di cercare e leggere elementi di lavoro Jira, pagine Confluence e pull request Bitbucket, e di creare o aggiornare elementi di lavoro, pagine e commenti. Ogni utente accede al proprio account Atlassian dal browser e approva l'accesso in una schermata di consenso. Gli agenti hanno gli stessi permessi dell'utente: possono modificare elementi di lavoro e pagine, modificare i permessi delle pagine ed eseguire il merge delle pull request. Gli strumenti che eliminano dati Jira restano disattivati finché un amministratore dell'organizzazione non li attiva. Ogni chiamata a uno strumento consuma crediti Rovo.",
+  "marketplace.plugin.atlassian.app":
+    "Jira, Confluence e Bitbucket, tramite il server MCP di Atlassian con accesso dal browser.",
+  "marketplace.plugin.atlassian.prompt.assigned": "Quali elementi di lavoro Jira aperti sono assegnati a me?",
+  "marketplace.plugin.atlassian.prompt.releasePage":
+    "Trova la pagina Confluence sul nostro processo di rilascio e riassumila.",
+  "marketplace.plugin.atlassian.prompt.newItem":
+    "Crea un elemento di lavoro Jira per il bug di accesso con i passaggi per riprodurlo.",
+  "marketplace.plugin.todoist.tagline": "Attività, progetti e promemoria",
+  "marketplace.plugin.todoist.description":
+    "Todoist permette agli agenti di trovare attività per data, testo, etichetta o filtro, aggiungere e ripianificare attività, e gestire progetti, sezioni, etichette, commenti e promemoria. Ogni utente accede al proprio account Todoist dal browser. Gli agenti hanno accesso in lettura e scrittura: possono modificare, completare ed eliminare attività, progetti e altri elementi.",
+  "marketplace.plugin.todoist.app":
+    "Attività, progetti e promemoria, tramite il server MCP di Todoist con accesso dal browser.",
+  "marketplace.plugin.todoist.prompt.today": "Quali attività di Todoist scadono oggi?",
+  "marketplace.plugin.todoist.prompt.capture": "Aggiungi queste azioni alla mia Posta in arrivo di Todoist.",
+  "marketplace.plugin.todoist.prompt.overdue": "Sposta a domani le mie attività scadute di Todoist.",
+  "marketplace.plugin.huggingface.tagline": "Modelli, dataset e paper sull'Hub",
+  "marketplace.plugin.huggingface.description":
+    "Hugging Face permette agli agenti di cercare modelli, dataset, Spaces, collezioni e paper sull'Hugging Face Hub, leggere model card e file dei repository, vedere un'anteprima dei dataset e cercare nella documentazione di Hugging Face. Usa dati pubblici dell'Hub e non richiede account né chiave. Gli strumenti leggono soltanto: gli agenti non possono creare repository né eseguire job.",
+  "marketplace.plugin.huggingface.app":
+    "Ricerca di modelli, dataset, Spaces, paper e documentazione, tramite il server MCP di Hugging Face senza accesso.",
+  "marketplace.plugin.huggingface.prompt.models":
+    "Trova piccoli modelli aperti per il riconoscimento vocale su Hugging Face.",
+  "marketplace.plugin.huggingface.prompt.papers": "Quali paper sono di tendenza oggi su Hugging Face?",
+  "marketplace.plugin.huggingface.prompt.dataset": "Trova un dataset di serie temporali meteo e mostrane le colonne.",
   "marketplace.auth.apiKey": "Chiave API",
   "marketplace.auth.personalApiKey": "Chiave API personale",
   "marketplace.auth.mcpUrl": "URL MCP",

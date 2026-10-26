@@ -19,10 +19,12 @@ export const messages = {
   "marketplace.version": "バージョン {version}",
 
   "marketplace.title": "マーケットプレイス",
-  "marketplace.close": "マーケットプレイスを閉じる",
   "marketplace.kinds": "マーケットプレイスのコンテンツの種類",
   "marketplace.tab.agents": "エージェント",
   "marketplace.tab.skills": "スキル",
+  "marketplace.description.apps": "エージェントが使うツールやサービスに接続します。",
+  "marketplace.description.agents": "独自の指示とスキルを持つ、すぐに使えるエージェント。",
+  "marketplace.description.skills": "エージェントにタスクやツールの使い方を教える指示。",
 
   "marketplace.plugins.missing": "このプラグインは OpenBot のカタログにありません。",
 
@@ -86,17 +88,24 @@ export const messages = {
   "marketplace.app.reconnectNamed": "{name} を再接続",
   "marketplace.app.connected": "接続済み",
   "marketplace.app.attention": "対応が必要",
+  "marketplace.app.partialTitle": "{name} は完了していません",
+  "marketplace.app.partialDescription":
+    "一部のアプリまたはスキルがインストールされていません。再接続するとインストールされます。",
   "marketplace.app.notConnected": "未接続",
   "marketplace.app.custom": "MCP サーバー",
   "marketplace.app.githubTagline": "リポジトリ、Issue、プルリクエスト",
   "marketplace.app.onePasswordTagline": "共有したログイン情報でサイトにサインイン",
+  "marketplace.app.slackTagline": "Slack のメンションとダイレクトメッセージ",
+  "marketplace.app.discordTagline": "Discord のメンションとダイレクトメッセージ",
+  "marketplace.app.telegramTagline": "Telegram のグループとダイレクトチャット",
+  "marketplace.app.bitwardenTagline": "共有フォルダーのログイン情報でサイトにサインイン",
   "marketplace.app.onePasswordCategory": "ログインと認証情報の管理",
   "marketplace.app.yourApps": "あなたのアプリ",
-  "marketplace.app.moreApps": "その他のアプリ",
+  "marketplace.app.addCustom": "カスタムを追加",
   "marketplace.app.server": "サーバー",
   "marketplace.app.command": "コマンド",
   "marketplace.app.address": "アドレス",
-  "marketplace.app.disconnect.title": "切断",
+  "marketplace.app.disconnect.title": "{name} を切断",
   "marketplace.app.disconnect.description":
     "{name} とそのスキルをこのコンピューターから削除します。あとでもう一度接続できます。",
   "marketplace.app.disconnect.action": "切断",
@@ -105,6 +114,17 @@ export const messages = {
   "marketplace.app.remove.action": "削除",
   "marketplace.app.remove.confirmTitle": "{name} を削除しますか？",
   "marketplace.app.remove.keep": "残す",
+  "marketplace.app.connection": "接続",
+  "marketplace.app.setup.account": "ブラウザーで {name} アカウントにサインインします。",
+  "marketplace.app.setup.key": "{name} アカウントの API キーが必要です。",
+  "marketplace.app.setup.keySaved": "{field} は {host} に保存されています。",
+  "marketplace.app.setup.desktop": "{name} デスクトップアプリの {address} で動作します。",
+  "marketplace.app.setup.desktopConnected": "{address} に接続済みです。",
+  "marketplace.app.setup.open": "サインインもキーも不要です。",
+  "marketplace.app.connectAgain": "もう一度接続",
+  "marketplace.app.signInTitle": "{name} にもう一度サインインしてください",
+  "marketplace.app.signInDescription":
+    "{name} が保存済みのサインインを拒否しました。もう一度サインインするまで、エージェントはこのアプリを使用できません。",
 
   "marketplace.plugin.aave.tagline": "Aave のデータとトランザクション",
   "marketplace.plugin.aave.description":
@@ -295,6 +315,69 @@ export const messages = {
   "marketplace.plugin.composio.prompt.apps": "Composio で使えるアプリと操作はどれですか？",
   "marketplace.plugin.composio.hint.url": "Composio アカウントにある MCP サーバーの URL",
   "marketplace.plugin.composio.hint.apiKey": "Composio アカウントの Settings > Sessions & API Key で確認できます。",
+  "marketplace.plugin.neon.tagline": "Postgres のプロジェクト、ブランチ、マイグレーション",
+  "marketplace.plugin.neon.description":
+    "Neon を使うと、エージェントはプロジェクトとブランチを一覧表示し、SQL を実行し、テーブルスキーマを読み、一時ブランチでスキーマ変更をテストし、遅いクエリを見つけ、Neon のドキュメントを検索できます。各ユーザーはブラウザーで自分の Neon アカウントにサインインし、認可時に読み取り専用アクセスを選べます。フルアクセスの場合、エージェントはデータを変更または削除する SQL を実行でき、ブランチ、データベース、プロジェクトの作成、リセット、削除もできます。Neon は MCP サーバーを開発とテスト向けに推奨しており、本番データベースでの使用は推奨していません。",
+  "marketplace.plugin.neon.app":
+    "Postgres のプロジェクト、ブランチ、SQL、マイグレーションを、ブラウザーでサインインする Neon の MCP サーバーで提供します。",
+  "marketplace.plugin.neon.prompt.projects": "私の Neon アカウントにはどのプロジェクトとブランチがありますか？",
+  "marketplace.plugin.neon.prompt.slowQueries":
+    "私の Neon データベースで最も遅いクエリはどれですか？その理由も教えてください。",
+  "marketplace.plugin.neon.prompt.migration":
+    "一時ブランチで orders テーブルにインデックスを追加し、適用する前に結果を見せてください。",
+  "marketplace.plugin.prisma.tagline": "Postgres データベース、バックアップ、Compute アプリ",
+  "marketplace.plugin.prisma.description":
+    "Prisma を使うと、エージェントは Prisma Postgres データベースを一覧表示・作成し、スキーマを読み、SQL を実行し、バックアップを一覧表示して新しいデータベースに復元し、Object Storage のバケットを管理し、Compute のビルドとログを読み、Prisma のドキュメントを検索できます。各ユーザーはブラウザーで自分の Prisma アカウントにサインインし、ワークスペースを選びます。エージェントはフルアクセスを持ちます。データを変更または削除する SQL の実行、スキーマの更新、データベースとバケットの削除、Compute デプロイの停止、ロールバック、削除ができます。",
+  "marketplace.plugin.prisma.app":
+    "データベース、SQL、バックアップ、Compute アプリを、ブラウザーでサインインする Prisma の MCP サーバーで提供します。",
+  "marketplace.plugin.prisma.prompt.databases": "私の Prisma ワークスペースにはどのデータベースがありますか？",
+  "marketplace.plugin.prisma.prompt.backups": "私のデータベースで利用できるバックアップをすべて見せてください。",
+  "marketplace.plugin.prisma.prompt.logs": "最新の Compute デプロイのランタイムログを見せてください。",
+  "marketplace.plugin.netlify.tagline": "プロジェクト、デプロイ、リクエストログ",
+  "marketplace.plugin.netlify.description":
+    "Netlify を使うと、エージェントはプロジェクトとデプロイを一覧表示し、エッジのリクエストログを読み、プロジェクトを作成し、既存のプロジェクトにコードをデプロイできます。各ユーザーはブラウザーで自分の Netlify アカウントにサインインします。エージェントはユーザーのアカウントと同じアクセス権を持ちます。環境変数、フォーム、訪問者のアクセス設定の変更、拡張機能のインストールや削除、フォームの送信データと環境変数の削除ができます。",
+  "marketplace.plugin.netlify.app":
+    "プロジェクト、デプロイ、リクエストログ、サイト設定を、ブラウザーでサインインする Netlify の MCP サーバーで提供します。",
+  "marketplace.plugin.netlify.prompt.latestDeploy":
+    "私の各 Netlify プロジェクトの最新デプロイのステータスはどうなっていますか？",
+  "marketplace.plugin.netlify.prompt.errors": "過去 1 日にサーバーエラーを返したサイトの URL はどれですか？",
+  "marketplace.plugin.netlify.prompt.deploy": "このフォルダーを既存の Netlify プロジェクトにデプロイしてください。",
+  "marketplace.plugin.railway.tagline": "プロジェクト、サービス、デプロイ",
+  "marketplace.plugin.railway.description":
+    "Railway を使うと、エージェントはプロジェクトとサービスを一覧表示し、プロジェクトを作成し、サービスを再デプロイし、フィーチャーフラグを管理できます。複数の手順が必要な作業は Railway Agent に任せることもできます。Railway Agent はログを読み、デプロイが失敗した理由を調べ、サービスを作成し、変数を設定します。各ユーザーはブラウザーで自分の Railway アカウントにサインインし、エージェントが使えるワークスペースとプロジェクトを選びます。それらのプロジェクトでは、エージェントはフルアクセスを持ちます。ステージされた変更のデプロイやフィーチャーフラグの削除ができ、Railway Agent を通じてサービス、変数、データベース、ネットワークも変更できます。",
+  "marketplace.plugin.railway.app":
+    "プロジェクト、サービス、デプロイを、ブラウザーでサインインする Railway の MCP サーバーで提供します。",
+  "marketplace.plugin.railway.prompt.projects":
+    "自分の Railway ワークスペースにはどのプロジェクトとサービスがありますか？",
+  "marketplace.plugin.railway.prompt.crash":
+    "Railway のバックエンドサービスがデプロイ時にクラッシュするのはなぜですか？",
+  "marketplace.plugin.railway.prompt.redeploy": "自分の Railway プロジェクトの API サービスを再デプロイしてください。",
+  "marketplace.plugin.atlassian.tagline": "Jira の作業項目と Confluence のページ",
+  "marketplace.plugin.atlassian.description":
+    "Atlassian を使うと、エージェントは Jira の作業項目、Confluence のページ、Bitbucket のプルリクエストを検索して読み、作業項目、ページ、コメントを作成または更新できます。各ユーザーはブラウザーで自分の Atlassian アカウントにサインインし、同意画面でアクセスを承認します。エージェントはユーザーと同じ権限を持ちます。作業項目とページの変更、ページの権限の変更、プルリクエストのマージができます。Jira のデータを削除するツールは、組織の管理者がオンにするまでオフのままです。ツールを呼び出すたびに Rovo クレジットを使います。",
+  "marketplace.plugin.atlassian.app":
+    "Jira、Confluence、Bitbucket を、ブラウザーでサインインする Atlassian の MCP サーバーで提供します。",
+  "marketplace.plugin.atlassian.prompt.assigned": "自分に割り当てられている未完了の Jira の作業項目はどれですか？",
+  "marketplace.plugin.atlassian.prompt.releasePage":
+    "リリース手順についての Confluence のページを探して要約してください。",
+  "marketplace.plugin.atlassian.prompt.newItem":
+    "ログインのバグについて、再現手順を付けて Jira の作業項目を作成してください。",
+  "marketplace.plugin.todoist.tagline": "タスク、プロジェクト、リマインダー",
+  "marketplace.plugin.todoist.description":
+    "Todoist を使うと、エージェントは日付、テキスト、ラベル、フィルターでタスクを探し、タスクを追加して日程を変更し、プロジェクト、セクション、ラベル、コメント、リマインダーを管理できます。各ユーザーはブラウザーで自分の Todoist アカウントにサインインします。エージェントには読み取りと書き込みの権限があり、タスク、プロジェクト、その他の項目を変更、完了、削除できます。",
+  "marketplace.plugin.todoist.app":
+    "タスク、プロジェクト、リマインダーを、ブラウザーでサインインする Todoist の MCP サーバーで提供します。",
+  "marketplace.plugin.todoist.prompt.today": "今日が期限の Todoist タスクはどれですか？",
+  "marketplace.plugin.todoist.prompt.capture": "これらのアクション項目を Todoist のインボックスに追加してください。",
+  "marketplace.plugin.todoist.prompt.overdue": "期限切れの Todoist タスクを明日に移してください。",
+  "marketplace.plugin.huggingface.tagline": "Hub のモデル、データセット、論文",
+  "marketplace.plugin.huggingface.description":
+    "Hugging Face を使うと、エージェントは Hugging Face Hub のモデル、データセット、Spaces、コレクション、論文を検索し、モデルカードやリポジトリのファイルを読み、データセットをプレビューし、Hugging Face のドキュメントを検索できます。公開されている Hub のデータを使うので、アカウントもキーも不要です。ツールは読み取り専用で、エージェントはリポジトリの作成やジョブの実行はできません。",
+  "marketplace.plugin.huggingface.app":
+    "モデル、データセット、Spaces、論文、ドキュメントの検索を、サインイン不要の Hugging Face MCP サーバーで提供します。",
+  "marketplace.plugin.huggingface.prompt.models": "Hugging Face で音声認識用の小さなオープンモデルを探してください。",
+  "marketplace.plugin.huggingface.prompt.papers": "今日 Hugging Face で話題の論文はどれですか？",
+  "marketplace.plugin.huggingface.prompt.dataset": "気象の時系列データセットを探して、その列を見せてください。",
   "marketplace.auth.apiKey": "API キー",
   "marketplace.auth.personalApiKey": "個人用 API キー",
   "marketplace.auth.mcpUrl": "MCP URL",

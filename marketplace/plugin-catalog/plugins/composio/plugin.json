@@ -4,7 +4,7 @@
   "tagline": "Many apps through your own Composio link",
   "description": "Composio connects agents to Gmail, Slack, GitHub, and hundreds of other apps through one MCP server. Connect the apps you want in your Composio account, then paste its MCP URL and API key here.",
   "category": "automation",
-  "creatorName": "composio.dev",
+  "creatorName": "Composio",
   "iconUrl": "https://composio.dev/favicon.ico",
   "version": "1.1.0",
   "prompts": [

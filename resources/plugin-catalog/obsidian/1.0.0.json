@@ -4,7 +4,7 @@
   "tagline": "Notes in your vault",
   "description": "Obsidian lets agents search, read and write the notes in your vault, so the vault can be their memory. The local server connects to the Local REST API plugin in the Obsidian app on this computer. The plugin's API key is passed to the local server as one environment variable. Keep Obsidian open while agents use it.",
   "category": "productivity",
-  "creatorName": "obsidian.md",
+  "creatorName": "Obsidian",
   "iconUrl": "https://obsidian.md/favicon.ico",
   "version": "1.0.0",
   "prompts": [

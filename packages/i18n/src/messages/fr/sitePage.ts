@@ -48,7 +48,7 @@ export const messages = {
     "L’onglet OpenBot qui a lancé la connexion à {name} n’a pas répondu. Ouvrez OpenBot dans votre navigateur et connectez de nouveau {name}.",
   "sitePage.connect.failure.failed": "{name} n’a pas terminé la connexion. Réessayez.",
   "sitePage.connect.restartHint":
-    "Dans OpenBot, ouvrez {serverSettings}, puis {connectors}, puis {name}, et sélectionnez {connect}.",
+    "Dans OpenBot, ouvrez {marketplace}, puis {apps}, puis {name}, et sélectionnez {connect}.",
   "sitePage.connect.notOpened":
     "Lancez OpenBot, puis réessayez. Si OpenBot n’est pas sur cet ordinateur, téléchargez-le et connectez {name} depuis l’app.",
   "sitePage.openApp.title": "Rien ne s’est ouvert ?",

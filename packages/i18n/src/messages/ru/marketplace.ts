@@ -19,10 +19,12 @@ export const messages = {
   "marketplace.version": "Версия {version}",
 
   "marketplace.title": "Каталог",
-  "marketplace.close": "Закрыть каталог",
   "marketplace.kinds": "Типы содержимого каталога",
   "marketplace.tab.agents": "Агенты",
   "marketplace.tab.skills": "Навыки",
+  "marketplace.description.apps": "Подключите инструменты и сервисы, с которыми работают ваши агенты.",
+  "marketplace.description.agents": "Готовые агенты со своими инструкциями и навыками.",
+  "marketplace.description.skills": "Инструкции, которые учат агента задаче или инструменту.",
 
   "marketplace.plugins.missing": "Этого плагина нет в каталоге OpenBot.",
 
@@ -106,17 +108,23 @@ export const messages = {
   "marketplace.app.reconnectNamed": "Переподключить: {name}",
   "marketplace.app.connected": "Подключено",
   "marketplace.app.attention": "Требует внимания",
+  "marketplace.app.partialTitle": "{name}: установка не завершена",
+  "marketplace.app.partialDescription": "Часть приложений или навыков не установлена. «Переподключить» установит их.",
   "marketplace.app.notConnected": "Не подключено",
   "marketplace.app.custom": "Сервер MCP",
   "marketplace.app.githubTagline": "Репозитории, задачи и пул-реквесты",
   "marketplace.app.onePasswordTagline": "Вход на сайты с общими учётными данными",
+  "marketplace.app.slackTagline": "Упоминания и личные сообщения в Slack",
+  "marketplace.app.discordTagline": "Упоминания и личные сообщения в Discord",
+  "marketplace.app.telegramTagline": "Группы и личные чаты в Telegram",
+  "marketplace.app.bitwardenTagline": "Вход на сайты с учётными данными из общей папки",
   "marketplace.app.onePasswordCategory": "Управление логинами и учётными данными",
   "marketplace.app.yourApps": "Ваши приложения",
-  "marketplace.app.moreApps": "Другие приложения",
+  "marketplace.app.addCustom": "Добавить своё",
   "marketplace.app.server": "Сервер",
   "marketplace.app.command": "Команда",
   "marketplace.app.address": "Адрес",
-  "marketplace.app.disconnect.title": "Отключить",
+  "marketplace.app.disconnect.title": "Отключить {name}",
   "marketplace.app.disconnect.description":
     "Удалить «{name}» и его навыки с этого компьютера. Позже его можно подключить снова.",
   "marketplace.app.disconnect.action": "Отключить",
@@ -126,6 +134,17 @@ export const messages = {
   "marketplace.app.remove.action": "Удалить",
   "marketplace.app.remove.confirmTitle": "Удалить «{name}»?",
   "marketplace.app.remove.keep": "Оставить",
+  "marketplace.app.connection": "Подключение",
+  "marketplace.app.setup.account": "Войдите в аккаунт {name} в браузере.",
+  "marketplace.app.setup.key": "Нужен ключ API из аккаунта {name}.",
+  "marketplace.app.setup.keySaved": "{field} хранится на {host}.",
+  "marketplace.app.setup.desktop": "Работает в настольном приложении {name} по адресу {address}.",
+  "marketplace.app.setup.desktopConnected": "Подключено к {address}.",
+  "marketplace.app.setup.open": "Вход и ключ не нужны.",
+  "marketplace.app.connectAgain": "Подключить снова",
+  "marketplace.app.signInTitle": "Снова войдите в {name}",
+  "marketplace.app.signInDescription":
+    "«{name}» отклонил сохранённый вход. Агенты не смогут им пользоваться, пока вы снова не войдёте.",
 
   "marketplace.plugin.aave.tagline": "Данные и транзакции Aave",
   "marketplace.plugin.aave.description":
@@ -313,6 +332,64 @@ export const messages = {
   "marketplace.plugin.composio.hint.url": "URL сервера MCP в вашем аккаунте Composio",
   "marketplace.plugin.composio.hint.apiKey":
     "Он находится в аккаунте Composio, в разделе Settings > Sessions & API Key.",
+  "marketplace.plugin.neon.tagline": "Проекты, ветки и миграции Postgres",
+  "marketplace.plugin.neon.description":
+    "Neon позволяет агентам просматривать проекты и ветки, выполнять SQL, читать схемы таблиц, проверять изменения схемы во временной ветке, находить медленные запросы и искать в документации Neon. Каждый пользователь входит в свой аккаунт Neon через браузер и при авторизации может выбрать доступ только для чтения. С полным доступом агенты могут выполнять SQL, который изменяет или удаляет данные, а также создавать, сбрасывать и удалять ветки, базы данных и проекты. Neon рекомендует свой сервер MCP для разработки и тестирования, а не для продакшен-баз данных.",
+  "marketplace.plugin.neon.app":
+    "Проекты, ветки, SQL и миграции Postgres через сервер MCP Neon со входом через браузер.",
+  "marketplace.plugin.neon.prompt.projects": "Какие проекты и ветки есть в моём аккаунте Neon?",
+  "marketplace.plugin.neon.prompt.slowQueries": "Какие запросы самые медленные в моей базе данных Neon и почему?",
+  "marketplace.plugin.neon.prompt.migration":
+    "Добавьте индекс в таблицу orders во временной ветке и покажите мне результат, прежде чем применять его.",
+  "marketplace.plugin.prisma.tagline": "Базы данных Postgres, резервные копии и приложения Compute",
+  "marketplace.plugin.prisma.description":
+    "Prisma позволяет агентам просматривать и создавать базы данных Prisma Postgres, читать схемы, выполнять SQL, просматривать резервные копии и восстанавливать их в новую базу данных, управлять бакетами Object Storage, читать сборки и логи Compute и искать в документации Prisma. Каждый пользователь входит в свой аккаунт Prisma через браузер и выбирает рабочее пространство. Агенты получают полный доступ: они могут выполнять SQL, который изменяет или удаляет данные, обновлять схемы, удалять базы данных и бакеты, а также останавливать, откатывать и удалять деплои Compute.",
+  "marketplace.plugin.prisma.app":
+    "Базы данных, SQL, резервные копии и приложения Compute через сервер MCP Prisma со входом через браузер.",
+  "marketplace.plugin.prisma.prompt.databases": "Какие базы данных есть в моём рабочем пространстве Prisma?",
+  "marketplace.plugin.prisma.prompt.backups": "Покажите все доступные резервные копии моей базы данных.",
+  "marketplace.plugin.prisma.prompt.logs": "Покажите логи выполнения моего последнего деплоя Compute.",
+  "marketplace.plugin.netlify.tagline": "Проекты, деплои и логи запросов",
+  "marketplace.plugin.netlify.description":
+    "Netlify позволяет агентам просматривать проекты и деплои, читать логи запросов на edge, создавать проекты и деплоить код в существующий проект. Каждый пользователь входит в свой аккаунт Netlify через браузер. У агентов тот же доступ, что и у аккаунта пользователя: они могут изменять переменные окружения, формы и доступ посетителей, устанавливать и удалять расширения, а также удалять отправки форм и переменные окружения.",
+  "marketplace.plugin.netlify.app":
+    "Проекты, деплои, логи запросов и настройки сайта через сервер MCP Netlify со входом через браузер.",
+  "marketplace.plugin.netlify.prompt.latestDeploy": "Каков статус последнего деплоя каждого из моих проектов Netlify?",
+  "marketplace.plugin.netlify.prompt.errors": "Какие URL моего сайта вернули ошибки сервера за последние сутки?",
+  "marketplace.plugin.netlify.prompt.deploy": "Задеплойте эту папку в мой существующий проект Netlify.",
+  "marketplace.plugin.railway.tagline": "Проекты, сервисы и деплои",
+  "marketplace.plugin.railway.description":
+    "Railway позволяет агентам просматривать проекты и сервисы, создавать проекты, заново деплоить сервисы и управлять флагами функций. Агенты также могут передать многошаговую работу Railway Agent: он читает логи, выясняет, почему деплой не удался, создаёт сервисы и задаёт переменные. Каждый пользователь входит в свой аккаунт Railway через браузер и выбирает рабочие пространства и проекты, которые могут использовать агенты. В этих проектах у агентов полный доступ: они могут деплоить подготовленные изменения, удалять флаги функций, а через Railway Agent — изменять сервисы, переменные, базы данных и сеть.",
+  "marketplace.plugin.railway.app": "Проекты, сервисы и деплои через сервер MCP Railway со входом через браузер.",
+  "marketplace.plugin.railway.prompt.projects": "Какие проекты и сервисы есть в моём рабочем пространстве Railway?",
+  "marketplace.plugin.railway.prompt.crash": "Почему мой бэкенд-сервис на Railway падает при деплое?",
+  "marketplace.plugin.railway.prompt.redeploy": "Заново задеплой сервис API в моём проекте Railway.",
+  "marketplace.plugin.atlassian.tagline": "Рабочие элементы Jira и страницы Confluence",
+  "marketplace.plugin.atlassian.description":
+    "Atlassian позволяет агентам искать и читать рабочие элементы Jira, страницы Confluence и пул-реквесты Bitbucket, а также создавать и обновлять рабочие элементы, страницы и комментарии. Каждый пользователь входит в свой аккаунт Atlassian через браузер и подтверждает доступ на экране согласия. У агентов те же права, что и у пользователя: они могут изменять рабочие элементы и страницы, менять права доступа к страницам и сливать пул-реквесты. Инструменты, которые удаляют данные Jira, остаются выключенными, пока администратор организации их не включит. Каждый вызов инструмента расходует кредиты Rovo.",
+  "marketplace.plugin.atlassian.app":
+    "Jira, Confluence и Bitbucket через сервер MCP Atlassian со входом через браузер.",
+  "marketplace.plugin.atlassian.prompt.assigned": "Какие открытые рабочие элементы Jira назначены мне?",
+  "marketplace.plugin.atlassian.prompt.releasePage":
+    "Найди страницу Confluence о нашем процессе релиза и кратко изложи её.",
+  "marketplace.plugin.atlassian.prompt.newItem":
+    "Создай рабочий элемент Jira для ошибки входа с шагами для воспроизведения.",
+  "marketplace.plugin.todoist.tagline": "Задачи, проекты и напоминания",
+  "marketplace.plugin.todoist.description":
+    "Todoist позволяет агентам находить задачи по дате, тексту, метке или фильтру, добавлять задачи и переносить их сроки, а также управлять проектами, разделами, метками, комментариями и напоминаниями. Каждый пользователь входит в свой аккаунт Todoist через браузер. Агенты получают доступ на чтение и запись: они могут изменять, завершать и удалять задачи, проекты и другие элементы.",
+  "marketplace.plugin.todoist.app": "Задачи, проекты и напоминания через сервер MCP Todoist со входом через браузер.",
+  "marketplace.plugin.todoist.prompt.today": "Какие задачи в Todoist нужно сделать сегодня?",
+  "marketplace.plugin.todoist.prompt.capture": "Добавь эти пункты в мои «Входящие» в Todoist.",
+  "marketplace.plugin.todoist.prompt.overdue": "Перенеси мои просроченные задачи в Todoist на завтра.",
+  "marketplace.plugin.huggingface.tagline": "Модели, датасеты и статьи на Hub",
+  "marketplace.plugin.huggingface.description":
+    "Hugging Face позволяет агентам искать модели, датасеты, Spaces, коллекции и статьи на Hugging Face Hub, читать карточки моделей и файлы репозиториев, просматривать датасеты и искать по документации Hugging Face. Он использует публичные данные Hub и не требует аккаунта и ключа. Инструменты только читают данные: агенты не могут создавать репозитории или запускать задачи.",
+  "marketplace.plugin.huggingface.app":
+    "Поиск моделей, датасетов, Spaces, статей и документации через сервер MCP Hugging Face без входа.",
+  "marketplace.plugin.huggingface.prompt.models":
+    "Найди на Hugging Face небольшие открытые модели для распознавания речи.",
+  "marketplace.plugin.huggingface.prompt.papers": "Какие статьи сегодня в тренде на Hugging Face?",
+  "marketplace.plugin.huggingface.prompt.dataset": "Найди датасет с временными рядами погоды и покажи его столбцы.",
   "marketplace.auth.apiKey": "API-ключ",
   "marketplace.auth.personalApiKey": "Личный API-ключ",
   "marketplace.auth.mcpUrl": "URL MCP",
