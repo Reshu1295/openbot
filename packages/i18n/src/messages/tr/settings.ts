@@ -279,7 +279,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "OpenBot ile son altı ayım",
-  "settings.profile.activity.title": "Etkinlik",
+  "settings.profile.activity.title": "Bu bilgisayardaki etkinlik",
   "settings.profile.activity.activeDays": {
     one: "Son bir yılda {count} etkin gün",
     other: "Son bir yılda {count} etkin gün",

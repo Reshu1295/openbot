@@ -294,7 +294,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "我与 OpenBot 的过去六个月",
-  "settings.profile.activity.title": "活动",
+  "settings.profile.activity.title": "这台电脑上的活动",
   "settings.profile.activity.activeDays": { other: "过去一年有 {count} 个活跃日" },
   "settings.profile.activity.empty": "暂无活动",
   "settings.profile.activity.loading": "正在加载活动…",

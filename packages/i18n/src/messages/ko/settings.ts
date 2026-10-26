@@ -295,7 +295,7 @@ export const messages = {
   "settings.profile.share.createFailed": "이미지를 만들 수 없어요.",
   "settings.profile.share.fileName": "openbot-activity.png",
   "settings.profile.share.caption": "OpenBot과 함께한 지난 6개월",
-  "settings.profile.activity.title": "활동",
+  "settings.profile.activity.title": "이 컴퓨터의 활동",
   "settings.profile.activity.activeDays": {
     other: "지난 1년간 활동한 날 {count}일",
   },

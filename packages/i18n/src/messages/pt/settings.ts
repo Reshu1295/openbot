@@ -283,7 +283,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "Meus últimos seis meses com o OpenBot",
-  "settings.profile.activity.title": "Atividade",
+  "settings.profile.activity.title": "Atividade neste computador",
   "settings.profile.activity.activeDays": {
     one: "{count} dia ativo no último ano",
     other: "{count} dias ativos no último ano",
