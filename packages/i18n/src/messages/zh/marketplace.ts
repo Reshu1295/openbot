@@ -241,7 +241,7 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.compare": "对比这两家供应商，并附上来源。",
   "marketplace.plugin.obsidian.tagline": "你仓库中的笔记",
   "marketplace.plugin.obsidian.description":
-    "Obsidian 让智能体搜索、阅读和写入你仓库中的笔记，让仓库成为它们的记忆。本地服务器连接这台电脑上 Obsidian 应用中的 Local REST API 插件。插件的 API 密钥作为一个环境变量传给本地服务器。智能体使用期间请保持 Obsidian 打开。",
+    "Obsidian 让助手搜索、阅读和写入你仓库中的笔记，让仓库成为它们的记忆。本地服务器连接这台电脑上 Obsidian 应用中的 Local REST API 插件。插件的 API 密钥作为一个环境变量传给本地服务器。助手使用期间请保持 Obsidian 打开。",
   "marketplace.plugin.obsidian.app": "通过使用 Local REST API 插件密钥的本地 MCP 服务器，搜索、阅读和编辑笔记。",
   "marketplace.plugin.obsidian.prompt.recall": "我的笔记里关于这个项目的决定是怎么写的？",
   "marketplace.plugin.obsidian.prompt.save": "把这个决定作为新笔记保存到我的仓库。",
