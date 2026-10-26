@@ -6,6 +6,7 @@ import {
   CONVERSATION_SNAPSHOT_MESSAGE_LIMIT,
   type ConversationMessage,
   type ConversationSnapshot,
+  type QueueDeliveryStatus,
 } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import type { AgentClient } from "../agent-client";
@@ -404,18 +405,13 @@ export class ConversationRuntime {
   #trimCompletedCache(cached: CachedSnapshot): boolean {
     const activeTurnId = cached.snapshot.activeTurnId;
     const completed = cached.snapshot.messages.filter((message) => !isActiveMessage(message, activeTurnId));
-    const { count } = oldestMessagesToRemove(
-      completed,
-      this.#cachedSnapshotBytes - CONVERSATION_CACHE_TOTAL_BYTES_LIMIT,
-    );
-    if (count === 0) return false;
+    const removed = oldestMessagesToRemove(completed, this.#cachedSnapshotBytes - CONVERSATION_CACHE_TOTAL_BYTES_LIMIT);
+    if (removed.size === 0) return false;
     // In place, because a caller can hold this array.
     const messages = cached.snapshot.messages;
-    let toRemove = count;
     let kept = 0;
     for (const message of messages) {
-      if (toRemove > 0 && !isActiveMessage(message, activeTurnId)) {
-        toRemove -= 1;
+      if (removed.has(message)) {
         cached.omittedMessageIds.add(message.id);
         cached.messageSignatures.delete(message.id);
         continue;
@@ -695,9 +691,21 @@ export class ConversationRuntime {
   #changedMessages(snapshot: ConversationSnapshot): ConversationMessage[] {
     const cached = this.#cachedSnapshot(snapshot);
     if (!cached) return structuredClone(snapshot.messages);
-    return snapshot.messages.filter(
-      (message) => cached.messageSignatures.get(message.id) !== messageSignature(message),
-    );
+    const changed = new Set<ConversationMessage>();
+    const untracked: ConversationMessage[] = [];
+    for (const message of snapshot.messages) {
+      const signature = cached.messageSignatures.get(message.id);
+      if (signature === undefined) untracked.push(message);
+      else if (signature !== messageSignature(message)) changed.add(message);
+    }
+    if (untracked.length === 0) return [...changed];
+    // A message the cache does not hold can be a stored row that a limit dropped and a sync added
+    // back. Write it only when it stores differently, so the same row is never written again.
+    for (const message of snapshot.threadId
+      ? this.#store.database.changedConversationMessages(snapshot.threadId, untracked)
+      : untracked)
+      changed.add(message);
+    return snapshot.messages.filter((message) => changed.has(message));
   }
 
   #removedMessageIds(snapshot: ConversationSnapshot): string[] {
@@ -915,13 +923,16 @@ function boundedConversationSnapshot(snapshot: ConversationSnapshot): CachedSnap
     ? snapshot.messages.filter((message) => isActiveMessage(message, snapshot.activeTurnId))
     : [];
   const allCompletedMessages = snapshot.messages.filter((message) => !activeMessages.includes(message));
-  const completedMessages = allCompletedMessages.slice(-CONVERSATION_SNAPSHOT_MESSAGE_LIMIT);
-  const completedSnapshot = { ...snapshot, messages: completedMessages };
-  let completedBytes = conversationSnapshotBytes(completedSnapshot);
+  let completedMessages = withMailboxMessages(
+    allCompletedMessages,
+    allCompletedMessages.slice(-CONVERSATION_SNAPSHOT_MESSAGE_LIMIT),
+    activeMessages,
+  );
+  let completedBytes = conversationSnapshotBytes({ ...snapshot, messages: completedMessages });
   if (completedBytes > CONVERSATION_CACHE_BYTES_LIMIT) {
     const removed = oldestMessagesToRemove(completedMessages, completedBytes - CONVERSATION_CACHE_BYTES_LIMIT);
-    completedMessages.splice(0, removed.count);
-    completedBytes -= removed.bytes;
+    completedMessages = completedMessages.filter((message) => !removed.has(message));
+    completedBytes = conversationSnapshotBytes({ ...snapshot, messages: completedMessages });
   }
   const retainedAllMessages =
     completedMessages.length === allCompletedMessages.length &&
@@ -948,6 +959,48 @@ function boundedConversationSnapshot(snapshot: ConversationSnapshot): CachedSnap
       snapshot.messages.flatMap((message) => (retainedIds.has(message.id) ? [] : [message.id])),
     ),
   };
+}
+
+/**
+ * Adds the older messages that mailbox sync puts back: each message with a queued or running
+ * delivery, and each mailbox message from the oldest kept message on. Sync reads from the first
+ * message's `createdAt`, but the display order groups a turn by its earliest message, so the last
+ * 100 in that order do not end at one time. When the bound dropped these, each sync added them
+ * again, and each change wrote the same rows and sent the whole chat again.
+ */
+function withMailboxMessages(
+  completed: readonly ConversationMessage[],
+  recent: ConversationMessage[],
+  active: readonly ConversationMessage[],
+): ConversationMessage[] {
+  const older = completed.slice(0, completed.length - recent.length);
+  if (older.length === 0) return recent;
+  const queued = new Set(older.filter(hasActiveDelivery));
+  // The same text comparison as `MailboxStore.conversationMessages`.
+  let oldest: string | undefined;
+  for (const message of [...recent, ...active, ...queued])
+    if (oldest === undefined || message.createdAt < oldest) oldest = message.createdAt;
+  const from = oldest;
+  if (from === undefined) return recent;
+  return [
+    ...older.filter((message) => queued.has(message) || (isMailboxMessage(message) && message.createdAt >= from)),
+    ...recent,
+  ];
+}
+
+function isMailboxMessage(message: ConversationMessage): boolean {
+  return message.delivery !== undefined || message.exchange !== undefined;
+}
+
+const ACTIVE_DELIVERY_STATUSES: ReadonlySet<QueueDeliveryStatus> = new Set(["queued", "starting", "running"]);
+
+/** An agent's own message waits for any recipient; a message to it waits for its own delivery. */
+function hasActiveDelivery(message: ConversationMessage): boolean {
+  if (message.delivery) return ACTIVE_DELIVERY_STATUSES.has(message.delivery.status);
+  return (
+    message.exchange?.direction === "outgoing" &&
+    message.exchange.deliveries.some((delivery) => ACTIVE_DELIVERY_STATUSES.has(delivery.status))
+  );
 }
 
 function isActiveMessage(message: ConversationMessage, activeTurnId: string | null): boolean {
@@ -995,18 +1048,24 @@ function conversationSnapshotBytes(snapshot: ConversationSnapshot): number {
  * an element removes its own bytes and one comma while another element remains. Only the removed
  * messages are serialized.
  */
+/**
+ * The oldest messages that free `excessBytes`. Mailbox messages stay: mailbox sync adds them back,
+ * so removing one frees no memory and makes the next change write it again.
+ */
 function oldestMessagesToRemove(
   messages: readonly ConversationMessage[],
   excessBytes: number,
-): { count: number; bytes: number } {
-  let count = 0;
+): Set<ConversationMessage> {
+  const removed = new Set<ConversationMessage>();
   let bytes = 0;
   for (const message of messages) {
     if (bytes >= excessBytes) break;
-    bytes += Buffer.byteLength(JSON.stringify(message), "utf8") + (count < messages.length - 1 ? 1 : 0);
-    count += 1;
+    if (isMailboxMessage(message)) continue;
+    // With the comma between messages.
+    bytes += Buffer.byteLength(JSON.stringify(message), "utf8") + 1;
+    removed.add(message);
   }
-  return { count, bytes };
+  return removed;
 }
 
 function messageSignature(message: ConversationMessage): string {
