@@ -124,11 +124,11 @@ export class SignInRelayClient {
   paste(key: string, address: string): void {
     const waiting = this.#waiting.get(key);
     if (!waiting) throw new Error(sourceText("error.mcp.relayEnded"));
-    // The sign-in already has its callback, and the host completes it: a second one would change nothing.
-    if (waiting.accepted()) return;
     if (waiting.state === null) throw new Error(sourceText("error.mcp.relayAddressInvalid"));
     const query = relayCallbackQuery(address, waiting.state);
     if (query === null) throw new Error(sourceText("error.mcp.relayAddressInvalid"));
+    // The sign-in already has its callback, and the host completes it: a second one would change nothing.
+    if (waiting.accepted()) return;
     waiting.receive(query);
   }
 

@@ -20,6 +20,7 @@ const STATE = "relay-state";
 const PAGE = `https://auth.example/authorize?state=${STATE}`;
 const CALLBACK = `http://127.0.0.1:1455/auth/callback?code=first&state=${STATE}`;
 const SECOND_CALLBACK = `http://127.0.0.1:1455/auth/callback?code=second&state=${STATE}`;
+const WRONG_STATE_CALLBACK = `http://127.0.0.1:1455/auth/callback?code=other&state=not-${STATE}`;
 const SUCCESS: McpTestResult = { toolCount: 1, error: null };
 
 interface CaseResult {
@@ -27,6 +28,7 @@ interface CaseResult {
   wrongStateBefore: string | null;
   pageWhileCompleting: unknown;
   pasteWhileCompleting: string | null;
+  wrongStateWhileCompleting: string | null;
   completeQueries: string[];
   result: McpTestResult;
   pasteAfterEnd: string | null;
@@ -76,13 +78,12 @@ async function runCase(name: string, accept: (client: SignInRelayClient) => void
   const run = Effect.runPromise(client.run(KEY, remote, { page: PAGE, onWaiting: () => waiting.resolve() }));
   await waiting.promise;
 
-  const wrongStateBefore = thrown(() =>
-    client.paste(KEY, `http://127.0.0.1:1455/auth/callback?code=other&state=not-${STATE}`),
-  );
+  const wrongStateBefore = thrown(() => client.paste(KEY, WRONG_STATE_CALLBACK));
   accept(client);
   await completing.promise;
   const pageWhileCompleting = client.page(KEY);
   const pasteWhileCompleting = thrown(() => client.paste(KEY, SECOND_CALLBACK));
+  const wrongStateWhileCompleting = thrown(() => client.paste(KEY, WRONG_STATE_CALLBACK));
   Deferred.doneUnsafe(release, Effect.void);
   const ended = await run;
   return {
@@ -90,6 +91,7 @@ async function runCase(name: string, accept: (client: SignInRelayClient) => void
     wrongStateBefore,
     pageWhileCompleting,
     pasteWhileCompleting,
+    wrongStateWhileCompleting,
     completeQueries,
     result: ended,
     pasteAfterEnd: thrown(() => client.paste(KEY, SECOND_CALLBACK)),
@@ -108,6 +110,11 @@ try {
     assert.equal(result.wrongStateBefore, sourceText("error.mcp.relayAddressInvalid"), `${result.name}: wrong state.`);
     assert.equal(result.pageWhileCompleting, null, `${result.name}: no page while the host completes.`);
     assert.equal(result.pasteWhileCompleting, null, `${result.name}: a paste while the host completes is no error.`);
+    assert.equal(
+      result.wrongStateWhileCompleting,
+      sourceText("error.mcp.relayAddressInvalid"),
+      `${result.name}: wrong state while the host completes.`,
+    );
     assert.deepEqual(
       result.completeQueries,
       [new URL(CALLBACK).search.slice(1)],
