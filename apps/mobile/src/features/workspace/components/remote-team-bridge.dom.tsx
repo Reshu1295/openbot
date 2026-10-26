@@ -118,7 +118,7 @@ export default function RemoteTeamBridge({
     };
   }
   const teamCommands = runCommands.current;
-  // The handle and the prop both send the state. A repeated state must not run a second return.
+  // The handle and the first prop both send the state. A repeated state must not run a second return.
   const appliedActive = useRef<boolean | null>(null);
   const applyActive = useRef<((value: unknown) => void) | null>(null);
   if (!applyActive.current)
@@ -144,8 +144,10 @@ export default function RemoteTeamBridge({
     void onReady();
   }, [onReady]);
 
+  // The first state of a page that loads. After it, the handle sends each state before its commands,
+  // and a prop render that arrives later carries an older state.
   useEffect(() => {
-    setActive(active);
+    if (appliedActive.current === null) setActive(active);
   }, [active, setActive]);
 
   // The WebView has no network details, but it sends `online` when the phone gets a network again.
