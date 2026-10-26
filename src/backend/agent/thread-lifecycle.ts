@@ -1450,11 +1450,24 @@ function decodeToolApprovals(value: unknown): CodexToolApprovals | null {
   return approvals;
 }
 
-/** Whether a tool approval that a session started with is gone or changed now. */
+/**
+ * Whether a tool setting that a session started with is gone or changed now, or a tool got a setting
+ * other than an approval, such as `approval_mode = "prompt"`. Only a new approval leaves the session.
+ */
 function approvalRevoked(session: CodexToolApprovals, current: CodexToolApprovals): boolean {
+  const before = new Map(session);
   const now = new Map(current);
-  return session.some(([key, tools]) =>
-    Object.entries(tools).some(([tool, approval]) => JSON.stringify(now.get(key)?.[tool]) !== JSON.stringify(approval)),
+  const changed = session.some(([key, tools]) =>
+    Object.entries(tools).some(([tool, setting]) => JSON.stringify(now.get(key)?.[tool]) !== JSON.stringify(setting)),
+  );
+  return (
+    changed ||
+    current.some(([key, tools]) =>
+      Object.entries(tools).some(
+        ([tool, setting]) =>
+          before.get(key)?.[tool] === undefined && !(isDynamicRecord(setting) && setting.approval_mode === "approve"),
+      ),
+    )
   );
 }
 

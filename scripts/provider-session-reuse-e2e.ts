@@ -318,7 +318,7 @@ interface CaseDetails {
   spawns?: { resume: string | null; sessionId: string }[];
   secondTurnHasHandoff?: boolean | null;
   serverKey?: string;
-  threadStarts?: { afterTurn1: number; afterGrantTurn2: number; afterRevokeTurn3: number };
+  threadStarts?: { afterTurn1: number; afterGrantTurn2: number; afterRevokeTurn3: number; afterPromptTurn4: number };
   prompts?: PromptReport[];
   firstPrompt?: PromptReport;
   secondPrompt?: PromptReport & { repeatsFirstRequest: boolean };
@@ -533,7 +533,7 @@ try {
     };
     // The entry that Codex keeps for this server: OpenBot's disabled placeholder, with the approvals.
     const key = codexMcpServerKey(server);
-    const writeConfig = (tools: { echo: { approval_mode: "approve" } } | null) =>
+    const writeConfig = (tools: { echo: { approval_mode: "approve" | "prompt" } } | null) =>
       writeFileSync(
         codexConfig,
         JSON.stringify({
@@ -552,12 +552,17 @@ try {
     const afterGrantTurn2 = starts();
     writeConfig(null);
     await sendTurn(profile, agent.id, "turn-after-revoke");
-    const counts = { afterTurn1, afterGrantTurn2, afterRevokeTurn3: starts() };
+    const afterRevokeTurn3 = starts();
+    // A tool set to ask every time is stricter than no setting: the session must not keep running it.
+    writeConfig({ echo: { approval_mode: "prompt" } });
+    await sendTurn(profile, agent.id, "turn-after-prompt");
+    const counts = { afterTurn1, afterGrantTurn2, afterRevokeTurn3, afterPromptTurn4: starts() };
     details.serverKey = key;
     details.threadStarts = counts;
     assert.equal(counts.afterTurn1, 1, "The first turn starts one Codex session.");
     assert.equal(counts.afterGrantTurn2, 1, "A granted approval keeps the Codex session.");
     assert.equal(counts.afterRevokeTurn3, 2, "A revoked approval replaces the Codex session.");
+    assert.equal(counts.afterPromptTurn4, 3, "A tool set to ask every time replaces the Codex session.");
   });
 
   await runCase("antigravity-channel-delta", "antigravity", async (profile, details) => {
