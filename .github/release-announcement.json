@@ -1,10 +1,9 @@
 {
-  "version": "0.50.0",
+  "version": "0.51.1",
   "highlights": [
-    "Sign in to Google MCP servers, such as Gmail, Calendar or Drive, again after you update. Then the sign-in keeps working after the first hour.",
-    "Draw a workflow on a canvas with agent, model, condition and approval steps, and run it on a schedule or from a webhook.",
-    "Save logins, payment cards and contact info in the Vault. Agents use them, but never see a password or a card number.",
-    "Open the trace of an agent's turn to see each thought, tool call and subagent on one timeline, with its cost.",
-    "Claude can use an Anthropic API key, and Gemini can hold more than one Google account."
+    "DeepSeek, Inception and OpenRouter now download the Pi CLI when you save their API key.",
+    "Closing the Linux AppImage no longer shows a crash report.",
+    "Gemini works again on Docker servers with LXCFS, and Claude agents on a server now respect its CPU limit.",
+    "Agents on a shared server no longer tell you to open the chat on another device."
   ]
 }

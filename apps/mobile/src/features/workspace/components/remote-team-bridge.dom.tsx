@@ -23,6 +23,11 @@ export type RemoteTeamBridgeHandle = {
    * ready. A command whose ID the page has already had does not run again.
    */
   teamCommands: (commands: BridgeJson) => void;
+  /**
+   * The foreground state, before the commands that follow it. The `active` prop arrives through a
+   * render, so a `connect` sent at a return to the app ran before it and failed as in the background.
+   */
+  setActive: (active: BridgeJson) => void;
 };
 
 interface RemoteTeamBridgeProps extends RemoteTeamPeerActions {
@@ -113,11 +118,22 @@ export default function RemoteTeamBridge({
     };
   }
   const teamCommands = runCommands.current;
+  // The handle and the first prop both send the state. A repeated state must not run a second return.
+  const appliedActive = useRef<boolean | null>(null);
+  const applyActive = useRef<((value: unknown) => void) | null>(null);
+  if (!applyActive.current)
+    applyActive.current = (value) => {
+      if (typeof value !== "boolean" || appliedActive.current === value) return;
+      appliedActive.current = value;
+      peer.setActive(value);
+    };
+  const setActive = applyActive.current;
 
-  useDOMImperativeHandle<RemoteTeamBridgeHandle>(ref ?? null, () => ({ browserView: views.command, teamCommands }), [
-    views,
-    teamCommands,
-  ]);
+  useDOMImperativeHandle<RemoteTeamBridgeHandle>(
+    ref ?? null,
+    () => ({ browserView: views.command, teamCommands, setActive }),
+    [views, teamCommands, setActive],
+  );
 
   // After the handle effect above, so the native side knows the handle before it sends the commands.
   // In Expo Go on Android `onReady` arrives with the second props; see expo-go-dom.ts.
@@ -128,9 +144,11 @@ export default function RemoteTeamBridge({
     void onReady();
   }, [onReady]);
 
+  // The first state of a page that loads. After it, the handle sends each state before its commands,
+  // and a prop render that arrives later carries an older state.
   useEffect(() => {
-    peer.setActive(active);
-  }, [active, peer]);
+    if (appliedActive.current === null) setActive(active);
+  }, [active, setActive]);
 
   // The WebView has no network details, but it sends `online` when the phone gets a network again.
   useEffect(() => {

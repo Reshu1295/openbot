@@ -45,6 +45,7 @@ export const messages = {
   "onboarding.provider.clineAccount": "Бесплатные модели с аккаунтом Cline",
   "onboarding.provider.inceptionKey": "Модели Mercury с ключом API Inception",
   "onboarding.provider.deepseekKey": "Модели DeepSeek с ключом API DeepSeek",
+  "onboarding.provider.openrouterKey": "Множество моделей с ключом API OpenRouter",
   "onboarding.provider.tryFree": "Попробовать бесплатно",
   "onboarding.provider.noSignIn": "Вход не нужен",
   "onboarding.provider.more": "Другие провайдеры",

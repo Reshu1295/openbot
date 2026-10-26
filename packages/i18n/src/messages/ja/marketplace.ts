@@ -209,6 +209,14 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.errors": "過去 1 時間にエラーを記録した Cloudflare Workers はどれですか？",
   "marketplace.plugin.cloudflare.prompt.dns":
     "自分の Cloudflare アカウントの各ゾーンの DNS レコードを一覧表示してください。",
+  "marketplace.plugin.supabase.tagline": "データベース、ログ、Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase を使うと、エージェントはプロジェクトを一覧表示し、SQL を実行し、テーブルのスキーマとログを読み、advisors のセキュリティとパフォーマンスの指摘を確認し、Edge Functions とブランチを管理し、Supabase のドキュメントを検索できます。各ユーザーはブラウザーで自分の Supabase アカウントにサインインし、組織を選びます。エージェントにはフルアクセスが与えられます。データを変更または削除する SQL の実行、マイグレーションの適用、Edge Functions のデプロイ、プロジェクトの作成と一時停止ができます。",
+  "marketplace.plugin.supabase.app":
+    "データベース、ログ、Edge Functions を、ブラウザーでサインインする Supabase の MCP サーバーで提供します。",
+  "marketplace.plugin.supabase.prompt.projects": "自分の Supabase 組織にはどのプロジェクトがありますか？",
+  "marketplace.plugin.supabase.prompt.tables": "自分の Supabase データベースのテーブルと列を一覧表示してください。",
+  "marketplace.plugin.supabase.prompt.errors": "自分の Supabase プロジェクトが過去 1 時間に記録したエラーは何ですか？",
   "marketplace.plugin.context7.tagline": "最新のライブラリドキュメント",
   "marketplace.plugin.context7.description":
     "Context7 はライブラリとフレームワークの最新のドキュメントと API リファレンスを取得するので、回答はプロジェクトが実際に使っているバージョンに基づきます。アカウントもキーも不要です。",
@@ -258,6 +266,17 @@ export const messages = {
     "このフレームワークのバージョンについて、レビュアーは何と言っていますか？",
   "marketplace.plugin.braveSearch.prompt.news": "この製品分野の今日の発表を探してください。",
   "marketplace.plugin.braveSearch.prompt.compare": "この 2 つのベンダーを、情報源を引用して比較してください。",
+  "marketplace.plugin.obsidian.tagline": "保管庫のノート",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian を使うと、エージェントが保管庫のノートを検索、閲覧、作成できるため、保管庫をエージェントの記憶として使えます。ローカルサーバーは、このコンピューターの Obsidian アプリにある Local REST API プラグインに接続します。プラグインの API キーは、1 つの環境変数としてローカルサーバーに渡されます。エージェントが使う間は Obsidian を開いたままにしてください。",
+  "marketplace.plugin.obsidian.app":
+    "ノートの検索、閲覧、編集。Local REST API プラグインのキーを使うローカル MCP サーバー経由です。",
+  "marketplace.plugin.obsidian.prompt.recall":
+    "このプロジェクトの決定事項について、私のノートには何が書かれていますか？",
+  "marketplace.plugin.obsidian.prompt.save": "この決定を保管庫に新しいノートとして保存してください。",
+  "marketplace.plugin.obsidian.prompt.log": "今日の作業のまとめを「作業ログ」ノートに追加してください。",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Obsidian で Settings > Local REST API を開きます。API キーをコピーし、"Enable non-encrypted (HTTP) server" をオンにしてください。',
   "marketplace.plugin.resend.tagline": "トランザクションメール",
   "marketplace.plugin.resend.description":
     "Resend を使うと、エージェントは 1 つの API でトランザクションメールを送信し、配信を確認できます。Resend ダッシュボードの API キーは、1 つの環境変数としてローカルサーバーに渡されます。",

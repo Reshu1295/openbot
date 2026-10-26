@@ -627,7 +627,7 @@ provider added after v8 needs no new protocol version. The `providers-v8` routes
 The host hides a provider from a peer below v8 when that protocol's frozen list does not have it
 (`FROZEN_PROVIDERS` in `src/main/team-api/provider-visibility.ts`). So a new provider is hidden
 from old peers with no change there. Do not edit those lists. A key-only provider
-(`KEY_ONLY_PROVIDERS`, now Inception and DeepSeek) is hidden from peers on every protocol, v8 too,
+(`KEY_ONLY_PROVIDERS`, now Inception, DeepSeek and OpenRouter) is hidden from peers on every protocol, v8 too,
 and the peer key routes refuse its key.
 
 A v8 client keeps the agents of a provider that its build does not know (`ForeignProviderId`,
@@ -817,6 +817,24 @@ the account balance (`#failureText` in `pi-client.ts`). The DeepSeek client list
 models, with bare ids such as `deepseek-v4-pro`. The Pi client loads no key extension, so it keeps
 the user's own `deepseek` models, for example from `DEEPSEEK_API_KEY` in Pi's environment.
 DeepSeek is local-only, as Inception is.
+
+## OpenRouter
+
+OpenRouter works as DeepSeek does: a key-only provider on Pi's managed CLI. The key is stored as the
+`openrouter` API key. Pi has a built-in `openrouter` provider with OpenRouter's model list (401 models
+in Pi 1.1.0 and 1.4.0), so the extension registers only the key and the `Authorization` header, and
+OpenBot keeps no OpenRouter model list. Pi sends some models to OpenRouter's Anthropic Messages
+endpoint and the others to its chat completions endpoint; both read the header. On the Anthropic
+Messages endpoint Pi also sends the key from its own `auth.json` as `x-api-key`, so the extension sets
+that header to the OpenBot key too (checked in Pi 1.4.0 with a local server). Pi's own
+`/api/models/user` request still uses a key from `auth.json` when the user saved one there; it reads
+the model list and sends no turn content. Model ids keep
+OpenRouter's `<lab>/<model>` form, such as `anthropic/claude-opus-5.5`, and the client passes them to
+Pi unchanged. The catalog drops the aliases that start with `~`, such as
+`~anthropic/claude-sonnet-latest`, because `isAgentModel` refuses that character, and the default is
+`anthropic/claude-sonnet-5.5`. The model picker groups the models by lab (`openRouterLab` in
+`provider-model-options.ts`) and marks the `:free` models as free. A 402 means the account has no
+credits. OpenRouter is local-only, as Inception is.
 
 ## Muse
 

@@ -35,7 +35,7 @@ BACKUP_UNIT=openbot-instance-backup
 LOCKS=/run
 # LXCFS shows each container its own CPU and memory limits in these files. See lxcfs.yaml.
 LXCFS=/var/lib/lxcfs
-LXCFS_FILES=(proc/cpuinfo proc/stat proc/meminfo proc/swaps sys/devices/system/cpu/online)
+LXCFS_FILES=(proc/cpuinfo proc/stat proc/meminfo proc/swaps)
 LXCFS_DROP_IN=/etc/systemd/system/lxcfs.service.d/openbot.conf
 # The files without which a backup cannot open: the database and the keyring with its password.
 REQUIRED_FILES=(.config/OpenBot/openbot.db .local/share/keyrings/login.keyring .config/openbot-container/keyring-password)

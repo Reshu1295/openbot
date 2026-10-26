@@ -156,7 +156,8 @@ export const messages = defineMessages("settings", {
   "settings.tab.voice.description":
     "Dictation in the message box. Local models run on this computer; ElevenLabs runs in the cloud.",
   "settings.tab.computerUse.title": "Computer Use",
-  "settings.tab.computerUse.description": "Allow OpenBot to see and interact with apps on this computer.",
+  "settings.tab.computerUse.description":
+    "Let agents on this computer's OpenBot see and use its apps. Agents on another server use that server's computer.",
   "settings.tab.profile.title": "Profile",
   "settings.tab.profile.description": "Manage how you appear in OpenBot.",
   "settings.tab.mobileConnect.title": "Mobile Connect",
@@ -308,7 +309,7 @@ export const messages = defineMessages("settings", {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "My last six months with OpenBot",
-  "settings.profile.activity.title": "Activity",
+  "settings.profile.activity.title": "Activity on this computer",
   "settings.profile.activity.activeDays": {
     one: "{count} active day in the past year",
     other: "{count} active days in the past year",

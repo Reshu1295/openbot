@@ -216,6 +216,15 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.errors":
     "Welche Cloudflare Workers haben in der letzten Stunde Fehler protokolliert?",
   "marketplace.plugin.cloudflare.prompt.dns": "Liste die DNS-Einträge jeder Zone in meinem Cloudflare-Konto auf.",
+  "marketplace.plugin.supabase.tagline": "Datenbanken, Logs und Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Mit Supabase listen Agenten Projekte auf, führen SQL aus, lesen Tabellenschemas und Logs, prüfen die Sicherheits- und Leistungshinweise der Advisors, verwalten Edge Functions und Branches und durchsuchen die Supabase-Dokumentation. Jeder Nutzer meldet sich im Browser bei seinem eigenen Supabase-Konto an und wählt eine Organisation. Agenten erhalten vollen Zugriff: Sie können SQL ausführen, das Daten ändert oder löscht, Migrationen anwenden, Edge Functions bereitstellen und Projekte erstellen oder pausieren.",
+  "marketplace.plugin.supabase.app":
+    "Datenbanken, Logs und Edge Functions über den MCP-Server von Supabase mit Anmeldung im Browser.",
+  "marketplace.plugin.supabase.prompt.projects": "Welche Projekte gibt es in meiner Supabase-Organisation?",
+  "marketplace.plugin.supabase.prompt.tables": "Liste die Tabellen und Spalten meiner Supabase-Datenbank auf.",
+  "marketplace.plugin.supabase.prompt.errors":
+    "Welche Fehler hat mein Supabase-Projekt in der letzten Stunde protokolliert?",
   "marketplace.plugin.context7.tagline": "Aktuelle Bibliotheksdokumentation",
   "marketplace.plugin.context7.description":
     "Context7 ruft aktuelle Dokumentation und API-Referenzen für Bibliotheken und Frameworks ab, damit Antworten die Version verwenden, die das Projekt tatsächlich nutzt. Es braucht kein Konto und keinen Schlüssel.",
@@ -266,6 +275,17 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "Was sagen Rezensenten über diese Framework-Version?",
   "marketplace.plugin.braveSearch.prompt.news": "Finde die heutigen Ankündigungen für diesen Produktbereich.",
   "marketplace.plugin.braveSearch.prompt.compare": "Vergleiche diese beiden Anbieter mit Quellenangaben.",
+  "marketplace.plugin.obsidian.tagline": "Notizen in deinem Vault",
+  "marketplace.plugin.obsidian.description":
+    "Mit Obsidian können Agenten die Notizen in deinem Vault durchsuchen, lesen und schreiben, sodass der Vault ihr Gedächtnis sein kann. Der lokale Server verbindet sich mit dem Plugin Local REST API in der Obsidian-App auf diesem Computer. Der API-Schlüssel des Plugins wird dem lokalen Server als eine Umgebungsvariable übergeben. Lass Obsidian geöffnet, solange Agenten es nutzen.",
+  "marketplace.plugin.obsidian.app":
+    "Notizen suchen, lesen und bearbeiten, über einen lokalen MCP-Server mit dem Schlüssel des Plugins Local REST API.",
+  "marketplace.plugin.obsidian.prompt.recall": "Was steht in meinen Notizen zu den Entscheidungen in diesem Projekt?",
+  "marketplace.plugin.obsidian.prompt.save": "Speichere diese Entscheidung als neue Notiz in meinem Vault.",
+  "marketplace.plugin.obsidian.prompt.log":
+    "Füge eine Zusammenfassung der heutigen Arbeit zu meiner Notiz Arbeitsprotokoll hinzu.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Öffne in Obsidian Settings > Local REST API. Kopiere den API-Schlüssel und aktiviere "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "Transaktions-E-Mails",
   "marketplace.plugin.resend.description":
     "Mit Resend senden Agenten Transaktions-E-Mails und prüfen die Zustellung über eine API. Ein API-Schlüssel aus dem Resend-Dashboard wird dem lokalen Server als eine Umgebungsvariable übergeben.",

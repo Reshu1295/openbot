@@ -199,6 +199,63 @@ const NOTION: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/notion",
 };
 
+const OBSIDIAN: MarketplacePluginDetail = {
+  id: "plugin-obsidian",
+  slug: "obsidian",
+  name: "Obsidian",
+  tagline: "Notes in your vault",
+  description:
+    "Obsidian lets agents search, read and write the notes in your vault, so the vault can be their memory. The local server connects to the Local REST API plugin in the Obsidian app on this computer. The plugin's API key is passed to the local server as one environment variable. Keep Obsidian open while agents use it.",
+  category: "productivity",
+  creatorName: "obsidian.md",
+  iconUrl: "https://obsidian.md/favicon.ico",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-recall", text: "What do my notes say about the decisions on this project?" },
+    { id: "prompt-save", text: "Save this decision as a new note in my vault." },
+    { id: "prompt-log", text: "Add a summary of today's work to my Work log note." },
+  ],
+  apps: [
+    {
+      id: "app-obsidian-mcp",
+      name: "Obsidian",
+      description: "Note search, reading and editing, over a local MCP server with the Local REST API plugin key.",
+      iconUrl: "https://obsidian.md/favicon.ico",
+      server: {
+        name: "obsidian",
+        transport: "stdio",
+        command: "npx",
+        args: ["-y", "obsidian-mcp-server@3.7.2"],
+        auth: [
+          {
+            id: "obsidian-key",
+            kind: "key",
+            label: "API key",
+            fields: [
+              {
+                id: "token",
+                label: "API key",
+                env: "OBSIDIAN_API_KEY",
+                hint: 'In Obsidian, open Settings > Local REST API. Copy the API key and turn on "Enable non-encrypted (HTTP) server".',
+              },
+            ],
+            docsUrl: "https://github.com/coddingtonbear/obsidian-local-rest-api",
+            docsLabel: "Get a key",
+          },
+        ],
+      },
+    },
+  ],
+  websiteUrl: "https://obsidian.md",
+  privacyPolicyUrl: "https://obsidian.md/privacy",
+  termsUrl: "https://obsidian.md/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/obsidian",
+};
+
 const COBRAIN: MarketplacePluginDetail = {
   id: "plugin-cobrain",
   slug: "cobrain",
@@ -488,6 +545,46 @@ const CLOUDFLARE: MarketplacePluginDetail = {
   featured: false,
   updatedAt: "2026-09-30T00:00:00.000Z",
   shareUrl: "https://openbot.run/plugins/cloudflare",
+};
+
+const SUPABASE: MarketplacePluginDetail = {
+  id: "plugin-supabase",
+  slug: "supabase",
+  name: "Supabase",
+  tagline: "Databases, logs and edge functions",
+  description:
+    "Supabase lets agents list projects, run SQL, read table schemas and logs, check security and performance advisors, manage edge functions and branches, and search the Supabase docs. Each user signs in to their own Supabase account through the browser and chooses an organization. Agents get full access: they can run SQL that changes or deletes data, apply migrations, deploy edge functions, and create or pause projects.",
+  category: "coding",
+  creatorName: "supabase.com",
+  iconUrl: "https://supabase.com/favicon/favicon.ico",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-projects", text: "Which projects are in my Supabase organization?" },
+    { id: "prompt-tables", text: "List the tables and columns of my Supabase database." },
+    { id: "prompt-errors", text: "Which errors did my Supabase project log in the last hour?" },
+  ],
+  apps: [
+    {
+      id: "app-supabase-mcp",
+      name: "Supabase",
+      description: "Databases, logs, and edge functions, over Supabase's MCP server with browser sign-in.",
+      iconUrl: "https://supabase.com/favicon/favicon.ico",
+      server: {
+        name: "supabase",
+        transport: "http",
+        url: "https://mcp.supabase.com/mcp",
+        auth: [{ id: "supabase-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://supabase.com",
+  privacyPolicyUrl: "https://supabase.com/privacy",
+  termsUrl: "https://supabase.com/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/supabase",
 };
 
 const CONTEXT7: MarketplacePluginDetail = {
@@ -904,6 +1001,7 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   CANVA,
   LINEAR,
   NOTION,
+  OBSIDIAN,
   COBRAIN,
   FIGMA,
   PAPER,
@@ -911,6 +1009,7 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   SENTRY,
   VERCEL,
   CLOUDFLARE,
+  SUPABASE,
   CONTEXT7,
   STRIPE,
   POSTHOG,

@@ -30,7 +30,7 @@ const FROZEN_PROVIDERS: ReadonlyMap<number, readonly string[]> = (() => {
  * provider.
  */
 export function isPeerHiddenProvider(value: unknown, protocol: number): boolean {
-  // A key-only provider, such as Inception or DeepSeek, runs in the host's Pi CLI with the host's own key.
+  // A key-only provider, such as Inception, DeepSeek or OpenRouter, runs in the host's Pi CLI with the host's own key.
   if (isAgentProvider(value) && isKeyOnlyProvider(value)) return true;
   const known = FROZEN_PROVIDERS.get(Math.max(1, Math.min(protocol, 8)));
   return known !== undefined && isAgentProvider(value) && !known.includes(value);

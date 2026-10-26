@@ -45,12 +45,10 @@ export const messages = {
   "customProvider.error.baseUrlProtocol": "Verwende eine http://- oder https://-URL.",
   "customProvider.error.baseUrlCredential": "Trage die Zugangsdaten in einen Header ein, nicht in die URL.",
   "customProvider.saved.restarted": "Gespeichert. OpenBot lädt die Modelle.",
-  "customProvider.saved.skippedBusy":
-    "Gespeichert. OpenCode liest die Liste, sobald die aktuelle Aufgabe beendet ist. Drücke dann „Verbinden“.",
+  "customProvider.saved.skippedBusy": "Gespeichert. OpenCode liest die Liste, sobald die aktuelle Aufgabe beendet ist.",
   "customProvider.saved.notRunning": "Gespeichert. OpenCode liest die Liste beim nächsten Start.",
   "customProvider.removed.restarted": "Entfernt. OpenBot lädt die Modelle.",
-  "customProvider.removed.skippedBusy":
-    "Entfernt. OpenCode liest die Liste, sobald die aktuelle Aufgabe beendet ist. Drücke dann „Verbinden“.",
+  "customProvider.removed.skippedBusy": "Entfernt. OpenCode liest die Liste, sobald die aktuelle Aufgabe beendet ist.",
   "customProvider.removed.notRunning": "Entfernt. OpenCode liest die Liste beim nächsten Start.",
   "customProvider.saveFailed": "OpenBot konnte diesen Endpunkt nicht speichern.",
   "customProvider.removeFailed": "OpenBot konnte {name} nicht entfernen.",

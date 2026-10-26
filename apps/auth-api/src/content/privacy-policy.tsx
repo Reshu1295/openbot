@@ -741,7 +741,7 @@ export function PrivacyPolicy() {
 
       <h2>Children's Privacy</h2>
       <p>
-        Our Services are not intended for individuals under the age of 18, or any higher minimum age required under
+        Our Services are not intended for individuals under the age of 16, or any higher minimum age required under
         applicable law. We do not knowingly collect or process Customer data from children. If we become aware that
         Customer information has been collected from a child in violation of this Policy, we will take appropriate steps
         to delete such information without undue delay.

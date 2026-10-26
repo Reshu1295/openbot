@@ -202,6 +202,55 @@ export const MOBILE_PLUGINS: readonly MobilePlugin[] = [
     ],
   },
   {
+    slug: "obsidian",
+    name: "Obsidian",
+    tagline: "Notes in your vault",
+    description:
+      "Obsidian lets agents search, read and write the notes in your vault, so the vault can be their memory. The local server connects to the Local REST API plugin in the Obsidian app on this computer. The plugin's API key is passed to the local server as one environment variable. Keep Obsidian open while agents use it.",
+    category: "productivity",
+    creatorName: "obsidian.md",
+    version: "1.0.0",
+    prompts: [
+      { id: "prompt-recall", text: "What do my notes say about the decisions on this project?" },
+      { id: "prompt-save", text: "Save this decision as a new note in my vault." },
+      { id: "prompt-log", text: "Add a summary of today's work to my Work log note." },
+    ],
+    websiteUrl: "https://obsidian.md",
+    privacyPolicyUrl: "https://obsidian.md/privacy",
+    termsUrl: "https://obsidian.md/terms",
+    featured: false,
+    apps: [
+      {
+        id: "app-obsidian-mcp",
+        name: "Obsidian",
+        description: "Note search, reading and editing, over a local MCP server with the Local REST API plugin key.",
+        server: {
+          name: "obsidian",
+          transport: "stdio",
+          command: "npx",
+          args: ["-y", "obsidian-mcp-server@3.7.2"],
+          auth: [
+            {
+              id: "obsidian-key",
+              kind: "key",
+              label: "API key",
+              fields: [
+                {
+                  id: "token",
+                  label: "API key",
+                  env: "OBSIDIAN_API_KEY",
+                  hint: 'In Obsidian, open Settings > Local REST API. Copy the API key and turn on "Enable non-encrypted (HTTP) server".',
+                },
+              ],
+              docsUrl: "https://github.com/coddingtonbear/obsidian-local-rest-api",
+              docsLabel: "Get a key",
+            },
+          ],
+        },
+      },
+    ],
+  },
+  {
     slug: "cobrain",
     name: "Cobrain",
     tagline: "Shared memory for your AI agents",
@@ -436,6 +485,38 @@ export const MOBILE_PLUGINS: readonly MobilePlugin[] = [
           transport: "http",
           url: "https://mcp.cloudflare.com/mcp",
           auth: [{ id: "cloudflare-oauth", kind: "link", label: "Sign in" }],
+        },
+      },
+    ],
+  },
+  {
+    slug: "supabase",
+    name: "Supabase",
+    tagline: "Databases, logs and edge functions",
+    description:
+      "Supabase lets agents list projects, run SQL, read table schemas and logs, check security and performance advisors, manage edge functions and branches, and search the Supabase docs. Each user signs in to their own Supabase account through the browser and chooses an organization. Agents get full access: they can run SQL that changes or deletes data, apply migrations, deploy edge functions, and create or pause projects.",
+    category: "coding",
+    creatorName: "supabase.com",
+    version: "1.0.0",
+    prompts: [
+      { id: "prompt-projects", text: "Which projects are in my Supabase organization?" },
+      { id: "prompt-tables", text: "List the tables and columns of my Supabase database." },
+      { id: "prompt-errors", text: "Which errors did my Supabase project log in the last hour?" },
+    ],
+    websiteUrl: "https://supabase.com",
+    privacyPolicyUrl: "https://supabase.com/privacy",
+    termsUrl: "https://supabase.com/terms",
+    featured: false,
+    apps: [
+      {
+        id: "app-supabase-mcp",
+        name: "Supabase",
+        description: "Databases, logs, and edge functions, over Supabase's MCP server with browser sign-in.",
+        server: {
+          name: "supabase",
+          transport: "http",
+          url: "https://mcp.supabase.com/mcp",
+          auth: [{ id: "supabase-oauth", kind: "link", label: "Sign in" }],
         },
       },
     ],

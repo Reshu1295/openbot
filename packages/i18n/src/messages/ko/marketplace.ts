@@ -190,6 +190,14 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.workers": "내 Cloudflare 계정에 배포된 Workers가 뭐야?",
   "marketplace.plugin.cloudflare.prompt.errors": "지난 한 시간 동안 오류를 기록한 Cloudflare Workers가 뭐야?",
   "marketplace.plugin.cloudflare.prompt.dns": "내 Cloudflare 계정의 각 영역에 있는 DNS 레코드를 나열해 줘.",
+  "marketplace.plugin.supabase.tagline": "데이터베이스, 로그, Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase를 사용하면 에이전트가 프로젝트를 나열하고, SQL을 실행하고, 테이블 스키마와 로그를 읽고, advisors의 보안 및 성능 권고를 확인하고, Edge Functions와 브랜치를 관리하고, Supabase 문서를 검색할 수 있어요. 사용자는 각자 브라우저에서 자신의 Supabase 계정으로 로그인하고 조직을 선택해요. 에이전트는 전체 권한을 받아요. 데이터를 변경하거나 삭제하는 SQL을 실행하고, 마이그레이션을 적용하고, Edge Functions를 배포하고, 프로젝트를 만들거나 일시 중지할 수 있어요.",
+  "marketplace.plugin.supabase.app":
+    "데이터베이스, 로그, Edge Functions를 브라우저 로그인 방식의 Supabase MCP 서버로 제공해요.",
+  "marketplace.plugin.supabase.prompt.projects": "내 Supabase 조직에 있는 프로젝트가 뭐야?",
+  "marketplace.plugin.supabase.prompt.tables": "내 Supabase 데이터베이스의 테이블과 열을 나열해 줘.",
+  "marketplace.plugin.supabase.prompt.errors": "지난 한 시간 동안 내 Supabase 프로젝트가 기록한 오류가 뭐야?",
   "marketplace.plugin.context7.tagline": "최신 라이브러리 문서",
   "marketplace.plugin.context7.description":
     "Context7은 라이브러리와 프레임워크의 최신 문서와 API 레퍼런스를 가져와서, 프로젝트가 실제로 사용하는 버전에 맞는 답변을 제공해요. 계정도 키도 필요 없어요.",
@@ -233,6 +241,15 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "이 프레임워크 버전에 대해 리뷰어들은 뭐라고 해?",
   "marketplace.plugin.braveSearch.prompt.news": "이 제품 분야의 오늘 발표를 찾아 줘.",
   "marketplace.plugin.braveSearch.prompt.compare": "이 두 업체를 출처와 함께 비교해 줘.",
+  "marketplace.plugin.obsidian.tagline": "보관함의 노트",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian을 사용하면 에이전트가 보관함의 노트를 검색하고 읽고 쓸 수 있어서, 보관함을 에이전트의 기억으로 쓸 수 있어요. 로컬 서버는 이 컴퓨터의 Obsidian 앱에 있는 Local REST API 플러그인에 연결돼요. 플러그인의 API 키는 환경 변수 하나로 로컬 서버에 전달돼요. 에이전트가 사용하는 동안 Obsidian을 열어 두세요.",
+  "marketplace.plugin.obsidian.app": "Local REST API 플러그인 키를 쓰는 로컬 MCP 서버로 노트를 검색, 읽기, 편집해요.",
+  "marketplace.plugin.obsidian.prompt.recall": "이 프로젝트의 결정 사항에 대해 내 노트에는 뭐라고 적혀 있어?",
+  "marketplace.plugin.obsidian.prompt.save": "이 결정을 내 보관함에 새 노트로 저장해 줘.",
+  "marketplace.plugin.obsidian.prompt.log": "오늘 한 작업 요약을 내 작업 로그 노트에 추가해 줘.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Obsidian에서 Settings > Local REST API를 여세요. API 키를 복사하고 "Enable non-encrypted (HTTP) server"를 켜세요.',
   "marketplace.plugin.resend.tagline": "트랜잭션 이메일",
   "marketplace.plugin.resend.description":
     "Resend를 사용하면 에이전트가 API 하나로 트랜잭션 이메일을 보내고 전송 상태를 확인할 수 있어요. Resend 대시보드의 API 키는 환경 변수 하나로 로컬 서버에 전달돼요.",

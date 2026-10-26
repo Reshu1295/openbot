@@ -161,6 +161,10 @@ export const messages = {
   "provider.deepseekKey.description":
     "在这台电脑上保存 DeepSeek API 密钥，即可使用 DeepSeek 模型。OpenBot 会在它下载的 Pi CLI 中运行这些模型。",
   "provider.deepseekKey.label": "DeepSeek API 密钥",
+  "provider.openrouterKey.title": "OpenRouter API 密钥",
+  "provider.openrouterKey.description":
+    "在这台电脑上保存 OpenRouter API 密钥，即可使用 OpenRouter 提供的模型。OpenBot 会在它下载的 Pi CLI 中运行这些模型。",
+  "provider.openrouterKey.label": "OpenRouter API 密钥",
 
   // The optional OpenCode Go key dialog.
   "provider.openCodeKey.title": "登录 OpenCode Go",

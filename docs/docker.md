@@ -145,11 +145,14 @@ only to `tmpfs` folders that count toward the memory limit: `/tmp` (8 GiB), `/va
 started 63 on a 64-CPU host that gives the instance 8, and two builds filled 32 GiB. `setup`
 installs LXCFS with `--enable-cfs` (`lxcfs-openbot.conf`) as its last step; when that fails, it
 prints a warning and the rest of the setup stays done. When LXCFS runs, `openbot-instance` adds
-`lxcfs.yaml`: the container then reads its own CPU and memory limits in `/proc/cpuinfo`, `/proc/stat`,
-`/proc/meminfo`, `/proc/swaps` and `/sys/devices/system/cpu/online` (which glibc's
-`sysconf(_SC_NPROCESSORS_ONLN)` and Python's `os.cpu_count()` read). Without LXCFS, an instance still starts (an
-update from the app must not fail), and `ready` prints a warning. OpenBot then limits only the Node
-programs of agents (see [agent processes](hosted-servers.md#memory)).
+`lxcfs.yaml`: the container then reads its own CPU limit in `/proc/cpuinfo`, and its memory limit in
+`/proc/meminfo` and `/proc/swaps`. On cgroup v2, LXCFS 5.0 does not limit the CPU lines of
+`/proc/stat`, which Node's `os.cpus()` counts, so OpenBot limits the Node programs of agents itself
+(see [agent processes](hosted-servers.md#memory)). `nproc`, Python's `os.cpu_count()` and other
+programs that read the CPU affinity or `/sys/devices/system/cpu/online` still see the CPUs of the
+host. That file is not mounted: LXCFS lists CPUs 0 to limit-1 in it, but a process still runs on any
+CPU of the host, and the Gemini CLI then exits with SIGILL. Without LXCFS, an instance still starts
+(an update from the app must not fail), and `ready` prints a warning.
 
 An instance gets the LXCFS files when its container is made again: run `openbot-instance up <name>`
 after `setup`. A restart of LXCFS breaks its files in the containers that run, so `setup` does not

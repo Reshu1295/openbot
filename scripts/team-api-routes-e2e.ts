@@ -1165,14 +1165,14 @@ try {
     const hiddenBy = (protocol: number) =>
       AGENT_PROVIDERS.filter((provider) => isPeerHiddenProvider(provider, protocol));
     const expectedHidden: Record<number, readonly string[]> = {
-      1: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek"],
-      3: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek"],
-      4: ["antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek"],
-      5: ["cursor", "cline", "pi", "muse", "inception", "deepseek"],
-      6: ["pi", "muse", "inception", "deepseek"],
-      7: ["inception", "deepseek"],
-      8: ["inception", "deepseek"],
-      9: ["inception", "deepseek"],
+      1: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      3: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      4: ["antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      5: ["cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      6: ["pi", "muse", "inception", "deepseek", "openrouter"],
+      7: ["inception", "deepseek", "openrouter"],
+      8: ["inception", "deepseek", "openrouter"],
+      9: ["inception", "deepseek", "openrouter"],
     };
     const hiddenRows = Object.entries(expectedHidden).map(([protocol, expected]) => ({
       protocol: Number(protocol),

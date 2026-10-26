@@ -6,6 +6,10 @@ import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const mobileRoot = fileURLToPath(new URL("../apps/mobile", import.meta.url));
+// Without node_modules, Bun resolves expo from its global cache, where @expo/cli is missing.
+if (!existsSync(join(mobileRoot, "../../node_modules/expo"))) {
+  throw new Error("Dependencies are not installed in this worktree. Run `bun install --frozen-lockfile` first.");
+}
 const require = createRequire(join(mobileRoot, "package.json"));
 const expo = require.resolve("expo/bin/cli");
 const launchArgs = process.argv.slice(2);
@@ -43,9 +47,15 @@ if (useRocketSim) {
 }
 
 // Keep the Xcode build in the ignored ios/ directory of this worktree. See mobile-ios-bin/xcodebuild.
-process.env.OPENBOT_XCODE_DERIVED_DATA ??= join(mobileRoot, "ios/build/DerivedData");
+// Do not use ios/build: pod install writes codegen and autolinking output there, and removing the
+// Xcode build must not remove that output.
+process.env.OPENBOT_XCODE_DERIVED_DATA ??= join(mobileRoot, "ios/DerivedData");
 process.env.PATH = [fileURLToPath(new URL("mobile-ios-bin", import.meta.url)), process.env.PATH].join(delimiter);
 
 // run:ios skips prebuild when ios/ exists. Apply config plugins to existing projects too.
-run("node", [expo, "prebuild", "--platform", "ios", "--no-clean", "--no-install"]);
+// run:ios installs pods only when Podfile.lock changes. Install them again when their generated
+// output is missing, because Xcode's fallback codegen does not match the Pods project.
+const podsOutput = join(mobileRoot, "ios/build/generated/autolinking/autolinking.json");
+const installPods = existsSync(join(mobileRoot, "ios/Pods")) && !existsSync(podsOutput);
+run("node", [expo, "prebuild", "--platform", "ios", "--no-clean", ...(installPods ? [] : ["--no-install"])]);
 run("node", [expo, "run:ios", ...args]);

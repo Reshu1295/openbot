@@ -46,12 +46,10 @@ export const messages = {
 
   // The note after a save or a removal. It tells the user when OpenCode reads the new list.
   "customProvider.saved.restarted": "저장했어요. OpenBot이 모델을 불러오는 중이에요.",
-  "customProvider.saved.skippedBusy":
-    "저장했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요. 그때 연결을 눌러 주세요.",
+  "customProvider.saved.skippedBusy": "저장했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요.",
   "customProvider.saved.notRunning": "저장했어요. OpenCode는 다음에 시작할 때 목록을 읽어요.",
   "customProvider.removed.restarted": "제거했어요. OpenBot이 모델을 불러오는 중이에요.",
-  "customProvider.removed.skippedBusy":
-    "제거했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요. 그때 연결을 눌러 주세요.",
+  "customProvider.removed.skippedBusy": "제거했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요.",
   "customProvider.removed.notRunning": "제거했어요. OpenCode는 다음에 시작할 때 목록을 읽어요.",
   "customProvider.saveFailed": "OpenBot이 이 엔드포인트를 저장하지 못했어요.",
   "customProvider.removeFailed": "OpenBot이 {name}을(를) 제거하지 못했어요.",

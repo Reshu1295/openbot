@@ -133,7 +133,7 @@ export const messages = {
     "Mesaj kutusunda dikte. Yerel modeller bu bilgisayarda, ElevenLabs ise bulutta çalışır.",
   "settings.tab.computerUse.title": "Bilgisayar Kullanımı",
   "settings.tab.computerUse.description":
-    "OpenBot'un bu bilgisayardaki uygulamaları görmesine ve bunlarla etkileşime girmesine izin verin.",
+    "Bu bilgisayardaki OpenBot ajanlarının buradaki uygulamaları görmesine ve kullanmasına izin verin. Başka bir sunucudaki ajanlar o sunucunun bilgisayarını kullanır.",
   "settings.tab.profile.title": "Profil",
   "settings.tab.profile.description": "OpenBot'ta nasıl göründüğünüzü yönetin.",
   "settings.tab.mobileConnect.title": "Mobil Bağlantı",
@@ -279,7 +279,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "OpenBot ile son altı ayım",
-  "settings.profile.activity.title": "Etkinlik",
+  "settings.profile.activity.title": "Bu bilgisayardaki etkinlik",
   "settings.profile.activity.activeDays": {
     one: "Son bir yılda {count} etkin gün",
     other: "Son bir yılda {count} etkin gün",

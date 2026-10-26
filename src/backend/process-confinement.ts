@@ -1,4 +1,5 @@
-import { existsSync, realpathSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { closeSync, existsSync, mkdirSync, openSync, realpathSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { sourceText } from "@openbot/i18n/source";
@@ -32,6 +33,12 @@ export interface ProviderStatePaths {
    * depth, that trust a project or approve its MCP servers for the processes that are not confined.
    */
   readonly protectedInProjects?: { readonly folders: readonly string[]; readonly names: readonly string[] };
+  /**
+   * Files outside `writable` that the provider writes in, and that processes that are not confined
+   * open too. Only their contents are writable: a confined agent that replaced one with a link would
+   * send those processes' writes outside.
+   */
+  readonly writableContents?: readonly string[];
 }
 
 export interface SpawnTarget {
@@ -112,7 +119,8 @@ export function antigravityStatePaths(env: NodeJS.ProcessEnv = process.env, home
  * skills, agents, commands and rules, load code or settings in the editor and in every other CLI
  * process, so they stay read-only. So do the trust and MCP approval files of each project in
  * `projects`. The sessions stay in the shared data folder, so a thread continues when the agent
- * changes between Workspace only and Full access.
+ * changes between Workspace only and Full access. On macOS the CLI reads its sign-in from the login
+ * Keychain with `security`, which must write a lock file first: `keychainLockFiles`.
  */
 export function cursorStatePaths(env: NodeJS.ProcessEnv = process.env, home = homedir()): ProviderStatePaths {
   const xdgConfig = env.XDG_CONFIG_HOME?.trim();
@@ -138,6 +146,7 @@ export function cursorStatePaths(env: NodeJS.ProcessEnv = process.env, home = ho
   ];
   return {
     writable: unique([cursorConfinedConfig(home), dataHome, fixedHome, CURSOR_CONFINED_CACHE]),
+    writableContents: keychainLockFiles(),
     protected: unique([userConfig, dataHome, fixedHome].flatMap((root) => settings.map((name) => join(root, name)))),
     protectedInProjects: {
       folders: unique([dataHome, fixedHome].map((root) => join(root, "projects"))),
@@ -147,6 +156,28 @@ export function cursorStatePaths(env: NodeJS.ProcessEnv = process.env, home = ho
 }
 
 const CURSOR_CONFINED_CACHE = join(tmpdir(), "openbot-confined-cursor-cache");
+
+let keychainLockFile: string | undefined;
+
+/**
+ * `security` takes `mds/mds.lock` in the user's cache folder (`DARWIN_USER_CACHE_DIR`, not
+ * `TMPDIR`) before it reads the login Keychain. When the sandbox denies that write, the read fails,
+ * and Cursor 2026.10.22 answers each session with "Authentication required" although it is signed
+ * in. Only the contents of the lock file are writable: the module directory beside it lists the
+ * security modules that the user's other processes load. The confined process cannot create the
+ * file, so OpenBot makes it when it is missing, as `security` would.
+ */
+function keychainLockFiles(): string[] {
+  if (process.platform !== "darwin") return [];
+  keychainLockFile ??= join(
+    execFileSync("/usr/bin/getconf", ["DARWIN_USER_CACHE_DIR"], { encoding: "utf8" }).trim(),
+    "mds",
+    "mds.lock",
+  );
+  mkdirSync(dirname(keychainLockFile), { recursive: true, mode: 0o700 });
+  closeSync(openSync(keychainLockFile, "a"));
+  return [keychainLockFile];
+}
 
 /** The config folder of every confined Cursor process. Only confined processes read it. */
 function cursorConfinedConfig(home: string): string {
@@ -278,7 +309,7 @@ export function confineSpawnTarget(
       command: SANDBOX_EXEC,
       args: [
         "-p",
-        seatbeltProfile(writable, protectedPaths, state.protectedInProjects),
+        seatbeltProfile(writable, protectedPaths, state.protectedInProjects, state.writableContents ?? []),
         target.command,
         ...target.args,
       ],
@@ -296,15 +327,18 @@ function unavailable(tool: string): string {
 
 /**
  * Writes are denied, then allowed in the writable folders, then denied again in the protected paths:
- * in a Seatbelt profile the last rule that matches wins. Everything else stays open, as the Access
- * setting says: reads, the network and process starts.
+ * in a Seatbelt profile the last rule that matches wins. `file-write-data` allows writes in an
+ * existing file, not its removal, a rename or a link in its place. Everything else stays open, as
+ * the Access setting says: reads, the network and process starts.
  */
 function seatbeltProfile(
   writable: readonly string[],
   protectedPaths: readonly string[],
   inProjects: ProviderStatePaths["protectedInProjects"],
+  contents: readonly string[],
 ): string {
   const allowed = unique(writable.flatMap(realPaths)).map((path) => `(subpath ${sbplString(path)})`);
+  const files = unique(contents.flatMap(realPaths)).map((path) => `(literal ${sbplString(path)})`);
   const names = inProjects?.names.map(regexText).join("|");
   const denied = [
     ...unique(protectedPaths.flatMap(realPaths)).map(
@@ -321,6 +355,7 @@ function seatbeltProfile(
     "(allow default)",
     "(deny file-write*)",
     `(allow file-write* ${allowed.join(" ")})`,
+    ...(files.length > 0 ? [`(allow file-write-data ${files.join(" ")})`] : []),
     '(allow file-write* (literal "/dev/null") (literal "/dev/zero") (literal "/dev/tty") (literal "/dev/ptmx") (literal "/dev/dtracehelper") (regex #"^/dev/ttys[0-9]+$") (regex #"^/dev/fd/"))',
     ...(denied.length > 0 ? [`(deny file-write* ${denied.join(" ")})`] : []),
     "",

@@ -197,6 +197,13 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.workers": "我的 Cloudflare 账号中部署了哪些 Workers？",
   "marketplace.plugin.cloudflare.prompt.errors": "过去一小时哪些 Cloudflare Workers 记录了错误？",
   "marketplace.plugin.cloudflare.prompt.dns": "列出我的 Cloudflare 账号中每个区域的 DNS 记录。",
+  "marketplace.plugin.supabase.tagline": "数据库、日志与 Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase 让助手列出项目、运行 SQL、读取表结构和日志、查看 advisors 的安全与性能建议、管理 Edge Functions 和分支，并搜索 Supabase 文档。每位用户通过浏览器登录自己的 Supabase 账号并选择一个组织。助手拥有完全访问权限：可以运行修改或删除数据的 SQL、应用迁移、部署 Edge Functions，以及创建或暂停项目。",
+  "marketplace.plugin.supabase.app": "通过 Supabase 的 MCP 服务器和浏览器登录，提供数据库、日志与 Edge Functions。",
+  "marketplace.plugin.supabase.prompt.projects": "我的 Supabase 组织中有哪些项目？",
+  "marketplace.plugin.supabase.prompt.tables": "列出我的 Supabase 数据库中的表和列。",
+  "marketplace.plugin.supabase.prompt.errors": "我的 Supabase 项目在过去一小时记录了哪些错误？",
   "marketplace.plugin.context7.tagline": "最新的库文档",
   "marketplace.plugin.context7.description":
     "Context7 获取库与框架的最新文档和 API 参考，让回答基于项目实际运行的版本。无需账号，也无需密钥。",
@@ -239,6 +246,15 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "评测者对这个框架版本有什么评价？",
   "marketplace.plugin.braveSearch.prompt.news": "找找今天这个产品领域的公告。",
   "marketplace.plugin.braveSearch.prompt.compare": "对比这两家供应商，并附上来源。",
+  "marketplace.plugin.obsidian.tagline": "你仓库中的笔记",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian 让助手搜索、阅读和写入你仓库中的笔记，让仓库成为它们的记忆。本地服务器连接这台电脑上 Obsidian 应用中的 Local REST API 插件。插件的 API 密钥作为一个环境变量传给本地服务器。助手使用期间请保持 Obsidian 打开。",
+  "marketplace.plugin.obsidian.app": "通过使用 Local REST API 插件密钥的本地 MCP 服务器，搜索、阅读和编辑笔记。",
+  "marketplace.plugin.obsidian.prompt.recall": "我的笔记里关于这个项目的决定是怎么写的？",
+  "marketplace.plugin.obsidian.prompt.save": "把这个决定作为新笔记保存到我的仓库。",
+  "marketplace.plugin.obsidian.prompt.log": "把今天工作的总结添加到我的“工作日志”笔记中。",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    '在 Obsidian 中打开 Settings > Local REST API。复制 API 密钥并开启 "Enable non-encrypted (HTTP) server"。',
   "marketplace.plugin.resend.tagline": "事务性邮件",
   "marketplace.plugin.resend.description":
     "Resend 让助手通过一个 API 发送事务性邮件并检查投递情况。把 Resend 控制台中的 API 密钥作为一个环境变量传给本地服务器即可。",

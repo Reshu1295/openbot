@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require("expo/metro-config");
+const fs = require("node:fs");
 const path = require("node:path");
 const { withUniwindConfig } = require("uniwind/metro");
 
@@ -10,6 +11,8 @@ process.env.EXPO_METRO_CACHE_OUTPUT_DIR ??= path.join(__dirname, ".expo/metro-ca
 
 const config = getDefaultConfig(__dirname);
 config.fileMapCacheDirectory = path.join(__dirname, ".expo/metro-file-map");
+// Metro writes the file map cache but does not create its directory.
+fs.mkdirSync(config.fileMapCacheDirectory, { recursive: true });
 // Metro keys a cached file by its project-relative path and contents. The `use dom` transform
 // embeds the absolute path, so a sibling worktree's cached output would point DOM components at
 // files outside this project.

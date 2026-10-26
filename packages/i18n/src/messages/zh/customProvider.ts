@@ -43,10 +43,10 @@ export const messages = {
 
   // The note after a save or a removal. It tells the user when OpenCode reads the new list.
   "customProvider.saved.restarted": "已保存，OpenBot 正在加载模型。",
-  "customProvider.saved.skippedBusy": "已保存。当前任务结束后 OpenCode 会读取该列表，届时请点“连接”。",
+  "customProvider.saved.skippedBusy": "已保存。当前任务结束后 OpenCode 会读取该列表。",
   "customProvider.saved.notRunning": "已保存。OpenCode 下次启动时会读取该列表。",
   "customProvider.removed.restarted": "已移除，OpenBot 正在加载模型。",
-  "customProvider.removed.skippedBusy": "已移除。当前任务结束后 OpenCode 会读取该列表，届时请点“连接”。",
+  "customProvider.removed.skippedBusy": "已移除。当前任务结束后 OpenCode 会读取该列表。",
   "customProvider.removed.notRunning": "已移除。OpenCode 下次启动时会读取该列表。",
   "customProvider.saveFailed": "OpenBot 无法保存该端点。",
   "customProvider.removeFailed": "OpenBot 无法移除 {name}。",

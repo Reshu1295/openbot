@@ -216,6 +216,15 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.errors":
     "Quels Workers Cloudflare ont enregistré des erreurs au cours de la dernière heure ?",
   "marketplace.plugin.cloudflare.prompt.dns": "Listez les enregistrements DNS de chaque zone de mon compte Cloudflare.",
+  "marketplace.plugin.supabase.tagline": "Bases de données, journaux et edge functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase permet aux agents de lister les projets, d’exécuter du SQL, de lire les schémas des tables et les journaux, de consulter les recommandations de sécurité et de performance des advisors, de gérer les edge functions et les branches, et de chercher dans la documentation Supabase. Chaque utilisateur se connecte à son propre compte Supabase dans le navigateur et choisit une organisation. Les agents ont un accès complet : ils peuvent exécuter du SQL qui modifie ou supprime des données, appliquer des migrations, déployer des edge functions et créer ou mettre en pause des projets.",
+  "marketplace.plugin.supabase.app":
+    "Bases de données, journaux et edge functions, via le serveur MCP de Supabase avec connexion dans le navigateur.",
+  "marketplace.plugin.supabase.prompt.projects": "Quels projets se trouvent dans mon organisation Supabase ?",
+  "marketplace.plugin.supabase.prompt.tables": "Listez les tables et les colonnes de ma base de données Supabase.",
+  "marketplace.plugin.supabase.prompt.errors":
+    "Quelles erreurs mon projet Supabase a-t-il enregistrées au cours de la dernière heure ?",
   "marketplace.plugin.context7.tagline": "Documentation à jour des bibliothèques",
   "marketplace.plugin.context7.description":
     "Context7 récupère la documentation et les références d’API à jour des bibliothèques et des frameworks, pour que les réponses utilisent la version que le projet exécute réellement. Il ne demande ni compte ni clé.",
@@ -266,6 +275,16 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "Que disent les critiques de cette version du framework ?",
   "marketplace.plugin.braveSearch.prompt.news": "Trouvez les annonces du jour pour ce domaine de produit.",
   "marketplace.plugin.braveSearch.prompt.compare": "Comparez ces deux fournisseurs en citant les sources.",
+  "marketplace.plugin.obsidian.tagline": "Les notes de votre coffre",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian permet aux agents de rechercher, lire et écrire les notes de votre coffre, qui peut ainsi servir de mémoire. Le serveur local se connecte au plugin Local REST API de l'application Obsidian sur cet ordinateur. La clé API du plugin est transmise au serveur local dans une variable d'environnement. Gardez Obsidian ouvert pendant que les agents l'utilisent.",
+  "marketplace.plugin.obsidian.app":
+    "Recherche, lecture et modification de notes, via un serveur MCP local avec la clé du plugin Local REST API.",
+  "marketplace.plugin.obsidian.prompt.recall": "Que disent mes notes sur les décisions de ce projet ?",
+  "marketplace.plugin.obsidian.prompt.save": "Enregistrez cette décision dans une nouvelle note de mon coffre.",
+  "marketplace.plugin.obsidian.prompt.log": "Ajoutez un résumé du travail d'aujourd'hui à ma note Journal de travail.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Dans Obsidian, ouvrez Settings > Local REST API. Copiez la clé API et activez "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "E-mails transactionnels",
   "marketplace.plugin.resend.description":
     "Resend permet aux agents d’envoyer des e-mails transactionnels et de vérifier leur livraison via une seule API. Une clé API du tableau de bord Resend est transmise au serveur local dans une variable d’environnement.",

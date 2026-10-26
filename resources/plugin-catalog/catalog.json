@@ -27,6 +27,12 @@
       "detailSha256": "8b66d2a108340a79e398bedc19efc7dad2914b0addf17c76ee9fc50b72b09c1b"
     },
     {
+      "slug": "obsidian",
+      "version": "1.0.0",
+      "featured": false,
+      "detailSha256": "3280f8897ea3d3767a01854bd903309d82ac1cfd7e3165ae9b3cc043c38c2a13"
+    },
+    {
       "slug": "cobrain",
       "version": "1.0.0",
       "featured": false,
@@ -67,6 +73,12 @@
       "version": "1.0.0",
       "featured": false,
       "detailSha256": "9360bcbc4784bb85ffb53474c0e6213ba0cb38c2a99884a718cff70769043b63"
+    },
+    {
+      "slug": "supabase",
+      "version": "1.0.0",
+      "featured": false,
+      "detailSha256": "21f1fecbcc8f302097e05319492ae5fd5bb0ae72a1b0f4a4b8a1dc334bccb30c"
     },
     {
       "slug": "context7",

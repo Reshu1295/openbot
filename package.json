@@ -2,7 +2,7 @@
   "name": "openbot",
   "productName": "OpenBot",
   "desktopName": "openbot.desktop",
-  "version": "0.50.0",
+  "version": "0.51.1",
   "description": "A local-first multi-agent desktop workspace for Codex, Claude, and Grok.",
   "author": {
     "name": "Norbert Bodziony",
@@ -249,6 +249,7 @@
     "test:agent-channel-manage": "bun scripts/agent-channel-manage-e2e.ts",
     "test:agent-profile-accounts": "bun scripts/agent-profile-accounts-e2e.ts",
     "test:claude-usage-resume": "bun scripts/claude-usage-resume-e2e.ts",
+    "test:provider-session-reuse": "bun scripts/provider-session-reuse-e2e.ts",
     "test:claude-cache": "bun scripts/claude-cache-e2e.ts",
     "test:backup-model-failover": "bun scripts/backup-model-failover-e2e.ts",
     "test:zip-attachments": "bun scripts/zip-attachment-e2e.ts",

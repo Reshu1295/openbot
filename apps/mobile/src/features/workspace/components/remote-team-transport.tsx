@@ -107,6 +107,13 @@ export const RemoteTeamTransport = memo(
       const teamCommands = bridge.current?.teamCommands;
       if (typeof teamCommands === "function" && commands.length > 0) teamCommands(commands);
     }, []);
+    // Runs before the effect of the parent `ServerConnection` that starts the connect at a return, so
+    // the page is active before the command arrives. The prop alone arrives after it.
+    const sendActive = useCallback((active: boolean) => {
+      const setActive = bridge.current?.setActive;
+      if (typeof setActive === "function") setActive(active);
+    }, []);
+    useEffect(() => sendActive(props.active), [props.active, sendActive]);
     const mailboxRef = useRef<ReturnType<typeof createRemoteCommandMailbox> | null>(null);
     if (!mailboxRef.current) mailboxRef.current = createRemoteCommandMailbox((command) => deliverCommands([command]));
     const mailbox = mailboxRef.current;
@@ -225,7 +232,11 @@ export const RemoteTeamTransport = memo(
     );
 
     // A page that loads again, such as after Android ends its renderer, has none of the commands.
-    const handleReady = useCallback(async () => deliverCommands(mailbox.outstanding()), [deliverCommands, mailbox]);
+    // The page takes later states from the handle only, so it gets the current one before its commands.
+    const handleReady = useCallback(async () => {
+      sendActive(latest.current.props.active);
+      deliverCommands(mailbox.outstanding());
+    }, [sendActive, deliverCommands, mailbox]);
     const handleCommandResult = useCallback(
       async (result: RemoteTeamCommandResult) => {
         mailbox.receive(result);

@@ -1,5 +1,66 @@
 [
   {
+    "version": "0.51.1",
+    "date": "2026-10-26",
+    "notices": [],
+    "groups": [
+      {
+        "type": "fixed",
+        "items": [
+          "DeepSeek, Inception and OpenRouter now download the Pi CLI when you save their API key.",
+          "On Linux, closing the OpenBot AppImage no longer shows a crash report.",
+          "On a Docker server with LXCFS, Gemini starts again.",
+          "On a server, programs that Claude agents start now use the server's CPU limit.",
+          "Agents on a shared server no longer tell you to open the chat on another device."
+        ]
+      }
+    ]
+  },
+  {
+    "version": "0.51.0",
+    "date": "2026-10-26",
+    "notices": [],
+    "groups": [
+      {
+        "type": "added",
+        "items": [
+          "Add OpenRouter as a provider with an OpenRouter API key, and choose one of the models that it serves for an agent.",
+          "Add DeepSeek as a provider with a DeepSeek API key, and choose DeepSeek V4 Pro or DeepSeek V4.1 Flash for an agent.",
+          "On a Mac, connect Apple apps from the Apps catalog. Agents can then use Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari.",
+          "Connect Supabase from the Apps catalog. Agents can run SQL, read schemas and logs, and manage your projects.",
+          "Agents use the skills in your ~/.agents/skills folder with every provider. Type $ in the message box to tag a skill.",
+          "Paste an image into the message box at the cursor. It shows as a small preview with its name and size.",
+          "Zoom into an image in the image viewer of a chat with a pinch, Ctrl or Command and scroll, or the zoom buttons.",
+          "Pin pages to the page rail from the new More button under the rail pages.",
+          "Choose the browser that opens external links in Settings → General → \"Open external links in\".",
+          "Choose the reasoning level of a new agent in the create-an-agent form.",
+          "Change the provider or account of an agent while it works. The change starts after the running turn."
+        ]
+      },
+      {
+        "type": "changed",
+        "items": [
+          "Claude agents use Claude Code's own prompt cache time again. To keep the cache for 1 hour, choose \"1 hour\" on the Claude page in Server settings → Providers.",
+          "When OpenBot updates, it also updates the provider CLIs that it installed. A notice shows only when an update fails."
+        ]
+      },
+      {
+        "type": "fixed",
+        "items": [
+          "OpenBot starts the Codex app server again when it stops answering. Before, every agent turn and routine run failed.",
+          "On Windows, Claude starts when the Claude Code CLI comes from npm.",
+          "The Linux AppImage starts on Arch Linux, Omarchy and other systems with no libfuse2.",
+          "On macOS 26 with the Dark icon style, the app icon shows its eyes again.",
+          "Usage shows the cost of OpenCode turns, including OpenCode Go.",
+          "A channel that waits for your answer or approval moves to \"Needs you\" in the sidebar.",
+          "Agent builds on a server no longer take all of its CPU and memory and drop your connection.",
+          "Plugins that start with npx, such as Firecrawl, connect on their first start.",
+          "Agents use fewer tokens in channels, and Claude and Codex agents keep their conversations after a change to MCP servers or skills."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.50.0",
     "date": "2026-10-25",
     "notices": ["Sign in to Google MCP servers, such as Gmail, Calendar or Drive, again after you upgrade."],

@@ -153,6 +153,18 @@ const PLUGIN_TEXT = {
       "prompt-dns": "marketplace.plugin.cloudflare.prompt.dns",
     },
   },
+  supabase: {
+    tagline: "marketplace.plugin.supabase.tagline",
+    description: "marketplace.plugin.supabase.description",
+    apps: {
+      "app-supabase-mcp": "marketplace.plugin.supabase.app",
+    },
+    prompts: {
+      "prompt-projects": "marketplace.plugin.supabase.prompt.projects",
+      "prompt-tables": "marketplace.plugin.supabase.prompt.tables",
+      "prompt-errors": "marketplace.plugin.supabase.prompt.errors",
+    },
+  },
   context7: {
     tagline: "marketplace.plugin.context7.tagline",
     description: "marketplace.plugin.context7.description",
@@ -225,6 +237,18 @@ const PLUGIN_TEXT = {
       "prompt-compare": "marketplace.plugin.braveSearch.prompt.compare",
     },
   },
+  obsidian: {
+    tagline: "marketplace.plugin.obsidian.tagline",
+    description: "marketplace.plugin.obsidian.description",
+    apps: {
+      "app-obsidian-mcp": "marketplace.plugin.obsidian.app",
+    },
+    prompts: {
+      "prompt-recall": "marketplace.plugin.obsidian.prompt.recall",
+      "prompt-save": "marketplace.plugin.obsidian.prompt.save",
+      "prompt-log": "marketplace.plugin.obsidian.prompt.log",
+    },
+  },
   resend: {
     tagline: "marketplace.plugin.resend.tagline",
     description: "marketplace.plugin.resend.description",
@@ -263,6 +287,8 @@ const AUTH_TEXT: Readonly<Record<string, AppTextKey>> = {
   "Create a key": "marketplace.auth.createKey",
   "The URL of an MCP server in your Composio account": "marketplace.plugin.composio.hint.url",
   "Find it in your Composio account, in Settings > Sessions & API Key.": "marketplace.plugin.composio.hint.apiKey",
+  'In Obsidian, open Settings > Local REST API. Copy the API key and turn on "Enable non-encrypted (HTTP) server".':
+    "marketplace.plugin.obsidian.hint.apiKey",
 };
 
 const english = translateFor("en");

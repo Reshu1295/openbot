@@ -51,6 +51,31 @@ Troubleshooting:
 - A long session calls tools that do not exist: start a new thread. Paper
   gives this advice in <https://paper.design/docs/mcp>.
 
+## Obsidian
+
+The listing runs `npx -y obsidian-mcp-server@3.7.2`
+(<https://github.com/cyanheads/obsidian-mcp-server>). A third party publishes
+this package and it gets write access to the vault, so the listing names one
+version. Move it only in a reviewed commit, after you check that the release
+keeps `OBSIDIAN_API_KEY` and the `http://127.0.0.1:27123` default. The server talks to the
+Local REST API community plugin in the Obsidian app
+(<https://github.com/coddingtonbear/obsidian-local-rest-api>). The user types the
+plugin's API key in the connect dialog, and OpenBot gives it to the server as
+`OBSIDIAN_API_KEY`.
+
+The server uses `http://127.0.0.1:27123` by default. A listing cannot set other
+environment values, so the user turns on the plugin's HTTP server:
+
+1. In Obsidian, install and enable the Local REST API plugin (version 4 or later).
+2. Open Settings > Local REST API. Copy the API key.
+3. Turn on "Enable non-encrypted (HTTP) server". Keep the port at 27123.
+4. Keep Obsidian open while agents use the vault.
+
+Troubleshooting:
+
+- The connection is refused: Obsidian is closed, or the HTTP server is off.
+- The server replies 401: the API key is wrong. Copy it again from the plugin settings.
+
 ## Apple apps
 
 The listing starts the community server `mcp-icloud`

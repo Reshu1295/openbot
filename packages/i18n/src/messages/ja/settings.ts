@@ -130,7 +130,8 @@ export const messages = {
   "settings.tab.voice.description":
     "メッセージ欄での音声入力です。ローカルモデルはこのコンピューター上で、ElevenLabs はクラウドで動作します。",
   "settings.tab.computerUse.title": "Computer Use",
-  "settings.tab.computerUse.description": "このコンピューターのアプリを OpenBot が見て操作できるようにします。",
+  "settings.tab.computerUse.description":
+    "このコンピューターの OpenBot のエージェントが、このコンピューターのアプリを見て操作できるようにします。別のサーバーのエージェントは、そのサーバーのコンピューターを使います。",
   "settings.tab.profile.title": "プロフィール",
   "settings.tab.profile.description": "OpenBot での自分の表示を設定します。",
   "settings.tab.mobileConnect.title": "Mobile Connect",
@@ -277,7 +278,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "OpenBot と過ごした直近 6 か月",
-  "settings.profile.activity.title": "アクティビティ",
+  "settings.profile.activity.title": "このコンピューターでのアクティビティ",
   "settings.profile.activity.activeDays": {
     other: "過去 1 年間のアクティブな日: {count} 日",
   },

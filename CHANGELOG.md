@@ -6,6 +6,159 @@ All notable changes to OpenBot will be documented here. The project follows
 
 ## [Unreleased]
 
+## [0.51.1] - 2026-10-26
+
+### Fixed
+
+- On Linux, closing the OpenBot AppImage no longer shows a crash report for `chrome_crashpad_handler`. Before, its crash helper stopped with `SIGBUS` after each quit.
+- An agent on a shared server no longer tells you to open the chat on another device to use that device. The agent now says that it works only on the computer that runs the server. Settings › Computer Use also says that agents on another server use that server's computer.
+- On a Docker server of `docker/instances` with LXCFS, Gemini works again. Before, it stopped with
+  SIGILL when it started, because the container listed only the CPUs of its limit as online.
+- On a server, Node programs that Claude agents start now also see the server's CPU limit. Before,
+  only Codex and the ACP agents got it, and a build of a Claude agent started a worker for each CPU of
+  the host.
+- DeepSeek, Inception and OpenRouter now download the Pi CLI when you save their API key. Before, the
+  key was saved but the provider showed "The pi CLI is not installed" until you downloaded Pi from
+  its own row in Settings.
+
+## [0.51.0] - 2026-10-26
+
+### Added
+
+- Choose the reasoning level of a new agent in the create-an-agent form. The model picker shows the
+  level next to the model, as it does in the agent settings. The web app has the same choice.
+- Settings › General › "Open external links in" now lists each browser on your Mac, and "Other app…"
+  lets you choose an app that is not in the list. On Linux and Windows, "Command…" takes a program
+  path or command. Links in chats, sign-in pages, billing pages and connector pages open there. When
+  that browser does not start, the page opens in the default browser and OpenBot shows a short
+  notice.
+- Pin pages to the page rail. The new More button under the rail pages lists Routines, Workflows,
+  Tasks, Schedule and Usage. Click a page to open it, or click the pin at the end of its row to show
+  it in the rail or take it off. Routines, Tasks and Schedule start in the More menu. The choice is
+  saved on this computer, and on the web app in this browser.
+- You can change the provider, account or custom agent while a turn or a task runs on this computer. The running work keeps its sessions. The new provider starts before the next turn after the running turn and its tasks end. The header shows the same "After this turn" badge that a model change already uses. On a remote server, a provider change still waits until the work ends.
+- Add DeepSeek as a provider. Connect it with a DeepSeek API key, then choose DeepSeek V4 Pro or
+  DeepSeek V4.1 Flash for an agent. The agents run in the Pi CLI that OpenBot downloads, and the key
+  stays encrypted on this computer.
+- A pasted image goes into the message box at the cursor, as a reference with a small preview, its
+  name and its size. Thanks to @sebapaszynski.
+- When you copy or cut a draft that has attachments and paste it into another agent's message box, the
+  files come with the text as new copies. The Copy action on a message also keeps its attachments.
+  Other apps get the text with the file names. The clipboard holds no file paths and no file bytes.
+- The website has a Brand page at `/brand`. It has the OpenBot logo in each shape and color, with
+  and without the name, as SVG and PNG files. "Download all" saves all of them in one zip file.
+- Right-click the OpenBot logo in the website header to copy the logo as SVG, download the brand
+  files, or open the Brand page.
+- Agents use the skills in your `~/.agents/skills` folder with every provider. Claude gets them as `agents:<name>`, and a skill that Claude already reads from `~/.claude/skills` is not added again. Antigravity, Muse and custom ACP agents get a list of these skills in their instructions and read a skill's `SKILL.md` when a task needs it. The other providers already read the folder.
+- Type `$` in the message field to tag a skill from `~/.agents/skills`. The agent gets the path of the skill's `SKILL.md`, so every provider can open it.
+- You can now zoom into an image in the image viewer of a chat. Pinch, or hold Ctrl or Command and scroll, to zoom around the pointer; double-click to zoom in or back to the whole image; drag or scroll to move a zoomed image. The viewer also has zoom out, zoom in and fit buttons, and the `+`, `-` and `0` keys. Before, you had to download a large image to see its detail.
+- Add Apple apps to the Apps catalog. On a Mac, agents can use Mail, Calendar, Contacts, Reminders, Notes, Messages
+  and Safari through the community server mcp-icloud. It needs no account or key; macOS asks for Automation access the
+  first time an agent uses each app.
+- Add OpenRouter as a provider. Connect it with an OpenRouter API key, then choose one of the
+  models that OpenRouter serves for an agent. The model picker groups the models by lab and marks
+  the free models. The agents run in the Pi CLI that OpenBot downloads, and the key stays encrypted
+  on this computer.
+- Add Supabase to the Apps catalog. After you sign in to Supabase in the browser, agents can list projects, run SQL,
+  read table schemas and logs, check advisors, manage edge functions and branches, and search the Supabase docs.
+  Agents get full access, so they can also change data, apply migrations and create or pause projects.
+
+### Changed
+
+- Claude agents use Claude Code's own prompt cache time again by default: 5 minutes with an Anthropic
+  API key, and 1 hour for the main chat of a Claude plan within its usage limits. In 0.50.0, OpenBot
+  asked for 1 hour for all agents, and a 1-hour cache write costs more. The "Prompt cache" setting on
+  the Claude page in Server settings › Providers now has "Claude Code default" and "1 hour". If you
+  chose "1 hour", it stays.
+- The website FAQ answer to "Is OpenBot open source?" now uses simpler words. It says that all of the source code is public, links to it on GitHub, and says that it is free for noncommercial use. The launch news post now calls OpenBot source-available, not open-source.
+- The website header has a Resources menu with Download, Changelog, Community, Documentation, Brand
+  and Status. Changelog and the Community button moved into it.
+- When OpenBot updates to a new version, it also updates the provider CLIs that it installed, such
+  as Claude, OpenCode and Grok, with no update notification. A notification shows only when an
+  update fails, with a Retry. A CLI that you installed yourself is not changed.
+
+### Fixed
+
+- A server with a saved Anthropic API key no longer starts a Claude sign-in on the API key account, or
+  removes that account, when an older OpenBot version asks for it. That version shows the key as a
+  signed-out account. Now it gets a message that tells you to change the key in Server settings ›
+  Providers.
+- Open and create agent routines in the web app. Before, Create routine and a routine in Schedule
+  showed the "This page could not load" error page.
+- Show why an OpenCode agent does not answer when the free models reach their usage limit. Before,
+  each message failed with no error, and only the agent's face changed.
+- Pi agents no longer stop with "Pi returned an invalid RPC record." when a tool call has a value
+  such as `true` that is also the value of an MCP server setting or of the GitHub connection. Before,
+  OpenBot stopped Pi and started it again, and the turn failed.
+- The Cursor usage ring no longer shows an "Other models" window for a Cursor plan that includes no other models, such as an X subscription. It shows the plan's total usage only. Before, it showed an "Other models" window that the plan does not have.
+- Escape in the model picker of the create-an-agent form now closes only the picker. Before, it also
+  closed the form and the draft was lost.
+- In the web app, browser Back and Forward, including the side buttons of a mouse, now open the chats
+  that you opened before, also on another server. Before, Back left the app and opened the page that
+  you came from.
+- On macOS 26 with the Dark icon style, the OpenBot app icon is a black tile with white eyes. Before,
+  macOS made a black tile with black eyes, and the eyes were almost invisible. The Light style still
+  shows the lavender icon.
+- The "Open external links in" setting had no effect, and it went back to "Default browser" after a
+  restart. Now OpenBot keeps it, and "OpenBot" opens links in chats in the built-in browser.
+- The Linux AppImage starts on Arch Linux, Omarchy and other systems with no libfuse2. It mounts
+  itself with `fusermount3` from the `fuse3` package. Before, it stopped with an error about
+  `libfuse.so.2`.
+- In a wide window, the agent's working row and its pending questions, approvals and other cards now show in the centered chat column. Before, they showed at the left edge of the pane until the turn finished. (#3146)
+- Give MCP server tools to Codex agents on GPT-6 and other code-mode models after an update to Codex
+  0.164. Before, a chat that started before OpenBot 0.50.0 had no MCP tools. Each Codex agent starts
+  one new Codex session to get the tools.
+- On Windows, OpenBot now tries again when another program, such as antivirus, has a settings file
+  open while OpenBot saves it. Before, a save at sign-in could fail, and then Slack, Discord and
+  Telegram connections failed with "Sign in, give this computer a name, and try again."
+- On Windows, Claude starts when the Claude Code CLI comes from npm (`claude.cmd`). Before, every Claude session, model list and usage read failed with "spawn EINVAL", and sign-in and sign-out through such a CLI failed too. Stopping a session now also stops the Claude process that the `.cmd` file started.
+- Keep the web client connected while a server sends many events. Before, it disconnected and connected again every few seconds during a turn.
+- OpenBot no longer shows "OpenBot database is not initialized." when you quit it. The windows now
+  hide when the quit starts, and the database waits a short time for a slow agent stop before it
+  closes.
+- A sleeping cloud server keeps its data when the hosting provider refuses its keep-alive start or
+  its start for a routine run. Before, a refusal such as a billing error left the server in an error
+  state, no automatic start tried again, and the provider deleted the server's disk 14 days after its
+  last stop.
+- Continue unfinished agent work after a provider reaches its usage limit and switches to a backup.
+  Keep completed work, tool results and attachments with the request, including across backup models.
+- Deleting an agent that runs on its own provider process, such as an agent with "Workspace only" access or a second provider account, now stops that process first. Before, on Windows the delete could fail and the agent came back until you restarted OpenBot.
+- When a delete fails after the agent is already gone, the agent no longer comes back in the list until a restart.
+- In a channel, an agent that posts its task result no longer shows a second short reply, such as "Yes.", under it. Before, the text that the agent wrote after the result showed as a separate message. Now it shows in the steps of the turn.
+- The agent's browser `evaluate` tool no longer times out on pages with an ad frame that does not run its timers, such as Amazon product pages.
+- On a server, agent builds no longer take all the CPU and memory and drop your connection. Before,
+  a build such as `next build` started one worker for each CPU of the host, not of the server's
+  limit, the server stopped answering, and the apps reconnected every few minutes. Agent processes
+  now run at a lower CPU priority, and Node programs of agents see the server's CPU limit.
+- When a server is almost out of memory, OpenBot now stops leftover agent processes first, such as
+  preview servers and build workers that stayed after their job ended. Before, they kept their memory
+  until the kernel stopped a process or the server restarted.
+- Routine wake-up commands now run also when the long command fails, so an agent learns that its job
+  stopped.
+- OpenBot now starts the Codex app server again when it stops answering. Before, a hung Codex process stayed in use, and every agent turn and routine run failed until you stopped codex.exe yourself.
+- When Codex does not answer, a message now fails with that reason. Before, it failed with "OpenBot could not register MCP servers in the Codex configuration", although `config.toml` was correct.
+- Usage now shows the token cost of OpenCode turns, including OpenCode Go. Before, the OpenCode cost was always "Unavailable". The cost is the session cost that OpenCode reports, at API-equivalent rates, not the subscription charge. When earlier turns of a session have no cost, as in a session that started before this release, the first turn with a cost has no cost.
+- Two reads of the history of one Claude session at the same time no longer fail with "database is locked". Before, this error could show when an agent continued on its backup model while OpenBot read the session history after a start.
+- Connecting Firecrawl, or another plugin that starts with `npx`, no longer fails with "The server did
+  not answer in 10 seconds" on its first start. A local server now has 60 seconds to download its
+  package and answer. A server at a web address still has 10 seconds.
+- When you drag a channel to a new place in a sidebar section, it now stays where the sidebar showed it would go. Before, the first drag after you moved a channel or an agent into the section with "Move to", or made a new one, could put the agents above the channels or put the channel in a different place. On a team server, the server must also have this version.
+- The model picker for a new agent no longer starts on Claude when Claude is not installed or not
+  signed in. It now starts on a provider that can run the agent, as the server already does.
+- When an agent runs on a custom endpoint and the endpoint does not answer, the waiting notice and the error now name your endpoint. Before, they said "OpenCode has sent no update" and "OpenCode stopped responding", so it looked as if OpenCode's own models were in use.
+- A message that you steer into a running DeepSeek or Pi agent now goes into the running turn also while Pi compacts its context. When Pi refuses a steer, only the steer fails: the agent keeps working, and the message waits in the queue. Before, the refusal stopped the turn in the chat while Pi kept working, and the next messages failed with "Agent is already processing".
+- A "Could not steer the agent" error no longer stays below the last reply after the turn ends. Before, it stayed at the end of the chat until you sent the next message, so it looked like a new message.
+- When you sign in a provider account of a joined server in this computer's browser, the dialog no
+  longer says "This sign-in ended" while the server completes the sign-in. After the browser returns,
+  the dialog shows the progress until the server gives the result.
+- A channel whose agent waits for your answer, your approval, or you in the browser now moves to
+  "Needs you" at the top of the sidebar, with the same badge and tooltip as an agent. Before, only
+  the channel conversation showed it, so a request in a channel was easy to miss.
+- Gemini (Antigravity) agents in a channel get only the messages they have not read. Before, each channel turn sent the complete channel history again into the same session, so usage grew with each message. Long channel sessions are now also compacted.
+- A change to MCP servers or skills keeps the conversations of Claude agents. Before, each Claude agent started a new session on its next turn, with a summary of the history and no prompt cache.
+- Agents in a channel report their result with fewer model requests. Before, an agent such as Grok searched for the channel tools first, and each search step sent the whole conversation again.
+- An "always allow" approval for an MCP tool keeps the conversations of Codex agents. Before, each Codex agent that used that server started a new session on its next turn.
+
 ## [0.50.0] - 2026-10-25
 
 ### Added
