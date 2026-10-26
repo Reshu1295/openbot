@@ -789,6 +789,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       emitError: (code, error, agentId) => this.#emitError(code, error, agentId),
       scheduleDrain: (agentId) => this.#drain.scheduleDrain(agentId),
       rotateSession: (agentId, client, threadId) => this.#threads.rotateProviderSession(agentId, client, threadId),
+      rotatesSession: (agentId, threadId) => this.#threads.rotatesSession(agentId, threadId),
       compacted: (threadId) => this.channels.contextCompacted(threadId),
     });
     this.#attention = new AttentionRegistry({
@@ -923,6 +924,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       // Only a server has a memory reading.
       serverHost: hostMemory !== null,
       sectionTeammates: (agentId) => this.sectionTeammates(agentId),
+      channelThread: (threadId) => this.channels.store.channelForThread(threadId) !== null,
       hooks: {
         logRecovery: (agentId, provider, outcome) =>
           logger.warn("Recovered an unavailable provider session.", { agentId, provider, outcome }),
@@ -997,12 +999,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         const session = agent ? this.#store.database.activeProviderSession(threadId, agent.provider) : null;
         return session ? this.#compaction.contextInputCharacters(session.externalSessionId) : 120_000;
       },
-      // Claude and the app-server providers report each compaction. An ACP agent or Pi can compact
-      // on its own with no report, so its next packet would leave out what the summary dropped.
+      // Claude and the app-server providers report each compaction. A `handoff` provider compacts
+      // only when OpenBot replaces its session, and the new session gets the complete packet. Another
+      // ACP agent or Pi can compact on its own with no report, so its next packet would leave out
+      // what the summary dropped.
       reportsCompactions: (agentId) => {
         const agent = this.#store.list().find((item) => item.id === agentId);
         const mode = agent ? this.#providers.clientForAgent(agent)?.contextCompaction : undefined;
-        return mode === "native" || mode === "events";
+        return mode === "native" || mode === "events" || mode === "handoff";
       },
       forgetThread: (threadId) => this.#forgetExecutionThread(threadId).pipe(toChannelOperationError),
       loadedSnapshot: (threadId) => this.#conversation.loadedExecutionSnapshot(threadId),

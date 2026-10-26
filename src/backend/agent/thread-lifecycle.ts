@@ -11,7 +11,7 @@ import {
   type McpServerConfig,
   workspaceAccessEnforced,
 } from "@openbot/contracts/ipc";
-import type { DynamicRecord } from "@openbot/contracts/runtime-values";
+import { type DynamicRecord, isDynamicRecord } from "@openbot/contracts/runtime-values";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect, Result, Schema } from "effect";
@@ -88,6 +88,9 @@ const CODEX_MCP_ADAPTER_VERSION = 8;
 /** What a provider other than Codex, or a Codex with no file to read, has in its own files. */
 const NO_CODEX_OWN_SERVERS: CodexOwnServers = { disabled: {}, transports: {} };
 
+/** Per server key, the `tools` table Codex saved for it: each tool's approval. */
+type CodexToolApprovals = Array<[string, DynamicRecord]>;
+
 /**
  * Codex offers `update_plan` only when this is on, and without it a turn sends no
  * `turn/plan/updated`, so the conversation shows no task list.
@@ -146,6 +149,8 @@ export interface ThreadLifecycleOptions {
   serverHost?: boolean;
   /** The other agents in an agent's sidebar section, read at each start and resume of a session. */
   sectionTeammates?: (agentId: string) => SectionTeammates | null;
+  /** Whether a public thread is a channel member's thread. */
+  channelThread?: (threadId: string) => boolean;
 }
 
 /**
@@ -177,6 +182,7 @@ export class ThreadLifecycle {
   readonly #vaultItems: () => VaultContents;
   readonly #serverHost: boolean;
   readonly #sectionTeammates: (agentId: string) => SectionTeammates | null;
+  readonly #channelThread: (threadId: string) => boolean;
   readonly #pendingHandoffs = new Map<string, string>();
   readonly #pendingRuntimeRefreshes = new Set<string>();
   /**
@@ -205,6 +211,7 @@ export class ThreadLifecycle {
     this.#vaultItems = options.vaultItems ?? (() => ({ available: false, cards: false, contacts: false }));
     this.#serverHost = options.serverHost ?? false;
     this.#sectionTeammates = options.sectionTeammates ?? (() => null);
+    this.#channelThread = options.channelThread ?? (() => false);
   }
 
   /**
@@ -590,15 +597,11 @@ export class ThreadLifecycle {
     const prepared = yield* Effect.result(
       Effect.gen({ self: this }, function* () {
         if (client.provider === "codex") {
-          yield* threadIo(() => mkdir(this.toolManifestDirectory(), { recursive: true, mode: 0o700 }));
-          yield* threadIo(() =>
-            writeFile(
-              this.toolManifestPath(externalThreadId),
-              this.toolFingerprint(agent, mcpServers, own, toolRuntimes, environment, section, proxy),
-              {
-                mode: 0o600,
-              },
-            ),
+          const approvals = this.#toolApprovals(mcpServers, own);
+          yield* this.#writeToolManifest(
+            externalThreadId,
+            this.toolFingerprint(agent, mcpServers, own, approvals, toolRuntimes, environment, section, proxy),
+            approvals,
           );
         }
         // The handoff reads the store synchronously. A failure there must also clean up this session.
@@ -843,7 +846,8 @@ export class ThreadLifecycle {
   private toolFingerprint(
     agent: AgentSummary,
     configs: readonly McpServerConfig[],
-    { disabled, transports }: CodexOwnServers,
+    { disabled }: CodexOwnServers,
+    approvals: CodexToolApprovals,
     toolRuntimes: McpToolRuntimes,
     environment: Readonly<Record<string, string>>,
     section: SectionTeammates | null,
@@ -856,10 +860,7 @@ export class ThreadLifecycle {
           mcpFingerprintValues(configs),
           Object.keys(disabled).sort(),
           // A revoked approval must also replace a loaded session with the old tool policy.
-          configs.map((config) => {
-            const key = codexMcpServerKey(config, transports);
-            return [key, disabled[key]?.tools ?? {}];
-          }),
+          approvals,
           [toolRuntimes.binDirectories, toolRuntimes.commandAliases],
           CODEX_MCP_ADAPTER_VERSION,
           // Only a sandboxed agent, one that allows local scripts, or one that shows its plan adds a
@@ -880,6 +881,30 @@ export class ThreadLifecycle {
       )
       .digest("hex");
   }
+
+  /** The tool approvals that Codex saved in its own file, by the key each server travels under. */
+  #toolApprovals(configs: readonly McpServerConfig[], { disabled, transports }: CodexOwnServers): CodexToolApprovals {
+    return configs.map((config) => {
+      const key = codexMcpServerKey(config, transports);
+      return [key, disabled[key]?.tools ?? {}];
+    });
+  }
+
+  /**
+   * The fingerprint, then the approvals it holds as JSON. A manifest from before has the fingerprint
+   * only, and keeps the old rule: any change to the approvals replaces its session.
+   */
+  readonly #writeToolManifest = Effect.fn("ThreadLifecycle.writeToolManifest")(function* (
+    this: ThreadLifecycle,
+    sessionId: string,
+    fingerprint: string,
+    approvals: CodexToolApprovals,
+  ) {
+    yield* threadIo(() => mkdir(this.toolManifestDirectory(), { recursive: true, mode: 0o700 }));
+    yield* threadIo(() =>
+      writeFile(this.toolManifestPath(sessionId), `${fingerprint}\n${JSON.stringify(approvals)}`, { mode: 0o600 }),
+    );
+  });
 
   #proxyFingerprint(configs: readonly McpServerConfig[]): Effect.Effect<string | null, ThreadOperationFailed> {
     return this.#mcpProxyFingerprint(configs).pipe(toThreadOperationFailed);
@@ -934,18 +959,29 @@ export class ThreadLifecycle {
     const toolRuntimes = this.#toolRuntimes();
     const own = yield* this.codexOwnServersEffect(client, configs, toolRuntimes);
     const proxy = yield* this.#proxyFingerprint(configs);
+    const environment = this.#agentEnvironment();
+    const section = this.#sectionTeammates(agent.id);
+    const approvals = this.#toolApprovals(configs, own);
+    const newline = stored.success.indexOf("\n");
+    const storedFingerprint = newline < 0 ? stored.success : stored.success.slice(0, newline);
     const fingerprint = yield* threadStep(() =>
-      this.toolFingerprint(
-        agent,
-        configs,
-        own,
-        toolRuntimes,
-        this.#agentEnvironment(),
-        this.#sectionTeammates(agent.id),
-        proxy,
-      ),
+      this.toolFingerprint(agent, configs, own, approvals, toolRuntimes, environment, section, proxy),
     );
-    return stored.success === fingerprint;
+    if (storedFingerprint === fingerprint) return true;
+    if (newline < 0) return false;
+    // An approval given since the start is in the loaded session already: Codex saved it from that
+    // session's answer. Only a revoked one needs a new session. The manifest takes the new approvals,
+    // so that a later revoke of one of them is seen.
+    const sessionApprovals = yield* threadStep(() =>
+      decodeToolApprovals(JSON.parse(stored.success.slice(newline + 1))),
+    ).pipe(Effect.orElseSucceed(() => null));
+    if (!sessionApprovals || approvalRevoked(sessionApprovals, approvals)) return false;
+    const sessionFingerprint = yield* threadStep(() =>
+      this.toolFingerprint(agent, configs, own, sessionApprovals, toolRuntimes, environment, section, proxy),
+    );
+    if (storedFingerprint !== sessionFingerprint) return false;
+    yield* this.#writeToolManifest(sessionId, fingerprint, approvals);
+    return true;
   });
 
   /**
@@ -1088,10 +1124,25 @@ export class ThreadLifecycle {
   }, Effect.uninterruptible).bind(this);
 
   /**
+   * Whether a new session can take the place of this one with no lost context. The agent's own chat
+   * starts the new session from its history handoff, and a channel thread from the complete channel
+   * packet, which a new session always gets. Other threads have neither.
+   */
+  rotatesSession(agentId: string, externalThreadId: string): boolean {
+    const agent = this.#store.list().find((candidate) => candidate.id === agentId);
+    if (!agent) return false;
+    const publicThreadId = this.#conversation.publicThreadId(agentId, externalThreadId);
+    if (publicThreadId !== agent.threadId && !this.#channelThread(publicThreadId)) return false;
+    return (
+      this.#store.database.activeProviderSession(publicThreadId, agent.provider)?.externalSessionId === externalThreadId
+    );
+  }
+
+  /**
    * Compacts the context of a provider that cannot compact on request: the session ends, and a new
-   * one on the same public thread starts from the history handoff. The agent, its thread, and its
-   * messages stay. Returns the new session, or `null` when the old one is no longer the active one
-   * or is not the agent's own chat: only that chat has a handoff to start from.
+   * one on the same public thread starts from the history handoff, or from the complete packet on a
+   * channel thread. The agent, its thread, and its messages stay. Returns the new session, or `null`
+   * when the old one is no longer the active one or `rotatesSession` refuses its thread.
    */
   readonly rotateProviderSession = Effect.fn("ThreadLifecycle.rotateProviderSession")(function* (
     this: ThreadLifecycle,
@@ -1102,7 +1153,7 @@ export class ThreadLifecycle {
     const agent = this.#store.list().find((candidate) => candidate.id === agentId);
     if (!agent) return null;
     const publicThreadId = this.#conversation.publicThreadId(agentId, externalThreadId);
-    if (publicThreadId !== agent.threadId) return null;
+    if (publicThreadId !== agent.threadId && !this.#channelThread(publicThreadId)) return null;
     const session = this.#store.database.activeProviderSession(publicThreadId, client.provider);
     if (session?.externalSessionId !== externalThreadId) return null;
     // The steps first: an ACP agent keeps them only in the session that closes below.
@@ -1189,7 +1240,7 @@ export class ThreadLifecycle {
       // A running turn owns its provider session, so the refresh waits for it. The mark stays, and
       // the next drain of this agent refreshes the thread that was busy this time.
       if (this.#activeTurnOf(agent.id, threadId)) deferred = true;
-      else yield* this.#refreshThreadRuntime(threadId);
+      else yield* this.#refreshThreadRuntime(threadId, true);
     }
     if (!deferred) {
       this.#pendingRuntimeRefreshes.delete(agent.id);
@@ -1230,12 +1281,27 @@ export class ThreadLifecycle {
   /**
    * Drops the provider-side state of one thread and keeps the thread itself. The public thread row
    * and its messages stay, so the next turn starts a new provider session with the same history.
+   *
+   * `reload`: the thread only needs the current runtime. A session whose client reloads it on resume
+   * keeps its provider history: its process closes, and the next turn resumes it with the new set.
    */
   readonly #refreshThreadRuntime = Effect.fn("ThreadLifecycle.refreshThreadRuntime")(function* (
     this: ThreadLifecycle,
     threadId: string,
+    reload = false,
   ) {
     const sessions = this.#store.database.listProviderSessions(threadId).filter((one) => one.state === "active");
+    if (
+      reload &&
+      sessions.length > 0 &&
+      sessions.every((one) => this.#conversation.openClientFor(one.externalSessionId)?.reloadsRuntimeOnResume)
+    ) {
+      for (const session of sessions) {
+        yield* this.#releaseProviderSession(session.externalSessionId);
+        this.#conversation.unloadThread(session.externalSessionId);
+      }
+      return;
+    }
     this.#store.database.deactivateProviderSessions(threadId);
     for (const session of sessions) {
       // The client first, while the routing entry below still names it. Dropping the entry alone
@@ -1372,6 +1438,25 @@ export class ThreadOperationFailed extends Schema.TaggedError<ThreadOperationFai
 }) {}
 
 const { io: threadIo, sync: threadStep, rewrap: toThreadOperationFailed } = causeHelpers(ThreadOperationFailed);
+
+/** The approvals of a manifest this app wrote, or null for any other value. */
+function decodeToolApprovals(value: unknown): CodexToolApprovals | null {
+  if (!Array.isArray(value)) return null;
+  const approvals: CodexToolApprovals = [];
+  for (const entry of value) {
+    if (!Array.isArray(entry) || typeof entry[0] !== "string" || !isDynamicRecord(entry[1])) return null;
+    approvals.push([entry[0], entry[1]]);
+  }
+  return approvals;
+}
+
+/** Whether a tool approval that a session started with is gone or changed now. */
+function approvalRevoked(session: CodexToolApprovals, current: CodexToolApprovals): boolean {
+  const now = new Map(current);
+  return session.some(([key, tools]) =>
+    Object.entries(tools).some(([tool, approval]) => JSON.stringify(now.get(key)?.[tool]) !== JSON.stringify(approval)),
+  );
+}
 
 function missingSessionFile(error: unknown): boolean {
   return error instanceof Error && "code" in error && error.code === "ENOENT";

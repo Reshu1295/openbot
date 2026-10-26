@@ -19,6 +19,12 @@ export interface AgentClient {
    * handoff.
    */
   readonly contextCompaction?: "events" | "request" | "native" | "handoff" | "unsupported";
+  /**
+   * True when resuming a session starts its process again with the MCP servers and skills of that
+   * moment. A runtime refresh then closes the process and keeps the session, so the provider history
+   * and its prompt cache stay. Missing means a resumed session keeps what it was started with.
+   */
+  readonly reloadsRuntimeOnResume?: boolean;
   readonly running: boolean;
   readonly readHistory?: ReadProviderHistory;
   /** False when stopping this client would lose a live provider session with no recovery path. */

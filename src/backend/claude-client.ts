@@ -285,6 +285,8 @@ const queryLogger = createOpenBotLogger("claude-query");
 
 export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
   readonly contextCompaction = "native";
+  // `#startThread` reads the MCP servers and the skill plugins at each start, also on a resume.
+  readonly reloadsRuntimeOnResume = true;
   #queryRestarts = 0;
   readonly provider: AgentProvider = "claude";
   readonly #cli: ClaudeCliInfo;

@@ -37,6 +37,8 @@ export interface ContextCompactionOptions {
     client: AgentClient,
     threadId: string,
   ): Effect.Effect<string | null, ThreadOperationFailed>;
+  /** Whether `rotateSession` can replace this session. See `ThreadLifecycle.rotatesSession`. */
+  rotatesSession(agentId: string, threadId: string): boolean;
   changed?(): void;
   /** A provider session finished a compaction: its summary replaces what it read before. */
   compacted?(threadId: string): void;
@@ -74,6 +76,7 @@ export class ContextCompaction {
   readonly #emitError: (code: string, error: unknown, agentId?: string) => void;
   readonly #scheduleDrain: (agentId: string) => void;
   readonly #rotateSession: ContextCompactionOptions["rotateSession"];
+  readonly #rotatesSession: ContextCompactionOptions["rotatesSession"];
   readonly #budgets = new Map<string, ThreadContextBudget>();
   /** The thread that compacts, and the client that runs it once `request` sends it. */
   readonly #compactingAgents = new Map<string, { threadId: string; client: AgentClient | null }>();
@@ -99,6 +102,7 @@ export class ContextCompaction {
     this.#emitError = options.emitError;
     this.#scheduleDrain = options.scheduleDrain;
     this.#rotateSession = options.rotateSession;
+    this.#rotatesSession = options.rotatesSession;
   }
 
   /** Only personal sessions appear in the desktop snapshot; execution threads remain separate. */
@@ -249,13 +253,7 @@ export class ContextCompaction {
     const agent = this.#store.list().find((candidate) => candidate.id === agentId);
     const mode = agent ? this.#providers.clientForAgent(agent)?.contextCompaction : undefined;
     if (!agent || !compactsOnRequest(mode)) return false;
-    // Only the agent's own chat has a handoff to start a new session from.
-    if (
-      mode === "handoff" &&
-      (!agent.threadId ||
-        this.#store.database.activeProviderSession(agent.threadId, agent.provider)?.externalSessionId !== threadId)
-    )
-      return false;
+    if (mode === "handoff" && !this.#rotatesSession(agentId, threadId)) return false;
     const budget = this.#budgets.get(threadId);
     if (!(budget?.pending || (manual && budget)) || budget.phase !== "idle" || this.#compactingAgents.has(agentId)) {
       return false;
