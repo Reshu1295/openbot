@@ -88,6 +88,14 @@ const CODEX_MCP_ADAPTER_VERSION = 8;
 /** What a provider other than Codex, or a Codex with no file to read, has in its own files. */
 const NO_CODEX_OWN_SERVERS: CodexOwnServers = { disabled: {}, transports: {} };
 
+/**
+ * Providers whose client starts its process again with the MCP servers and skills of that moment
+ * when it resumes a session: `ClaudeAgentClient.#startThread` reads them at each start. A runtime
+ * refresh keeps their sessions, with the provider history and its prompt cache. Decided by provider,
+ * not by a running client: an idle client stops, and a session with no process resumes the same way.
+ */
+const RUNTIME_RELOADED_ON_RESUME: ReadonlySet<AgentProvider> = new Set(["claude"]);
+
 /** Per server key, the `tools` table Codex saved for it: each tool's approval. */
 type CodexToolApprovals = Array<[string, DynamicRecord]>;
 
@@ -151,8 +159,6 @@ export interface ThreadLifecycleOptions {
   sectionTeammates?: (agentId: string) => SectionTeammates | null;
   /** Whether a public thread is a channel member's thread. */
   channelThread?: (threadId: string) => boolean;
-  /** Whether the client of this agent's provider reloads the runtime on resume. See `AgentClient`. */
-  reloadsRuntimeOnResume?: (agent: AgentSummary) => boolean;
 }
 
 /**
@@ -185,7 +191,6 @@ export class ThreadLifecycle {
   readonly #serverHost: boolean;
   readonly #sectionTeammates: (agentId: string) => SectionTeammates | null;
   readonly #channelThread: (threadId: string) => boolean;
-  readonly #reloadsRuntimeOnResume: (agent: AgentSummary) => boolean;
   readonly #pendingHandoffs = new Map<string, string>();
   readonly #pendingRuntimeRefreshes = new Set<string>();
   /**
@@ -215,7 +220,6 @@ export class ThreadLifecycle {
     this.#serverHost = options.serverHost ?? false;
     this.#sectionTeammates = options.sectionTeammates ?? (() => null);
     this.#channelThread = options.channelThread ?? (() => false);
-    this.#reloadsRuntimeOnResume = options.reloadsRuntimeOnResume ?? (() => false);
   }
 
   /**
@@ -1244,7 +1248,11 @@ export class ThreadLifecycle {
       // A running turn owns its provider session, so the refresh waits for it. The mark stays, and
       // the next drain of this agent refreshes the thread that was busy this time.
       if (this.#activeTurnOf(agent.id, threadId)) deferred = true;
-      else yield* this.#refreshThreadRuntime(threadId, this.#reloadsRuntimeOnResume(agent) ? agent.provider : null);
+      else
+        yield* this.#refreshThreadRuntime(
+          threadId,
+          RUNTIME_RELOADED_ON_RESUME.has(agent.provider) ? agent.provider : null,
+        );
     }
     if (!deferred) {
       this.#pendingRuntimeRefreshes.delete(agent.id);

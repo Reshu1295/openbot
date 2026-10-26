@@ -239,8 +239,7 @@ interface ClientEvents {
 
 /**
  * The real Claude client. Only the account, usage and model reads are answered here: the real ones
- * run `claude auth status` or a probe query. Sessions, turns, events and `reloadsRuntimeOnResume`
- * come from the real client.
+ * run `claude auth status` or a probe query. Sessions, turns and events come from the real client.
  */
 class ClaudeStandIn extends EventEmitter<ClientEvents> implements AgentClient {
   readonly provider = "claude";
@@ -256,10 +255,6 @@ class ClaudeStandIn extends EventEmitter<ClientEvents> implements AgentClient {
     this.#real.on("request", (request) => this.emit("request", request));
     this.#real.on("diagnostic", (message) => this.emit("diagnostic", message));
     this.#real.on("exit", (error) => this.emit("exit", error));
-  }
-
-  get reloadsRuntimeOnResume(): boolean {
-    return this.#real.reloadsRuntimeOnResume;
   }
 
   get running(): boolean {
