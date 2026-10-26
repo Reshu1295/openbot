@@ -1,11 +1,16 @@
-import { isKnownAgentProvider } from "@openbot/contracts/agent-providers";
+import { isKnownAgentProvider, providerDisplayName } from "@openbot/contracts/agent-providers";
 import {
   type FileQuoteTarget,
   fileQuoteId,
   fileQuoteTarget,
   limitedQuoteText,
 } from "@openbot/contracts/chat-tag-references";
-import { type McpSignInRelayPage, relayableSignInLink, type UpdateAgentInput } from "@openbot/contracts/ipc";
+import {
+  customProviderOfModel,
+  type McpSignInRelayPage,
+  relayableSignInLink,
+  type UpdateAgentInput,
+} from "@openbot/contracts/ipc";
 import type { QuoteRequest } from "@openbot/ui/features/conversation/ComposerEditor";
 import { currentText } from "@openbot/ui/text";
 import { usesTouchLayout } from "@openbot/ui/utils";
@@ -379,6 +384,14 @@ export function createConversationViewScope(props: ConversationProps) {
     providerSilentMinutes,
     providerOffline,
   } = activity;
+  /** The name of what the agent's turns wait for. OpenCode serves a custom endpoint, so it names the endpoint (#3234). */
+  const agentProviderName = () => {
+    const agent = props.agent;
+    if (!agent) return undefined;
+    const endpoint =
+      agent.provider === "opencode" ? customProviderOfModel(agent.model, props.customProviders ?? []) : undefined;
+    return endpoint?.name ?? providerDisplayName(agent.provider);
+  };
   const browser = createBrowserStore({
     props,
     browserOpenRequests: resources.browserOpenRequests,
@@ -1779,6 +1792,7 @@ export function createConversationViewScope(props: ConversationProps) {
     renderedAgentActivity,
     providerSilentMinutes,
     providerOffline,
+    agentProviderName,
     reorderPresentedQueue,
     replyTarget,
     replyToMessage,

@@ -6,6 +6,7 @@ import {
   type AgentAuthState,
   type AgentModelOption,
   type AgentProviderId,
+  customProviderOfModel,
   DEFAULT_PROMPT_CACHE_TTL,
   type KeyOnlyProviderId,
   type PromptCacheTtl,
@@ -757,8 +758,7 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         signInMessage: openCodeSignInMessage(context.customProviders().length),
         modelName: (id, name) => openCodeModelName(id, name, context.customProviders),
         // A stalled turn on a custom endpoint names the endpoint, not OpenCode (#3234).
-        providerName: (modelId) =>
-          context.customProviders().find((provider) => modelId?.startsWith(`${provider.id}/`))?.name ?? null,
+        providerName: (modelId) => customProviderOfModel(modelId, context.customProviders())?.name ?? null,
         servesModel: context.servesModel,
         mcpServers: context.mcpServers,
         reportMcpDrops: context.reportMcpDrops,

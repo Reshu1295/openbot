@@ -1,4 +1,3 @@
-import { providerDisplayName } from "@openbot/contracts/agent-providers";
 import { chatVisualReply } from "@openbot/contracts/chat-visual";
 import type { ConversationMessageSender, MessageReaction } from "@openbot/contracts/ipc";
 import type { ConversationUiBlock } from "@openbot/contracts/ui-blocks";
@@ -165,6 +164,7 @@ export function ConversationTimeline() {
     renderedAgentActivity,
     providerOffline,
     providerSilentMinutes,
+    agentProviderName,
     replyJump,
     respondToBrowserTakeover,
     replyToMessage,
@@ -195,9 +195,8 @@ export function ConversationTimeline() {
   // A named function, not a ternary in the prop: the compiler wraps a ternary prop in a memo, and
   // the avatar reads it in a tracked effect, where a new memo halts the reactive system.
   const waitingProviderName = () => {
-    const agent = props.agent;
     const waiting = providerSilentMinutes() !== null || providerOffline();
-    return waiting && agent ? providerDisplayName(agent.provider) : undefined;
+    return waiting ? agentProviderName() : undefined;
   };
   /** An agent reply can be read aloud by this computer's speech model, in this chat's voice. */
   const readAloudAction = (message: AgentMessage) => {
