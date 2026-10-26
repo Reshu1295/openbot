@@ -107,6 +107,12 @@ export const RemoteTeamTransport = memo(
       const teamCommands = bridge.current?.teamCommands;
       if (typeof teamCommands === "function" && commands.length > 0) teamCommands(commands);
     }, []);
+    // Runs before the effect of the parent `ServerConnection` that starts the connect at a return, so
+    // the page is active before the command arrives. The prop alone arrives after it.
+    useEffect(() => {
+      const setActive = bridge.current?.setActive;
+      if (typeof setActive === "function") setActive(props.active);
+    }, [props.active]);
     const mailboxRef = useRef<ReturnType<typeof createRemoteCommandMailbox> | null>(null);
     if (!mailboxRef.current) mailboxRef.current = createRemoteCommandMailbox((command) => deliverCommands([command]));
     const mailbox = mailboxRef.current;
