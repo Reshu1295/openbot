@@ -872,4 +872,54 @@ export const MOBILE_PLUGINS: readonly MobilePlugin[] = [
       },
     ],
   },
+  {
+    slug: "cafecito-beans",
+    name: "Cafecito Beans",
+    tagline: "Publisher research and coverage",
+    description:
+      "Cafecito Beans lets agents search news, reports, research, and official statements, track trends, and compare coverage across publishers. It provides read-only access through a hosted MCP server. Each user connects with a Cafecito API key.",
+    category: "research",
+    creatorName: "cafecito.tech",
+    version: "1.0.0",
+    prompts: [
+      { id: "prompt-trends", text: "What news about GPU supply shortages is trending this week?" },
+      { id: "prompt-legal", text: "Find lawsuits and official statements about Nvidia since the start of this month." },
+      { id: "prompt-story", text: "Compare publishers’ coverage of semiconductor export restrictions this week." },
+    ],
+    websiteUrl: "https://developer.cafecito.tech/products/beans",
+    privacyPolicyUrl: "https://cafecito.tech/docs/privacy-policy/",
+    termsUrl: "https://cafecito.tech/docs/terms-of-use/",
+    featured: false,
+    apps: [
+      {
+        id: "app-cafecito-beans-mcp",
+        name: "Cafecito Beans",
+        description:
+          "Read-only article search, stories, trends, source details, related coverage, and mentions, through the hosted Beans MCP server with a Cafecito API key.",
+        server: {
+          name: "cafecito-beans",
+          transport: "http",
+          url: "https://api.cafecito.tech/beans/mcp",
+          auth: [
+            {
+              id: "cafecito-api-key",
+              kind: "key",
+              label: "Cafecito API key",
+              fields: [
+                {
+                  id: "token",
+                  label: "Cafecito API key",
+                  header: "Authorization",
+                  prefix: "Bearer ",
+                  hint: "Enter only the key from Cafecito API Keys. Do not include Bearer.",
+                },
+              ],
+              docsUrl: "https://developer.cafecito.tech/settings/api-keys",
+              docsLabel: "Get a Cafecito API key",
+            },
+          ],
+        },
+      },
+    ],
+  },
 ];
