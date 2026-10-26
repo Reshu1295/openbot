@@ -499,7 +499,10 @@ export function ConversationPanels(panelProps: { onOpenUsage?: ((trigger: HTMLBu
               }
               autoApprove={props.agentAutoApproves}
               onUpdatePermissions={props.onUpdateAgentPermissions}
-              computerUseEditable={props.server?.kind === "local"}
+              computerUseEditable={
+                props.server?.kind === "local" ||
+                (serverCanAdminister(props.server, "agent-host-settings-v1") && agent().computerUse !== undefined)
+              }
               automationEditable={
                 props.server?.kind === "local" ||
                 (serverCanAdminister(props.server, "agent-host-settings-v1") && agent().allowAutomation !== undefined)

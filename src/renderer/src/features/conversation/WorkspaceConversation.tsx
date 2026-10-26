@@ -248,6 +248,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
   const conversationAgent = createMemo(() => {
     const agent = activeAgent();
     const settings = remoteAgentSettings();
+    const computerUse = remoteAgentAdmin.computerUse();
     const automation = remoteAgentAdmin.automation();
     const backupModels = remoteAgentAdmin.backupModels();
     const usageLimitReturn = remoteAgentAdmin.usageLimitReturn();
@@ -256,6 +257,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       ? {
           ...agent,
           ...(settings ? { access: settings.access } : {}),
+          ...(activeServer()?.kind === "remote" && computerUse !== undefined ? { computerUse } : {}),
           ...(activeServer()?.kind === "remote" && automation !== undefined ? { allowAutomation: automation } : {}),
           ...(activeServer()?.kind === "remote" && backupModels ? { backupModels } : {}),
           ...(activeServer()?.kind === "remote" && usageLimitReturn ? { usageLimitReturn } : {}),

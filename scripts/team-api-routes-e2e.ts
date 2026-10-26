@@ -34,6 +34,10 @@ import {
 } from "@openbot/contracts/team-protocol/agent-backup-models-v1";
 import { AGENT_HIDDEN_CAPABILITY, AGENT_HIDDEN_ROUTES } from "@openbot/contracts/team-protocol/agent-hidden-v1";
 import {
+  AGENT_HOST_SETTINGS_CAPABILITY,
+  AGENT_HOST_SETTINGS_ROUTES,
+} from "@openbot/contracts/team-protocol/agent-host-settings-v1";
+import {
   AGENT_TASK_LIMIT_CAPABILITY,
   AGENT_TASK_LIMIT_ROUTES,
 } from "@openbot/contracts/team-protocol/agent-task-limit-v1";
@@ -596,6 +600,7 @@ try {
               else if (input.backupModels) target.backupModels = input.backupModels;
               if (input.taskLimit === null) delete target.taskLimit;
               else if (input.taskLimit !== undefined) target.taskLimit = input.taskLimit;
+              if (input.computerUse !== undefined) target.computerUse = input.computerUse;
               return target;
             }),
         },
@@ -1489,6 +1494,150 @@ try {
         callsOf("updateAgent").length === writes + 2,
       [summary(hiddenRead), summary(hiddenSet)],
     );
+  }
+
+  // ---- Computer Use (agent-host-settings-v1) ----
+  {
+    const hostCapabilities = [AGENT_HIDDEN_CAPABILITY, TEAM_QUEUE_EDIT_CAPABILITY, AGENT_HOST_SETTINGS_CAPABILITY];
+    const target = agents.find((item) => item.id === "agent-ada");
+    assert.ok(target);
+    const before = structuredClone(target);
+    const writes = callsOf("updateAgent").length;
+    const expected = {
+      computerUse: true,
+      allowAutomation: DEFAULT_AGENT_DEFAULTS.allowAutomation,
+      busyMessageMode: null,
+      defaultBusyMessageMode: "queue",
+    };
+    for (const [role, token] of [
+      ["owner", owner.sessionToken],
+      ["admin", adaToken],
+    ] as const) {
+      const read = await call("POST", AGENT_HOST_SETTINGS_ROUTES.settings, {
+        token,
+        json: { agentId: target.id },
+        capabilities: hostCapabilities,
+      });
+      check(
+        `an ${role} reads the host's Computer Use setting without a write`,
+        read.status === 200 && isDeepStrictEqual(read.body, expected) && callsOf("updateAgent").length === writes,
+        summary(read),
+      );
+    }
+    const unsupported = [
+      await call("POST", AGENT_HOST_SETTINGS_ROUTES.settings, {
+        token: adaToken,
+        json: { agentId: target.id },
+        capabilities: [],
+      }),
+      await call("POST", AGENT_HOST_SETTINGS_ROUTES.update, {
+        token: adaToken,
+        json: { agentId: target.id, computerUse: false },
+        capabilities: [],
+      }),
+    ];
+    check(
+      "Computer Use read and save without the capability are refused without a write",
+      unsupported.every((reply) => errorIs(reply, 400, sourceText("error.team.agentSettingsUnsupported"))) &&
+        callsOf("updateAgent").length === writes &&
+        isDeepStrictEqual(target, before),
+      unsupported.map(summary),
+    );
+    const member = [
+      await call("POST", AGENT_HOST_SETTINGS_ROUTES.settings, {
+        token: bobToken,
+        json: { agentId: target.id },
+        capabilities: hostCapabilities,
+      }),
+      await call("POST", AGENT_HOST_SETTINGS_ROUTES.update, {
+        token: bobToken,
+        json: { agentId: target.id, computerUse: false },
+        capabilities: hostCapabilities,
+      }),
+    ];
+    check(
+      "a member cannot read or change Computer Use and the agent remains unchanged",
+      member.every((reply) => errorIs(reply, 403, sourceText("error.team.adminRequired"))) &&
+        callsOf("updateAgent").length === writes &&
+        isDeepStrictEqual(target, before),
+      member.map(summary),
+    );
+    for (const [agentId, protocol] of [
+      ["agent-none", 7],
+      ["agent-pi", 6],
+    ] as const) {
+      const inaccessible = [
+        await call("POST", AGENT_HOST_SETTINGS_ROUTES.settings, {
+          token: adaToken,
+          json: { agentId },
+          capabilities: hostCapabilities,
+          protocol,
+        }),
+        await call("POST", AGENT_HOST_SETTINGS_ROUTES.update, {
+          token: adaToken,
+          json: { agentId, computerUse: false },
+          capabilities: hostCapabilities,
+          protocol,
+        }),
+      ];
+      check(
+        `Computer Use read and save for ${agentId === "agent-none" ? "an unknown" : "a protocol-hidden"} agent return 404 without reaching the writer`,
+        inaccessible.every((reply) => errorIs(reply, 404, sourceText("error.team.agentNotFound"))) &&
+          callsOf("updateAgent").length === writes &&
+          isDeepStrictEqual(target, before),
+        inaccessible.map(summary),
+      );
+    }
+    const malformed = await call("POST", AGENT_HOST_SETTINGS_ROUTES.update, {
+      token: adaToken,
+      json: { agentId: target.id, computerUse: "false" },
+      capabilities: hostCapabilities,
+    });
+    check(
+      "a non-boolean Computer Use grant is refused without a write",
+      malformed.status === 400 && callsOf("updateAgent").length === writes && isDeepStrictEqual(target, before),
+      summary(malformed),
+    );
+    for (const [role, token] of [
+      ["owner", owner.sessionToken],
+      ["admin", adaToken],
+    ] as const) {
+      for (const computerUse of [false, true]) {
+        const writeCount = callsOf("updateAgent").length;
+        const saved = await call("POST", AGENT_HOST_SETTINGS_ROUTES.update, {
+          token,
+          json: { agentId: target.id, computerUse },
+          capabilities: hostCapabilities,
+        });
+        const readBack = await call("POST", AGENT_HOST_SETTINGS_ROUTES.settings, {
+          token,
+          json: { agentId: target.id },
+          capabilities: hostCapabilities,
+        });
+        check(
+          `an ${role} ${computerUse ? "enables" : "disables"} Computer Use through the host writer and reads the saved value`,
+          saved.status === 200 &&
+            readBack.status === 200 &&
+            isDeepStrictEqual(saved.body, { ...expected, computerUse }) &&
+            isDeepStrictEqual(readBack.body, { ...expected, computerUse }) &&
+            isDeepStrictEqual(target, { ...before, computerUse }) &&
+            callsOf("updateAgent").length === writeCount + 1 &&
+            isDeepStrictEqual(callsOf("updateAgent").at(-1), [{ agentId: target.id, computerUse }]),
+          [summary(saved), summary(readBack)],
+        );
+      }
+    }
+    check(
+      "remote Computer Use changes retain agent identity, thread, provider, model and workspace",
+      target.id === before.id &&
+        target.threadId === before.threadId &&
+        target.provider === before.provider &&
+        target.model === before.model &&
+        target.workspacePath === before.workspacePath,
+      { agentId: target.id, threadUnchanged: target.threadId === before.threadId },
+    );
+    if (before.computerUse === undefined) delete target.computerUse;
+    else target.computerUse = before.computerUse;
   }
 
   // ---- Browser profiles (browser-profiles-v1) ----

@@ -201,6 +201,16 @@ export function createRemoteAgentAdmin(
   });
 
   return {
+    computerUse: (): boolean | undefined =>
+      state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings?.computerUse : undefined,
+    async updateComputerUse(agentId: string, computerUse: boolean): Promise<void> {
+      const server = target()?.server;
+      if (server?.kind !== "remote" || !serverCanAdminister(server, AGENT_HOST_SETTINGS_CAPABILITY))
+        throw new Error(currentText().t("agent.error.adminOnly"));
+      const settings = await calls().updateAgentHostSettings({ agentId, computerUse }, server.id);
+      if (hostKey() === JSON.stringify([server.id, agentId])) hostReadGeneration += 1;
+      acceptHost(JSON.stringify([server.id, agentId]), settings);
+    },
     automation: (): boolean | undefined =>
       state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings?.allowAutomation : undefined,
     async updateAutomation(agentId: string, allowAutomation: boolean): Promise<void> {
@@ -260,20 +270,24 @@ export function createRemoteAgentAdmin(
 
 /**
  * Sends a profile change to an agent of a joined server. The Team API agent route ignores access,
- * so access, Local scripts, backup models and the task limit go to their admin routes. Other fields
+ * so access, Computer Use, Local scripts, backup models and the task limit go to their admin routes. Other fields
  * keep the agent route.
  */
 export async function updateRemoteAgent(
-  admin: Pick<RemoteAgentAdmin, "update" | "updateAutomation" | "updateBackupModels" | "updateTaskLimit">,
+  admin: Pick<
+    RemoteAgentAdmin,
+    "update" | "updateComputerUse" | "updateAutomation" | "updateBackupModels" | "updateTaskLimit"
+  >,
   input: UpdateAgentInput,
   updateProfile: (input: UpdateAgentInput) => Promise<void>,
 ): Promise<void> {
-  const { access, allowAutomation, backupModels, taskLimit, agentId, ...fields } = input;
+  const { access, computerUse, allowAutomation, backupModels, taskLimit, agentId, ...fields } = input;
   // A joined server's host keeps one value for each agent: it has no account default to return to.
   // Only Settings › Agents sends `null`, and only for this computer, so no user sees this error.
   // It comes before the first write, so that a wrong call changes nothing.
   if (allowAutomation === null) throw new Error("A joined server has no default for Local scripts.");
   if (access !== undefined) await admin.update({ agentId, access });
+  if (computerUse !== undefined) await admin.updateComputerUse(agentId, computerUse);
   if (allowAutomation !== undefined) await admin.updateAutomation(agentId, allowAutomation);
   if (backupModels !== undefined) await admin.updateBackupModels(agentId, backupModels);
   if (taskLimit !== undefined) await admin.updateTaskLimit(agentId, taskLimit);

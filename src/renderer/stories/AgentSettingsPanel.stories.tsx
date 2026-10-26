@@ -1,47 +1,61 @@
-import { type BrowserProfileSummary, nextBrowserProfileHue } from "@openbot/contracts/ipc";
+import {
+  type AgentHostSettings,
+  type BrowserProfileSummary,
+  nextBrowserProfileHue,
+  type ServerSummary,
+  type UpdateAgentHostSettingsInput,
+} from "@openbot/contracts/ipc";
+import { Button, Text } from "@openbot/ui";
 import AgentSettingsPanel from "@openbot/ui/features/conversation/AgentSettingsPanel";
-import { createStore } from "solid-js";
+import { type ComponentProps, createMemo, createStore, untrack } from "solid-js";
 import { fn } from "storybook/test";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import {
+  createRemoteAgentAdmin,
+  type RemoteAgentAdminCalls,
+  updateRemoteAgent,
+} from "../src/features/agents/remote-agent-admin";
 import { STORY_AGENT, STORY_AGENT_STATUS, STORY_MODELS, storyRuntimeSettings } from "./fixtures";
+
+const defaultArgs = {
+  agent: STORY_AGENT,
+  runtimeSettings: storyRuntimeSettings(STORY_AGENT),
+  agentStatus: STORY_AGENT_STATUS,
+  modelOptions: STORY_MODELS,
+  working: false,
+  autoApprove: true,
+  onUpdatePermissions: fn(async () => undefined),
+  busyMessageModeEditable: true,
+  newChatEditable: true,
+  quickAcknowledgementEditable: true,
+  browserProfiles: {
+    profiles: [
+      { id: "0a1b2c3d4e5f60718293a4b5c6d7e8f9", name: "Client A", hue: 215 },
+      { id: "f9e8d7c6b5a4938271605f4e3d2c1b0a", name: "Client B", hue: 30 },
+    ],
+    onChange: fn(async () => undefined),
+    onCreate: fn(async () => "1b2c3d4e5f60718293a4b5c6d7e8f90a"),
+    onManage: fn(),
+  },
+  defaultBusyMessageMode: "queue",
+  width: 296,
+  maxWidth: () => 640,
+  onClose: fn(),
+  onStartNewChat: fn(async () => {}),
+  onResize: fn(),
+  onResizeEnd: fn(),
+  onUpdateAgent: fn(async () => undefined),
+  onUpdateRuntimeSettings: fn(async () => true),
+  onSetAgentAvatar: fn(async () => undefined),
+} satisfies ComponentProps<typeof AgentSettingsPanel>;
 
 const meta = {
   title: "Settings/Shared Agent Form",
   component: AgentSettingsPanel,
-  args: {
-    agent: STORY_AGENT,
-    runtimeSettings: storyRuntimeSettings(STORY_AGENT),
-    agentStatus: STORY_AGENT_STATUS,
-    modelOptions: STORY_MODELS,
-    working: false,
-    autoApprove: true,
-    onUpdatePermissions: fn(async () => undefined),
-    busyMessageModeEditable: true,
-    newChatEditable: true,
-    quickAcknowledgementEditable: true,
-    browserProfiles: {
-      profiles: [
-        { id: "0a1b2c3d4e5f60718293a4b5c6d7e8f9", name: "Client A", hue: 215 },
-        { id: "f9e8d7c6b5a4938271605f4e3d2c1b0a", name: "Client B", hue: 30 },
-      ],
-      onChange: fn(async () => undefined),
-      onCreate: fn(async () => "1b2c3d4e5f60718293a4b5c6d7e8f90a"),
-      onManage: fn(),
-    },
-    defaultBusyMessageMode: "queue",
-    width: 296,
-    maxWidth: () => 640,
-    onClose: fn(),
-    onStartNewChat: fn(async () => {}),
-    onResize: fn(),
-    onResizeEnd: fn(),
-    onUpdateAgent: fn(async () => undefined),
-    onUpdateRuntimeSettings: fn(async () => true),
-    onSetAgentAvatar: fn(async () => undefined),
-  },
+  args: defaultArgs,
   render: (args) => (
     <main class="agent-memories-story-stage">
-      <AgentSettingsPanel {...args} />
+      <AgentSettingsPanel {...defaultArgs} {...args} />
     </main>
   ),
   parameters: { layout: "fullscreen", a11y: { test: "error" } },
@@ -89,6 +103,7 @@ export const NewBrowserProfile: Story = {
     return (
       <main class="agent-memories-story-stage">
         <AgentSettingsPanel
+          {...defaultArgs}
           {...args}
           browserProfiles={{
             profiles: profiles.list,
@@ -132,5 +147,265 @@ export const SaveFailure: Story = {
     onUpdateAgent: fn(async () => {
       throw new Error("Could not save agent settings. Try again.");
     }),
+  },
+};
+
+/** Real remote controller and form, with a synthetic host that exposes its saved values. */
+export const RemoteComputerUse: Story = {
+  render: (args) => {
+    const initialSettings = (computerUse: boolean): AgentHostSettings => ({
+      computerUse,
+      allowAutomation: false,
+      busyMessageMode: null,
+      defaultBusyMessageMode: "queue",
+    });
+    const [host, setHost] = createStore<{
+      agentId: string;
+      role: "owner" | "admin" | "member";
+      supported: boolean;
+      revision: number;
+      holdRead: boolean;
+      failRead: boolean;
+      failWrite: boolean;
+      reads: number;
+      writes: number;
+      profileWrites: number;
+      values: Record<string, AgentHostSettings>;
+      lastWrite: UpdateAgentHostSettingsInput | null;
+      lastServer: string | null;
+    }>({
+      agentId: "remote-a",
+      role: "owner",
+      supported: true,
+      revision: 0,
+      holdRead: false,
+      failRead: false,
+      failWrite: false,
+      reads: 0,
+      writes: 0,
+      profileWrites: 0,
+      values: { "remote-a": initialSettings(false), "remote-b": initialSettings(true) },
+      lastWrite: null,
+      lastServer: null,
+    });
+    const heldReads: Array<() => void> = [];
+    const server = createMemo<ServerSummary>(() => ({
+      id: "sample-host",
+      name: "Sample host",
+      kind: "remote",
+      state: "online",
+      apiUrl: "https://host.example.com",
+      logoUrl: null,
+      notificationsMuted: false,
+      notificationsMutedUntil: null,
+      notificationLevel: "all",
+      remoteDesktopAvailable: true,
+      role: host.role,
+      active: true,
+      compatibility: {
+        localAppVersion: "story",
+        hostAppVersion: "story",
+        localProtocol: { minimum: 3, maximum: 3 },
+        hostProtocol: { minimum: 3, maximum: 3 },
+        negotiatedProtocol: 3,
+        capabilities: host.supported ? ["agent-host-settings-v1"] : [],
+      },
+    }));
+    function settings(agentId: string): AgentHostSettings {
+      return untrack(() => {
+        const value = host.values[agentId];
+        if (!value) throw new Error("The sample agent does not exist.");
+        return { ...value };
+      });
+    }
+    const calls: RemoteAgentAdminCalls = {
+      getAgentHostSettings: async (agentId) => {
+        const value = settings(agentId);
+        const { hold, fail } = untrack(() => ({ hold: host.holdRead, fail: host.failRead }));
+        setHost((draft) => {
+          draft.reads += 1;
+          draft.holdRead = false;
+          draft.failRead = false;
+        });
+        if (fail) throw new Error("The sample host could not load settings.");
+        if (hold) return new Promise<AgentHostSettings>((resolve) => heldReads.push(() => resolve(value)));
+        return value;
+      },
+      updateAgentHostSettings: async (input, serverId) => {
+        const fail = host.failWrite;
+        setHost((draft) => {
+          draft.writes += 1;
+          draft.lastWrite = input;
+          draft.lastServer = serverId ?? null;
+          draft.failWrite = false;
+        });
+        if (fail) throw new Error("The sample host refused the update.");
+        const next = settings(input.agentId);
+        if (input.computerUse !== undefined) next.computerUse = input.computerUse;
+        if (input.allowAutomation !== undefined) next.allowAutomation = input.allowAutomation;
+        if (input.busyMessageMode !== undefined) next.busyMessageMode = input.busyMessageMode;
+        setHost((draft) => {
+          const saved = draft.values[input.agentId];
+          if (!saved) throw new Error("The sample agent does not exist.");
+          Object.assign(saved, next);
+        });
+        return next;
+      },
+      getAgentAdminSettings: async () => ({ access: "full", autoApprove: true, autoApproveLocked: false }),
+      updateAgentAdminSettings: async () => ({ access: "full", autoApprove: true, autoApproveLocked: false }),
+      getAgentBackupModels: async () => ({ backupModels: null, usageLimitReturn: null }),
+      updateAgentBackupModels: async () => ({ backupModels: null, usageLimitReturn: null }),
+      getAgentTaskLimit: async () => ({ taskLimit: null }),
+      updateAgentTaskLimit: async () => ({ taskLimit: null }),
+    };
+    const admin = createRemoteAgentAdmin(
+      () => ({ server: server(), agentId: host.agentId, updatedAt: String(host.revision) }),
+      () => calls,
+    );
+    return (
+      <main class="agent-memories-story-stage">
+        <AgentSettingsPanel
+          {...defaultArgs}
+          {...args}
+          agent={{
+            ...STORY_AGENT,
+            id: host.agentId,
+            name: host.agentId === "remote-a" ? "Sample A" : "Sample B",
+            computerUse: admin.computerUse(),
+          }}
+          onUpdatePermissions={undefined}
+          computerUseEditable={admin.computerUse() !== undefined}
+          automationEditable={false}
+          browserProfiles={undefined}
+          busyMessageModeEditable={false}
+          newChatEditable={false}
+          quickAcknowledgementEditable={false}
+          onUpdateAgent={(agentId, updates) =>
+            updateRemoteAgent(admin, { agentId, ...updates }, async () => {
+              setHost((draft) => {
+                draft.profileWrites += 1;
+              });
+            })
+          }
+        />
+        <section
+          aria-label="Synthetic host controls"
+          style={{ display: "grid", gap: "var(--openbot-space-3)", padding: "var(--openbot-space-4)" }}
+        >
+          <Text as="p">This story uses a sample host and the real remote settings controller.</Text>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.role = "owner";
+              })
+            }
+          >
+            Use owner role
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.role = "admin";
+              })
+            }
+          >
+            Use admin role
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.role = "member";
+              })
+            }
+          >
+            Use member role
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.supported = !draft.supported;
+              })
+            }
+          >
+            Toggle host capability
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.holdRead = true;
+              })
+            }
+          >
+            Hold next host read
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.failRead = true;
+              })
+            }
+          >
+            Fail next host read
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.failWrite = true;
+              })
+            }
+          >
+            Fail next host update
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.revision += 1;
+              })
+            }
+          >
+            Reload host settings
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              for (const release of heldReads.splice(0)) release();
+            }}
+          >
+            Release held host reads
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setHost((draft) => {
+                draft.agentId = draft.agentId === "remote-a" ? "remote-b" : "remote-a";
+              })
+            }
+          >
+            Switch sample agent
+          </Button>
+          <output aria-label="Synthetic host state">
+            {JSON.stringify({
+              agentId: host.agentId,
+              role: host.role,
+              supported: host.supported,
+              hostComputerUse: host.values[host.agentId]?.computerUse,
+              reads: host.reads,
+              writes: host.writes,
+              profileWrites: host.profileWrites,
+              lastWrite: host.lastWrite,
+              lastServer: host.lastServer,
+            })}
+          </output>
+        </section>
+      </main>
+    );
   },
 };

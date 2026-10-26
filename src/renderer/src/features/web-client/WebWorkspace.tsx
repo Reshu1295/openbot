@@ -714,6 +714,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     const host = providerAdmin.hostAccounts.host();
     const agent = selected && host ? withHostProfileAccount(selected, host) : selected;
     const settings = remoteAgentAdmin.settings();
+    const computerUse = remoteAgentAdmin.computerUse();
     const automation = remoteAgentAdmin.automation();
     const backupModels = remoteAgentAdmin.backupModels();
     const usageLimitReturn = remoteAgentAdmin.usageLimitReturn();
@@ -722,6 +723,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       ? {
           ...agent,
           ...(settings ? { access: settings.access } : {}),
+          ...(computerUse === undefined ? {} : { computerUse }),
           ...(automation === undefined ? {} : { allowAutomation: automation }),
           ...(backupModels ? { backupModels } : {}),
           ...(usageLimitReturn ? { usageLimitReturn } : {}),

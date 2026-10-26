@@ -1,5 +1,12 @@
 # Agents
 
+## Remote Computer Use permission
+
+Desktop, web and mobile read and save an agent's Computer Use setting through
+`agent-host-settings-v1`. The control is available to owners and admins after the host answers.
+Hosts without the capability keep the remote control hidden. The general remote agent update
+route refuses this field; the client sends it to the host settings route instead.
+
 ## Local scripts API
 
 `src/main/automation-server.ts` is a loopback HTTP listener through which a local script sends
