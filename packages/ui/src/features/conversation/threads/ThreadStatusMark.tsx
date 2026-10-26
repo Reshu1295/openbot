@@ -14,7 +14,7 @@ const WAIT_TEXT = {
 } as const satisfies Record<SidebarWaitReason, AppTextKey>;
 
 /** What a thread does now, for a screen reader. An idle thread has no label. */
-export function threadStatusLabel(status: ThreadStatus, t: TextValue["t"]): string {
+function threadStatusLabel(status: ThreadStatus, t: TextValue["t"]): string {
   switch (status.kind) {
     case "working":
       return t("sidebar.state.working");

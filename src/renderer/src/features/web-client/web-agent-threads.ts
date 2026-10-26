@@ -90,5 +90,3 @@ export function createWebAgentThreads(options: {
   );
   return { tasks, tabs };
 }
-
-export type WebAgentThreads = ReturnType<typeof createWebAgentThreads>;

@@ -10,7 +10,7 @@ const AGENT_THREAD_ORIGINS = ["user", "agent"] as const;
 export type AgentThreadOrigin = (typeof AGENT_THREAD_ORIGINS)[number];
 
 const AGENT_THREAD_TITLE_SOURCES = ["auto", "agent", "user"] as const;
-export type AgentThreadTitleSource = (typeof AGENT_THREAD_TITLE_SOURCES)[number];
+type AgentThreadTitleSource = (typeof AGENT_THREAD_TITLE_SOURCES)[number];
 
 /**
  * A side thread: a second conversation of one agent, with its own thread, next to the agent's own chat.
