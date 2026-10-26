@@ -3876,8 +3876,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       );
   }
 
-  searchConversationMessages(query: string, agentId?: string, cursor?: string, limit?: number): ConversationSearchPage {
-    return this.#reader.search(query, agentId, cursor, limit);
+  searchConversationMessages(
+    query: string,
+    agentId?: string,
+    cursor?: string,
+    limit?: number,
+    includeSideThreads = false,
+  ): ConversationSearchPage {
+    return this.#reader.search(query, agentId, cursor, limit, includeSideThreads);
   }
 
   searchConversationFiles(query: string, cursor?: string, limit?: number): ConversationFileSearchPage {
@@ -4114,10 +4120,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
   }
 
   /**
-   * Deletes the task's thread with its conversation. It cancels the queued messages first; a running
-   * turn must be stopped first, so a delete never ends work that the person did not stop. The thread
-   * is archived before the first await, so no send or drain starts new work in it while the provider
-   * sessions close. A delete that fails after that leaves the thread archived, and it can open again.
+   * Deletes the task's thread with its conversation and mailbox messages. It cancels the queued messages
+   * first; a running turn must be stopped first, so a delete never ends work that the person did not
+   * stop. The thread is archived before the first await, so no send or drain starts new work in it while
+   * the provider sessions close. A delete that fails after that leaves the thread archived, and it can
+   * open again.
    */
   readonly deleteTask = Effect.fn("AgentService.deleteTask")(function* (
     this: AgentService,
@@ -4140,6 +4147,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       throw new Error(sourceText("error.backend.threadStillRunning"));
     });
     yield* this.#forgetExecutionThread(task.threadId);
+    // The person's messages and their files go with the thread. A message that the agent sent from the
+    // thread to another agent has no task id: it stays in the recipient's history.
+    yield* this.#mailbox
+      .deleteTaskMessages(task.agentId, task.taskId)
+      .pipe(Effect.mapError(({ cause }) => new AgentLifecycleFailed({ operation: "delete task messages", cause })));
     yield* lifecycleStep("delete task", () => {
       if (this.#mailbox.taskBusy(task.agentId, task.taskId))
         throw new Error(sourceText("error.backend.threadStillRunning"));

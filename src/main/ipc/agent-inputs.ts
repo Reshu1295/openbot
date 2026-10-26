@@ -459,6 +459,7 @@ export function parseSearchConversationMessages(value: unknown): SearchConversat
       : { agentId: requireString(value.agentId, "agentId", INPUT_LIMITS.identifier) }),
     ...(value.cursor === undefined ? {} : { cursor: requireString(value.cursor, "cursor", 2048) }),
     limit,
+    ...(value.includeSideThreads === true ? { includeSideThreads: true } : {}),
   };
 }
 

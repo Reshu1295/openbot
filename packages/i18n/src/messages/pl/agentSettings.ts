@@ -86,6 +86,8 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "Dostęp agenta",
   "agentSettings.runtime.busyMessage": "Podczas pracy",
   "agentSettings.runtime.busyMessageLabel": "Wiadomości podczas pracy agenta",
+  "agentSettings.runtime.taskLimit": "Równoległe wątki",
+  "agentSettings.runtime.taskLimitLabel": "Wątki, które działają w tym samym czasie",
   "agentSettings.runtime.workingDirectory": "Katalog roboczy",
   "agentSettings.runtime.notAvailable": "Jeszcze niedostępne",
   "agentSettings.runtime.fullAccessNote":
@@ -103,6 +105,7 @@ export const messages = {
   "agentSettings.busyMessage.steerUnsupported":
     "{provider} nie może kierować trwającą turą. Wiadomości wysłane w trakcie pracy czekają w kolejce.",
   "agentSettings.taskLimit.default": "Domyślnie ({count})",
+  "agentSettings.taskLimit.oneTurn": "{provider} wykonuje jedną turę naraz. Wątki tego agenta czekają na siebie.",
   "agentSettings.notifications.title": "Powiadomienia",
   "agentSettings.newChat.title": "Nowy czat",
   "agentSettings.newChat.description": "Agent zapomni ten czat. Jego konfiguracja zostanie.",

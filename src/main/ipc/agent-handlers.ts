@@ -534,7 +534,13 @@ export function agentIpcHandlers({
       }),
       searchConversationMessages: scopedHandler(parseSearchConversationMessages, {
         local: (parsed) =>
-          host.searchAgentConversationMessages(parsed.query, parsed.agentId, parsed.cursor, parsed.limit),
+          host.searchAgentConversationMessages(
+            parsed.query,
+            parsed.agentId,
+            parsed.cursor,
+            parsed.limit,
+            parsed.includeSideThreads,
+          ),
         remote: (parsed, serverId) =>
           runCauseEffect(
             remoteServers.searchAgentConversationMessages(

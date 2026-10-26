@@ -19,6 +19,8 @@ export const messages = {
     "Dieser Anbieter kann einen laufenden Durchlauf nicht steuern. Die Nachricht wartet daher in der Warteschlange.",
   "queue.item.steerFallback.steerFailed":
     "Die Nachricht konnte nicht gesteuert werden und wartet daher in der Warteschlange.",
+  "queue.item.runAsTask": "In neuem Thread ausführen",
+  "queue.item.runAsTaskLabel": "Nachricht {position} aus der Warteschlange in einem neuen Thread ausführen",
   "queue.item.deleteLabel": "Nachricht {position} aus der Warteschlange löschen",
   "queue.item.deleteTooltip": "Nachricht löschen",
   "queue.item.editLabel": "Nachricht {position} in der Warteschlange bearbeiten",

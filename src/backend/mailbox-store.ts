@@ -835,6 +835,73 @@ export class MailboxStore {
     );
   }
 
+  /**
+   * Removes the messages of a deleted side thread, with their deliveries, reactions and idempotency keys.
+   * Their files leave the Transfers folder through the deletion outbox, as in {@link deleteStoredFile},
+   * when no other record uses the same path. The caller cancels the queued messages first; a delivery
+   * that is still active stops the removal, and the state stays as it was.
+   */
+  deleteTaskMessages = Effect.fn("MailboxStore.deleteTaskMessages")(function* (
+    this: MailboxStore,
+    agentId: string,
+    taskId: string,
+  ): Effect.fn.Return<void, StoredStateFailure> {
+    try {
+      const found = () => {
+        const ids = new Set(
+          this.#state.messages.filter((message) => message.taskId === taskId).map((message) => message.id),
+        );
+        const deliveries = this.#state.deliveries.filter((delivery) => ids.has(delivery.messageId));
+        // A task message has one recipient, the thread's agent.
+        if (deliveries.some((delivery) => delivery.recipientAgentId !== agentId || isActiveDelivery(delivery)))
+          throw new Error(sourceText("error.backend.threadStillRunning"));
+        return { ids, deliveries };
+      };
+      if (found().ids.size === 0) return;
+      // The path checks wait, so they run before the state changes, as in `deleteStoredFile`.
+      const managedPaths = new Map<string, string | null>();
+      for (const message of this.#state.messages) {
+        if (message.taskId !== taskId) continue;
+        for (const file of messageFiles(message)) {
+          if (file.deletedAt || managedPaths.has(file.path)) continue;
+          managedPaths.set(file.path, yield* this.#files.managedTransferFile(file.path).pipe(toStoredStateFailure));
+        }
+      }
+      const { ids, deliveries } = found();
+      const previous = structuredClone(this.#state);
+      const files = this.#state.messages.filter((message) => ids.has(message.id)).flatMap(messageFiles);
+      this.#state.messages = this.#state.messages.filter((message) => !ids.has(message.id));
+      this.#state.deliveries = this.#state.deliveries.filter((delivery) => !ids.has(delivery.messageId));
+      const reactions = this.#state.reactions.filter((reaction) => ids.has(reaction.messageId));
+      this.#state.reactions = this.#state.reactions.filter((reaction) => !ids.has(reaction.messageId));
+      for (const [key, messageId] of Object.entries(this.#state.idempotency))
+        if (ids.has(messageId)) delete this.#state.idempotency[key];
+      for (const id of ids) this.#changes.messageIds.add(id);
+      for (const delivery of deliveries) this.#changes.deliveryIds.add(delivery.id);
+      for (const reaction of reactions)
+        this.#changes.reactionKeys.add(mailboxReactionRowKey(reaction.agentId, reaction.messageId, reaction.actor));
+      const inUse = new Set(
+        this.#fileRecords()
+          .filter((record) => !record.deletedAt)
+          .map((record) => record.path),
+      );
+      const deletions: string[] = [];
+      for (const path of new Set(files.filter((file) => !file.deletedAt).map((file) => file.path))) {
+        const managed = inUse.has(path) ? null : managedPaths.get(path);
+        if (managed) deletions.push(managed);
+      }
+      try {
+        this.#persist("mailbox.thread-deleted", `mailbox:thread-deleted:${taskId}:${randomUUID()}`, deletions);
+      } catch (error) {
+        this.#state = previous;
+        throw error;
+      }
+      yield* this.#drainFileDeletionOutboxEffect();
+    } catch (cause) {
+      return yield* new StoredStateFailure({ cause });
+    }
+  }, Effect.uninterruptible).bind(this);
+
   /** Every queued, starting or running delivery that runs in a task, with the task id. */
   unfinishedTaskDeliveries(): Array<{ agentId: string; deliveryId: string; taskId: string; queued: boolean }> {
     const messages = this.#messagesById();

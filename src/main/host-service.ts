@@ -1094,8 +1094,14 @@ export class HostService extends EventEmitter<HostEvents> {
     );
   }
 
-  searchAgentConversationMessages(query: string, agentId?: string, cursor?: string, limit = 100) {
-    return this.#options.agents.searchConversationMessages(query, agentId, cursor, limit);
+  searchAgentConversationMessages(
+    query: string,
+    agentId?: string,
+    cursor?: string,
+    limit = 100,
+    includeSideThreads = false,
+  ) {
+    return this.#options.agents.searchConversationMessages(query, agentId, cursor, limit, includeSideThreads);
   }
 
   searchAgentConversationFiles(query: string, cursor?: string, limit = 50) {
