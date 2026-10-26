@@ -287,7 +287,9 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
         // After an app upgrade the first check updates an installed CLI itself, so it is not offered
         // until that check has started its download.
         const automatic = this.#updateInstalled && this.#updatesInstalled(provider, this.#target);
-        providers[provider].availableVersion = offer && !configuredCliPath(provider) && !automatic ? version : null;
+        // A provider that is off offers no update: the user turned it off to stop using its CLI.
+        providers[provider].availableVersion =
+          offer && !configuredCliPath(provider) && !automatic && this.#isProviderOn(provider) ? version : null;
       }
     }
     return { revision: this.#revision, providers, toolRuntimes: { bun } };
@@ -465,6 +467,12 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
     if ((this.#systemVersions.get(provider) ?? null) === version) return;
     if (version) this.#systemVersions.set(provider, version);
     else this.#systemVersions.delete(provider);
+    this.#revision += 1;
+    this.emit("status", this.getStatus());
+  }
+
+  /** Sends the offers again after the user turns a provider on or off. */
+  providerUseChanged(): void {
     this.#revision += 1;
     this.emit("status", this.getStatus());
   }
