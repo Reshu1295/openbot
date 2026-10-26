@@ -44,12 +44,10 @@ export const messages = {
   "customProvider.error.baseUrlCredential": "Передавайте учётные данные в заголовке, а не в URL.",
 
   "customProvider.saved.restarted": "Сохранено. OpenBot загружает модели.",
-  "customProvider.saved.skippedBusy":
-    "Сохранено. OpenCode прочитает список, когда завершится текущая задача. Затем нажмите «Подключить».",
+  "customProvider.saved.skippedBusy": "Сохранено. OpenCode прочитает список, когда завершится текущая задача.",
   "customProvider.saved.notRunning": "Сохранено. OpenCode прочитает список при следующем запуске.",
   "customProvider.removed.restarted": "Удалено. OpenBot загружает модели.",
-  "customProvider.removed.skippedBusy":
-    "Удалено. OpenCode прочитает список, когда завершится текущая задача. Затем нажмите «Подключить».",
+  "customProvider.removed.skippedBusy": "Удалено. OpenCode прочитает список, когда завершится текущая задача.",
   "customProvider.removed.notRunning": "Удалено. OpenCode прочитает список при следующем запуске.",
   "customProvider.saveFailed": "OpenBot не удалось сохранить этот эндпоинт.",
   "customProvider.removeFailed": "OpenBot не удалось удалить «{name}».",

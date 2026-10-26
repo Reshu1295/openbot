@@ -45,12 +45,10 @@ export const messages = {
   "customProvider.error.baseUrlCredential": "Mettez l’identifiant dans un en-tête, pas dans l’URL.",
 
   "customProvider.saved.restarted": "Enregistré. OpenBot charge les modèles.",
-  "customProvider.saved.skippedBusy":
-    "Enregistré. OpenCode lit la liste quand la tâche en cours s’arrête. Appuyez alors sur Se connecter.",
+  "customProvider.saved.skippedBusy": "Enregistré. OpenCode lit la liste quand la tâche en cours s’arrête.",
   "customProvider.saved.notRunning": "Enregistré. OpenCode lit la liste à son prochain démarrage.",
   "customProvider.removed.restarted": "Supprimé. OpenBot charge les modèles.",
-  "customProvider.removed.skippedBusy":
-    "Supprimé. OpenCode lit la liste quand la tâche en cours s’arrête. Appuyez alors sur Se connecter.",
+  "customProvider.removed.skippedBusy": "Supprimé. OpenCode lit la liste quand la tâche en cours s’arrête.",
   "customProvider.removed.notRunning": "Supprimé. OpenCode lit la liste à son prochain démarrage.",
   "customProvider.saveFailed": "OpenBot n’a pas pu enregistrer ce point de terminaison.",
   "customProvider.removeFailed": "OpenBot n’a pas pu supprimer {name}.",

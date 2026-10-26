@@ -47,12 +47,10 @@ export const messages = {
 
   // Kaydetme veya kaldırma işleminden sonraki not. OpenCode'un yeni listeyi ne zaman okuduğunu belirtir.
   "customProvider.saved.restarted": "Kaydedildi. OpenBot modelleri yüklüyor.",
-  "customProvider.saved.skippedBusy":
-    "Kaydedildi. OpenCode listeyi geçerli görev durduktan sonra okur. Ardından Bağlan'a basın.",
+  "customProvider.saved.skippedBusy": "Kaydedildi. OpenCode listeyi geçerli görev durduktan sonra okur.",
   "customProvider.saved.notRunning": "Kaydedildi. OpenCode bir sonraki başlatılışında listeyi okur.",
   "customProvider.removed.restarted": "Kaldırıldı. OpenBot modelleri yüklüyor.",
-  "customProvider.removed.skippedBusy":
-    "Kaldırıldı. OpenCode listeyi geçerli görev durduktan sonra okur. Ardından Bağlan'a basın.",
+  "customProvider.removed.skippedBusy": "Kaldırıldı. OpenCode listeyi geçerli görev durduktan sonra okur.",
   "customProvider.removed.notRunning": "Kaldırıldı. OpenCode bir sonraki başlatılışında listeyi okur.",
   "customProvider.saveFailed": "OpenBot bu uç noktayı kaydedemedi.",
   "customProvider.removeFailed": "OpenBot {name} öğesini kaldıramadı.",

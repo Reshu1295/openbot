@@ -44,12 +44,10 @@ export const messages = {
   "customProvider.error.baseUrlProtocol": "Użyj adresu URL http:// lub https://.",
   "customProvider.error.baseUrlCredential": "Umieść poświadczenie w nagłówku, nie w adresie URL.",
   "customProvider.saved.restarted": "Zapisano. OpenBot wczytuje modele.",
-  "customProvider.saved.skippedBusy":
-    "Zapisano. OpenCode odczyta listę po zakończeniu bieżącego zadania. Wtedy naciśnij „Połącz”.",
+  "customProvider.saved.skippedBusy": "Zapisano. OpenCode odczyta listę po zakończeniu bieżącego zadania.",
   "customProvider.saved.notRunning": "Zapisano. OpenCode odczyta listę przy następnym uruchomieniu.",
   "customProvider.removed.restarted": "Usunięto. OpenBot wczytuje modele.",
-  "customProvider.removed.skippedBusy":
-    "Usunięto. OpenCode odczyta listę po zakończeniu bieżącego zadania. Wtedy naciśnij „Połącz”.",
+  "customProvider.removed.skippedBusy": "Usunięto. OpenCode odczyta listę po zakończeniu bieżącego zadania.",
   "customProvider.removed.notRunning": "Usunięto. OpenCode odczyta listę przy następnym uruchomieniu.",
   "customProvider.saveFailed": "Nie udało się zapisać tego endpointu.",
   "customProvider.removeFailed": "Nie udało się usunąć: {name}.",

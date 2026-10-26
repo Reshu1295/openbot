@@ -412,7 +412,10 @@ export class ProviderRuntime implements ProviderPort {
   readonly #updatesWhenIdle = new Set<AgentProvider>();
   /** A custom agent change that a turn delayed. The idle check applies it when the turn stops. */
   #customAgentsReloadPending = false;
-  /** Providers that a turn kept on the old agent environment. The idle check restarts each after its turn. */
+  /**
+   * Providers that a turn kept on the old agent environment or OpenCode config. The idle check
+   * restarts each after its turn.
+   */
   readonly #environmentReloadPending = new Set<AgentProvider>();
   readonly #lastUsed = new Map<AgentProvider, number>();
   /**
@@ -1721,7 +1724,7 @@ export class ProviderRuntime implements ProviderPort {
    *
    * One `opencode acp` process serves every OpenCode agent, so a respawn is felt account-wide. That
    * is why a turn in progress wins: the config is only read at spawn, so skipping costs nothing
-   * durable, and the next connect or app start picks the endpoint up.
+   * durable, and the idle check applies the respawn after the turn stops.
    *
    * It reports how the respawn went and never throws, because the caller has already written the
    * endpoint to disk: a throw here would read to the user as a save that failed. A respawn that
@@ -1732,12 +1735,19 @@ export class ProviderRuntime implements ProviderPort {
   readonly reloadOpenCodeConfig = Effect.fn("ProviderRuntime.reloadOpenCodeConfig")(function* (
     this: ProviderRuntime,
   ): Effect.fn.Return<CustomProviderRestart> {
+    this.#environmentReloadPending.delete("opencode");
     if (!this.#clients.has("opencode")) return "not-running";
-    if (this.#hooks.isProviderBusy("opencode")) return "skipped-busy";
+    if (this.#hooks.isProviderBusy("opencode")) {
+      this.#environmentReloadPending.add("opencode");
+      return "skipped-busy";
+    }
     const result = yield* Effect.result(
       this.#runProviderConnectionCommand("opencode", () => this.#reprobeProvider("opencode")),
     );
-    if (Result.isFailure(result) && this.#hooks.isProviderBusy("opencode")) return "skipped-busy";
+    if (Result.isFailure(result) && this.#hooks.isProviderBusy("opencode")) {
+      this.#environmentReloadPending.add("opencode");
+      return "skipped-busy";
+    }
     return "restarted";
   }, Effect.uninterruptible).bind(this);
 

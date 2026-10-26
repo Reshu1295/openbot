@@ -45,12 +45,10 @@ export const messages = defineMessages("customProvider", {
 
   // The note after a save or a removal. It tells the user when OpenCode reads the new list.
   "customProvider.saved.restarted": "Saved. OpenBot is loading the models.",
-  "customProvider.saved.skippedBusy":
-    "Saved. OpenCode reads the list after the current task stops. Press Connect then.",
+  "customProvider.saved.skippedBusy": "Saved. OpenCode reads the list after the current task stops.",
   "customProvider.saved.notRunning": "Saved. OpenCode reads the list when it next starts.",
   "customProvider.removed.restarted": "Removed. OpenBot is loading the models.",
-  "customProvider.removed.skippedBusy":
-    "Removed. OpenCode reads the list after the current task stops. Press Connect then.",
+  "customProvider.removed.skippedBusy": "Removed. OpenCode reads the list after the current task stops.",
   "customProvider.removed.notRunning": "Removed. OpenCode reads the list when it next starts.",
   "customProvider.saveFailed": "OpenBot could not save this endpoint.",
   "customProvider.removeFailed": "OpenBot could not remove {name}.",
