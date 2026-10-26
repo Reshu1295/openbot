@@ -849,6 +849,7 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
     if (!this.#running) return yield* providerFailure(new Error("Claude Agent SDK is not running."));
     if (handoff) this.#reportMcpDrops?.(this.provider, handoff.dropped);
     const mcpServers = handoff ? { ...handoff.servers, ...this.#createOpenBotServers(threadId) } : {};
+    const nodeOptions = this.#agentEnvironment?.().NODE_OPTIONS;
     const claudeQuery = yield* providerSync(() =>
       this.#createQuery({
         prompt: input,
@@ -889,6 +890,10 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
           persistSession: config.persistSession,
           additionalDirectories: config.additionalDirectories,
           canUseTool,
+          // The SDK deletes NODE_OPTIONS from the environment of the CLI. On a server the agent
+          // environment has the CPU limit module there (`agentProcessEnvironment`), so it goes into
+          // the flag settings, whose `env` the CLI gives to the Bash tool and its hooks.
+          ...(nodeOptions ? { settings: { env: { NODE_OPTIONS: nodeOptions } } } : {}),
           ...(config.workspaceOnly
             ? {
                 sandbox: claudeWorkspaceSandbox(config.additionalDirectories),
