@@ -122,9 +122,9 @@ export interface RenameAgentTaskInput extends AgentTaskInput {
  * characters. Null when the value is not a valid title. IPC and the Team API use this one rule.
  */
 export function agentThreadTitle(value: unknown): string | null {
-  if (typeof value !== "string" || value.length > INPUT_LIMITS.agentTaskTitle) return null;
+  if (typeof value !== "string") return null;
   const title = value.trim();
-  return title && !/[\p{Cc}\p{Zl}\p{Zp}]/u.test(title) ? title : null;
+  return title && title.length <= INPUT_LIMITS.agentTaskTitle && !/[\p{Cc}\p{Zl}\p{Zp}]/u.test(title) ? title : null;
 }
 
 function isAgentTaskQueuedMessage(value: unknown): value is AgentTaskQueuedMessage {

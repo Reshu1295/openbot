@@ -183,6 +183,7 @@ export class AgentTasks implements TaskLanes {
   delete(task: AgentThreadRecord): void {
     this.#progress.delete(task.taskId);
     this.#stoppedTurns.delete(task.taskId);
+    this.#turnEndWaiters.delete(task.taskId);
     this.#store.delete(task.taskId);
     this.changed(task.agentId);
   }
@@ -389,7 +390,10 @@ export class AgentTasks implements TaskLanes {
           event.status === "completed" ? "completed" : event.status === "failed" ? "failed" : "interrupted",
         );
         this.changed(task.agentId);
-        for (const ended of this.#turnEndWaiters.get(task.taskId) ?? []) Deferred.doneUnsafe(ended, Effect.void);
+        // The waiters leave the map here, so a wait that a failed Stop never runs does not stay.
+        const waiters = this.#turnEndWaiters.get(task.taskId);
+        this.#turnEndWaiters.delete(task.taskId);
+        for (const ended of waiters ?? []) Deferred.doneUnsafe(ended, Effect.void);
         return true;
       }
       case "queue-changed":

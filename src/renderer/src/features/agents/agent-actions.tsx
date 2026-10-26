@@ -23,6 +23,7 @@ import { useDirectMessages } from "../conversation/direct-messages-context";
 import { useServers } from "../servers/servers-context";
 import { useSidebar } from "../sidebar/sidebar-context";
 import { type NewAgentDraft, newAgentInput } from "./agent-create-input";
+import { attentionAgentId, withoutAttention } from "./agent-runtime-snapshot";
 import { useAgents } from "./agents-context";
 import { agentsPort } from "./agents-port";
 
@@ -301,7 +302,7 @@ const AgentActions = createSimpleContext({
         setActiveTurns((current) => withoutAgent(current, agentId));
         setFailedTurns((current) => withoutAgent(current, agentId));
         setQueues((current) => withoutAgent(current, agentId));
-        setPendingPrompts((current) => withoutAgent(current, agentId));
+        setPendingPrompts((current) => withoutAttention(current, (event) => attentionAgentId(event) === agentId));
       }
 
       async function commit(): Promise<void> {

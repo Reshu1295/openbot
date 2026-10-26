@@ -1290,8 +1290,9 @@ export class ThreadLifecycle {
   }
 
   /**
-   * As `providerContextBusy`, for the agent's own chat alone: a side thread that starts a turn or
-   * compacts its own session does not hold a change to the chat's context.
+   * As `providerContextBusy`, for the agent's own chat alone: a side thread that runs a turn or
+   * compacts its own session does not hold a change to the chat's context. A start in flight holds it
+   * in any thread, for its short wait, because the runtime refresh needs that hold for the agent.
    */
   mainContextBusy(agent: AgentSummary): boolean {
     if (this.#pendingStarts.has(agent.id)) return true;

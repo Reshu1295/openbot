@@ -55,6 +55,9 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
   };
   /** The side threads with a tab that shows. */
   const openIds = (agentId: string): string[] => storedTabs(agentId).open.filter((id) => shown(agentId, id));
+  /** The side threads whose tabs a write keeps. Before the thread list loads, no stored tab is dropped. */
+  const keptIds = (agentId: string): string[] =>
+    tasks.snapshot(agentId) ? openIds(agentId) : storedTabs(agentId).open.filter((id) => !hidden().has(id));
   const hasDraft = (agentId: string) => drafts().has(agentId);
   const tabOrder = (agentId: string): string[] => [
     MAIN_THREAD_ID,
@@ -72,7 +75,7 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
   function writeTabs(agentId: string, tabs: AgentThreadTabs | null): void {
     const server = serverId();
     const stored = readThreadTabs();
-    const agents = { ...stored[server], ...tabsByServer()[server] };
+    const agents = { ...stored[server] };
     if (tabs && (tabs.open.length > 0 || tabs.active !== null)) agents[agentId] = tabs;
     else delete agents[agentId];
     const next = { ...stored, [server]: agents };
@@ -101,10 +104,10 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
   /** Opens a thread. A thread without a tab gets one at the end. */
   function open(agentId: string, id: string): void {
     if (id === MAIN_THREAD_ID || id === DRAFT_THREAD_ID) {
-      writeTabs(agentId, { open: openIds(agentId), active: id === MAIN_THREAD_ID ? null : id });
+      writeTabs(agentId, { open: keptIds(agentId), active: id === MAIN_THREAD_ID ? null : id });
       return;
     }
-    const ids = openIds(agentId);
+    const ids = keptIds(agentId);
     writeTabs(agentId, { open: ids.includes(id) ? ids : [...ids, id], active: id });
   }
 
@@ -125,7 +128,7 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
   /** Opens the new thread tab. Its first message starts the thread. */
   function startNew(agentId: string): void {
     setDraft(agentId, true);
-    writeTabs(agentId, { open: openIds(agentId), active: DRAFT_THREAD_ID });
+    writeTabs(agentId, { open: keptIds(agentId), active: DRAFT_THREAD_ID });
   }
 
   /** Closes a tab only. The thread stays in the thread list. The tab to its left opens. */
@@ -322,7 +325,7 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
     const stillOpen = activeId(agentId) === DRAFT_THREAD_ID;
     setDraft(agentId, false);
     writeTabs(agentId, {
-      open: [...openIds(agentId).filter((entry) => entry !== started.id), started.id],
+      open: [...keptIds(agentId).filter((entry) => entry !== started.id), started.id],
       active: stillOpen ? started.id : storedTabs(agentId).active,
     });
     return true;
