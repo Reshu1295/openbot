@@ -108,6 +108,20 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
     writeTabs(agentId, { open: ids.includes(id) ? ids : [...ids, id], active: id });
   }
 
+  /**
+   * Opens the tab of a conversation thread from outside the header, for example a notification: a
+   * side thread's tab, or the agent's own chat for a thread that is no side thread. An archived side
+   * thread does not open, and the tabs stay as they are.
+   */
+  async function openConversation(agentId: string, threadId: string): Promise<void> {
+    const find = () => tasks.snapshot(agentId)?.tasks.find((entry) => entry.threadId === threadId);
+    if (!find() && tasks.available()) await tasks.loadTasks(agentId);
+    if (!scopeIsCurrent()) return;
+    const entry = find();
+    if (!entry) open(agentId, MAIN_THREAD_ID);
+    else if (entry.state !== "closed") open(agentId, entry.id);
+  }
+
   /** Opens the new thread tab. Its first message starts the thread. */
   function startNew(agentId: string): void {
     setDraft(agentId, true);
@@ -378,6 +392,7 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
     activeId,
     hidden,
     open,
+    openConversation,
     startNew,
     close,
     closeOthers,

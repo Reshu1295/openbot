@@ -270,6 +270,7 @@ export function createAgentTasks(options: AgentTasksOptions) {
     conversation: (taskId: string): ConversationSnapshot | undefined => state.conversations[taskId],
     applyEvent,
     reload,
+    loadTasks,
     openTask,
     startTask,
     runQueuedMessageAsTask,

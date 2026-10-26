@@ -6,6 +6,7 @@
   list, and opening it restores it. Delete shows an Undo button for some seconds first.
 - Use threads in the web app and on a computer that is joined to a server, when the server has this version.
 - Search on this computer also finds messages in open threads. Select a result to open its thread tab.
+- A notification from a thread opens that thread's tab.
 
 ### Changed
 
@@ -13,5 +14,5 @@
   as threads after the upgrade. Closed tasks show as archived threads. The Tasks page and the task panel are removed.
 - "Tasks at once" in the agent settings is now "Parallel threads". "Run as task" on a queued message is now "Run in
   new thread".
-- Delete a thread also deletes its messages and their files from the agent's inbox.
+- Deleting a thread also deletes its messages and their files from the agent's inbox.
 - After this upgrade, an earlier version of OpenBot cannot open your data.
