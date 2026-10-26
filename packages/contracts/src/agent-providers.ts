@@ -437,6 +437,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     signInPageEnd: "callback",
     // The Claude client runs it, so these are the Claude row's values.
     skillFolders: [".claude/skills"],
+    homeSkills: "plugin",
     workspaceEnforcement: "tool-sandbox",
     steer: "native",
     concurrentTurns: true,
