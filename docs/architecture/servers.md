@@ -166,8 +166,8 @@ in the Routines view; the web client shows the view switch only when the host se
 
 ### Workflows
 
-`workflows-v1` serves the workflow canvas (see [Workflows](agents.md#workflows)) to a joined desktop
-and to the web client. Its routes are `POST /v1/workflows/<name>` with the input in the body:
+`workflows-v1` serves the workflow canvas (see [Workflows](agents.md#workflows)) to a joined desktop,
+to the web client and to the mobile app. Its routes are `POST /v1/workflows/<name>` with the input in the body:
 `list`, `get`, `create`, `rename`, `delete`, `save-graph`, `versions`, `version-graph`,
 `restore-version`, `start-run`, `run-step`, `stop-step`, `stop-run`, `retry-step`, `decide`, `runs`,
 `run` and `rotate-webhook-secret`. `version-graph` gives the graph of one version for the preview,
@@ -202,6 +202,21 @@ not know as read-only (`needsNewerApp`), and keeps the node when it saves.
 
 The optional event `workflows-changed { workflowId }` names the workflow that changed, so the
 client reads it again. A client without the capability shows `serverTooOld` on the Workflows page.
+
+The desktop app and the mobile app decode the answers with the same module,
+`packages/team-client/src/workflow-decoding.ts`. The host sends `workflows-changed` for each run
+and step change, so the mobile list, run and drawer read again on the event and do not poll.
+
+The mobile app edits a workflow as a list of steps, not as a canvas
+(`apps/mobile/src/features/workflows/model/workflow-outline.ts`). A graph with one trigger, at most
+one condition, and one path in and out of each step, except the step where the two condition paths
+join, becomes an outline. A change to the outline writes the edges of its steps again, with the
+edge ids of the desktop canvas. A new step goes to the right of the step before it, and the steps
+after it move right by its width. Other nodes, the notes, the shapes and the drawings keep their
+places. Any other graph keeps its edges: the phone changes only the settings of its steps. A save
+that a newer revision refused shows the conflict, and the person keeps the draft or loads the saved
+workflow. The pins of the mobile drawer stay on the phone, in the workspace preferences of the
+account and server (`pinnedWorkflows`); the host does not know them.
 
 ### History extent
 

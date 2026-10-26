@@ -37,6 +37,11 @@ import {
   workflowsEvent,
 } from "@openbot/contracts/team-protocol/workflows-v1";
 import { sourceText } from "@openbot/i18n/source";
+import {
+  decodeRemoteWorkflowDetail,
+  decodeRemoteWorkflowRunDetail,
+  decodeRemoteWorkflowVersions,
+} from "@openbot/team-client/workflow-decoding";
 import { plugin } from "bun";
 import { Effect } from "effect";
 import type { AgentBrowserHost } from "../src/backend/agent/turn-lifecycle";
@@ -50,11 +55,6 @@ import { WorkflowRunStore } from "../src/backend/workflows/workflow-run-store";
 import { WorkflowStore } from "../src/backend/workflows/workflow-store";
 import { workflowScheduleDueAt } from "../src/backend/workflows/workflow-triggers";
 import { createWorkflows, type WorkflowsHandle } from "../src/backend/workflows/workflows";
-import {
-  decodeRemoteWorkflowDetail,
-  decodeRemoteWorkflowRunDetail,
-  decodeRemoteWorkflowVersions,
-} from "../src/main/remote-workflow-decoding";
 import type { TeamApiBrowser } from "../src/main/team-api/dependencies";
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/workflow-team-api-e2e");
