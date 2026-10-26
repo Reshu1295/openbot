@@ -248,6 +248,16 @@ export const messages = defineMessages("marketplace", {
   "marketplace.plugin.braveSearch.prompt.search": "What are reviewers saying about this framework version?",
   "marketplace.plugin.braveSearch.prompt.news": "Find today's announcements for this product area.",
   "marketplace.plugin.braveSearch.prompt.compare": "Compare these two vendors with cited sources.",
+  "marketplace.plugin.obsidian.tagline": "Notes in your vault",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian lets agents search, read and write the notes in your vault, so the vault can be their memory. The local server connects to the Local REST API plugin in the Obsidian app on this computer. The plugin's API key is passed to the local server as one environment variable. Keep Obsidian open while agents use it.",
+  "marketplace.plugin.obsidian.app":
+    "Note search, reading and editing, over a local MCP server with the Local REST API plugin key.",
+  "marketplace.plugin.obsidian.prompt.recall": "What do my notes say about the decisions on this project?",
+  "marketplace.plugin.obsidian.prompt.save": "Save this decision as a new note in my vault.",
+  "marketplace.plugin.obsidian.prompt.log": "Add a summary of today's work to my Work log note.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'In Obsidian, open Settings > Local REST API. Copy the API key and turn on "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "Transactional email",
   "marketplace.plugin.resend.description":
     "Resend lets agents send transactional email and check delivery through one API. An API key from the Resend dashboard is passed to the local server as one environment variable.",

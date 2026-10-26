@@ -43,6 +43,12 @@ export const PLUGIN_CATALOG_INDEX: PluginCatalogIndex = {
       detailSha256: "8b66d2a108340a79e398bedc19efc7dad2914b0addf17c76ee9fc50b72b09c1b",
     },
     {
+      slug: "obsidian",
+      version: "1.0.0",
+      featured: false,
+      detailSha256: "45ea3600029406e68f15ea68c63876695e28878e54b1a6d9c08ae8b7fa730d8a",
+    },
+    {
       slug: "cobrain",
       version: "1.0.0",
       featured: false,
@@ -300,6 +306,57 @@ export const PLUGIN_CATALOG_DETAILS: Record<string, PluginCatalogDetail> = {
     websiteUrl: "https://www.notion.so",
     privacyPolicyUrl: "https://www.notion.so/privacy",
     termsUrl: "https://www.notion.so/terms",
+    skills: [],
+  },
+  obsidian: {
+    slug: "obsidian",
+    name: "Obsidian",
+    tagline: "Notes in your vault",
+    description:
+      "Obsidian lets agents search, read and write the notes in your vault, so the vault can be their memory. The local server connects to the Local REST API plugin in the Obsidian app on this computer. The plugin's API key is passed to the local server as one environment variable. Keep Obsidian open while agents use it.",
+    category: "productivity",
+    creatorName: "obsidian.md",
+    iconUrl: "https://obsidian.md/favicon.ico",
+    version: "1.0.0",
+    prompts: [
+      { id: "prompt-recall", text: "What do my notes say about the decisions on this project?" },
+      { id: "prompt-save", text: "Save this decision as a new note in my vault." },
+      { id: "prompt-log", text: "Add a summary of today's work to my Work log note." },
+    ],
+    apps: [
+      {
+        id: "app-obsidian-mcp",
+        name: "Obsidian",
+        description: "Note search, reading and editing, over a local MCP server with the Local REST API plugin key.",
+        iconUrl: "https://obsidian.md/favicon.ico",
+        server: {
+          name: "obsidian",
+          transport: "stdio",
+          command: "npx",
+          args: ["-y", "obsidian-mcp-server"],
+          auth: [
+            {
+              id: "obsidian-key",
+              kind: "key",
+              label: "API key",
+              fields: [
+                {
+                  id: "token",
+                  label: "API key",
+                  env: "OBSIDIAN_API_KEY",
+                  hint: 'In Obsidian, open Settings > Local REST API. Copy the API key and turn on "Enable non-encrypted (HTTP) server".',
+                },
+              ],
+              docsUrl: "https://github.com/coddingtonbear/obsidian-local-rest-api",
+              docsLabel: "Get a key",
+            },
+          ],
+        },
+      },
+    ],
+    websiteUrl: "https://obsidian.md",
+    privacyPolicyUrl: "https://obsidian.md/privacy",
+    termsUrl: "https://obsidian.md/terms",
     skills: [],
   },
   cobrain: {

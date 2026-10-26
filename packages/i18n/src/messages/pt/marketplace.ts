@@ -238,6 +238,16 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "O que os avaliadores estão dizendo sobre esta versão do framework?",
   "marketplace.plugin.braveSearch.prompt.news": "Encontre os anúncios de hoje nesta área de produto.",
   "marketplace.plugin.braveSearch.prompt.compare": "Compare estes dois fornecedores com fontes citadas.",
+  "marketplace.plugin.obsidian.tagline": "Notas do seu cofre",
+  "marketplace.plugin.obsidian.description":
+    "O Obsidian permite que agentes pesquisem, leiam e escrevam as notas do seu cofre, para que o cofre seja a memória deles. O servidor local se conecta ao plugin Local REST API no app Obsidian deste computador. A chave de API do plugin é passada ao servidor local como uma variável de ambiente. Mantenha o Obsidian aberto enquanto os agentes o usam.",
+  "marketplace.plugin.obsidian.app":
+    "Pesquisa, leitura e edição de notas, por um servidor MCP local com a chave do plugin Local REST API.",
+  "marketplace.plugin.obsidian.prompt.recall": "O que minhas notas dizem sobre as decisões deste projeto?",
+  "marketplace.plugin.obsidian.prompt.save": "Salve esta decisão como uma nova nota no meu cofre.",
+  "marketplace.plugin.obsidian.prompt.log": "Adicione um resumo do trabalho de hoje à minha nota Registro de trabalho.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'No Obsidian, abra Settings > Local REST API. Copie a chave de API e ative "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "E-mail transacional",
   "marketplace.plugin.resend.description":
     "O Resend permite que agentes enviem e-mails transacionais e verifiquem a entrega por uma única API. Uma chave de API do painel do Resend é passada ao servidor local como uma variável de ambiente.",

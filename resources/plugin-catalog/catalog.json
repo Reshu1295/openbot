@@ -27,6 +27,12 @@
       "detailSha256": "8b66d2a108340a79e398bedc19efc7dad2914b0addf17c76ee9fc50b72b09c1b"
     },
     {
+      "slug": "obsidian",
+      "version": "1.0.0",
+      "featured": false,
+      "detailSha256": "45ea3600029406e68f15ea68c63876695e28878e54b1a6d9c08ae8b7fa730d8a"
+    },
+    {
       "slug": "cobrain",
       "version": "1.0.0",
       "featured": false,

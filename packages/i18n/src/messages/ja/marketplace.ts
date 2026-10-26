@@ -249,6 +249,17 @@ export const messages = {
     "このフレームワークのバージョンについて、レビュアーは何と言っていますか？",
   "marketplace.plugin.braveSearch.prompt.news": "この製品分野の今日の発表を探してください。",
   "marketplace.plugin.braveSearch.prompt.compare": "この 2 つのベンダーを、情報源を引用して比較してください。",
+  "marketplace.plugin.obsidian.tagline": "Vault のノート",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian を使うと、エージェントが Vault のノートを検索、閲覧、作成できるため、Vault をエージェントの記憶として使えます。ローカルサーバーは、このコンピューターの Obsidian アプリにある Local REST API プラグインに接続します。プラグインの API キーは、1 つの環境変数としてローカルサーバーに渡されます。エージェントが使う間は Obsidian を開いたままにしてください。",
+  "marketplace.plugin.obsidian.app":
+    "ノートの検索、閲覧、編集。Local REST API プラグインのキーを使うローカル MCP サーバー経由です。",
+  "marketplace.plugin.obsidian.prompt.recall":
+    "このプロジェクトの決定事項について、私のノートには何が書かれていますか？",
+  "marketplace.plugin.obsidian.prompt.save": "この決定を Vault に新しいノートとして保存してください。",
+  "marketplace.plugin.obsidian.prompt.log": "今日の作業のまとめを「作業ログ」ノートに追加してください。",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Obsidian で Settings > Local REST API を開きます。API キーをコピーし、"Enable non-encrypted (HTTP) server" をオンにしてください。',
   "marketplace.plugin.resend.tagline": "トランザクションメール",
   "marketplace.plugin.resend.description":
     "Resend を使うと、エージェントは 1 つの API でトランザクションメールを送信し、配信を確認できます。Resend ダッシュボードの API キーは、1 つの環境変数としてローカルサーバーに渡されます。",

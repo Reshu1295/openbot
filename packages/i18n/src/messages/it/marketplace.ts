@@ -251,6 +251,17 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "Cosa dicono i recensori di questa versione del framework?",
   "marketplace.plugin.braveSearch.prompt.news": "Trova gli annunci di oggi per quest'area di prodotto.",
   "marketplace.plugin.braveSearch.prompt.compare": "Confronta questi due fornitori citando le fonti.",
+  "marketplace.plugin.obsidian.tagline": "Note del tuo vault",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian consente agli agenti di cercare, leggere e scrivere le note del tuo vault, che può così fare da loro memoria. Il server locale si collega al plugin Local REST API nell'app Obsidian su questo computer. La chiave API del plugin viene passata al server locale come variabile d'ambiente. Tieni Obsidian aperto mentre gli agenti lo usano.",
+  "marketplace.plugin.obsidian.app":
+    "Ricerca, lettura e modifica delle note, tramite un server MCP locale con la chiave del plugin Local REST API.",
+  "marketplace.plugin.obsidian.prompt.recall": "Cosa dicono le mie note sulle decisioni di questo progetto?",
+  "marketplace.plugin.obsidian.prompt.save": "Salva questa decisione come nuova nota nel mio vault.",
+  "marketplace.plugin.obsidian.prompt.log":
+    "Aggiungi un riepilogo del lavoro di oggi alla mia nota Registro di lavoro.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'In Obsidian, apri Settings > Local REST API. Copia la chiave API e attiva "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "Email transazionali",
   "marketplace.plugin.resend.description":
     "Resend permette agli agenti di inviare email transazionali e controllarne la consegna con una sola API. Una chiave API presa dalla dashboard di Resend viene passata al server locale come variabile d'ambiente.",

@@ -256,6 +256,16 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "Co recenzenci mówią o tej wersji frameworka?",
   "marketplace.plugin.braveSearch.prompt.news": "Znajdź dzisiejsze ogłoszenia z tego obszaru produktów.",
   "marketplace.plugin.braveSearch.prompt.compare": "Porównaj tych dwóch dostawców i podaj źródła.",
+  "marketplace.plugin.obsidian.tagline": "Notatki w Twoim sejfie",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian pozwala agentom wyszukiwać, czytać i zapisywać notatki w Twoim sejfie, więc sejf może być ich pamięcią. Lokalny serwer łączy się z wtyczką Local REST API w aplikacji Obsidian na tym komputerze. Klucz API wtyczki trafia do lokalnego serwera jako jedna zmienna środowiskowa. Nie zamykaj Obsidiana, gdy agenci z niego korzystają.",
+  "marketplace.plugin.obsidian.app":
+    "Wyszukiwanie, czytanie i edycja notatek przez lokalny serwer MCP z kluczem wtyczki Local REST API.",
+  "marketplace.plugin.obsidian.prompt.recall": "Co moje notatki mówią o decyzjach w tym projekcie?",
+  "marketplace.plugin.obsidian.prompt.save": "Zapisz tę decyzję jako nową notatkę w moim sejfie.",
+  "marketplace.plugin.obsidian.prompt.log": "Dodaj podsumowanie dzisiejszej pracy do mojej notatki Dziennik pracy.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'W Obsidianie otwórz Settings > Local REST API. Skopiuj klucz API i włącz "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "E-maile transakcyjne",
   "marketplace.plugin.resend.description":
     "Resend pozwala agentom wysyłać e-maile transakcyjne i sprawdzać ich dostarczenie przez jedno API. Klucz API z panelu Resend jest przekazywany do lokalnego serwera jako jedna zmienna środowiskowa.",

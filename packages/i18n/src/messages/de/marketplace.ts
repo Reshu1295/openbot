@@ -257,6 +257,17 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "Was sagen Rezensenten über diese Framework-Version?",
   "marketplace.plugin.braveSearch.prompt.news": "Finde die heutigen Ankündigungen für diesen Produktbereich.",
   "marketplace.plugin.braveSearch.prompt.compare": "Vergleiche diese beiden Anbieter mit Quellenangaben.",
+  "marketplace.plugin.obsidian.tagline": "Notizen in deinem Vault",
+  "marketplace.plugin.obsidian.description":
+    "Mit Obsidian können Agenten die Notizen in deinem Vault durchsuchen, lesen und schreiben, sodass der Vault ihr Gedächtnis sein kann. Der lokale Server verbindet sich mit dem Plugin Local REST API in der Obsidian-App auf diesem Computer. Der API-Schlüssel des Plugins wird dem lokalen Server als eine Umgebungsvariable übergeben. Lass Obsidian geöffnet, solange Agenten es nutzen.",
+  "marketplace.plugin.obsidian.app":
+    "Notizen suchen, lesen und bearbeiten, über einen lokalen MCP-Server mit dem Schlüssel des Plugins Local REST API.",
+  "marketplace.plugin.obsidian.prompt.recall": "Was steht in meinen Notizen zu den Entscheidungen in diesem Projekt?",
+  "marketplace.plugin.obsidian.prompt.save": "Speichere diese Entscheidung als neue Notiz in meinem Vault.",
+  "marketplace.plugin.obsidian.prompt.log":
+    "Füge eine Zusammenfassung der heutigen Arbeit zu meiner Notiz Arbeitsprotokoll hinzu.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Öffne in Obsidian Settings > Local REST API. Kopiere den API-Schlüssel und aktiviere "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "Transaktions-E-Mails",
   "marketplace.plugin.resend.description":
     "Mit Resend senden Agenten Transaktions-E-Mails und prüfen die Zustellung über eine API. Ein API-Schlüssel aus dem Resend-Dashboard wird dem lokalen Server als eine Umgebungsvariable übergeben.",

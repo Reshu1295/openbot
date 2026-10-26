@@ -266,6 +266,16 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "Что пишут обозреватели об этой версии фреймворка?",
   "marketplace.plugin.braveSearch.prompt.news": "Найдите сегодняшние анонсы в этой продуктовой области.",
   "marketplace.plugin.braveSearch.prompt.compare": "Сравните этих двух поставщиков со ссылками на источники.",
+  "marketplace.plugin.obsidian.tagline": "Заметки в вашем хранилище",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian позволяет агентам искать, читать и записывать заметки в вашем хранилище, и хранилище становится их памятью. Локальный сервер подключается к плагину Local REST API в приложении Obsidian на этом компьютере. API-ключ плагина передаётся локальному серверу в одной переменной окружения. Не закрывайте Obsidian, пока агенты с ним работают.",
+  "marketplace.plugin.obsidian.app":
+    "Поиск, чтение и правка заметок через локальный MCP-сервер с ключом плагина Local REST API.",
+  "marketplace.plugin.obsidian.prompt.recall": "Что сказано в моих заметках о решениях по этому проекту?",
+  "marketplace.plugin.obsidian.prompt.save": "Сохраните это решение как новую заметку в моём хранилище.",
+  "marketplace.plugin.obsidian.prompt.log": "Добавьте сводку сегодняшней работы в мою заметку «Журнал работы».",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'В Obsidian откройте Settings > Local REST API. Скопируйте API-ключ и включите "Enable non-encrypted (HTTP) server".',
   "marketplace.plugin.resend.tagline": "Транзакционная почта",
   "marketplace.plugin.resend.description":
     "Resend позволяет агентам отправлять транзакционные письма и проверять доставку через один API. Ключ API из панели Resend передаётся локальному серверу в одной переменной окружения.",

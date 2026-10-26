@@ -269,6 +269,16 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "İncelemeciler bu çerçeve sürümü hakkında ne diyor?",
   "marketplace.plugin.braveSearch.prompt.news": "Bu ürün alanı için bugünkü duyuruları bul.",
   "marketplace.plugin.braveSearch.prompt.compare": "Bu iki tedarikçiyi kaynak göstererek karşılaştır.",
+  "marketplace.plugin.obsidian.tagline": "Kasandaki notlar",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian, ajanların kasandaki notları aramasını, okumasını ve yazmasını sağlar; böylece kasa onların hafızası olabilir. Yerel sunucu, bu bilgisayardaki Obsidian uygulamasında bulunan Local REST API eklentisine bağlanır. Eklentinin API anahtarı yerel sunucuya tek bir ortam değişkeni olarak aktarılır. Ajanlar kullanırken Obsidian'ı açık tut.",
+  "marketplace.plugin.obsidian.app":
+    "Local REST API eklentisinin anahtarıyla yerel bir MCP sunucusu üzerinden not arama, okuma ve düzenleme.",
+  "marketplace.plugin.obsidian.prompt.recall": "Notlarım bu projedeki kararlar hakkında ne diyor?",
+  "marketplace.plugin.obsidian.prompt.save": "Bu kararı kasamda yeni bir not olarak kaydet.",
+  "marketplace.plugin.obsidian.prompt.log": "Bugünkü çalışmanın özetini İş günlüğü notuma ekle.",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Obsidian\'da Settings > Local REST API bölümünü aç. API anahtarını kopyala ve "Enable non-encrypted (HTTP) server" seçeneğini aç.',
   "marketplace.plugin.resend.tagline": "İşlemsel e-posta",
   "marketplace.plugin.resend.description":
     "Resend, ajanların tek bir API üzerinden işlemsel e-posta göndermesine ve teslimatı kontrol etmesine olanak tanır. Resend panosundaki API anahtarı yerel sunucuya tek bir ortam değişkeni olarak aktarılır.",
