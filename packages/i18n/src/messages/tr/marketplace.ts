@@ -230,6 +230,14 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.workers": "Cloudflare hesabımda hangi Workers dağıtılmış?",
   "marketplace.plugin.cloudflare.prompt.errors": "Son bir saatte hangi Cloudflare Workers hata kaydetti?",
   "marketplace.plugin.cloudflare.prompt.dns": "Cloudflare hesabımdaki her bölgenin DNS kayıtlarını listele.",
+  "marketplace.plugin.supabase.tagline": "Veritabanları, günlükler ve edge function'lar",
+  "marketplace.plugin.supabase.description":
+    "Supabase, ajanların projeleri listelemesini, SQL çalıştırmasını, tablo şemalarını ve günlükleri okumasını, advisors güvenlik ve performans önerilerini incelemesini, edge function'ları ve dalları yönetmesini ve Supabase belgelerinde arama yapmasını sağlar. Her kullanıcı tarayıcıdan kendi Supabase hesabına giriş yapar ve bir kuruluş seçer. Ajanlar tam erişim alır: verileri değiştiren veya silen SQL çalıştırabilir, migration uygulayabilir, edge function dağıtabilir ve proje oluşturup duraklatabilir.",
+  "marketplace.plugin.supabase.app":
+    "Veritabanları, günlükler ve edge function'lar; tarayıcıda giriş yapılan Supabase MCP sunucusu üzerinden.",
+  "marketplace.plugin.supabase.prompt.projects": "Supabase kuruluşumda hangi projeler var?",
+  "marketplace.plugin.supabase.prompt.tables": "Supabase veritabanımın tablolarını ve sütunlarını listele.",
+  "marketplace.plugin.supabase.prompt.errors": "Supabase projem son bir saatte hangi hataları kaydetti?",
   "marketplace.plugin.context7.tagline": "Güncel kitaplık belgeleri",
   "marketplace.plugin.context7.description":
     "Context7, kitaplıklar ve çerçeveler için güncel belgeleri ve API başvurularını getirir; böylece yanıtlar projenin gerçekten çalıştırdığı sürümü kullanır. Hesap veya anahtar gerektirmez.",

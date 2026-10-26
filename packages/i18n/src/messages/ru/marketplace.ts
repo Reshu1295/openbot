@@ -229,6 +229,14 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.workers": "Какие Workers развёрнуты в моём аккаунте Cloudflare?",
   "marketplace.plugin.cloudflare.prompt.errors": "Какие Cloudflare Workers записали ошибки за последний час?",
   "marketplace.plugin.cloudflare.prompt.dns": "Покажите DNS-записи каждой зоны в моём аккаунте Cloudflare.",
+  "marketplace.plugin.supabase.tagline": "Базы данных, логи и edge functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase позволяет агентам просматривать проекты, выполнять SQL, читать схемы таблиц и логи, проверять рекомендации advisors по безопасности и производительности, управлять edge functions и ветками и искать в документации Supabase. Каждый пользователь входит в свой аккаунт Supabase через браузер и выбирает организацию. Агенты получают полный доступ: они могут выполнять SQL, который меняет или удаляет данные, применять миграции, развёртывать edge functions, создавать и приостанавливать проекты.",
+  "marketplace.plugin.supabase.app":
+    "Базы данных, логи и edge functions через MCP-сервер Supabase со входом в браузере.",
+  "marketplace.plugin.supabase.prompt.projects": "Какие проекты есть в моей организации Supabase?",
+  "marketplace.plugin.supabase.prompt.tables": "Покажите таблицы и столбцы моей базы данных Supabase.",
+  "marketplace.plugin.supabase.prompt.errors": "Какие ошибки записал мой проект Supabase за последний час?",
   "marketplace.plugin.context7.tagline": "Актуальная документация библиотек",
   "marketplace.plugin.context7.description":
     "Context7 получает актуальную документацию и справочники API для библиотек и фреймворков, чтобы ответы учитывали версию, которая действительно используется в проекте. Аккаунт и ключ не нужны.",

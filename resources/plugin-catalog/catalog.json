@@ -69,6 +69,12 @@
       "detailSha256": "9360bcbc4784bb85ffb53474c0e6213ba0cb38c2a99884a718cff70769043b63"
     },
     {
+      "slug": "supabase",
+      "version": "1.0.0",
+      "featured": false,
+      "detailSha256": "21f1fecbcc8f302097e05319492ae5fd5bb0ae72a1b0f4a4b8a1dc334bccb30c"
+    },
+    {
       "slug": "context7",
       "version": "1.0.0",
       "featured": false,

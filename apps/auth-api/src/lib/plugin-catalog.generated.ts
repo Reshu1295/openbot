@@ -85,6 +85,12 @@ export const PLUGIN_CATALOG_INDEX: PluginCatalogIndex = {
       detailSha256: "9360bcbc4784bb85ffb53474c0e6213ba0cb38c2a99884a718cff70769043b63",
     },
     {
+      slug: "supabase",
+      version: "1.0.0",
+      featured: false,
+      detailSha256: "21f1fecbcc8f302097e05319492ae5fd5bb0ae72a1b0f4a4b8a1dc334bccb30c",
+    },
+    {
       slug: "context7",
       version: "1.0.0",
       featured: false,
@@ -559,6 +565,40 @@ export const PLUGIN_CATALOG_DETAILS: Record<string, PluginCatalogDetail> = {
     websiteUrl: "https://www.cloudflare.com",
     privacyPolicyUrl: "https://www.cloudflare.com/privacypolicy/",
     termsUrl: "https://www.cloudflare.com/website-terms/",
+    skills: [],
+  },
+  supabase: {
+    slug: "supabase",
+    name: "Supabase",
+    tagline: "Databases, logs and edge functions",
+    description:
+      "Supabase lets agents list projects, run SQL, read table schemas and logs, check security and performance advisors, manage edge functions and branches, and search the Supabase docs. Each user signs in to their own Supabase account through the browser and chooses an organization. Agents get full access: they can run SQL that changes or deletes data, apply migrations, deploy edge functions, and create or pause projects.",
+    category: "coding",
+    creatorName: "supabase.com",
+    iconUrl: "https://supabase.com/favicon/favicon.ico",
+    version: "1.0.0",
+    prompts: [
+      { id: "prompt-projects", text: "Which projects are in my Supabase organization?" },
+      { id: "prompt-tables", text: "List the tables and columns of my Supabase database." },
+      { id: "prompt-errors", text: "Which errors did my Supabase project log in the last hour?" },
+    ],
+    apps: [
+      {
+        id: "app-supabase-mcp",
+        name: "Supabase",
+        description: "Databases, logs, and edge functions, over Supabase's MCP server with browser sign-in.",
+        iconUrl: "https://supabase.com/favicon/favicon.ico",
+        server: {
+          name: "supabase",
+          transport: "http",
+          url: "https://mcp.supabase.com/mcp",
+          auth: [{ id: "supabase-oauth", kind: "link", label: "Sign in" }],
+        },
+      },
+    ],
+    websiteUrl: "https://supabase.com",
+    privacyPolicyUrl: "https://supabase.com/privacy",
+    termsUrl: "https://supabase.com/terms",
     skills: [],
   },
   context7: {

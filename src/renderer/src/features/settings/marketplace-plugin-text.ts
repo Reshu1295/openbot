@@ -153,6 +153,18 @@ const PLUGIN_TEXT = {
       "prompt-dns": "marketplace.plugin.cloudflare.prompt.dns",
     },
   },
+  supabase: {
+    tagline: "marketplace.plugin.supabase.tagline",
+    description: "marketplace.plugin.supabase.description",
+    apps: {
+      "app-supabase-mcp": "marketplace.plugin.supabase.app",
+    },
+    prompts: {
+      "prompt-projects": "marketplace.plugin.supabase.prompt.projects",
+      "prompt-tables": "marketplace.plugin.supabase.prompt.tables",
+      "prompt-errors": "marketplace.plugin.supabase.prompt.errors",
+    },
+  },
   context7: {
     tagline: "marketplace.plugin.context7.tagline",
     description: "marketplace.plugin.context7.description",

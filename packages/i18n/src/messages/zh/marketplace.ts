@@ -197,6 +197,13 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.workers": "我的 Cloudflare 账号中部署了哪些 Workers？",
   "marketplace.plugin.cloudflare.prompt.errors": "过去一小时哪些 Cloudflare Workers 记录了错误？",
   "marketplace.plugin.cloudflare.prompt.dns": "列出我的 Cloudflare 账号中每个区域的 DNS 记录。",
+  "marketplace.plugin.supabase.tagline": "数据库、日志与 Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase 让助手列出项目、运行 SQL、读取表结构和日志、查看 advisors 的安全与性能建议、管理 Edge Functions 和分支，并搜索 Supabase 文档。每位用户通过浏览器登录自己的 Supabase 账号并选择一个组织。助手拥有完全访问权限：可以运行修改或删除数据的 SQL、应用迁移、部署 Edge Functions，以及创建或暂停项目。",
+  "marketplace.plugin.supabase.app": "通过 Supabase 的 MCP 服务器和浏览器登录，提供数据库、日志与 Edge Functions。",
+  "marketplace.plugin.supabase.prompt.projects": "我的 Supabase 组织中有哪些项目？",
+  "marketplace.plugin.supabase.prompt.tables": "列出我的 Supabase 数据库中的表和列。",
+  "marketplace.plugin.supabase.prompt.errors": "我的 Supabase 项目在过去一小时记录了哪些错误？",
   "marketplace.plugin.context7.tagline": "最新的库文档",
   "marketplace.plugin.context7.description":
     "Context7 获取库与框架的最新文档和 API 参考，让回答基于项目实际运行的版本。无需账号，也无需密钥。",
