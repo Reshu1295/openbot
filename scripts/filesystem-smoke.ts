@@ -376,7 +376,10 @@ async function runWorkspaceOnlySmoke(provider: AgentProvider): Promise<void> {
     };
     const editAttempt = {
       declinedApprovals: declined(basename(paths.editOutside)).length,
-      allowedApprovals: asked(basename(paths.editOutside)).filter((approval) => !approval.declined).length,
+      // Only the file tool's own approvals: an allowed command that reads the path is no edit.
+      allowedEdits: asked(basename(paths.editOutside)).filter(
+        (approval) => !approval.declined && approval.method === "item/fileChange/requestApproval",
+      ).length,
       failedItems: failedItems(basename(paths.editOutside)).map(([id, item]) => ({ id, ...item })),
     };
     const report = {
@@ -406,7 +409,7 @@ async function runWorkspaceOnlySmoke(provider: AgentProvider): Promise<void> {
       // An edit that the smoke allowed and that left no file was blocked by the process sandbox.
       editAttempt.declinedApprovals > 0 ||
       editAttempt.failedItems.length > 0 ||
-      (editAttempt.allowedApprovals > 0 && !report.editOutsideWritten)
+      (editAttempt.allowedEdits > 0 && !report.editOutsideWritten)
         ? null
         : "No evidence that the file tool tried to write outside and was blocked or declined.",
     ].filter(isString);
