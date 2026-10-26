@@ -23,8 +23,8 @@ export const messages = {
   "error.site.tooManyFiles": "一個站點最多包含 {limit} 個檔案。",
   "error.site.hiddenFile": "不允許包含隱藏檔案：{path}",
   "error.site.unsafePath": "不允許使用該檔案路徑：{path}",
-  "error.site.secretFile": "不允許包含憑據、私鑰或服務端原始碼：{path}",
-  "error.site.fileType": "不允許使用該檔案型別：{path}",
+  "error.site.secretFile": "不允許包含憑證、私鑰或服務端原始碼：{path}",
+  "error.site.fileType": "不允許使用該檔案類型：{path}",
   "error.site.fileOutsideRoot": "站點檔案必須位於源根目錄內：{path}",
   "error.site.fileTooLarge": "某個檔案超過了 1 MB 上限：{path}",
 } as const satisfies PartialTranslation<typeof source>;

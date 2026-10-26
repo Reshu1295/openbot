@@ -33,7 +33,7 @@ export const messages = {
   "mobile.search.clearFilter": "清除篩選",
   "mobile.search.seeAll": "檢視全部",
   "mobile.search.seeAllLabel": "檢視全部{section}",
-  "mobile.search.emptyTitle": "沒有匹配的結果",
+  "mobile.search.emptyTitle": "沒有符合的結果",
   "mobile.search.emptyBody": "換個搜尋詞試試。",
   "mobile.search.hintTitle": "搜尋訊息",
   "mobile.search.hintBody": "輸入訊息中的某個詞即可搜尋助理對話。",

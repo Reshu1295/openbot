@@ -2,9 +2,10 @@ import type { PartialTranslation } from "../../message";
 import type { messages as source } from "../en/connector";
 
 export const messages = {
-  // Server settings > Connectors: the built-in GitHub connection of this computer.
+  // Marketplace > Apps > GitHub: the built-in GitHub connection.
   "connector.github.title": "GitHub",
-  "connector.github.description": "這台電腦上的每個助理都可以使用你的 GitHub 倉庫、Issue 和拉取請求，以及 gh 和 git。",
+  "connector.github.description":
+    "這台電腦上的每個助理都可以使用你的 GitHub 儲存庫、Issue 和拉取請求，以及 gh 和 git。",
   "connector.github.connect": "連線 GitHub",
   "connector.github.pendingTitle": "在 GitHub 上輸入該驗證碼",
   "connector.github.pendingDescription": "GitHub 已在瀏覽器中開啟，在那裡輸入驗證碼即可完成連線。",
@@ -14,14 +15,14 @@ export const messages = {
   "connector.github.openGitHub": "開啟 GitHub",
   "connector.github.cancel": "取消",
   "connector.github.connectedAs": "已連線為 @{login}",
-  "connector.github.repositoriesTitle": "倉庫",
-  "connector.github.repositoriesDescription": "助理只能使用已安裝 OpenBot GitHub App 的倉庫。",
-  "connector.github.chooseRepositories": "選擇倉庫",
-  "connector.github.repositoriesLoading": "正在從 GitHub 讀取倉庫",
-  "connector.github.repositoriesFailed": "OpenBot 無法從 GitHub 讀取倉庫。",
-  "connector.github.noRepositories": "尚未在任何倉庫上安裝 OpenBot GitHub App。",
+  "connector.github.repositoriesTitle": "儲存庫",
+  "connector.github.repositoriesDescription": "助理只能使用已安裝 OpenBot GitHub App 的儲存庫。",
+  "connector.github.chooseRepositories": "選擇儲存庫",
+  "connector.github.repositoriesLoading": "正在從 GitHub 讀取儲存庫",
+  "connector.github.repositoriesFailed": "OpenBot 無法從 GitHub 讀取儲存庫。",
+  "connector.github.noRepositories": "尚未在任何儲存庫上安裝 OpenBot GitHub App。",
   // {count} is a number, such as 12.
-  "connector.github.moreRepositories": { one: "還有 {count} 個倉庫", other: "還有 {count} 個倉庫" },
+  "connector.github.moreRepositories": { one: "還有 {count} 個儲存庫", other: "還有 {count} 個儲存庫" },
   // A badge next to a repository that only its members can see.
   "connector.github.private": "私有",
   "connector.github.disconnect": "斷開連線",
@@ -35,13 +36,12 @@ export const messages = {
   "connector.github.statusConnected": "已連線",
   "connector.github.statusConnecting": "連線中",
   "connector.github.statusExpired": "已過期",
-  "connector.github.statusNotSetUp": "未設定",
-  "connector.github.accountTitle": "賬號",
+  "connector.github.accountTitle": "帳號",
   // {count} is the number of repositories in the list, such as 12.
-  "connector.github.filterPlaceholder": { one: "篩選 {count} 個倉庫", other: "篩選 {count} 個倉庫" },
-  "connector.github.filterLabel": "篩選倉庫",
+  "connector.github.filterPlaceholder": { one: "篩選 {count} 個儲存庫", other: "篩選 {count} 個儲存庫" },
+  "connector.github.filterLabel": "篩選儲存庫",
   // {query} is the text the user typed in the filter.
-  "connector.github.noMatch": "沒有匹配「{query}」的倉庫。",
+  "connector.github.noMatch": "沒有符合「{query}」的儲存庫。",
   // The connect dialog. The steps show as numbers; screen readers read the names.
   "connector.github.stepSignIn": "登入",
   "connector.github.stepConnected": "已連線",
@@ -52,8 +52,8 @@ export const messages = {
   "connector.github.cancelConnecting": "取消連線 GitHub",
   // {count} is the number of repositories that agents can use.
   "connector.github.connectedSummary": {
-    one: "{count} 個倉庫 · 這台電腦上的所有助理",
-    other: "{count} 個倉庫 · 這台電腦上的所有助理",
+    one: "{count} 個儲存庫 · 這台電腦上的所有助理",
+    other: "{count} 個儲存庫 · 這台電腦上的所有助理",
   },
   "connector.github.done": "完成",
   "connector.github.later": "稍後",
@@ -65,10 +65,10 @@ export const messages = {
   "connector.github.disconnectEffectKept": "聊天、檔案和助理記憶仍保留在這台電腦上。",
   // The same text for the connection of a joined server. {host} is the server name, such as Studio.
   "connector.github.descriptionHost":
-    "{host} 上的每個助理都可以使用你的 GitHub 倉庫、Issue 和拉取請求，以及 gh 和 git。",
+    "{host} 上的每個助理都可以使用你的 GitHub 儲存庫、Issue 和拉取請求，以及 gh 和 git。",
   "connector.github.connectedSummaryHost": {
-    one: "{count} 個倉庫 · {host} 上的所有助理",
-    other: "{count} 個倉庫 · {host} 上的所有助理",
+    one: "{count} 個儲存庫 · {host} 上的所有助理",
+    other: "{count} 個儲存庫 · {host} 上的所有助理",
   },
   "connector.github.disconnectConfirmDescriptionHost": "斷開後會從 {host} 移除 @{login} 的登入資訊。",
   "connector.github.disconnectEffectKeptHost": "聊天、檔案和助理記憶仍保留在 {host} 上。",
@@ -79,23 +79,10 @@ export const messages = {
 
   "connector.statusUnknown": "未知",
   "connector.readFailed": "OpenBot 無法讀取該連線的狀態。",
-  // Server settings > Connectors: the list of integrations. Each row opens its page.
-  "connector.hub.onThisComputer": "在這台電腦上",
-  "connector.hub.onHost": "在 {host} 上",
-  "connector.hub.notSetUp": "未設定",
-  "connector.hub.available": "可用",
-  "connector.hub.localOnly": "僅限你的電腦",
-  // {name} is the name of an integration, such as Slack.
-  "connector.hub.open": "開啟 {name}",
-  "connector.hub.setUp": "設定",
-  // {names} lists the agents, such as "Chief, Research".
-  "connector.hub.usedBy": "被 {names} 使用",
-
-  // Server settings > Connectors > Slack: a workspace installs the one OpenBot app, and the Slack
+  // Marketplace > Apps > Slack: a workspace installs the one OpenBot app, and the Slack
   // Orchestrator agent receives each request, asks the team and answers.
   "connector.slack.title": "Slack",
   "connector.slack.description": "人們在 Slack 中提及 @OpenBot 或給它發私信，Slack 排程助理會找到合適的助理來回答。",
-  "connector.slack.statusNotSetUp": "未設定",
   "connector.slack.statusConnected": "已連線",
   "connector.slack.statusAttention": "需要關注",
   // {workspace} is the Slack workspace name.
@@ -112,7 +99,10 @@ export const messages = {
   "connector.slack.workspaceTitle": "工作區",
   "connector.slack.workspaceDescription": "人們提及 @OpenBot 或給它發私信。",
   "connector.slack.disconnectWorkspace": "斷開連線",
-  "connector.slack.missingScopes": "OpenBot 在 Slack 中缺少這些許可權：{scopes}。請斷開該工作區後重新連線。",
+  "connector.slack.disconnectAllTitle": "斷開 Slack",
+  "connector.slack.disconnectAllSummary": "所有工作區都將斷開，其他人無法再透過 @OpenBot 聯絡你的助理。",
+  "connector.slack.disconnectAllSummaryOrchestrator": "所有工作區都將斷開，Slack 排程助理及其對話將從 OpenBot 中刪除。",
+  "connector.slack.missingScopes": "OpenBot 在 Slack 中缺少這些權限：{scopes}。請斷開該工作區後重新連線。",
   "connector.slack.retryAt": "Slack 要求 OpenBot 等待，將於 {time} 重試。",
   "connector.slack.reconnect": "重新連線",
   "connector.slack.pause": "暫停",
@@ -149,8 +139,8 @@ export const messages = {
   "connector.slack.doneDescription": "在任意公開頻道中提及 @OpenBot，或給它發私信。",
   "connector.slack.done": "完成",
   "connector.slack.disconnectTitle": "斷開 {workspace}？",
-  "connector.slack.disconnectDescription": "OpenBot 將停止在 {workspace} 中回答，並從這台電腦刪除其 Slack 令牌。",
-  "connector.slack.disconnectDescriptionHost": "OpenBot 將停止在 {workspace} 中回答，並從 {host} 刪除其 Slack 令牌。",
+  "connector.slack.disconnectDescription": "OpenBot 將停止在 {workspace} 中回答，並從這台電腦刪除其 Slack 權杖。",
+  "connector.slack.disconnectDescriptionHost": "OpenBot 將停止在 {workspace} 中回答，並從 {host} 刪除其 Slack 權杖。",
   "connector.slack.disconnectEffect": "{workspace} 中的人將無法再透過 @OpenBot 聯絡你的助理。",
   "connector.slack.removeEffectKept": "對話和 Slack 排程助理會保留在 OpenBot 中。",
   "connector.slack.removeEffectDeleted": "Slack 排程助理及其對話將從 OpenBot 中刪除。",
@@ -162,13 +152,12 @@ export const messages = {
   "connector.slack.limitReached": { other: "最多可連線 {count} 個工作區。" },
   // {count} is the number of Slack workspaces: two or more.
   "connector.slack.summaryMany": { other: "{count} 個工作區 · 由 Slack 排程助理回答" },
-  // Server settings > Connectors > Discord: a Discord server (a guild) adds the one OpenBot bot, and
+  // Marketplace > Apps > Discord: a Discord server (a guild) adds the one OpenBot bot, and
   // the Discord Orchestrator agent receives each request, asks the team and answers. Always write
   // "Discord server": "server" alone is an OpenBot server.
   "connector.discord.title": "Discord",
   "connector.discord.description":
     "人們在 Discord 伺服器的頻道中提及 @OpenBot，Discord 排程助理會找到合適的助理來回答。",
-  "connector.discord.statusNotSetUp": "未設定",
   "connector.discord.statusConnected": "已連線",
   "connector.discord.statusAttention": "需要關注",
   // {workspace} is the Discord server name.
@@ -185,8 +174,11 @@ export const messages = {
   "connector.discord.workspaceTitle": "Discord 伺服器",
   "connector.discord.workspaceDescription": "在頻道中提及 @OpenBot，回覆 OpenBot 可繼續對話。",
   "connector.discord.disconnectWorkspace": "斷開連線",
-  "connector.discord.missingScopes":
-    "OpenBot 在 Discord 中缺少這些許可權：{scopes}。請斷開該 Discord 伺服器後重新連線。",
+  "connector.discord.disconnectAllTitle": "斷開 Discord",
+  "connector.discord.disconnectAllSummary": "所有伺服器都將斷開，其他人無法再透過 @OpenBot 聯絡你的助理。",
+  "connector.discord.disconnectAllSummaryOrchestrator":
+    "所有伺服器都將斷開，Discord 排程助理及其對話將從 OpenBot 中刪除。",
+  "connector.discord.missingScopes": "OpenBot 在 Discord 中缺少這些權限：{scopes}。請斷開該 Discord 伺服器後重新連線。",
   "connector.discord.retryAt": "Discord 要求 OpenBot 等待，將於 {time} 重試。",
   "connector.discord.reconnect": "重新連線",
   "connector.discord.pause": "暫停",
@@ -253,12 +245,11 @@ export const messages = {
   "connector.discord.accessSave": "儲存",
   // {host} is the joined server's name.
   "connector.discord.accessHostUpdate": "請更新 {host} 上的 OpenBot，以選擇角色。",
-  // Server settings > Connectors > Telegram: each chat adds the one OpenBot bot, and the Telegram
+  // Marketplace > Apps > Telegram: each chat adds the one OpenBot bot, and the Telegram
   // Orchestrator agent receives the messages of all chats, asks the team and answers.
   "connector.telegram.title": "Telegram",
   "connector.telegram.description":
     "把 OpenBot 機器人加入 Telegram 群組，或與它開啟私聊。Telegram 排程助理會找到合適的助理來回答。",
-  "connector.telegram.statusNotSetUp": "未設定",
   "connector.telegram.statusConnected": "已連線",
   "connector.telegram.statusAttention": "需要關注",
   // {count} is the number of linked Telegram chats.
@@ -292,11 +283,13 @@ export const messages = {
   "connector.telegram.resume": "恢復",
   "connector.telegram.reconnect": "重新連線",
   "connector.telegram.disconnectChat": "斷開連線",
+  "connector.telegram.disconnectAllTitle": "斷開 Telegram",
+  "connector.telegram.disconnectAllSummary": "所有聊天都將斷開，其他人無法再透過 OpenBot 機器人聯絡你的助理。",
+  "connector.telegram.disconnectAllSummaryOrchestrator":
+    "所有聊天都將斷開，Telegram 排程助理及其對話將從 OpenBot 中刪除。",
   // {action} is a button, such as Pause; {name} is the chat name.
   "connector.telegram.rowAction": "{action}：{name}",
-  "connector.telegram.linkTitle": "關聯其他聊天",
-  "connector.telegram.linkDescription": "Telegram 會在瀏覽器中開啟。關聯完成後聊天會顯示在這裡。",
-  "connector.telegram.linkWaiting": "正在等待 Telegram，請在 Telegram 中選擇聊天。",
+  "connector.telegram.linkChat": "關聯聊天",
   "connector.telegram.addToGroup": "加入群組",
   "connector.telegram.openDirectChat": "開啟私聊",
   "connector.telegram.orchestratorTitle": "Telegram 排程助理",
@@ -312,7 +305,7 @@ export const messages = {
   "connector.telegram.connectDescription":
     "把 OpenBot 機器人加入群組，或與它開啟私聊。一個機器人即可服務你的所有聊天。",
   "connector.telegram.connectStepBrowser": "Telegram 會在瀏覽器中開啟",
-  "connector.telegram.connectStepPick": "選擇群組，或在私聊中點選「開始」",
+  "connector.telegram.connectStepPick": "選擇群組，或在私聊中點擊「開始」",
   "connector.telegram.connectStepReturn": "聊天關聯完成後該對話方塊會繼續",
   "connector.telegram.connectWaiting": "正在等待 Telegram，請在 Telegram 中選擇聊天。",
   "connector.telegram.agentStepTitle": "新增 Telegram 排程助理",
@@ -328,7 +321,7 @@ export const messages = {
   "connector.telegram.doneTitle": "OpenBot 已加入 {chat}",
   "connector.telegram.done": "完成",
   "connector.telegram.disconnectTitle": "斷開 {chat}？",
-  "connector.telegram.leaveDescription": "OpenBot 機器人會退出 {chat}，OpenBot 將停止在那裡回答。",
+  "connector.telegram.leaveDescription": "OpenBot 機器人會離開 {chat}，OpenBot 將停止在那裡回答。",
   "connector.telegram.disconnectEffect": "{chat} 中的人將無法再透過 OpenBot 機器人聯絡你的助理。",
   "connector.telegram.removeEffectKept": "對話和 Telegram 排程助理會保留在 OpenBot 中。",
   "connector.telegram.removeEffectDeleted": "這是最後一個聊天，因此 Telegram 排程助理及其對話將從 OpenBot 中刪除。",
@@ -337,9 +330,9 @@ export const messages = {
   // Marketplace > 1Password: a vault that the user shares with OpenBot through a service account.
   "connector.onePassword.title": "1Password",
   "connector.onePassword.description":
-    "透過服務賬號把一個專用的 1Password 保險庫共享給 OpenBot，讓助理可以在 OpenBot 瀏覽器中登入網站。",
+    "透過服務帳號把一個專用的 1Password 保險庫共享給 OpenBot，讓助理可以在 OpenBot 瀏覽器中登入網站。",
   "connector.onePassword.howItWorks":
-    "連線時會在你的 1Password 賬號中建立「Shared with OpenBot」保險庫，以及一個只能讀取該保險庫的服務賬號。OpenBot 在這台電腦的瀏覽器中填充已儲存的登入資訊，因此只會共享你移入該保險庫的條目。助理永遠看不到密碼。",
+    "連線時會在你的 1Password 帳號中建立「Shared with OpenBot」保險庫，以及一個只能讀取該保險庫的服務帳號。OpenBot 在這台電腦的瀏覽器中填充已儲存的登入資訊，因此只會共享你移入該保險庫的條目。助理永遠看不到密碼。",
   "connector.onePassword.connect": "連線 1Password",
   // The three setup steps before a connection, each with the one button it needs.
   "connector.onePassword.setupTitle": "設定",
@@ -360,16 +353,17 @@ export const messages = {
   "connector.onePassword.checkAgain": "重新檢查",
   "connector.onePassword.stepVaultTitle": "建立共享保險庫",
   "connector.onePassword.stepVaultDescription":
-    "OpenBot 會建立「Shared with OpenBot」保險庫和一個只能讀取它的服務賬號。1Password 會請求你批准。",
-  "connector.onePassword.useToken": "改用服務賬號令牌",
-  "connector.onePassword.tokenLabel": "服務賬號令牌",
+    "OpenBot 會建立「Shared with OpenBot」保險庫和一個只能讀取它的服務帳號。1Password 會請求你批准。",
+  "connector.onePassword.useTokenDescription": "不走這些步驟，改為貼上 1Password.com 上的服務帳號權杖。",
+  "connector.onePassword.useTokenAction": "使用權杖",
+  "connector.onePassword.tokenLabel": "服務帳號權杖",
   "connector.onePassword.tokenPlaceholder": "ops_…",
   "connector.onePassword.connectWithToken": "連線",
   "connector.onePassword.approveInApp": "請在 1Password 應用中批准該請求",
   "connector.onePassword.cancel": "取消",
-  "connector.onePassword.chooseAccountTitle": "選擇賬號",
-  "connector.onePassword.chooseAccountDescription": "OpenBot 會在你選擇的賬號中建立共享保險庫。",
-  "connector.onePassword.useAccount": "使用該賬號",
+  "connector.onePassword.chooseAccountTitle": "選擇帳號",
+  "connector.onePassword.chooseAccountDescription": "OpenBot 會在你選擇的帳號中建立共享保險庫。",
+  "connector.onePassword.useAccount": "使用該帳號",
   "connector.onePassword.vaultTitle": "共享保險庫",
   "connector.onePassword.vaultDescription": "在 1Password 中把登入資訊移入該保險庫，助理即可用它登入。移出後即停止。",
   "connector.onePassword.loginsLoading": "正在從 1Password 讀取登入資訊",
@@ -378,43 +372,49 @@ export const messages = {
   "connector.onePassword.disconnect": "斷開連線",
   "connector.onePassword.disconnectTitle": "斷開 1Password",
   "connector.onePassword.disconnectSummary":
-    "OpenBot 會忘記該令牌。保險庫和服務賬號仍保留在 1Password 中，如不再需要請在那裡刪除。",
+    "OpenBot 會忘記該權杖。保險庫和服務帳號仍保留在 1Password 中，如不再需要請在那裡刪除。",
   "connector.onePassword.actionFailed": "OpenBot 無法更改 1Password 連線。",
   "connector.onePassword.statusConnected": "已連線",
   "connector.onePassword.statusConnecting": "連線中",
-  "connector.onePassword.statusNotSetUp": "未設定",
   // The same page for the connection of a joined server. {host} is the server name, such as Studio.
   "connector.onePassword.descriptionHost":
-    "透過服務賬號把一個專用的 1Password 保險庫共享給 {host} 上的 OpenBot，讓 {host} 上的助理可以在其瀏覽器中登入網站。",
+    "透過服務帳號把一個專用的 1Password 保險庫共享給 {host} 上的 OpenBot，讓 {host} 上的助理可以在其瀏覽器中登入網站。",
   "connector.onePassword.howItWorksHost":
-    "{host} 使用服務賬號令牌連線。請在 1Password.com 上建立一個只能讀取你共享給 OpenBot 的保險庫的服務賬號，然後把它的令牌貼上到這裡。{host} 會校驗並儲存該令牌，這台電腦不儲存。助理永遠看不到密碼。",
+    "{host} 使用服務帳號權杖連線。請在 1Password.com 上建立一個只能讀取你共享給 OpenBot 的保險庫的服務帳號，然後把它的權杖貼上到這裡。{host} 會驗證並儲存該權杖，這台電腦不儲存。助理永遠看不到密碼。",
   "connector.onePassword.disconnectSummaryHost":
-    "{host} 會忘記該令牌。保險庫和服務賬號仍保留在 1Password 中，如不再需要請在那裡刪除。",
+    "{host} 會忘記該權杖。保險庫和服務帳號仍保留在 1Password 中，如不再需要請在那裡刪除。",
   "connector.bitwarden.title": "Bitwarden",
   "connector.bitwarden.description": "用 Bitwarden 填充瀏覽器登入資訊。",
   "connector.bitwarden.setup":
-    "請安裝 Bitwarden CLI 並用 bw login 登入。建立一個名為 Shared with OpenBot 的資料夾，只把允許助理使用的登入資訊放進去。執行 bw unlock --raw，把會話金鑰貼上到下方。請勿貼上主密碼。",
+    "請安裝 Bitwarden CLI 並用 bw login 登入。建立一個名為 Shared with OpenBot 的資料夾，只把允許助理使用的登入資訊放進去。執行 bw unlock --raw，把工作階段金鑰貼上到下方。請勿貼上主密碼。",
   "connector.bitwarden.scope":
-    "這台電腦上的所有助理都可以使用 Shared with OpenBot 中匹配的登入資訊。OpenBot 只按精確的 HTTPS 來源匹配，不會使用需要主密碼提示或自定義 URI 匹配規則的條目。",
+    "這台電腦上的所有助理都可以使用 Shared with OpenBot 中符合的登入資訊。OpenBot 只按精確的 HTTPS 來源符合，不會使用需要主密碼提示或自訂 URI 符合規則的條目。",
   "connector.bitwarden.session":
-    "會話金鑰只儲存在記憶體中。連續 8 小時未使用保險庫或 OpenBot 退出後，需要重新連線。斷開只停止 OpenBot 的訪問，不會鎖定其他 Bitwarden 客戶端。",
-  "connector.bitwarden.sessionKey": "Bitwarden 會話金鑰",
+    "工作階段金鑰只儲存在記憶體中。連續 8 小時未使用保險庫或 OpenBot 結束後，需要重新連線。斷開只停止 OpenBot 的存取，不會鎖定其他 Bitwarden 用戶端。",
+  "connector.bitwarden.sessionKey": "Bitwarden 工作階段金鑰",
   "connector.bitwarden.connect": "連線 Bitwarden",
   "connector.bitwarden.disconnect": "斷開 Bitwarden",
+  "connector.bitwarden.disconnectAction": "斷開",
+  "connector.bitwarden.disconnectSummary":
+    "OpenBot 會忘記工作階段金鑰。代理將無法再從 Bitwarden 填寫登入資訊。其他 Bitwarden 用戶端保持解鎖狀態。",
+  "connector.bitwarden.disconnectSummaryHost":
+    "{host} 會刪除 API 金鑰和主密碼。{host} 上的代理將無法再從 Bitwarden 填寫登入資訊。",
   "connector.bitwarden.connected": "已連線",
-  "connector.bitwarden.disconnected": "未連線",
   "connector.bitwarden.actionFailed": "OpenBot 無法更改 Bitwarden 連線。",
   "connector.bitwarden.descriptionHost": "在 {host} 上用 Bitwarden 或 Vaultwarden 填充瀏覽器登入資訊。",
   "connector.bitwarden.setupHost":
     "{host} 使用自己的 Bitwarden CLI 登入。請在你的保險庫中建立一個名為 Shared with OpenBot 的資料夾，只把允許助理使用的登入資訊放進去。在網頁版保險庫中開啟「設定 › 安全 › 金鑰」，檢視你的 API 金鑰。然後在下方填寫伺服器地址、client_id、client_secret 和你的主密碼。",
   "connector.bitwarden.scopeHost":
-    "{host} 上的所有助理都可以使用 Shared with OpenBot 中匹配的登入資訊。OpenBot 只按精確的 HTTPS 來源匹配，不會使用需要主密碼提示或自定義 URI 匹配規則的條目。",
+    "{host} 上的所有助理都可以使用 Shared with OpenBot 中符合的登入資訊。OpenBot 只按精確的 HTTPS 來源符合，不會使用需要主密碼提示或自訂 URI 符合規則的條目。",
   "connector.bitwarden.sessionHost":
-    "{host} 會加密儲存 API 金鑰和主密碼，因此重啟後可以再次解鎖。這台電腦不儲存它們。斷開連線會把它們從 {host} 上移除。{host} 必須能透過 HTTPS 訪問該伺服器地址。",
+    "{host} 會加密儲存 API 金鑰和主密碼，因此重啟後可以再次解鎖。這台電腦不儲存它們。斷開連線會把它們從 {host} 上移除。{host} 必須能透過 HTTPS 存取該伺服器地址。",
   "connector.bitwarden.serverUrl": "伺服器地址",
+  "connector.bitwarden.folderTitle": "共享資料夾",
+  "connector.bitwarden.folderDescription": "在 Bitwarden 中把登入資訊移入該資料夾，助理即可用它登入。移出後即停止。",
+  "connector.bitwarden.folderName": "Shared with OpenBot",
+  "connector.bitwarden.folderKind": "Bitwarden 中的資料夾",
   "connector.bitwarden.clientId": "API 金鑰 client_id",
   "connector.bitwarden.clientSecret": "API 金鑰 client_secret",
   "connector.bitwarden.masterPassword": "主密碼",
   "connector.bitwarden.connecting": "正在連線",
-  "connector.bitwarden.connectedServer": "已連線到 {server}。",
 } as const satisfies PartialTranslation<typeof source>;

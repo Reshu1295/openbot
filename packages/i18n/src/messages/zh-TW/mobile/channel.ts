@@ -57,7 +57,7 @@ export const messages = {
   "mobile.channel.form.create": "建立頻道",
   "mobile.channel.form.save": "儲存頻道",
   "mobile.channel.form.name": "名稱",
-  "mobile.channel.form.namePlaceholder": "釋出中心",
+  "mobile.channel.form.namePlaceholder": "發佈中心",
   "mobile.channel.form.title": "標題",
   "mobile.channel.form.titlePlaceholder": "描述該頻道的用途",
   "mobile.channel.form.instructions": "指令",

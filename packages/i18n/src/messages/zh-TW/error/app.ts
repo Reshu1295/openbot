@@ -9,7 +9,7 @@ export const messages = {
   "error.app.notReady": "OpenBot 尚未就緒。",
   "error.app.macSecureStorageUnavailable": "macOS 安全儲存不可用。",
   "error.app.secretStorageUnavailable": "系統金鑰儲存不可用。",
-  "error.app.remoteIdentityUnavailable": "遠端主機身份不可用。",
+  "error.app.remoteIdentityUnavailable": "遠端主機身分不可用。",
   "error.app.iceServersMissing": "Remote Signal 尚未提供 ICE 伺服器。",
   "error.app.finishLocalTest": "請先完成本地測試再切換顯示器。",
 } as const satisfies PartialTranslation<typeof source>;

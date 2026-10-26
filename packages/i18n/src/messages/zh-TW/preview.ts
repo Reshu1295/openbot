@@ -18,7 +18,7 @@ export const messages = {
   "preview.truncated": "預覽已超過 {limit} 個字元，內容已截斷。",
   "preview.unavailable": "預覽不可用。",
   "preview.unsupported.title": "預覽不可用",
-  "preview.unsupported.description": "該檔案型別可以用預設應用開啟。",
+  "preview.unsupported.description": "該檔案類型可以用預設應用開啟。",
   "preview.unsupported.openExternally": "用外部程式開啟",
   "preview.spreadsheet.readFailed": "無法讀取該表格。",
   "preview.spreadsheet.truncated": "預覽僅限前 {rows} 行、{columns} 列。",

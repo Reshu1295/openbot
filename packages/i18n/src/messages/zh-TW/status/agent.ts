@@ -6,8 +6,8 @@ export const messages = {
   "status.agent.contextCleared": "上下文已清空，將從這裡開始新對話。",
   "status.agent.modelSwitchedForLimit": "額度已用完，已切換到 {model}。",
   "status.agent.modelReturnedAfterLimit": "額度已恢復，已切回 {model}。",
-  "status.agent.modelSwitchedForError": "服務商出錯，已切換到 {model}。",
-  "status.agent.modelReturnedAfterError": "服務商出錯後，已切回 {model}。",
+  "status.agent.modelSwitchedForError": "供應商出錯，已切換到 {model}。",
+  "status.agent.modelReturnedAfterError": "供應商出錯後，已切回 {model}。",
   "status.agent.marketplaceSuggested": "推薦了一個市場應用：{app}。",
   "status.agent.channelMemberAdded": "{agent} 已把 {member} 加入該頻道，這是 {person} 的請求。",
   "status.agent.channelMemberRemoved": "{agent} 已把 {member} 移出該頻道，這是 {person} 的請求。",
@@ -31,6 +31,8 @@ export const messages = {
   "status.agent.skillUsing": "正在使用技能 {name}…",
   "status.agent.skillReading": "正在讀取技能…",
   "status.agent.memoryChanges": "記憶：已儲存 {saved} 條，已更新 {updated} 條，已忘記 {forgotten} 條。",
+  "status.agent.memoryChangesWithConflicts":
+    "記憶：已儲存 {saved} 條，已更新 {updated} 條，已忘記 {forgotten} 條，{notChanged} 條因另一個話題先更改而未更改。",
   "status.agent.mcpServerAdd":
     "新增 MCP 伺服器 {name}：{target}。該伺服器上的每個助理都能使用它的工具。OpenBot 會連線它進行測試。",
   "status.agent.mcpServerChange":

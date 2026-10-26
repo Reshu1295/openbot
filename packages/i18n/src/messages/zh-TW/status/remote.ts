@@ -3,11 +3,11 @@ import type { messages as source } from "../../en/status/remote";
 
 export const messages = {
   // Status lines of remote desktop setup and remote connection recovery.
-  "status.remote.setupMacOnly": "許可權設定僅在 macOS 上可用。",
+  "status.remote.setupMacOnly": "權限設定僅在 macOS 上可用。",
   "status.remote.setupInstallHost": "請先安裝遠端桌面主機元件，然後重新檢查。",
-  "status.remote.setupUpdateRuntime": "請更新遠端桌面執行時以檢查 macOS 許可權。",
-  "status.remote.setupCheckFailed": "Sunshine 未能完成許可權檢查，請檢查主機會話後重試。",
-  "status.remote.setupServiceFailed": "遠端桌面服務無法啟動，請確認該 macOS 使用者有活躍的圖形會話。",
+  "status.remote.setupUpdateRuntime": "請更新遠端桌面執行階段以檢查 macOS 權限。",
+  "status.remote.setupCheckFailed": "Sunshine 未能完成權限檢查，請檢查主機工作階段後重試。",
+  "status.remote.setupServiceFailed": "遠端桌面服務無法啟動，請確認該 macOS 使用者有活躍的圖形工作階段。",
   "status.remote.connectingSunshine": "正在透過 Sunshine 連線…",
   "status.remote.switchingMonitor": "正在切換共享顯示器…",
   "status.remote.controlConnected": "遠端控制已連線。",

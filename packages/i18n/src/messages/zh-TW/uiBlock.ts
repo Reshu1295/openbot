@@ -6,7 +6,7 @@ export const messages = {
   "uiBlock.status.answered": "已回答",
   "uiBlock.status.expired": "已過期",
   "uiBlock.status.closed": "已關閉",
-  "uiBlock.outcome.expired": "超時未回答",
+  "uiBlock.outcome.expired": "逾時未回答",
   "uiBlock.outcome.closed": "未回答即關閉",
   "uiBlock.outcome.autoAnswered": "{outcome}（無人及時回答）",
   "uiBlock.confirm.holdHint": "按住按鈕確認，或點一下在第二步確認",

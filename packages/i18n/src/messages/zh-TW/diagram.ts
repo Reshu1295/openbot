@@ -15,7 +15,7 @@ export const messages = {
   "diagram.board.sample.researchTitle": "研究搭檔",
   "diagram.board.sample.researchTask": "收集自昨天以來的市場和產品新聞，每條都註明來源。",
   "diagram.board.sample.researchOutput":
-    "1. Northwind 把 API 價格下調了 20%。\n2. 歐盟針對通用模型的指南已正式定稿。\n3. 本週有兩家競爭對手釋出了助理畫布。",
+    "1. Northwind 把 API 價格下調了 20%。\n2. 歐盟針對通用模型的指南已正式定稿。\n3. 本週有兩家競爭對手發佈了助理畫布。",
   "diagram.board.sample.salesName": "銷售",
   "diagram.board.sample.salesTitle": "外拓專員",
   "diagram.board.sample.salesTask": "列出自昨天以來階段發生變化的交易，以及每筆交易的下一步。",
@@ -28,7 +28,7 @@ export const messages = {
     "Northwind 下調了 API 價格，歐盟指南已定稿，Contoso 即將成交。Fabrikam 今天需要跟進電話。",
   "diagram.board.sample.chiefName": "主管",
   "diagram.board.sample.chiefTitle": "幕僚長",
-  "diagram.board.sample.chiefTask": "閱讀簡報，確定今天的三項優先事項，併發布給團隊。",
+  "diagram.board.sample.chiefTask": "閱讀簡報，確定今天的三項優先事項，並發佈給團隊。",
   "diagram.board.sample.chiefOutput":
     "今天的優先事項：\n1. 傳送 Contoso 的安全評審。\n2. 回應 Northwind 的降價。\n3. 給 Fabrikam 打電話。",
   "diagram.menu.label": "畫布",
@@ -47,7 +47,7 @@ export const messages = {
   "diagram.zoom.label": "縮放",
   "diagram.zoom.in": "放大",
   "diagram.zoom.out": "縮小",
-  "diagram.zoom.fit": "適應圖表，當前 {zoom}",
+  "diagram.zoom.fit": "適應圖表，目前 {zoom}",
   "diagram.node.routine": "自動化任務",
   "diagram.node.step": "第 {step} 步",
   "diagram.node.unreachable": "未連線",

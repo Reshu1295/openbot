@@ -18,7 +18,7 @@ export const messages = {
   "notification.channelTitle": "{channel} 中的 {agent}",
   // The body of a channel reply notification when the preview of agent words is off.
   "notification.channelMessage": "發來一條訊息。",
-  "notification.usageLimit.title": "{provider} 賬號已達上限",
+  "notification.usageLimit.title": "{provider} 帳號已達上限",
   "notification.usageLimit.body": {
     one: "{count} 個助理在等待，OpenBot 稍後會重試。",
     other: "{count} 個助理在等待，OpenBot 稍後會重試。",

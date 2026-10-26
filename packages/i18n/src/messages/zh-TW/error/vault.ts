@@ -13,8 +13,8 @@ export const messages = {
   "error.vault.cardNumberInvalid": "請填寫有效的卡號。",
   "error.vault.securityCodeInvalid": "請填寫 3 位或 4 位的安全碼。",
   "error.vault.expiryInvalid": "請填寫有效的到期月份和年份。",
-  "error.vault.contactEmpty": "請填寫姓名、地址、電話號碼或郵箱地址。",
-  "error.vault.contactMissing": "該賬單聯絡人已不在保險庫中。",
+  "error.vault.contactEmpty": "請填寫姓名、地址、電話號碼或電子郵件地址。",
+  "error.vault.contactMissing": "該帳單聯絡人已不在保險庫中。",
   "error.vault.csvInvalid": "該檔案不是 CSV 格式的密碼匯出檔案。",
   "error.vault.csvTooLarge": "CSV 檔案過大。",
 } as const satisfies PartialTranslation<typeof source>;

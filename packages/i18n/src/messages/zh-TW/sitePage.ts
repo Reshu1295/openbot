@@ -21,8 +21,8 @@ export const messages = {
   "sitePage.join.mobile": "如果已安裝 OpenBot，請點按「{open}」。你也可以把該連結貼上到應用的「新增伺服器」中。",
   "sitePage.join.singleUse":
     "一次性連結只能使用一次，之後即失效。永久連結在所有者撤銷之前一直有效。加入前，OpenBot 會顯示有效期。",
-  "sitePage.join.email": "如果邀請是透過電子郵件發來的，請用該郵箱地址登入 OpenBot。",
-  "sitePage.join.share": "該連結可訪問伺服器。只分享給你想邀請的人。",
+  "sitePage.join.email": "如果邀請是透過電子郵件發來的，請用該電子郵件地址登入 OpenBot。",
+  "sitePage.join.share": "該連結可存取伺服器。只分享給你想邀請的人。",
   // {name} is Slack or Discord on all the connect keys.
   "sitePage.connect.title": "返回 OpenBot",
   "sitePage.connect.failedTitle": "連線未完成",
@@ -36,23 +36,23 @@ export const messages = {
   "sitePage.connect.failure.exchange": "{name} 未確認連線。請重試。",
   "sitePage.connect.failure.enterprise": "請連線單個 Slack 工作區，而不是整個組織。",
   "sitePage.connect.failure.takenSlack":
-    "另一台 OpenBot 伺服器已在響應該 Slack 工作區。請先在那台伺服器上斷開連線，然後重試。",
+    "另一台 OpenBot 伺服器已在回應該 Slack 工作區。請先在那台伺服器上斷開連線，然後重試。",
   "sitePage.connect.failure.takenDiscord":
-    "另一台 OpenBot 伺服器已在響應該 Discord 伺服器。請先在那台伺服器上斷開連線，然後重試。",
+    "另一台 OpenBot 伺服器已在回應該 Discord 伺服器。請先在那台伺服器上斷開連線，然後重試。",
   "sitePage.connect.failure.unavailable": "OpenBot 現在無法連線 {name}。請稍後重試。",
   "sitePage.connect.failure.tabClosed":
-    "發起 {name} 連線的 OpenBot 標籤頁沒有響應。請在瀏覽器中開啟 OpenBot，再次連線 {name}。",
+    "發起 {name} 連線的 OpenBot 標籤頁沒有回應。請在瀏覽器中開啟 OpenBot，再次連線 {name}。",
   "sitePage.connect.failure.failed": "{name} 未完成連線。請重試。",
-  // {serverSettings}, {connectors} and {connect} are the names of these screens and that button in the app.
+  // {marketplace}, {apps} and {connect} are the names of these screens and that button in the app.
   "sitePage.connect.restartHint":
-    "在 OpenBot 中開啟「{serverSettings}」，再開啟「{connectors}」，然後開啟「{name}」並選擇「{connect}」。",
+    "在 OpenBot 中開啟「{marketplace}」，再開啟「{apps}」，然後開啟「{name}」並選擇「{connect}」。",
   "sitePage.connect.notOpened": "請啟動 OpenBot，然後重試。如果這台電腦上沒有 OpenBot，請下載並在應用中連線 {name}。",
   "sitePage.openApp.title": "沒有開啟？",
   "sitePage.openApp.dismiss": "暫不",
-  "sitePage.billing.pageTitle": "OpenBot 賬單",
-  "sitePage.billing.updatedTitle": "賬單已更新",
+  "sitePage.billing.pageTitle": "OpenBot 帳單",
+  "sitePage.billing.updatedTitle": "帳單已更新",
   "sitePage.billing.updatedBody": "返回 OpenBot。你可以關閉該頁面。",
-  "sitePage.billing.cancelledTitle": "結賬已取消",
+  "sitePage.billing.cancelledTitle": "結帳已取消",
   "sitePage.billing.cancelledBody": "沒有扣款。請返回 OpenBot。",
   "sitePage.report.pageTitle": "舉報託管站點 — OpenBot",
   "sitePage.report.title": "舉報託管站點",

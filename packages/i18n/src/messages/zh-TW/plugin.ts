@@ -8,7 +8,6 @@ export const messages = {
   "plugin.link.terms": "服務條款",
   "plugin.copyLink": "複製連結",
   "plugin.askPrompt": "向 {name} 提問：{prompt}",
-  "plugin.section.apps": "應用",
   "plugin.section.skills": "技能",
   "plugin.section.information": "資訊",
   "plugin.info.developer": "開發者",

@@ -9,7 +9,7 @@ export const messages = {
   "dialog.filter.images": "圖片",
   "dialog.filter.supportedFiles": "支援的檔案",
   "dialog.filter.attachment": "附件",
-  "dialog.filter.zipArchive": "ZIP 壓縮包",
+  "dialog.filter.zipArchive": "ZIP 壓縮檔",
   "dialog.filter.jsonDocument": "JSON 文件",
   "dialog.chooseAgentExport": "選擇助理匯出檔案",
   "dialog.chooseHermesFolder": "選擇 Hermes 資料夾",

@@ -22,7 +22,7 @@ export const messages = {
   "agent.setup.suggestions": "推薦",
   // Suggested agents. Selecting one copies its name and purpose into the new agent.
   "agent.setup.suggestion.label": "{name}。{description}",
-  "agent.setup.suggestion.inboxHelper.name": "收件箱助理",
+  "agent.setup.suggestion.inboxHelper.name": "收件匣助理",
   "agent.setup.suggestion.inboxHelper.description": "起草回覆，避免遺漏跟進。",
   "agent.setup.suggestion.inboxHelper.purpose": "用我的口吻起草清晰的郵件回覆，總結冗長的郵件往來，並跟進待辦事項。",
   "agent.setup.suggestion.tripPlanner.name": "行程規劃師",
@@ -56,8 +56,8 @@ export const messages = {
   "agent.error.adminOnly": "只有伺服器管理員可以更改助理設定。",
   "agent.error.continueFailed": "助理無法繼續，請重試。",
   "agent.error.mcpNotStarted": "MCP 伺服器未啟動",
-  "agent.error.codexConfigIgnored": "Codex 配置警告",
-  "agent.error.provider": "服務商錯誤",
+  "agent.error.codexConfigIgnored": "Codex 設定警告",
+  "agent.error.provider": "供應商錯誤",
   "agent.error.run": "{provider} · {model}",
   "agent.error.providerNamed": "{provider} 錯誤",
   // Avatar color names. They fill `{color}` and `{hue}` inside a sentence.

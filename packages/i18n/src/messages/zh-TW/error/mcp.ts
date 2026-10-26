@@ -3,8 +3,8 @@ import type { messages as source } from "../../en/error/mcp";
 
 export const messages = {
   // MCP sign-in errors, and the sign-in page in the browser.
-  "error.mcp.redirectByName": "無法透過名稱訪問該地址。",
-  "error.mcp.redirectGetOnly": "該地址只響應 GET 請求。",
+  "error.mcp.redirectByName": "無法透過名稱存取該地址。",
+  "error.mcp.redirectGetOnly": "該地址只回應 GET 請求。",
   "error.mcp.redirectNotSignIn": "該地址不屬於任何登入流程。",
   "error.mcp.redirectRefused": "登入被拒絕，請返回 OpenBot 重試。",
   "error.mcp.redirectNoSignIn": "沒有等待處理的登入，它可能已結束。",

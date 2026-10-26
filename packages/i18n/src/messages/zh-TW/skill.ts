@@ -38,7 +38,7 @@ export const messages = {
   "skill.confirm.replace": "替換技能",
   "skill.confirm.remove": "移除技能",
 
-  "skill.unavailable.readOnly": "遠端技能為只讀。",
+  "skill.unavailable.readOnly": "遠端技能為唯讀。",
   "skill.unavailable.add": "新增該技能後即可試用。",
   "skill.unavailable.repair": "修復該技能後即可試用。",
   "skill.unavailable.updateVersion": "更新該技能後即可試用該版本。",

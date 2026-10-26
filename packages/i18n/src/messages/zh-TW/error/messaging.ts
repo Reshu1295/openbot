@@ -16,7 +16,7 @@ export const messages = {
   "error.messaging.telegramNotConnected": "該 Telegram 聊天未連線。",
   "error.messaging.telegramUnsupported": "這台電腦無法連線 Telegram。",
   "error.messaging.telegramRelayUnavailable": "OpenBot 無法在這台電腦上連線 Telegram。請登入，為這台電腦命名後重試。",
-  "error.messaging.telegramServiceUnavailable": "OpenBot 當前無法連線 Telegram，請稍後重試。",
+  "error.messaging.telegramServiceUnavailable": "OpenBot 目前無法連線 Telegram，請稍後重試。",
   // The agent gets this when a connected workspace has too many saved facts.
   "error.messaging.memoryLimit": "一個已連線的工作區最多可有 {limit} 條記憶，請先刪除一條。",
 } as const satisfies PartialTranslation<typeof source>;

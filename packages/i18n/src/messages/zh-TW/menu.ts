@@ -12,6 +12,6 @@ export const messages = {
   "menu.zoomOut": "縮小",
   "menu.copyLink": "複製連結",
   "menu.trayOpen": "開啟 OpenBot",
-  "menu.trayQuit": "退出 OpenBot",
+  "menu.trayQuit": "結束 OpenBot",
   "menu.trayTooltip": "OpenBot",
 } as const satisfies PartialTranslation<typeof source>;

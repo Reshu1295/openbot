@@ -21,7 +21,7 @@ export const messages = {
   "mobile.liveActivity.button.approve": "批准",
   "mobile.liveActivity.button.openDetails": "檢視詳情",
   "mobile.liveActivity.stale.label": "已過期",
-  "mobile.liveActivity.stale.detail": "請開啟 OpenBot 檢視當前狀態。",
+  "mobile.liveActivity.stale.detail": "請開啟 OpenBot 檢視目前狀態。",
   "mobile.liveActivity.confirm.title": "批准該命令？",
   "mobile.liveActivity.confirm.cancel": "取消",
   "mobile.liveActivity.confirm.approve": "批准",
@@ -44,5 +44,5 @@ export const messages = {
   "mobile.liveActivity.island.failureDetail": "任務在完成之前就停止了。請開啟該對話重試。",
   "mobile.liveActivity.island.approvalCommand": "命令需審閱",
   "mobile.liveActivity.island.approvalFileChange": "檔案改動需審閱",
-  "mobile.liveActivity.island.approvalPermissions": "許可權需審閱",
+  "mobile.liveActivity.island.approvalPermissions": "權限需審閱",
 } as const satisfies PartialTranslation<typeof source>;

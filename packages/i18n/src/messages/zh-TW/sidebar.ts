@@ -3,7 +3,7 @@ import type { messages as source } from "../en/sidebar";
 
 export const messages = {
   "sidebar.frame.label": "助理導航",
-  "sidebar.nav.label": "對話列表",
+  "sidebar.nav.label": "對話清單",
   "sidebar.nav.freeArea": "側邊欄空白區",
   "sidebar.nav.actions": "側邊欄操作",
   "sidebar.deletedChannels.title": "已刪除的頻道",
@@ -54,6 +54,7 @@ export const messages = {
   "sidebar.pinned.agent": "{name}，已置頂的助理",
   "sidebar.pinned.agentWithState": "{name}，已置頂的助理。{state}",
   "sidebar.pinned.channel": "{name}，已置頂的頻道",
+  "sidebar.pinned.channelWithState": "{name}，已置頂的頻道。{state}",
   "sidebar.agentMenu.label": "助理操作",
   "sidebar.agentMenu.edit": "編輯助理",
   "sidebar.agentMenu.duplicate": "複製助理",
@@ -63,6 +64,7 @@ export const messages = {
   "sidebar.agentMenu.restore": "恢復",
   "sidebar.agentMenu.restoreTo": "恢復到 {section}",
   "sidebar.agentMenu.openWindow": "在新視窗中開啟",
+  "sidebar.agentMenu.newThread": "新話題",
   "sidebar.agentMenu.inWindow": "在獨立視窗中開啟",
   "sidebar.channelMenu.label": "頻道操作",
   "sidebar.channelMenu.edit": "編輯頻道",
@@ -82,7 +84,7 @@ export const messages = {
   "sidebar.state.waitingTakeover": "等待你在瀏覽器中操作",
   "sidebar.state.waitingDetail": "{state}：{detail}",
   "sidebar.waiting.title": "需要你",
-  "sidebar.waiting.label": { one: "需要你，{count} 個助理", other: "需要你，{count} 個助理" },
+  "sidebar.waiting.label": { one: "需要你，{count} 個聊天", other: "需要你，{count} 個聊天" },
   "sidebar.waiting.action.question": "回答",
   "sidebar.waiting.action.approval": "稽核",
   "sidebar.waiting.action.takeover": "接管",
@@ -102,7 +104,7 @@ export const messages = {
   "sidebar.delete.pending": "正在刪除…",
   "sidebar.delete.title": "刪除 {name}？",
   "sidebar.delete.agentDescription":
-    "這會從應用中移除該助理及其 OpenBot 對話，該助理的佇列、記憶、自動化任務和工作區都會被刪除。由所連線的 CLI 服務商單獨儲存的歷史記錄不會被刪除。",
+    "這會從應用中移除該助理及其 OpenBot 對話，該助理的佇列、記憶、自動化任務和工作區都會被刪除。由所連線的 CLI 供應商單獨儲存的歷史記錄不會被刪除。",
   "sidebar.delete.channelDescription":
     "這會停止該頻道。其歷史記錄會保留在「已刪除的頻道」中，僅供預覽。你可以從那裡恢復。頻道內的助理會被保留。",
   "sidebar.delete.sectionDescription": "該分組內的助理會移動到「未分組」，助理本身不會被刪除。",
