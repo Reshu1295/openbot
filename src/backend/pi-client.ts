@@ -614,7 +614,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
       // Pi can still queue a steer that timed out, and the queue would then send the message again.
       // A refusal queues nothing, so other steers of the turn stay in Pi's queue.
       Effect.tapError((failure) =>
-        failure.cause instanceof RequestTimeoutError ? this.#dropSteer(thread, prompt.message) : Effect.void,
+        failure.cause instanceof RequestTimeoutError ? this.#dropSteer(thread, turn, prompt.message) : Effect.void,
       ),
     );
     if (thread.turn !== turn || turn.finishing || turn.stopped) {
@@ -629,12 +629,20 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
 
   /** Removes one queued steer. Pi clears its whole queue, so the other steers go back in, as text only. */
   readonly #dropSteer = Effect.fn("PiAgentClient.dropSteer")(
-    function* (this: PiAgentClient, thread: PiThread, message: string) {
+    function* (this: PiAgentClient, thread: PiThread, turn: PiTurn, message: string) {
       const cleared = yield* thread.rpc.request({ type: "clear_queue" });
       const steering = getArray(cleared, "steering").filter(isString);
       const index = steering.indexOf(message);
       if (index >= 0) steering.splice(index, 1);
-      for (const text of steering) yield* thread.rpc.request({ type: "steer", message: text });
+      for (const text of steering) {
+        // A steer for an ended or stopped turn would start a Pi run that OpenBot did not start.
+        if (thread.turn !== turn || turn.stopped || turn.finishing) return;
+        yield* thread.rpc
+          .request({ type: "steer", message: text })
+          .pipe(
+            Effect.catch((failure) => Effect.sync(() => this.emit("diagnostic", this.#redact(String(failure.cause))))),
+          );
+      }
     },
     (effect) => Effect.ignore(effect),
   );
