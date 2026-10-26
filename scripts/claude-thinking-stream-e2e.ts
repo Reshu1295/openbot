@@ -69,7 +69,7 @@ const { MailboxStore } = await import("../src/backend/mailbox-store");
 const { OpenBotDatabase } = await import("../src/backend/openbot-database");
 
 // The stand-in for the Claude CLI. It speaks enough of the stream-json protocol for a turn to end.
-const STAND_IN_CLAUDE = `#!${process.execPath}
+const STAND_IN_CLAUDE = `#!/usr/bin/env bun
 const { randomUUID } = require("node:crypto");
 const args = process.argv.slice(2);
 if (args.includes("--version")) {
