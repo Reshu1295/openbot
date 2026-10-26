@@ -53,6 +53,17 @@ const KEY_EXTENSIONS = {
 }
 `,
   },
+  // Pi has a built-in OpenRouter provider with OpenRouter's model list (396 models in Pi 1.3.0). As for
+  // DeepSeek, a registration with only the key keeps that list, and the Authorization header replaces a
+  // key from Pi's auth.json or OPENROUTER_API_KEY. Pi sends Anthropic models to OpenRouter's Anthropic
+  // Messages endpoint and the others to its chat completions endpoint; both read this header.
+  openrouter: {
+    variable: "OPENBOT_PI_OPENROUTER_API_KEY",
+    source: `export default function (pi) {${readKey("openrouter", "OPENBOT_PI_OPENROUTER_API_KEY")}
+  pi.registerProvider("openrouter", { apiKey, headers: { Authorization: "Bearer " + literal } });
+}
+`,
+  },
 } as const satisfies Record<KeyOnlyProviderId, { variable: string; source: string }>;
 
 /** Owns one temporary, key-free extension file that gives a key-only provider its key in Pi. */

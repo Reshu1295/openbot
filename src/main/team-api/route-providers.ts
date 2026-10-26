@@ -317,7 +317,7 @@ function codeSubmitInputV4(body: DynamicRecord): { provider: SignInProviderIdV4;
   return { provider: signInProviderV4(body), code: pastedCode(body) };
 }
 
-// Inception and DeepSeek run only on this computer, so a peer does not set their keys.
+// Inception, DeepSeek and OpenRouter run only on this computer, so a peer does not set their keys.
 function peerApiKeyInput(body: DynamicRecord) {
   const input = parseProviderApiKeyInput(body);
   if (isKeyOnlyProvider(input.provider)) throw new Error("Unknown provider.");
