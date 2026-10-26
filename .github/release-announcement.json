@@ -1,10 +1,10 @@
 {
-  "version": "0.50.0",
+  "version": "0.51.0",
   "highlights": [
-    "Sign in to Google MCP servers, such as Gmail, Calendar or Drive, again after you update. Then the sign-in keeps working after the first hour.",
-    "Draw a workflow on a canvas with agent, model, condition and approval steps, and run it on a schedule or from a webhook.",
-    "Save logins, payment cards and contact info in the Vault. Agents use them, but never see a password or a card number.",
-    "Open the trace of an agent's turn to see each thought, tool call and subagent on one timeline, with its cost.",
-    "Claude can use an Anthropic API key, and Gemini can hold more than one Google account."
+    "Add OpenRouter or DeepSeek as a provider with an API key, and choose their models for your agents.",
+    "Agents use the skills in your ~/.agents/skills folder with every provider. Type $ in the message box to tag one.",
+    "On a Mac, connect Apple apps from the Apps catalog, so agents can use Mail, Calendar, Notes, Messages and more.",
+    "Paste an image into the message box at the cursor, and zoom into images in a chat.",
+    "Codex, Claude on Windows and the Linux AppImage on Arch Linux start and keep working again."
   ]
 }
