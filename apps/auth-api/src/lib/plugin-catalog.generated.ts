@@ -46,7 +46,7 @@ export const PLUGIN_CATALOG_INDEX: PluginCatalogIndex = {
       slug: "obsidian",
       version: "1.0.0",
       featured: false,
-      detailSha256: "45ea3600029406e68f15ea68c63876695e28878e54b1a6d9c08ae8b7fa730d8a",
+      detailSha256: "3280f8897ea3d3767a01854bd903309d82ac1cfd7e3165ae9b3cc043c38c2a13",
     },
     {
       slug: "cobrain",
@@ -333,7 +333,7 @@ export const PLUGIN_CATALOG_DETAILS: Record<string, PluginCatalogDetail> = {
           name: "obsidian",
           transport: "stdio",
           command: "npx",
-          args: ["-y", "obsidian-mcp-server"],
+          args: ["-y", "obsidian-mcp-server@3.7.2"],
           auth: [
             {
               id: "obsidian-key",

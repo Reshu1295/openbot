@@ -53,8 +53,11 @@ Troubleshooting:
 
 ## Obsidian
 
-The listing runs `npx -y obsidian-mcp-server`
-(<https://github.com/cyanheads/obsidian-mcp-server>). The server talks to the
+The listing runs `npx -y obsidian-mcp-server@3.7.2`
+(<https://github.com/cyanheads/obsidian-mcp-server>). A third party publishes
+this package and it gets write access to the vault, so the listing names one
+version. Move it only in a reviewed commit, after you check that the release
+keeps `OBSIDIAN_API_KEY` and the `http://127.0.0.1:27123` default. The server talks to the
 Local REST API community plugin in the Obsidian app
 (<https://github.com/coddingtonbear/obsidian-local-rest-api>). The user types the
 plugin's API key in the connect dialog, and OpenBot gives it to the server as

@@ -225,7 +225,7 @@ const OBSIDIAN: MarketplacePluginDetail = {
         name: "obsidian",
         transport: "stdio",
         command: "npx",
-        args: ["-y", "obsidian-mcp-server"],
+        args: ["-y", "obsidian-mcp-server@3.7.2"],
         auth: [
           {
             id: "obsidian-key",

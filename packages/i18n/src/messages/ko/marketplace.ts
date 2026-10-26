@@ -224,12 +224,12 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "이 프레임워크 버전에 대해 리뷰어들은 뭐라고 해?",
   "marketplace.plugin.braveSearch.prompt.news": "이 제품 분야의 오늘 발표를 찾아 줘.",
   "marketplace.plugin.braveSearch.prompt.compare": "이 두 업체를 출처와 함께 비교해 줘.",
-  "marketplace.plugin.obsidian.tagline": "볼트의 노트",
+  "marketplace.plugin.obsidian.tagline": "보관함의 노트",
   "marketplace.plugin.obsidian.description":
-    "Obsidian을 사용하면 에이전트가 볼트의 노트를 검색하고 읽고 쓸 수 있어서, 볼트를 에이전트의 기억으로 쓸 수 있어요. 로컬 서버는 이 컴퓨터의 Obsidian 앱에 있는 Local REST API 플러그인에 연결돼요. 플러그인의 API 키는 환경 변수 하나로 로컬 서버에 전달돼요. 에이전트가 사용하는 동안 Obsidian을 열어 두세요.",
+    "Obsidian을 사용하면 에이전트가 보관함의 노트를 검색하고 읽고 쓸 수 있어서, 보관함을 에이전트의 기억으로 쓸 수 있어요. 로컬 서버는 이 컴퓨터의 Obsidian 앱에 있는 Local REST API 플러그인에 연결돼요. 플러그인의 API 키는 환경 변수 하나로 로컬 서버에 전달돼요. 에이전트가 사용하는 동안 Obsidian을 열어 두세요.",
   "marketplace.plugin.obsidian.app": "Local REST API 플러그인 키를 쓰는 로컬 MCP 서버로 노트를 검색, 읽기, 편집해요.",
   "marketplace.plugin.obsidian.prompt.recall": "이 프로젝트의 결정 사항에 대해 내 노트에는 뭐라고 적혀 있어?",
-  "marketplace.plugin.obsidian.prompt.save": "이 결정을 내 볼트에 새 노트로 저장해 줘.",
+  "marketplace.plugin.obsidian.prompt.save": "이 결정을 내 보관함에 새 노트로 저장해 줘.",
   "marketplace.plugin.obsidian.prompt.log": "오늘 한 작업 요약을 내 작업 로그 노트에 추가해 줘.",
   "marketplace.plugin.obsidian.hint.apiKey":
     'Obsidian에서 Settings > Local REST API를 여세요. API 키를 복사하고 "Enable non-encrypted (HTTP) server"를 켜세요.',
