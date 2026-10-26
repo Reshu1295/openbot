@@ -438,10 +438,13 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   });
 
   let serversRead = 0;
+  /** Each read of the sign-in states. An older answer does not replace a newer one. */
+  let signInsRead = 0;
   /** The server whose MCP servers `servers` holds. Null before the first read ends, and while a new read runs. */
   const [serversReadFor, setServersReadFor] = createSignal<string | null>(null);
   async function readServers(serverId: string) {
     const request = ++serversRead;
+    const signInRequest = ++signInsRead;
     setServersReadFor(null);
     const [configs, states] = await Promise.all([
       run(() => calls().mcp.listMcpServers(serverId)),
@@ -449,7 +452,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     ]);
     if (!configs || request !== serversRead) return;
     setServers(configs);
-    setSignIns(states);
+    if (signInRequest === signInsRead) setSignIns(states);
     setServersReadFor(serverId);
   }
   /**
@@ -463,8 +466,9 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   }
   /** After a save, a new sign-in can replace a refused one. */
   async function readSignIns(serverId: string) {
+    const request = ++signInsRead;
     const states = await listSignIns(serverId);
-    if (props.pluginServerId === serverId) setSignIns(states);
+    if (request === signInsRead && props.pluginServerId === serverId) setSignIns(states);
   }
   /**
    * True when each app shows what the host holds: its MCP servers and, for a plugin with skills, the
@@ -604,13 +608,12 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   }
 
   /**
-   * The configuration that the connect step of `app` starts from. An app that the host holds keeps
-   * its row id, so the save updates that row: a second row with the same name is refused.
+   * The configuration that the connect step of `app` starts from. An app that the host holds starts
+   * from its row: the save updates that row (a second row with the same name is refused), and the
+   * step replaces only the fields it asks for, so the user's own changes to the row stay.
    */
   function pluginAppConfig(app: MarketplacePluginApp): McpServerConfig {
-    const config = createPluginAppConfig(app);
-    const held = heldApp(app);
-    return held ? { ...config, id: held.id, enabled: held.enabled } : config;
+    return heldApp(app) ?? createPluginAppConfig(app);
   }
 
   /** Takes back only what this attempt installed. A skill the agent already had is the user's. */

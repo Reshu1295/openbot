@@ -116,12 +116,16 @@ function MarketplaceWindow(props: MarketplaceProps) {
     places[depth] = { top: 0, opener: null, ...places[depth], ...place };
   };
   // A new view moves the focus to its name, as a route change does. The first view keeps the focus.
+  // The side panel can replace the open view with another at the same depth, which is a new view too.
   createEffect(
-    () => nav.state.stack.length,
-    (length, previous) => {
+    () => [nav.state.stack.length, nav.state.stack.at(-1)] as const,
+    ([length, view], previous) => {
       if (previous === undefined) return;
-      const place = length < previous ? places[length - 1] : undefined;
-      places.length = length;
+      const [previousLength, previousView] = previous;
+      if (length === previousLength && view === previousView) return;
+      const place = length < previousLength ? places[length - 1] : undefined;
+      // Back keeps the place it returns to. Another view at a depth starts with no place there.
+      places.length = length < previousLength ? length : length - 1;
       body?.scrollTo({ top: place?.top ?? 0 });
       // A click in the side panel keeps the focus on the panel.
       if (document.activeElement?.closest(".marketplace-nav")) return;
