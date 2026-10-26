@@ -631,7 +631,9 @@ const resolveNativeCli = Effect.fn("Cli.resolveNativeCli")(function* (
   return yield* Effect.fail(
     providerFailure(
       new CodexCliError(
-        sourceText(found ? "error.provider.nativeNotStarted" : "error.provider.nativeMissing", { provider }),
+        sourceText(found ? "error.provider.nativeNotStarted" : "error.provider.nativeMissing", {
+          provider: provider === "pi" ? "Pi" : "Muse",
+        }),
         found ? "invalid" : "missing",
       ),
     ),

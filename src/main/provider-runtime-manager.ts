@@ -8,6 +8,8 @@ import { basename, dirname, join, resolve } from "node:path";
 import { finished } from "node:stream/promises";
 import { promisify } from "node:util";
 import {
+  type AgentProviderRef,
+  isKeyOnlyProvider,
   isManagedToolRuntime,
   MANAGED_RUNTIME_PROVIDERS,
   MANAGED_TOOL_RUNTIMES,
@@ -628,6 +630,21 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
           cause: new Error(status.message ?? sourceText("error.provider.runtimeUpdateIncomplete")),
         });
     });
+  }
+  /**
+   * Installs the Pi CLI that a key-only provider such as DeepSeek runs on, and waits for it. Only the
+   * Pi row has a Download button, so without this a saved key finds no CLI (#3273). A copy that
+   * OpenBot or the user already installed, even an older one, is kept as it is.
+   */
+  ensureKeyProviderCli(provider: AgentProviderRef): Effect.Effect<void, ProviderRuntimeFailure> {
+    if (
+      !isKeyOnlyProvider(provider) ||
+      this.#statuses.pi.version !== null ||
+      this.#systemVersions.has("pi") ||
+      configuredCliPath("pi")
+    )
+      return Effect.void;
+    return this.downloadAndWait("pi");
   }
   cancel(runtime: ManagedRuntimeId): Effect.Effect<ProviderRuntimeSnapshot, ProviderRuntimeFailure> {
     return Effect.gen({ self: this }, function* (): Effect.fn.Return<ProviderRuntimeSnapshot, ProviderRuntimeFailure> {
