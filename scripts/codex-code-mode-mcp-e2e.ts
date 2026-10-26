@@ -7,6 +7,9 @@
 // and calls the MCP tool when Codex offers it, so no account or key is used. A thread started with
 // the list keeps it on `thread/resume`. Codex 0.164 does not add the list to a thread started
 // without it, so `CODEX_MCP_ADAPTER_VERSION` 8 replaces those sessions.
+// Issue #3265: a direct call gives the model the result's `structuredContent` alone when the server
+// sends it, and drops each image of `content`. A result without it keeps its images. The image steps
+// record this Codex behavior, so a Codex update that changes it fails here.
 // `bun scripts/codex-code-mode-mcp-e2e.ts`. Writes .openbot-build/codex-code-mode-mcp-e2e/report.json.
 import assert from "node:assert/strict";
 import { mkdir, rm, writeFile } from "node:fs/promises";
@@ -39,6 +42,9 @@ const DEADLINE_MS = 60_000;
 const MODEL = "code-mode-model";
 const TOOL = "list_calendars";
 const RESULT = "calendar_fixture_result";
+const STRUCTURED = "calendar_fixture_structured";
+// A 1 × 1 PNG.
+const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 // The fields Codex reads to route tools, as its model cache has them for GPT-6.
 const MODEL_CATALOG = {
@@ -57,7 +63,7 @@ const MODEL_CATALOG = {
       truncation_policy: { mode: "tokens", limit: 10000 },
       context_window: 272000,
       experimental_supported_tools: [],
-      input_modalities: ["text"],
+      input_modalities: ["text", "image"],
       supports_search_tool: true,
       use_responses_lite: true,
       tool_mode: "code_mode_only",
@@ -72,7 +78,7 @@ interface ModelTool {
 }
 
 interface ModelRequest {
-  input?: Array<{ type?: string; tools?: ModelTool[] }>;
+  input?: Array<{ type?: string; tools?: ModelTool[]; output?: unknown }>;
   tools?: ModelTool[];
 }
 
@@ -106,6 +112,10 @@ interface Offer {
   mentionsTool: boolean;
   /** Whether the request carries the MCP tool's result back. */
   hasResult: boolean;
+  /** Whether the tool output carries the result's `structuredContent`. */
+  hasStructured: boolean;
+  /** Whether the tool output carries an image. */
+  hasImage: boolean;
 }
 
 /**
@@ -124,10 +134,13 @@ async function startFakeModel() {
       const input = parsed.input ?? [];
       // A Responses Lite request sends its tools in an `input` item.
       const tools = parsed.tools ?? input.find((item) => item.tools)?.tools ?? [];
+      const output = JSON.stringify(input.filter((item) => item.type === "function_call_output"));
       offers.push({
         names: tools.flatMap((tool) => (tool.name ? [tool.name] : [])).sort(),
         mentionsTool: body.includes(TOOL),
         hasResult: JSON.stringify(input).includes(RESULT),
+        hasStructured: output.includes(STRUCTURED),
+        hasImage: output.includes('"input_image"'),
       });
       const called = input.some((item) => item.type === "function_call");
       const namespace = tools.find(
@@ -157,17 +170,28 @@ async function startFakeModel() {
   return { offers, ...(await listen(server)) };
 }
 
-/** A stateless SDK Streamable HTTP MCP server with one tool, which records each call. */
+/**
+ * A stateless SDK Streamable HTTP MCP server with one tool, which records each call. The path chooses
+ * the result: `/mcp` sends text, `/image` adds a PNG, and `/structured-image` also adds `structuredContent`.
+ */
 async function startHttpMcp() {
   const calls: string[] = [];
   const server = createServer(async (request, response) => {
+    const image = request.url !== "/mcp";
+    const structured = request.url === "/structured-image";
     const mcp = new Server({ name: "calendar", version: "1.0.0" }, { capabilities: { tools: {} } });
     mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [{ name: TOOL, description: "Lists calendars.", inputSchema: { type: "object", properties: {} } }],
     }));
     mcp.setRequestHandler(CallToolRequestSchema, async (message) => {
       calls.push(message.params.name);
-      return { content: [{ type: "text", text: RESULT }] };
+      return {
+        content: [
+          { type: "text", text: RESULT },
+          ...(image ? [{ type: "image", mimeType: "image/png", data: PNG }] : []),
+        ],
+        ...(structured ? { structuredContent: { marker: STRUCTURED, width: 1, height: 1 } } : {}),
+      };
     });
     const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
     response.on("close", () => {
@@ -244,6 +268,8 @@ interface Outcome {
   mentionsTool: boolean;
   calls: string[];
   resultReturned: boolean;
+  structuredReturned: boolean;
+  imageReturned: boolean;
 }
 
 /** One app-server for the case's `CODEX_HOME`, initialized, and a way to run a turn to its end. */
@@ -349,6 +375,8 @@ async function run(test: Case): Promise<Outcome> {
       mentionsTool: offers[0]?.mentionsTool ?? false,
       calls: http.calls.slice(firstCall),
       resultReturned: offers.some((offer) => offer.hasResult),
+      structuredReturned: offers.some((offer) => offer.hasStructured),
+      imageReturned: offers.some((offer) => offer.hasImage),
     };
   } finally {
     await runCauseEffect(session.client.stop());
@@ -379,7 +407,8 @@ await writeFile(catalog, JSON.stringify(MODEL_CATALOG));
 const cli = await runCauseEffect(resolveCodexCli());
 const model = await startFakeModel();
 const http = await startHttpMcp();
-const httpUrl = `http://127.0.0.1:${http.port}/mcp`;
+const httpOrigin = `http://127.0.0.1:${http.port}`;
+const httpUrl = `${httpOrigin}/mcp`;
 
 try {
   await step(
@@ -448,6 +477,26 @@ try {
       assert.ok(!o.directOnly.some((namespace) => namespace.startsWith("mcp__")), o.directOnly.join(", "));
       assert.deepEqual(o.offered, []);
       assert.deepEqual(o.calls, []);
+    },
+  );
+  await step(
+    "an MCP image without structuredContent reaches the model with the text",
+    { name: "image", rows: [row("gallery", { url: `${httpOrigin}/image` })] },
+    (o) => {
+      assert.deepEqual(o.calls, [TOOL]);
+      assert.equal(o.resultReturned, true, "the model did not get the text");
+      assert.equal(o.imageReturned, true, "the model did not get the image");
+    },
+  );
+  await step(
+    "issue #3265: beside structuredContent, Codex gives the model the structured JSON alone",
+    { name: "structured-image", rows: [row("gallery", { url: `${httpOrigin}/structured-image` })] },
+    (o) => {
+      assert.deepEqual(o.calls, [TOOL]);
+      assert.equal(o.structuredReturned, true, "the model did not get structuredContent");
+      // A failure below means Codex now sends `content` too, which closes #3265 upstream.
+      assert.equal(o.resultReturned, false, "the model got the text of content");
+      assert.equal(o.imageReturned, false, "the model got the image of content");
     },
   );
 
