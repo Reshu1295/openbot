@@ -26,7 +26,14 @@ export function stopAppImageCrashpadHandlerAtExit(): void {
   // Each launch has a mount path of its own, so this matches no handler of another launch.
   const handlerPath = join(directory, "chrome_crashpad_handler");
   process.once("exit", () => {
-    for (const entry of readdirSync("/proc")) {
+    let entries: string[];
+    try {
+      entries = readdirSync("/proc");
+    } catch {
+      // A throw here would be an uncaught exception during exit.
+      return;
+    }
+    for (const entry of entries) {
       if (!/^\d+$/u.test(entry)) continue;
       try {
         if (readlinkSync(`/proc/${entry}/exe`) === handlerPath) process.kill(Number(entry), "SIGKILL");
