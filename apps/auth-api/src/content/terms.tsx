@@ -85,7 +85,8 @@ export function Terms() {
       </p>
       <p>
         The detailed rules governing Commercial Licenses, including Seat assignments, additional Seats, renewals,
-        cancellations, and commercial usage rights, are set out in the separate OpenBot Commercial License Agreement.
+        cancellations, and commercial usage rights, are set out in the separate{" "}
+        <Link to="/commercial-license">OpenBot Commercial License Agreement</Link>.
       </p>
 
       <h2>Hosted Server Services</h2>
