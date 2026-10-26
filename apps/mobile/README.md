@@ -83,8 +83,10 @@ missing, the command stops with setup instructions. The standard command does no
 look for RocketSim, even if `ROCKETSIM_APP_PATH` or the old `OPENBOT_ROCKETSIM`
 variable is set.
 
-The iOS commands keep the Xcode build in `ios/build/DerivedData`, not in
-`~/Library/Developer/Xcode/DerivedData`, so removing a worktree removes its build. Metro keeps its
+The iOS commands keep the Xcode build in `ios/DerivedData`, not in
+`~/Library/Developer/Xcode/DerivedData`, so removing a worktree removes its build. Do not remove
+`ios/build`: CocoaPods writes codegen output there. When that output is missing, `bun mobile:ios`
+installs the pods again. Metro keeps its
 caches in `.expo/metro-cache` and `.expo/metro-file-map` of the worktree.
 
 `bun mobile:android` also applies the config plugins without clearing `android/`, then runs

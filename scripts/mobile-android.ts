@@ -6,6 +6,10 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const mobileRoot = join(repositoryRoot, "apps/mobile");
+// Without node_modules, Bun resolves expo from its global cache, where @expo/cli is missing.
+if (!existsSync(join(repositoryRoot, "node_modules/expo"))) {
+  throw new Error("Dependencies are not installed in this worktree. Run `bun install --frozen-lockfile` first.");
+}
 const require = createRequire(join(mobileRoot, "package.json"));
 const expo = require.resolve("expo/bin/cli");
 const args = process.argv.slice(2).filter((arg) => arg !== "--");
