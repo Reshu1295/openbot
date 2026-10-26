@@ -824,7 +824,11 @@ OpenRouter works as DeepSeek does: a key-only provider on Pi's managed CLI. The 
 `openrouter` API key. Pi has a built-in `openrouter` provider with OpenRouter's model list (401 models
 in Pi 1.1.0 and 1.4.0), so the extension registers only the key and the `Authorization` header, and
 OpenBot keeps no OpenRouter model list. Pi sends some models to OpenRouter's Anthropic Messages
-endpoint and the others to its chat completions endpoint; both read the header. Model ids keep
+endpoint and the others to its chat completions endpoint; both read the header. On the Anthropic
+Messages endpoint Pi also sends the key from its own `auth.json` as `x-api-key`, so the extension sets
+that header to the OpenBot key too (checked in Pi 1.4.0 with a local server). Pi's own
+`/api/models/user` request still uses a key from `auth.json` when the user saved one there; it reads
+the model list and sends no turn content. Model ids keep
 OpenRouter's `<lab>/<model>` form, such as `anthropic/claude-opus-5.5`, and the client passes them to
 Pi unchanged. The catalog drops the aliases that start with `~`, such as
 `~anthropic/claude-sonnet-latest`, because `isAgentModel` refuses that character, and the default is
