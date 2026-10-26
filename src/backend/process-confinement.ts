@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -112,7 +113,8 @@ export function antigravityStatePaths(env: NodeJS.ProcessEnv = process.env, home
  * skills, agents, commands and rules, load code or settings in the editor and in every other CLI
  * process, so they stay read-only. So do the trust and MCP approval files of each project in
  * `projects`. The sessions stay in the shared data folder, so a thread continues when the agent
- * changes between Workspace only and Full access.
+ * changes between Workspace only and Full access. On macOS the CLI reads its sign-in from the login
+ * Keychain with `security`, which must write a lock file first: `keychainLockFiles`.
  */
 export function cursorStatePaths(env: NodeJS.ProcessEnv = process.env, home = homedir()): ProviderStatePaths {
   const xdgConfig = env.XDG_CONFIG_HOME?.trim();
@@ -137,7 +139,7 @@ export function cursorStatePaths(env: NodeJS.ProcessEnv = process.env, home = ho
     "rules",
   ];
   return {
-    writable: unique([cursorConfinedConfig(home), dataHome, fixedHome, CURSOR_CONFINED_CACHE]),
+    writable: unique([cursorConfinedConfig(home), dataHome, fixedHome, CURSOR_CONFINED_CACHE, ...keychainLockFiles()]),
     protected: unique([userConfig, dataHome, fixedHome].flatMap((root) => settings.map((name) => join(root, name)))),
     protectedInProjects: {
       folders: unique([dataHome, fixedHome].map((root) => join(root, "projects"))),
@@ -147,6 +149,25 @@ export function cursorStatePaths(env: NodeJS.ProcessEnv = process.env, home = ho
 }
 
 const CURSOR_CONFINED_CACHE = join(tmpdir(), "openbot-confined-cursor-cache");
+
+let keychainLockFile: string | undefined;
+
+/**
+ * `security` takes `mds/mds.lock` in the user's cache folder (`DARWIN_USER_CACHE_DIR`, not
+ * `TMPDIR`) before it reads the login Keychain. When the sandbox denies that write, the read fails,
+ * and Cursor 2026.10.22 answers each session with "Authentication required" although it is signed
+ * in. Only the lock file is writable: the module directory beside it lists the security modules
+ * that the user's other processes load.
+ */
+function keychainLockFiles(): string[] {
+  if (process.platform !== "darwin") return [];
+  keychainLockFile ??= join(
+    execFileSync("/usr/bin/getconf", ["DARWIN_USER_CACHE_DIR"], { encoding: "utf8" }).trim(),
+    "mds",
+    "mds.lock",
+  );
+  return [keychainLockFile];
+}
 
 /** The config folder of every confined Cursor process. Only confined processes read it. */
 function cursorConfinedConfig(home: string): string {
