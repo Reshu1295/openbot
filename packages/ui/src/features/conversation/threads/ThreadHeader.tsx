@@ -37,10 +37,14 @@ function NewThreadButton(props: { disabled: boolean; onNew: () => void }) {
  * The tabs, "+" and the thread list. In a narrow header the tabs and the list button become one
  * button with the open thread, and "+" follows it. The heading group takes the free width of the
  * header whatever it holds, so its width decides the mode and the mode does not change it again.
+ * When only the agent's own chat has a tab, the header already shows the agent's name, so no tab
+ * shows: only "+" and the thread list.
  */
 function ThreadRow(props: ThreadHeaderProps) {
   let row: HTMLDivElement | undefined;
-  const [mode, setMode] = createSignal<ThreadRowMode>("tabs");
+  const [measured, setMode] = createSignal<ThreadRowMode>("tabs");
+  // With no tab to show, the compact button would only repeat the agent's name.
+  const mode = (): ThreadRowMode => (props.tabs.length < 2 && measured() === "compact" ? "tabs" : measured());
   onSettled(() => {
     const group = row?.parentElement;
     if (!row || !group) return;
@@ -60,7 +64,9 @@ function ThreadRow(props: ThreadHeaderProps) {
   return (
     <div ref={row} class="agent-threads-header" data-mode={mode()}>
       <Show when={mode() === "tabs"}>
-        <ThreadTabs {...props} />
+        <Show when={props.tabs.length > 1}>
+          <ThreadTabs {...props} />
+        </Show>
         <NewThreadButton disabled={!props.canStartNew} onNew={props.onNew} />
       </Show>
       <ThreadMenu {...props} mode={mode()} />
@@ -73,8 +79,8 @@ function ThreadRow(props: ThreadHeaderProps) {
 
 /**
  * The threads of an agent, in the chat header. An agent with only its own chat shows only a "New
- * thread" button, so its header stays almost the same. From two threads, the open threads show as
- * tabs, with a menu of all threads.
+ * thread" button, so its header stays almost the same. From two threads, a menu of all threads
+ * shows, and the open threads show as tabs when a side thread has one.
  */
 export function ThreadHeader(props: ThreadHeaderProps) {
   const single = () => props.tabs.length < 2 && props.threads.length < 2 && props.archived.length === 0;
