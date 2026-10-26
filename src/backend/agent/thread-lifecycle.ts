@@ -151,6 +151,8 @@ export interface ThreadLifecycleOptions {
   sectionTeammates?: (agentId: string) => SectionTeammates | null;
   /** Whether a public thread is a channel member's thread. */
   channelThread?: (threadId: string) => boolean;
+  /** Whether the client of this agent's provider reloads the runtime on resume. See `AgentClient`. */
+  reloadsRuntimeOnResume?: (agent: AgentSummary) => boolean;
 }
 
 /**
@@ -183,6 +185,7 @@ export class ThreadLifecycle {
   readonly #serverHost: boolean;
   readonly #sectionTeammates: (agentId: string) => SectionTeammates | null;
   readonly #channelThread: (threadId: string) => boolean;
+  readonly #reloadsRuntimeOnResume: (agent: AgentSummary) => boolean;
   readonly #pendingHandoffs = new Map<string, string>();
   readonly #pendingRuntimeRefreshes = new Set<string>();
   /**
@@ -212,6 +215,7 @@ export class ThreadLifecycle {
     this.#serverHost = options.serverHost ?? false;
     this.#sectionTeammates = options.sectionTeammates ?? (() => null);
     this.#channelThread = options.channelThread ?? (() => false);
+    this.#reloadsRuntimeOnResume = options.reloadsRuntimeOnResume ?? (() => false);
   }
 
   /**
@@ -1240,7 +1244,7 @@ export class ThreadLifecycle {
       // A running turn owns its provider session, so the refresh waits for it. The mark stays, and
       // the next drain of this agent refreshes the thread that was busy this time.
       if (this.#activeTurnOf(agent.id, threadId)) deferred = true;
-      else yield* this.#refreshThreadRuntime(threadId, true);
+      else yield* this.#refreshThreadRuntime(threadId, this.#reloadsRuntimeOnResume(agent) ? agent.provider : null);
     }
     if (!deferred) {
       this.#pendingRuntimeRefreshes.delete(agent.id);
@@ -1282,20 +1286,17 @@ export class ThreadLifecycle {
    * Drops the provider-side state of one thread and keeps the thread itself. The public thread row
    * and its messages stay, so the next turn starts a new provider session with the same history.
    *
-   * `reload`: the thread only needs the current runtime. A session whose client reloads it on resume
-   * keeps its provider history: its process closes, and the next turn resumes it with the new set.
+   * `reloadProvider`: the thread only needs the current runtime, and this provider's client reloads
+   * it on resume. Its sessions keep their provider history: a process that holds one closes, and
+   * the next turn resumes it with the new set. A session that no process holds has nothing to close.
    */
   readonly #refreshThreadRuntime = Effect.fn("ThreadLifecycle.refreshThreadRuntime")(function* (
     this: ThreadLifecycle,
     threadId: string,
-    reload = false,
+    reloadProvider: AgentProvider | null = null,
   ) {
     const sessions = this.#store.database.listProviderSessions(threadId).filter((one) => one.state === "active");
-    if (
-      reload &&
-      sessions.length > 0 &&
-      sessions.every((one) => this.#conversation.openClientFor(one.externalSessionId)?.reloadsRuntimeOnResume)
-    ) {
+    if (reloadProvider && sessions.length > 0 && sessions.every((one) => one.provider === reloadProvider)) {
       for (const session of sessions) {
         yield* this.#releaseProviderSession(session.externalSessionId);
         this.#conversation.unloadThread(session.externalSessionId);

@@ -258,7 +258,7 @@ class ClaudeStandIn extends EventEmitter<ClientEvents> implements AgentClient {
     this.#real.on("exit", (error) => this.emit("exit", error));
   }
 
-  get reloadsRuntimeOnResume(): boolean | undefined {
+  get reloadsRuntimeOnResume(): boolean {
     return this.#real.reloadsRuntimeOnResume;
   }
 
@@ -498,7 +498,9 @@ try {
       );
       const firstSpawn = await waitFor("the first Claude start", () => entries<{ sessionId: string }>(claudeSpawns)[0]);
       const firstSession = firstSpawn.sessionId;
-      // The same call that an MCP server or a skill change makes.
+      // The same call that an MCP server or a skill change makes. The second one finds the session
+      // with no process: it must keep the session as well.
+      await runCauseEffect(agents.refreshAllAgentRuntimes());
       await runCauseEffect(agents.refreshAllAgentRuntimes());
       const messagesBefore = entries(claudeMessages).length;
       await sendTurn(profile, agent.id, "second-turn");
