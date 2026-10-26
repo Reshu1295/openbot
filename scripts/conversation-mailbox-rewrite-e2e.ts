@@ -11,6 +11,8 @@
 // - `byte-limit`: the answers are larger than the 8 MiB that the runtime keeps of one chat.
 // - `provider-read`: each round, a provider read replaces the chat with one that has no mailbox
 //   messages, so the cache has no record of them.
+// - `total-budget`: the least recently used chat has a turn that runs and only a mailbox message to
+//   trim. Idle chats then go over the limit of all chats. The idle chats must still be removed.
 // No app, provider, account or network is started.
 //
 // Run: bun scripts/conversation-mailbox-rewrite-e2e.ts
@@ -22,7 +24,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { AgentEvent, ConversationMessage, ConversationSnapshot } from "@openbot/contracts/ipc";
 import { Effect, Exit, Scope } from "effect";
-import { CONVERSATION_CACHE_BYTES_LIMIT, ConversationRuntime } from "../src/backend/agent/conversation-runtime";
+import {
+  CONVERSATION_CACHE_BYTES_LIMIT,
+  CONVERSATION_CACHE_TOTAL_BYTES_LIMIT,
+  ConversationRuntime,
+} from "../src/backend/agent/conversation-runtime";
 import { MailboxSync } from "../src/backend/agent/mailbox-sync";
 import { RoutineScheduler } from "../src/backend/agent/routine-scheduler";
 import { AgentStore } from "../src/backend/agent-store";
@@ -39,7 +45,7 @@ const SEEDED_TURNS = 120;
 const ROUNDS = 12;
 const TIMED_QUEUE_CHANGES = 50;
 
-type CaseName = "message-limit" | "byte-limit" | "provider-read";
+type CaseName = "message-limit" | "byte-limit" | "provider-read" | "total-budget";
 
 interface Round {
   round: number;
@@ -59,6 +65,8 @@ interface CaseReport {
   unchangedQueueChangeMs?: number;
   /** Warnings that a chat was sent again with no stored change. */
   loopWarnings?: number;
+  /** In `total-budget`, the idle chats that stay in memory. */
+  idleChatsKept?: string;
   error?: string;
 }
 
@@ -100,8 +108,8 @@ function after(iso: string): string {
   return new Date(Date.parse(iso) + 1).toISOString();
 }
 
-async function runCase(name: CaseName, result: CaseReport): Promise<void> {
-  const firstLoopWarning = loopWarnings;
+/** The real runtime, mailbox and mailbox sync on a temporary profile. */
+async function startRuntime() {
   const root = await mkdtemp(join(tmpdir(), "openbot-conversation-rewrite-"));
   const database = new OpenBotDatabase(join(root, "state"));
   const store = new AgentStore(join(root, "state"), join(root, "home"), database);
@@ -161,9 +169,27 @@ async function runCase(name: CaseName, result: CaseReport): Promise<void> {
     return persistConversationChanges(input);
   };
 
+  const close = async (): Promise<void> => {
+    timer.dispose();
+    conversation.dispose();
+    await Effect.runPromise(Scope.close(scope, Exit.void));
+    database.close();
+    await rm(root, { recursive: true, force: true });
+  };
   try {
     await runCauseEffect(store.initialize());
     await runCauseEffect(mailbox.initialize());
+  } catch (error) {
+    await close();
+    throw error;
+  }
+  return { store, mailbox, conversation, sync, events, writes, close };
+}
+
+async function runCase(name: CaseName, result: CaseReport): Promise<void> {
+  const firstLoopWarning = loopWarnings;
+  const { store, mailbox, conversation, sync, events, writes, close } = await startRuntime();
+  try {
     const agent = await runCauseEffect(
       store.createAgent({ name: "Writer", description: "Gets queued work", avatarSeed: "rewrite-a", avatarHue: null }),
     );
@@ -301,19 +327,100 @@ async function runCase(name: CaseName, result: CaseReport): Promise<void> {
     }
     result.passed = true;
   } finally {
-    timer.dispose();
-    conversation.dispose();
-    await Effect.runPromise(Scope.close(scope, Exit.void));
-    database.close();
-    await rm(root, { recursive: true, force: true });
+    await close();
+  }
+}
+
+/** Idle chats of about 7.5 MiB each, together more than the limit of all chats. */
+const IDLE_CHATS = Math.ceil(CONVERSATION_CACHE_TOTAL_BYTES_LIMIT / (CONVERSATION_CACHE_BYTES_LIMIT * 0.9375)) + 1;
+
+async function runBudgetCase(result: CaseReport): Promise<void> {
+  const { store, mailbox, conversation, sync, close } = await startRuntime();
+  try {
+    const busy = await runCauseEffect(
+      store.createAgent({ name: "Busy", description: "Runs a turn", avatarSeed: "budget-busy", avatarHue: null }),
+    );
+    await runCauseEffect(mailbox.enqueue({ sender: { kind: "user" }, recipientAgentIds: [busy.id], text: "Next" }));
+    conversation.emitConversation(
+      {
+        agentId: busy.id,
+        threadId: store.ensureThreadIdNow(busy.id),
+        activeTurnId: "turn-busy",
+        revision: 0,
+        messages: [
+          {
+            id: "turn-busy-answer",
+            turnId: "turn-busy",
+            author: "assistant",
+            text: "Working",
+            createdAt: new Date().toISOString(),
+            status: "streaming",
+            reactions: [],
+            reaction: null,
+          },
+        ],
+      },
+      "e2e.turn-started",
+      {},
+    );
+    // Adds the queued message. It is the only message that a trim of this chat could remove.
+    sync.emitQueue(busy.id);
+    const busyIds = conversation.loadedSnapshot(busy.id)?.messages.map((message) => message.id) ?? [];
+    assert.equal(busyIds.length, 2, "The busy chat has its turn and the queued message.");
+    result.checks.push("the least recently used chat runs a turn and has only a mailbox message to trim");
+
+    // Each idle chat is used later than the busy chat.
+    const usedAt = Date.now();
+    while (Date.now() === usedAt) await Promise.resolve();
+    const answersPerChat = 30;
+    const text = "x".repeat(Math.floor((CONVERSATION_CACHE_BYTES_LIMIT * 0.9375) / answersPerChat));
+    const idle: string[] = [];
+    for (let index = 0; index < IDLE_CHATS; index += 1) {
+      const agent = await runCauseEffect(
+        store.createAgent({
+          name: `Idle ${index}`,
+          description: "Idle",
+          avatarSeed: `budget-${index}`,
+          avatarHue: null,
+        }),
+      );
+      idle.push(agent.id);
+      const createdAt = new Date().toISOString();
+      conversation.emitConversation(
+        {
+          agentId: agent.id,
+          threadId: store.ensureThreadIdNow(agent.id),
+          activeTurnId: null,
+          revision: 0,
+          messages: Array.from({ length: answersPerChat }, (_, turn) =>
+            assistantMessage(`idle-${index}-${turn}`, createdAt, text),
+          ),
+        },
+        "e2e.idle-chat",
+        {},
+      );
+    }
+    const kept = idle.filter((id) => conversation.loadedSnapshot(id));
+    result.idleChatsKept = `${kept.length} of ${IDLE_CHATS}`;
+    assert.ok(kept.length < IDLE_CHATS, "The limit of all chats removes idle chats past the busy chat.");
+    assert.equal(conversation.loadedSnapshot(idle[0] ?? "")?.messages.length, undefined, "The oldest idle chat goes.");
+    assert.deepEqual(
+      conversation.loadedSnapshot(busy.id)?.messages.map((message) => message.id),
+      busyIds,
+      "The busy chat keeps its turn and the queued message.",
+    );
+    result.checks.push("idle chats are removed; the busy chat keeps its messages");
+    result.passed = true;
+  } finally {
+    await close();
   }
 }
 
 try {
-  for (const name of ["message-limit", "byte-limit", "provider-read"] as const) {
+  for (const name of ["message-limit", "byte-limit", "provider-read", "total-budget"] as const) {
     const result: CaseReport = { name, checks: [], rounds: [], passed: false };
     report.cases.push(result);
-    await runCase(name, result).catch((error: unknown) => {
+    await (name === "total-budget" ? runBudgetCase(result) : runCase(name, result)).catch((error: unknown) => {
       result.error = error instanceof Error ? error.message : String(error);
     });
     process.stdout.write(`${name}: ${result.passed ? "passed" : `FAILED: ${result.error}`}\n`);

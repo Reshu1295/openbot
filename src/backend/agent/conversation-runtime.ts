@@ -347,13 +347,18 @@ export class ConversationRuntime {
       }
       return result;
     };
-    const trim = (cached: CachedSnapshot): boolean => {
-      if (!this.#trimCompletedCache(cached)) return false;
+    // A chat with a turn that runs and nothing left to trim, for example only mailbox messages, is
+    // passed over so that the budget can still evict other chats.
+    const untrimmable = new Set<CachedSnapshot>();
+    const trim = (cached: CachedSnapshot): void => {
+      if (!this.#trimCompletedCache(cached)) {
+        untrimmable.add(cached);
+        return;
+      }
       // The trim edits the array in place, so a cache that holds the same array is checked again.
       for (const other of committed.keys()) {
         if (other !== cached && other.snapshot.messages === cached.snapshot.messages) committed.delete(other);
       }
-      return true;
     };
     while (this.#cachedSnapshotBytes > CONVERSATION_CACHE_TOTAL_BYTES_LIMIT) {
       let oldest:
@@ -361,13 +366,13 @@ export class ConversationRuntime {
         | { kind: "execution"; id: string; usedAt: number }
         | undefined;
       for (const [id, cached] of this.#cachedSnapshots) {
-        if (!isCommitted(cached)) continue;
+        if (!isCommitted(cached) || untrimmable.has(cached)) continue;
         if (cached.snapshot.messages.every((message) => isActiveMessage(message, cached.snapshot.activeTurnId)))
           continue;
         if (!oldest || cached.usedAt < oldest.usedAt) oldest = { kind: "agent", id, usedAt: cached.usedAt };
       }
       for (const [id, cached] of this.#cachedExecutionSnapshots) {
-        if (!isCommitted(cached)) continue;
+        if (!isCommitted(cached) || untrimmable.has(cached)) continue;
         if (cached.snapshot.messages.every((message) => isActiveMessage(message, cached.snapshot.activeTurnId)))
           continue;
         if (!oldest || cached.usedAt < oldest.usedAt) oldest = { kind: "execution", id, usedAt: cached.usedAt };
@@ -375,9 +380,8 @@ export class ConversationRuntime {
       if (!oldest) return;
       if (oldest.kind === "agent") {
         const cached = this.#cachedSnapshots.get(oldest.id);
-        if (cached?.snapshot.activeTurnId) {
-          if (!trim(cached)) return;
-        } else {
+        if (cached?.snapshot.activeTurnId) trim(cached);
+        else {
           // Keep the same recovery path as idle eviction. A caller may still hold this snapshot
           // while the process budget evicts it; dropping the map entry without a marker would make
           // queue and mailbox updates skip this agent until a full conversation read.
@@ -393,9 +397,8 @@ export class ConversationRuntime {
         }
       } else {
         const cached = this.#cachedExecutionSnapshots.get(oldest.id);
-        if (cached?.snapshot.activeTurnId) {
-          if (!trim(cached)) return;
-        } else {
+        if (cached?.snapshot.activeTurnId) trim(cached);
+        else {
           // Keep the execution-thread identity for routing, but release its message objects. The
           // next ensureSnapshot call sees the empty projection and rebuilds the recent page from
           // SQLite instead of retaining an evicted transcript through this strong map reference.
@@ -1077,12 +1080,6 @@ function conversationSnapshotBytes(snapshot: ConversationSnapshot): number {
   return Buffer.byteLength(JSON.stringify(snapshot), "utf8");
 }
 
-/**
- * The fewest oldest messages whose removal makes the serialized array at least `excessBytes`
- * shorter, and that byte count. An array serializes as its elements joined by commas, so removing
- * an element removes its own bytes and one comma while another element remains. Only the removed
- * messages are serialized.
- */
 /**
  * The oldest messages that free `excessBytes`. Mailbox messages stay: mailbox sync adds them back,
  * so removing one frees no memory and makes the next change write it again.
