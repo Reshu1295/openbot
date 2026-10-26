@@ -3,10 +3,10 @@ import { createSimpleContext } from "../../simple-context";
 import { useServers } from "../servers/servers-context";
 
 /**
- * The host pane over the middle of the workspace: the usage report, the routine schedule, the
- * tasks or the workflows. One state holds them, so each path that uncovers the conversation closes any of them.
+ * The host pane over the middle of the workspace: the usage report, the routine schedule or the
+ * workflows. One state holds them, so each path that uncovers the conversation closes any of them.
  */
-type HostPaneView = "usage" | "schedule" | "tasks" | "workflows";
+type HostPaneView = "usage" | "schedule" | "workflows";
 
 const context = createSimpleContext({
   name: "UsageProvider",
@@ -38,10 +38,6 @@ const context = createSimpleContext({
 
     function openSchedule(serverId: string, source: HTMLElement | null) {
       open("schedule", serverId, source);
-    }
-
-    function openTasks(serverId: string, source: HTMLElement | null) {
-      open("tasks", serverId, source);
     }
 
     function openWorkflows(serverId: string, source: HTMLElement | null) {
@@ -83,7 +79,6 @@ const context = createSimpleContext({
       state,
       openUsage,
       openSchedule,
-      openTasks,
       openWorkflows,
       closeUsage() {
         clear();

@@ -328,6 +328,15 @@ export const messages = {
   "error.backend.taskNotFound": "Esta tarea no está disponible.",
   "error.backend.taskClosed": "Esta tarea está cerrada. Vuelve a abrirla para enviar un mensaje.",
   "error.backend.taskStillRunning": "Esta tarea sigue en ejecución. Espera a que se detenga y después ciérrala.",
+  "error.backend.threadNotFound": "Este hilo no está disponible.",
+  "error.backend.threadStillRunning": "Este hilo sigue en ejecución. Detenlo y vuelve a intentarlo.",
+  "error.backend.threadArchived": "Este hilo está archivado. Restáuralo para enviar un mensaje.",
+  "error.backend.threadTitleRequired": "Dale al hilo un título corto.",
+  "error.backend.threadOpenLimitReached":
+    "Este agente tiene {count} hilos abiertos. Archiva un hilo y después inicia o restaura otro.",
+  "error.backend.threadRemoteUnsupported": "Los hilos solo están disponibles para los agentes de este equipo.",
+  "error.backend.threadMoveRefused":
+    "Solo un mensaje que enviaste únicamente a este agente puede ejecutarse en un hilo nuevo.",
   "error.backend.taskTitleRequired": "Dale a la tarea un título corto.",
   "error.backend.taskToolInvalid":
     "Dale a la tarea un título de 120 caracteres como máximo y una descripción que diga qué hay que hacer.",

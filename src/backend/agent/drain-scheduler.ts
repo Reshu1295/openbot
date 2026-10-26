@@ -223,8 +223,8 @@ export class DrainScheduler {
           .map(laneKey),
       isRunning: (key) => {
         const lane = laneOf(key);
-        // A compaction holds the agent's own session, so it uses the slot of the agent's own chat.
-        return this.#laneRunning(lane) || (lane.taskId === null && !this.#compaction.mayDrain(lane.agentId));
+        // A compaction is a provider turn of the lane whose thread it compacts, so it uses that slot.
+        return this.#laneRunning(lane) || this.#compactionHolds(lane);
       },
       isWaiting: (key) => {
         const lane = laneOf(key);
@@ -271,6 +271,20 @@ export class DrainScheduler {
       .some((snapshot) => snapshot.threadId === threadId && snapshot.activeTurnId);
   }
 
+  /**
+   * Whether a compaction holds this lane. A side thread waits for a compaction of its own thread
+   * only; the agent's own chat waits for one of any other thread (its chat, channel or messaging
+   * thread), so threads that run in parallel do not wait for each other.
+   */
+  #compactionHolds(lane: Lane): boolean {
+    const sideThreadId = lane.taskId === null ? null : this.#tasks.threadId(lane.taskId);
+    return this.#compaction.heldThreads(lane.agentId).some((externalThreadId) => {
+      const publicThreadId = this.#conversation.publicThreadId(lane.agentId, externalThreadId);
+      if (!this.#conversation.isTaskThread(publicThreadId)) return lane.taskId === null;
+      return publicThreadId === sideThreadId;
+    });
+  }
+
   /** The first clause of `mayDrain` that holds this lane, or null when none does. */
   #heldBy(lane: Lane): string | null {
     const { agentId, taskId } = lane;
@@ -304,7 +318,7 @@ export class DrainScheduler {
     if (taskId === null && !(this.#channels?.mayDrain(agentId) ?? true)) return "channel";
     if (!this.#profileSave.mayDrain(agentId)) return "profile-save";
     if (!this.#duplication.mayDrain(agentId)) return "duplication";
-    if (!this.#compaction.mayDrain(agentId)) return "compaction";
+    if (this.#compactionHolds(lane)) return "compaction";
     if (!this.#routines.mayDrain(agentId)) return "routine";
     if (!this.#usageLimits.mayDrain(agentId)) return "usage-limit";
     return null;
@@ -502,8 +516,9 @@ export class DrainScheduler {
         if (taskId === null) yield* this.#hooks.startRequestedNewChat(agentId);
         return;
       }
-      // A task compacts its context in its provider only: the OpenBot compaction holds every lane of
-      // the agent and runs on the agent's own chat or the thread of the work it serves.
+      // A side thread compacts at the end of its own turns (`TurnLifecycle`), and that compaction
+      // holds its own lane only. Here the agent's own chat compacts its chat, or the thread of the
+      // channel or messaging work it serves.
       if (taskId === null) {
         const agent = this.#store.list().find((candidate) => candidate.id === agentId);
         const assignment = this.#channels?.store.assignmentForDelivery(context.delivery.id);
@@ -628,7 +643,7 @@ export class DrainScheduler {
               delivery.id,
               "interrupted",
               taskId !== null
-                ? sourceText("error.backend.taskClosed")
+                ? sourceText("error.backend.threadArchived")
                 : channelDelivery
                   ? "The channel was deleted before starting."
                   : "The messaging thread was removed before starting.",

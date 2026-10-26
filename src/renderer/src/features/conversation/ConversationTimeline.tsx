@@ -7,7 +7,6 @@ import { ChannelActivityIndicator } from "@openbot/ui/features/channels/ChannelA
 import { AgentActivityIndicator } from "@openbot/ui/features/conversation/AgentActivity";
 import { AgentChatEmptyState } from "@openbot/ui/features/conversation/AgentChatEmptyState";
 import { AgentStepsDisclosure, type AgentStepsTrace } from "@openbot/ui/features/conversation/AgentSteps";
-import { AgentTaskChips } from "@openbot/ui/features/conversation/AgentTasks";
 import { AttachmentCards } from "@openbot/ui/features/conversation/AttachmentCards";
 import { UsageLimitAskCard } from "@openbot/ui/features/conversation/BackupModels";
 import { ChatActionMarker } from "@openbot/ui/features/conversation/ChatActionMarker";
@@ -187,7 +186,6 @@ export function ConversationTimeline() {
     followReaderScroll,
     setUnreadMessagesDividerElement,
     setVirtualRootElement,
-    openTaskPanel,
     shownSubagentId,
     toggleSubagentPanel,
   } = useConversationViewScope();
@@ -260,7 +258,6 @@ export function ConversationTimeline() {
         toggleSpokenReply({ serverId: props.server?.id ?? "local", agentId, messageId: message.id }, message.body),
     };
   };
-  const openTasks = () => props.tasks?.snapshot?.tasks.filter((task) => task.state !== "closed") ?? [];
   const compaction = (): ContextCompactionView | null => {
     const state = props.contextState;
     if (state?.agentId !== props.agent?.id || state?.threadId !== props.agent?.threadId || !state?.compaction)
@@ -1389,16 +1386,6 @@ export function ConversationTimeline() {
                 </Show>
               </Show>
             </div>
-            <Show when={props.tasks}>
-              {(tasks) => (
-                <AgentTaskChips
-                  tasks={openTasks()}
-                  onOpen={openTaskPanel}
-                  onClose={(taskId) => tasks().onClose(taskId)}
-                  waitsForApproval={(task) => tasks().approval(task) !== undefined}
-                />
-              )}
-            </Show>
             <Show when={keyedPrompt()} keyed>
               {(entry) => {
                 const presentResolution = () =>

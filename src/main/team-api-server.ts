@@ -34,6 +34,7 @@ import { AGENT_HIDDEN_CAPABILITY } from "@openbot/contracts/team-protocol/agent-
 import { AGENT_SESSION_SETTINGS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-session-settings-v1";
 import { AGENT_TASK_LIMIT_CAPABILITY } from "@openbot/contracts/team-protocol/agent-task-limit-v1";
 import { AGENT_TASKS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-tasks-v1";
+import { AGENT_THREADS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-threads-v1";
 import { BROWSER_PAGE_STATE_CAPABILITY } from "@openbot/contracts/team-protocol/browser-page-state-v1";
 import { BROWSER_PROFILES_CAPABILITY } from "@openbot/contracts/team-protocol/browser-profiles-v1";
 import { BROWSER_USER_CONTROL_CAPABILITY } from "@openbot/contracts/team-protocol/browser-user-control-v1";
@@ -184,6 +185,7 @@ import { routeAgentMemoryLimit } from "./team-api/route-agent-memory-limit";
 import { routeAgentPublish } from "./team-api/route-agent-publish";
 import { routeAgentSessionSettings } from "./team-api/route-agent-session-settings";
 import { routeAgentTasks } from "./team-api/route-agent-tasks";
+import { routeAgentThreads } from "./team-api/route-agent-threads";
 import { routeAgents } from "./team-api/route-agents";
 import { routeBitwardenConnector } from "./team-api/route-bitwarden-connector";
 import { routeBrowser } from "./team-api/route-browser";
@@ -865,6 +867,7 @@ export class TeamApiServer {
       if ((await routeAgentSessionSettings(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeAgentHidden(context, this.#options.hiddenAgents, hidden)) === "handled") return;
       if ((await routeAgentTasks(context, this.#options.agentTasks, hidden)) === "handled") return;
+      if ((await routeAgentThreads(context, this.#options.agentTasks, hidden)) === "handled") return;
       if ((await routeSkillsAdmin(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeSharedTables(context, this.#options.admin)) === "handled") return;
       if ((await routeAgentInstall(context, this.#options.admin, hidden, newAgentHidden)) === "handled") return;
@@ -1909,6 +1912,7 @@ export class TeamApiServer {
         if (capability === AGENT_SESSION_SETTINGS_CAPABILITY) return this.#options.admin?.sessionSettings !== undefined;
         if (capability === AGENT_HIDDEN_CAPABILITY) return this.#options.hiddenAgents !== undefined;
         if (capability === AGENT_TASKS_CAPABILITY) return this.#options.agentTasks !== undefined;
+        if (capability === AGENT_THREADS_CAPABILITY) return this.#options.agentTasks !== undefined;
         if (capability === AGENT_HOST_SETTINGS_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_BACKUP_MODELS_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_TASK_LIMIT_CAPABILITY) return this.#options.admin?.agentHost !== undefined;

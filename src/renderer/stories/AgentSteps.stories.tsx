@@ -50,6 +50,11 @@ const MEMORY: AgentStep[] = [
     kind: "memory",
     change: { memoryId: "m3", action: "forgotten", text: "Prefers plans as one long bulleted list." },
   },
+  {
+    id: "m4",
+    kind: "memory",
+    change: { memoryId: "m4", action: "notChanged", text: "Sends the weekly report on Friday at 16:00." },
+  },
 ];
 
 const meta = {

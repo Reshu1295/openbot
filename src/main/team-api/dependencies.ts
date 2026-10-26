@@ -225,12 +225,21 @@ export type TeamApiHostedSites = Pick<HostedSiteDesktopService, "listServerSites
 export type TeamApiHiddenAgents = Pick<AgentService, "listHiddenAgents" | "setAgentHidden">;
 
 /**
- * Its presence is what `#protocolSupport` advertises `agent-tasks-v1` on. A member who can send a
- * message to the agent can use it. Moving a queued message into a task stays local.
+ * Its presence is what `#protocolSupport` advertises `agent-tasks-v1` and `agent-threads-v1` on. A member
+ * who can send a message to the agent can use it. Moving a queued message into a task stays local.
  */
 export type TeamApiAgentTasks = Pick<
   AgentService,
-  "listAgents" | "listTasks" | "readTask" | "startTask" | "sendMessage" | "stopTask" | "closeTask" | "reopenTask"
+  | "listAgents"
+  | "listTasks"
+  | "readTask"
+  | "startTask"
+  | "sendMessage"
+  | "stopTask"
+  | "closeTask"
+  | "reopenTask"
+  | "renameTask"
+  | "deleteTask"
 >;
 
 /**

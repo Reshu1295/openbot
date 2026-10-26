@@ -208,8 +208,8 @@ import type { AgentApiKeys } from "./agent-api-keys";
 import type { AgentProvider } from "./agent-client";
 import type { AgentTables } from "./agent-data/agent-tables";
 import type { AgentStore } from "./agent-store";
-import { AgentTaskStore } from "./agent-tasks/agent-task-store";
 import { AgentTasks } from "./agent-tasks/agent-tasks";
+import { AgentThreadStore } from "./agent-threads/agent-thread-store";
 import { AgentWaitStore } from "./agent-waits/agent-wait-store";
 import { AgentWaits } from "./agent-waits/agent-waits";
 import { automationRunCommand } from "./automation-command";
@@ -382,6 +382,8 @@ export interface AgentServiceOptions {
 const USER_SEND_RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** The `send_message` recipient limit, so one message can reach every section-mate the prompt names. */
 const MAX_SECTION_TEAMMATES = 32;
+/** How long an archive waits for the provider to end the turn that it stopped. After it, the archive is refused. */
+const TASK_STOP_WAIT_MS = 15_000;
 
 /** The user's update, and the browser profile choice that the profile operations set after their checks. */
 export type AgentUpdate = UpdateAgentInput & { ownBrowserSession?: boolean; browserProfileId?: string | null };
@@ -526,7 +528,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       () => this.listAgents(),
     );
     this.#tasks = new AgentTasks({
-      store: new AgentTaskStore(store.database),
+      store: new AgentThreadStore(store.database),
       mailbox,
       conversation: this.#conversation,
       hooks: {
@@ -627,6 +629,19 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         },
         onProvidersReady: () =>
           Effect.gen({ self: this }, function* () {
+            // Work of a deleted task must not run or settle in the agent's own chat.
+            yield* this.#tasks.endWorkOfGoneTasks().pipe(
+              Effect.tap((agentIds) =>
+                Effect.sync(() => {
+                  for (const id of agentIds) this.#mailboxSync.emitQueue(id);
+                }),
+              ),
+              Effect.catchCause((cause) =>
+                Cause.hasInterruptsOnly(cause)
+                  ? Effect.failCause(cause)
+                  : reportOriginalFailure(cause, (failure) => this.#emitError("delivery_reconcile_failed", failure)),
+              ),
+            );
             // A failed reconcile must not skip the channels and drains below (#2214).
             yield* this.#boot
               .reconcileUnresolvedDeliveries()
@@ -1252,7 +1267,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       routines: this.#routines,
       hooks: {
         channelAssignment: (deliveryId) => this.channels.store.assignmentForDelivery(deliveryId),
-        taskThreadId: (deliveryId) => this.#tasks.threadForDelivery(deliveryId),
+        taskThreadId: (deliveryId) => {
+          // A steer must not reach the agent's own chat for a message of a deleted task.
+          if (this.#tasks.deliveryTaskGone(deliveryId)) throw new Error(sourceText("error.backend.threadNotFound"));
+          return this.#tasks.threadForDelivery(deliveryId);
+        },
       },
     });
     this.#turn = new TurnLifecycle({
@@ -3050,7 +3069,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       const activeTurn =
         this.#conversation.workingSnapshot(agentId)?.activeTurnId ??
         (agent.threadId ? this.#store.database.readActiveTurnId(agentId, agent.threadId) : null);
-      if (activeTurn || this.#mailbox.hasUnfinishedDelivery(agentId) || this.#threads.providerContextBusy(agent)) {
+      if (
+        activeTurn ||
+        this.#mailbox.hasUnfinishedDeliveryOutsideTasks(agentId) ||
+        this.#threads.mainContextBusy(agent)
+      ) {
         throw new ContextResetBusyError(sourceText("error.agent.waitBeforeClearContext"));
       }
       const database = this.#store.database;
@@ -3095,7 +3118,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       const activeTurn =
         this.#conversation.workingSnapshot(agentId)?.activeTurnId ??
         (agent.threadId ? this.#store.database.readActiveTurnId(agentId, agent.threadId) : null);
-      if (activeTurn || this.#mailbox.hasUnfinishedDelivery(agentId) || this.#threads.providerContextBusy(agent))
+      if (
+        activeTurn ||
+        this.#mailbox.hasUnfinishedDeliveryOutsideTasks(agentId) ||
+        this.#threads.mainContextBusy(agent)
+      )
         throw new Error(sourceText("error.agent.waitBeforeCompactContext"));
       const session = agent.threadId
         ? this.#store.database.activeProviderSession(agent.threadId, agent.provider)
@@ -4052,12 +4079,20 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     this: AgentService,
     input: AgentTaskInput,
   ): Effect.fn.Return<void, AgentLifecycleFailed> {
+    // The provider ends a stopped turn a moment later, so the close waits for that end, for a time.
+    const running = yield* lifecycleStep("find task", () => {
+      const found = this.#tasks.require(input.agentId, input.taskId);
+      return this.#conversation.loadedExecutionSnapshot(found.threadId)?.activeTurnId
+        ? this.#tasks.turnEnd(found.taskId)
+        : null;
+    });
     yield* this.stopTask(input);
+    if (running) yield* running.pipe(Effect.timeoutOption(TASK_STOP_WAIT_MS));
     const task = yield* lifecycleStep("find task", () => {
       const found = this.#tasks.require(input.agentId, input.taskId);
       // A turn that starts or ends after the Stop still counts toward the limits of its open task.
       if (this.#mailbox.taskBusy(found.agentId, found.taskId))
-        throw new Error(sourceText("error.backend.taskStillRunning"));
+        throw new Error(sourceText("error.backend.threadStillRunning"));
       return found;
     });
     this.#tasks.close(task);
@@ -4069,6 +4104,45 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     this.#tasks.reopen(this.#tasks.require(input.agentId, input.taskId));
     this.#drain.scheduleDrain(input.agentId);
   }
+
+  renameTask(input: AgentTaskInput, title: string): void {
+    this.#tasks.rename(this.#tasks.require(input.agentId, input.taskId), title);
+  }
+
+  /**
+   * Deletes the task's thread with its conversation. It cancels the queued messages first; a running
+   * turn must be stopped first, so a delete never ends work that the person did not stop. The thread
+   * is archived before the first await, so no send or drain starts new work in it while the provider
+   * sessions close. A delete that fails after that leaves the thread archived, and it can open again.
+   */
+  readonly deleteTask = Effect.fn("AgentService.deleteTask")(function* (
+    this: AgentService,
+    input: AgentTaskInput,
+  ): Effect.fn.Return<void, AgentLifecycleFailed> {
+    const { task, wasOpen } = yield* lifecycleStep("archive task", () => {
+      const found = this.#tasks.require(input.agentId, input.taskId);
+      if (this.#conversation.loadedExecutionSnapshot(found.threadId)?.activeTurnId)
+        throw new Error(sourceText("error.backend.threadStillRunning"));
+      const wasOpen = found.closedAt === null;
+      if (wasOpen) this.#tasks.close(found);
+      return { task: found, wasOpen };
+    });
+    for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId))
+      yield* this.cancelQueuedMessage(task.agentId, message.deliveryId);
+    yield* lifecycleStep("check task", () => {
+      if (!this.#mailbox.taskBusy(task.agentId, task.taskId)) return;
+      // A turn that started before the archive runs on, so the thread stays as the person left it.
+      if (wasOpen) this.#tasks.reopen(task);
+      throw new Error(sourceText("error.backend.threadStillRunning"));
+    });
+    yield* this.#forgetExecutionThread(task.threadId);
+    yield* lifecycleStep("delete task", () => {
+      if (this.#mailbox.taskBusy(task.agentId, task.taskId))
+        throw new Error(sourceText("error.backend.threadStillRunning"));
+      this.#tasks.delete(task);
+    });
+    this.#drain.scheduleDrain(task.agentId);
+  }).bind(this);
 
   acknowledgeFailedTurn(agentId: string, turnId: string): void {
     this.#turn.acknowledgeFailedTurn(agentId, turnId);
@@ -4285,7 +4359,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       yield* this.cancelQueuedMessage(agent.id, delivery.delivery.id);
       return yield* new AgentLifecycleFailed({
         operation: "send message",
-        cause: new Error(sourceText("error.backend.taskClosed")),
+        cause: new Error(sourceText("error.backend.threadArchived")),
       });
     }
     if (timezone !== undefined) this.#routines.noteDeliveryTimezone(delivery.delivery.id, timezone);
@@ -4621,6 +4695,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     const sessions = yield* lifecycleStep("list execution sessions", () =>
       this.#store.database.listProviderSessions(threadId),
     );
+    for (const session of sessions) yield* this.#threads.releaseDeletedSession(session.externalSessionId);
     for (const session of sessions)
       yield* this.#threads
         .deleteProviderSessionFiles(session.externalSessionId, session.id)

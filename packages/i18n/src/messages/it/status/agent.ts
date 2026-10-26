@@ -37,4 +37,6 @@ export const messages = {
   "status.agent.skillUsing": "Uso della skill {name}…",
   "status.agent.skillReading": "Lettura di una skill…",
   "status.agent.memoryChanges": "Memorie: {saved} salvate, {updated} aggiornate, {forgotten} dimenticate.",
+  "status.agent.memoryChangesWithConflicts":
+    "Memorie: {saved} salvate, {updated} aggiornate, {forgotten} dimenticate, {notChanged} non modificate perché un altro thread le ha modificate prima.",
 } as const satisfies PartialTranslation<typeof source>;

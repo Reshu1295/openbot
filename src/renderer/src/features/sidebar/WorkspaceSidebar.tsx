@@ -17,6 +17,7 @@ import { useNavigation } from "../../navigation";
 import { usePlatform } from "../../platform";
 import { useTurns } from "../../turns";
 import { useAgentActions } from "../agents/agent-actions";
+import { attentionByAgent } from "../agents/agent-runtime-snapshot";
 import { agentThreadAttention } from "../agents/agent-thread-attention";
 import { useAgents } from "../agents/agents-context";
 import { useChannels } from "../channels/channels-context";
@@ -30,7 +31,6 @@ import { useServers } from "../servers/servers-context";
 import { useSettings } from "../settings/settings-context";
 import { usePresence } from "../team/team-context";
 import { SidebarUpdateIsland } from "../updates/SidebarUpdateIsland";
-import { useWindowPage } from "../window/window-page-context";
 import { createCommunityCardVisibility } from "./community-card";
 import { useSidebar } from "./sidebar-context";
 import { createStorageCard } from "./storage-card";
@@ -52,9 +52,6 @@ const MOBILE_APP_DISMISSED_STORAGE_KEY = "openbot:mobile-app-card-dismissed";
 export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
   const { t } = useText();
   const layout = useLayout();
-  const windowPage = useWindowPage();
-  /** The Tasks page shows beside the list. No row is open, so a click on a row opens its chat. */
-  const tasksOpen = () => windowPage.page() === "tasks";
   const platform = usePlatform();
   const channels = useChannels();
   const { activeServer, activeServerId, activeServerSupportsCapability } = useServers();
@@ -178,7 +175,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
       activeTurns: activeTurns(),
       queues: queues(),
       failedTurns: failedTurns(),
-      pendingPrompts: pendingPrompts(),
+      pendingPrompts: attentionByAgent(pendingPrompts(), agentList()),
       pendingApprovals: pendingApprovals(),
       recentReplies: recentReplies(),
     }),
@@ -188,7 +185,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
     <Sidebar
       channels={visibleChannels()}
       deletedChannels={channelsListed() ? channels.state.channels.filter((channel) => channel.archived) : []}
-      activeChannelId={tasksOpen() ? null : channels.state.selectedId}
+      activeChannelId={channels.state.selectedId}
       onSelectChannel={(id) => void channels.open(id)}
       onEditChannel={(id) => void channels.editChannel(id)}
       onDeleteChannel={channels.deletionSupported() ? channels.remove : undefined}
@@ -236,11 +233,11 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
           : undefined
       }
       agents={agentList()}
-      activeAgentId={tasksOpen() || activeDirectMember() || channels.state.selectedId ? "" : (activeAgent()?.id ?? "")}
+      activeAgentId={activeDirectMember() || channels.state.selectedId ? "" : (activeAgent()?.id ?? "")}
       showPeople={props.peopleEnabled}
       people={directPeople()}
       directThreads={directThreads()}
-      activeDirectMemberId={tasksOpen() ? null : activeDirectMemberId()}
+      activeDirectMemberId={activeDirectMemberId()}
       agentStates={sidebarAgentStates()}
       channelWaits={channelWaits()}
       agentMoods={agentMoods()}

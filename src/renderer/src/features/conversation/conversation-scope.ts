@@ -253,11 +253,6 @@ export function createConversationViewScope(props: ConversationProps) {
     activeRightPanel,
     settingsOpen,
     filesOpen,
-    taskPanelOpen,
-    taskPanelTaskId,
-    taskListOpen,
-    openTaskPanel,
-    showTaskList,
     panelSubagentId,
     openSubagentPanel,
     sidePanel,
@@ -1266,12 +1261,7 @@ export function createConversationViewScope(props: ConversationProps) {
       setSidebarFilePreview(null);
       setRightPanels((current) => ({ ...current, [preview.ownerAgentId]: "none" }));
     }
-    if (
-      !previousAgentId ||
-      !agentId ||
-      (panel !== "settings" && panel !== "file-preview" && panel !== "files" && panel !== "task")
-    )
-      return;
+    if (!previousAgentId || !agentId || (panel !== "settings" && panel !== "file-preview" && panel !== "files")) return;
     setRightPanels((current) => ({ ...current, [agentId]: "none" }));
   }
 
@@ -1723,12 +1713,7 @@ export function createConversationViewScope(props: ConversationProps) {
     expandedEmojiMessageId,
     scrollFades,
     filesOpen,
-    taskPanelOpen,
-    taskPanelTaskId,
     activeRightPanel,
-    taskListOpen,
-    openTaskPanel,
-    showTaskList,
     panelSubagentId,
     shownSubagentId,
     toggleSubagentPanel,

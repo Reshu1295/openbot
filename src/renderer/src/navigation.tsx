@@ -203,7 +203,7 @@ const Navigation = createSimpleContext({
     /** The index that Back or Forward opens. The chat records it when it opens; a refused open keeps it until then. */
     let historyTarget: number | null = null;
 
-    /** The chat that the sidebar marks as open. A page, the Tasks page or the new agent form has none. */
+    /** The chat that the sidebar marks as open. A page or the new agent form has none. */
     const openChat = (): ChatHistoryEntry | null => {
       if (windowPage.page() !== "agents" || agentSetupOpen()) return null;
       const channelId = channels.state.selectedId;

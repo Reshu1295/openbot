@@ -7,10 +7,11 @@ import {
   DEFAULT_PROVIDER_ACCOUNT_ID,
   providerDisplayName,
 } from "@openbot/contracts/ipc";
-import { isAgentTaskActive } from "@openbot/team-client/agent-tasks";
 import { reasoningLabel } from "@openbot/ui/components/ProviderModelPicker";
 import { providerAccountName } from "@openbot/ui/components/provider-accounts";
 import { ConversationHeader as SharedConversationHeader } from "@openbot/ui/features/conversation/ConversationHeader";
+import { ThreadHeader } from "@openbot/ui/features/conversation/threads/ThreadHeader";
+import { Show } from "solid-js";
 import { useConversationViewScope } from "./conversation-scope";
 
 const loadAgentSettingsPanel = () => import("./AgentSettingsPanel");
@@ -46,7 +47,7 @@ export function ConversationHeader() {
     sidePanelOpen,
     toggleSidePanel,
   } = useConversationViewScope();
-  const runningTasks = () => props.tasks?.snapshot?.tasks.filter(isAgentTaskActive).length ?? 0;
+  const runningThreads = () => props.threads?.running ?? 0;
   const working = () => agentActivity() === "Working";
   const providerName = (provider: AgentProviderRef) =>
     isKnownAgentProvider(provider) ? providerDisplayName(provider) : String(provider);
@@ -68,10 +69,10 @@ export function ConversationHeader() {
     if (runtime.reasoningEffort !== other.reasoningEffort) parts.push(reasoningLabel(runtime.reasoningEffort, t));
     return parts.join(" · ");
   };
-  /** A change chosen during a turn or a task. It applies from the next turn. */
+  /** A change chosen during a turn, in any thread. It applies from the next turn. */
   const pendingModel = () => {
     const agent = props.agent;
-    if (!agent || !(working() || runningTasks() > 0)) return undefined;
+    if (!agent || !(working() || runningThreads() > 0)) return undefined;
     const running: BadgeRuntime = (working() ? runningTurnRuntime() : null) ?? agent;
     const next: BadgeRuntime = agent.pendingRuntime ?? {
       provider: settingsProvider(),
@@ -135,6 +136,7 @@ export function ConversationHeader() {
             }
           : undefined
       }
+      threads={<Show when={props.threads}>{(threads) => <ThreadHeader {...threads().header} />}</Show>}
       sidePanel={
         channel?.readOnly()
           ? undefined
@@ -143,7 +145,6 @@ export function ConversationHeader() {
               actingAgentName: actingBrowserControl()
                 ? (browserControlAgent()?.name ?? t("conversation.header.agentFallback"))
                 : undefined,
-              running: runningTasks(),
               onToggle: toggleSidePanel,
             }
       }

@@ -81,8 +81,6 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "에이전트 접근 권한",
   "agentSettings.runtime.busyMessage": "작업 중일 때",
   "agentSettings.runtime.busyMessageLabel": "에이전트가 작업 중일 때의 메시지",
-  "agentSettings.runtime.taskLimit": "동시 작업 수",
-  "agentSettings.runtime.taskLimitLabel": "동시에 실행되는 작업",
   "agentSettings.runtime.workingDirectory": "작업 디렉터리",
   "agentSettings.runtime.notAvailable": "아직 사용할 수 없음",
   "agentSettings.runtime.fullAccessNote": "에이전트가 워크스페이스와 공유 폴더에서 컴퓨터 전체 접근 권한으로 실행돼요.",
@@ -99,8 +97,6 @@ export const messages = {
   "agentSettings.busyMessage.steerUnsupported":
     "{provider}은(는) 실행 중인 턴에 방향을 지시할 수 없어요. 작업 중에 보낸 메시지는 대기열에서 기다려요.",
   "agentSettings.taskLimit.default": "기본값({count})",
-  "agentSettings.taskLimit.oneTurn":
-    "{provider}은(는) 한 번에 한 턴만 실행해요. 이 에이전트의 작업과 채팅은 서로 기다려요.",
   "agentSettings.notifications.title": "알림",
   "agentSettings.newChat.title": "새 채팅",
   "agentSettings.newChat.description": "에이전트가 이 채팅을 잊어요. 설정은 그대로 유지돼요.",

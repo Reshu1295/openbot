@@ -84,8 +84,6 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "Accès de l’agent",
   "agentSettings.runtime.busyMessage": "Pendant le travail",
   "agentSettings.runtime.busyMessageLabel": "Messages pendant le travail de l’agent",
-  "agentSettings.runtime.taskLimit": "Tâches simultanées",
-  "agentSettings.runtime.taskLimitLabel": "Tâches exécutées en même temps",
   "agentSettings.runtime.workingDirectory": "Répertoire de travail",
   "agentSettings.runtime.notAvailable": "Pas encore disponible",
   "agentSettings.runtime.fullAccessNote":
@@ -105,8 +103,6 @@ export const messages = {
     "{provider} ne peut pas orienter un tour en cours. Les messages envoyés pendant son travail attendent dans la file.",
 
   "agentSettings.taskLimit.default": "Par défaut ({count})",
-  "agentSettings.taskLimit.oneTurn":
-    "{provider} exécute un tour à la fois. Les tâches et la discussion de cet agent s’attendent mutuellement.",
   "agentSettings.notifications.title": "Notifications",
 
   "agentSettings.newChat.title": "Nouvelle discussion",

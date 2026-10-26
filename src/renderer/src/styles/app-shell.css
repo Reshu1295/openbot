@@ -3231,59 +3231,6 @@ textarea {
   transform: translateX(-8px);
 }
 
-.agent-tasks-row {
-  display: grid;
-  width: 100%;
-  height: var(--openbot-control-md);
-  align-items: center;
-  border: 0;
-  border-radius: var(--openbot-radius-sm);
-  background: transparent;
-  padding: 0 var(--openbot-space-2);
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-  gap: var(--openbot-space-2);
-  color: var(--openbot-text-primary);
-  font-size: var(--openbot-text-md);
-  letter-spacing: -0.01em;
-  text-align: left;
-  transition: background-color var(--openbot-duration-hover) ease;
-}
-
-.agent-tasks-row:hover:not(:disabled) {
-  background: var(--openbot-bg-control-hover);
-  color: var(--openbot-text-primary);
-}
-
-.agent-tasks-row:disabled {
-  cursor: default;
-  opacity: 0.45;
-}
-
-.agent-tasks-row:focus-visible {
-  outline: 0;
-  background: var(--openbot-bg-control-hover);
-  box-shadow: inset 0 0 0 1px var(--openbot-border-strong);
-}
-
-.agent-tasks-row small {
-  color: var(--openbot-text-muted);
-  font-size: var(--openbot-text-sm);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.agent-tasks-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: var(--openbot-icon-stroke);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  color: var(--openbot-text-primary);
-}
-
 .icon-spinning {
   animation: account-update-spin 800ms linear infinite;
 }
@@ -3356,7 +3303,6 @@ textarea {
 .reaction-picker-row button[aria-checked="true"],
 .composer-button:hover,
 .composer-attachment > button:hover,
-.agent-tasks-row:hover,
 .agent-context-menu button:hover,
 .agent-context-menu button:focus-visible {
   background: var(--openbot-bg-control-hover);

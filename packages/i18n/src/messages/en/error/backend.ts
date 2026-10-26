@@ -311,6 +311,15 @@ export const messages = defineMessages("error.backend", {
   "error.backend.taskNotFound": "This task is not available.",
   "error.backend.taskClosed": "This task is closed. Open it again to send a message.",
   "error.backend.taskStillRunning": "This task still runs. Wait until it stops, then close it.",
+  // Side threads. Hosts before side threads send the task texts above, so those keys stay.
+  "error.backend.threadNotFound": "This thread is not available.",
+  "error.backend.threadStillRunning": "This thread still runs. Stop it, then try again.",
+  "error.backend.threadArchived": "This thread is archived. Restore it to send a message.",
+  "error.backend.threadTitleRequired": "Give the thread a short title.",
+  "error.backend.threadOpenLimitReached":
+    "This agent has {count} open threads. Archive a thread, then start or restore another one.",
+  "error.backend.threadRemoteUnsupported": "Threads are only available for agents on this computer.",
+  "error.backend.threadMoveRefused": "Only a message that you sent to this agent alone can run in a new thread.",
   "error.backend.taskTitleRequired": "Give the task a short title.",
   "error.backend.taskToolInvalid": "Give the task a title of at most 120 characters and a brief that says what to do.",
   "error.backend.taskOwnChatOnly":

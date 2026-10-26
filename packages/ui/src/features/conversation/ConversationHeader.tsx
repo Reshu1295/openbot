@@ -21,6 +21,8 @@ export interface ConversationHeaderProps {
   remoteControl?: ConversationHeaderRemoteControl | undefined;
   /** Missing when the chat has no side panel, such as a deleted channel. */
   sidePanel?: SidePanelToggleProps | undefined;
+  /** The thread tabs of the agent, after its name. */
+  threads?: JSX.Element | undefined;
 }
 
 export interface ConversationHeaderPendingModel {
@@ -66,6 +68,7 @@ export function ConversationHeader(props: ConversationHeaderProps) {
             </span>
           )}
         </Show>
+        {props.threads}
       </div>
       <div class="conversation-header-actions no-drag">
         <Show when={props.agent && props.pendingModel}>

@@ -101,6 +101,7 @@ import type {
   AgentTask,
   AgentTaskInput,
   AgentTasksSnapshot,
+  RenameAgentTaskInput,
   RunQueuedMessageAsTaskInput,
   StartAgentTaskInput,
 } from "./ipc-agent-tasks";
@@ -1316,6 +1317,9 @@ export const IPC_ENDPOINTS = {
     stopTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:stop"),
     closeTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:close"),
     reopenTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:reopen"),
+    // A joined server takes these through `agent-threads-v1`.
+    renameTask: scopedRequest<RenameAgentTaskInput, void>()("agent:tasks:rename"),
+    deleteTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:delete"),
     acknowledgeFailedTurn: scopedRequest<AcknowledgeFailedTurnInput, void>()("agent:acknowledge-failed-turn"),
     cancelQueuedMessage: scopedRequest<CancelQueuedMessageInput, void>()("agent:cancel-queued-message"),
     steerQueuedMessage: scopedRequest<SteerQueuedMessageInput, void>()("agent:steer-queued-message"),

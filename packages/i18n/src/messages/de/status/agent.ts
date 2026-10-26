@@ -35,4 +35,6 @@ export const messages = {
   "status.agent.skillUsing": "Fähigkeit {name} wird verwendet…",
   "status.agent.skillReading": "Fähigkeit wird gelesen…",
   "status.agent.memoryChanges": "Erinnerungen: {saved} gespeichert, {updated} aktualisiert, {forgotten} vergessen.",
+  "status.agent.memoryChangesWithConflicts":
+    "Erinnerungen: {saved} gespeichert, {updated} aktualisiert, {forgotten} vergessen, {notChanged} nicht geändert, weil ein anderer Thread sie zuerst geändert hat.",
 } as const satisfies PartialTranslation<typeof source>;

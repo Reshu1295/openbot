@@ -708,7 +708,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
 
   function findTask(agentId: string, taskId: string): AgentTask {
     const task = tasks.get(agentId)?.find((candidate) => candidate.id === taskId);
-    if (!task) throw new Error(sourceText("error.backend.taskNotFound"));
+    if (!task) throw new Error(sourceText("error.backend.threadNotFound"));
     return task;
   }
 
@@ -734,7 +734,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         .find((line) => line.trim())
         ?.trim()
         .slice(0, 120) ?? "";
-    if (!title) throw new Error(sourceText("error.backend.taskTitleRequired"));
+    if (!title) throw new Error(sourceText("error.backend.threadTitleRequired"));
     const task: AgentTask = {
       id: `mock-task-${messageCounter++}`,
       agentId,
@@ -758,7 +758,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
 
   /** Runs one mock turn in a task: the user message, a progress line, then a short answer. */
   function runTaskTurn(task: AgentTask, text: string): QueuedMessageReceipt {
-    if (task.closedAt) throw new Error(sourceText("error.backend.taskClosed"));
+    if (task.closedAt) throw new Error(sourceText("error.backend.threadArchived"));
     const deliveryId = `mock-delivery-${messageCounter++}`;
     const turnId = `mock-turn-${messageCounter++}`;
     const conversation = taskConversation(task);
@@ -2542,6 +2542,21 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       reopenTask: async (input) => {
         const task = findTask(input.agentId, input.taskId);
         Object.assign(task, { state: "idle", closedAt: null, updatedAt: new Date().toISOString() });
+        emitTasks(input.agentId);
+      },
+      renameTask: async (input) => {
+        const task = findTask(input.agentId, input.taskId);
+        Object.assign(task, { title: input.title, updatedAt: new Date().toISOString() });
+        emitTasks(input.agentId);
+      },
+      deleteTask: async (input) => {
+        const task = findTask(input.agentId, input.taskId);
+        if (task.activeTurnId) throw new Error(sourceText("error.backend.threadStillRunning"));
+        tasks.set(
+          input.agentId,
+          (tasks.get(input.agentId) ?? []).filter((candidate) => candidate.id !== input.taskId),
+        );
+        taskConversations.delete(input.taskId);
         emitTasks(input.agentId);
       },
       acknowledgeFailedTurn: async () => undefined,

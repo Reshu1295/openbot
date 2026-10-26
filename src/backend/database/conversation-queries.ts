@@ -43,13 +43,13 @@ export interface ConversationMarkerExclusions {
 }
 
 /**
- * A channel gives each of its members a thread of its own, and a task has one too, under the same
+ * A channel gives each of its members a thread of its own, and a side thread has one too, under the same
  * agent id as the normal chat. A search result carries an agent id and a message, and opening one
  * shows the normal conversation of that agent, where a channel or task message does not exist. These
  * threads stay out of the search until a result can name the channel or task it belongs to.
  */
 const SIDE_THREAD_EXCLUSION = `AND message.thread_id NOT IN (SELECT thread_id FROM projection_channel_contexts)
-             AND message.thread_id NOT IN (SELECT thread_id FROM projection_agent_tasks)`;
+             AND message.thread_id NOT IN (SELECT thread_id FROM projection_agent_threads)`;
 
 /**
  * Every read of a thread's messages: the whole snapshot, one anchored page, a page's supported

@@ -1,7 +1,7 @@
 import { chatTagReferences } from "@openbot/contracts/chat-tag-references";
 import type { AgentTask } from "@openbot/contracts/ipc";
 
-/** The closed tasks that the Tasks page shows before "Show all". */
+/** The closed tasks that a task list shows before "Show all". */
 export const TASKS_CLOSED_SHOWN = 2;
 
 export type TasksSectionId = "needsYou" | "working" | "waiting" | "closed";

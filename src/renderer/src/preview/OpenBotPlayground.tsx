@@ -102,7 +102,8 @@ export function OpenBotPlayground(props: OpenBotPlaygroundProps) {
     disposed = true;
     landingController?.dispose();
     mock.dispose();
-    window.openbot = previousApi;
+    // Storybook can mount a second playground before it disposes the first one. That one owns the API now.
+    if (window.openbot === mock.api) window.openbot = previousApi;
   });
 
   return dependencies.renderApp();

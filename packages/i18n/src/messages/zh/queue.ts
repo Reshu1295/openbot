@@ -17,8 +17,6 @@ export const messages = {
   "queue.item.notSteered": "未引导",
   "queue.item.steerFallback.providerUnsupported": "该服务商无法在运行中引导，消息会留在队列中等待。",
   "queue.item.steerFallback.steerFailed": "引导未成功，消息会留在队列中等待。",
-  "queue.item.runAsTask": "作为任务运行",
-  "queue.item.runAsTaskLabel": "把排队消息 {position} 作为任务运行",
   "queue.item.deleteLabel": "删除排队消息 {position}",
   "queue.item.deleteTooltip": "删除消息",
   "queue.item.editLabel": "编辑排队消息 {position}",

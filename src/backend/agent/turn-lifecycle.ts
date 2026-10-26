@@ -10,6 +10,7 @@ import {
   CONVERSATION_PLAN_ITEM_TYPE,
   CONVERSATION_SUBAGENTS_ITEM_TYPE,
   type ConversationMemoryChange,
+  type ConversationMemoryChangeAction,
   type ConversationMessage,
   type ConversationPlan,
   type ConversationSnapshot,
@@ -1600,9 +1601,17 @@ function addMemoryChangesMessage(
     status: "completed",
     createdAt: new Date().toISOString(),
     itemType: CONVERSATION_MEMORY_CHANGES_ITEM_TYPE,
-    text: sourceText("status.agent.memoryChanges", countConversationMemoryChanges(memoryChanges)),
+    text: memoryChangesText(countConversationMemoryChanges(memoryChanges)),
     memoryChanges,
   });
+}
+
+/** The count of the changes. The older text stays for a turn whose changes all committed. */
+function memoryChangesText(counts: Record<ConversationMemoryChangeAction, number>): string {
+  const { notChanged, ...committed } = counts;
+  return notChanged > 0
+    ? sourceText("status.agent.memoryChangesWithConflicts", counts)
+    : sourceText("status.agent.memoryChanges", committed);
 }
 
 /** Which subagents a list holds and the state of each, without their steps. */

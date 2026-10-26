@@ -16,6 +16,7 @@ import { AGENT_PUBLISH_CAPABILITY } from "./agent-publish-v1";
 import { AGENT_SESSION_SETTINGS_CAPABILITY } from "./agent-session-settings-v1";
 import { AGENT_TASK_LIMIT_CAPABILITY } from "./agent-task-limit-v1";
 import { AGENT_TASKS_CAPABILITY } from "./agent-tasks-v1";
+import { AGENT_THREADS_CAPABILITY } from "./agent-threads-v1";
 import { AGENT_UPDATE_CAPABILITY } from "./agent-update-v1";
 import { BITWARDEN_CONNECTOR_CAPABILITY } from "./bitwarden-connector-v1";
 import { TEAM_BROWSER_NAVIGATION_CAPABILITY } from "./browser-navigation-v1";
@@ -131,6 +132,7 @@ export {
   AGENT_SESSION_SETTINGS_CAPABILITY,
   AGENT_TASK_LIMIT_CAPABILITY,
   AGENT_TASKS_CAPABILITY,
+  AGENT_THREADS_CAPABILITY,
   AGENT_UPDATE_CAPABILITY,
   ANDROID_PUSH_NOTIFICATIONS_CAPABILITY,
   BITWARDEN_CONNECTOR_CAPABILITY,
@@ -297,6 +299,7 @@ export const TEAM_CURRENT_CAPABILITIES = [
   PROMPT_CACHE_TTL_CAPABILITY,
   CLAUDE_API_KEY_CAPABILITY,
   WORKFLOWS_CAPABILITY,
+  AGENT_THREADS_CAPABILITY,
 ] as const;
 
 export type TeamCurrentCapability = (typeof TEAM_CURRENT_CAPABILITIES)[number];
@@ -413,7 +416,8 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== STORAGE_DISK_CAPABILITY &&
     capability !== PROMPT_CACHE_TTL_CAPABILITY &&
     capability !== CLAUDE_API_KEY_CAPABILITY &&
-    capability !== WORKFLOWS_CAPABILITY,
+    capability !== WORKFLOWS_CAPABILITY &&
+    capability !== AGENT_THREADS_CAPABILITY,
 );
 // A v7 host does not know the v8 markers, so a client sends them only after it negotiates protocol 8.
 const TEAM_PROTOCOL_V7_CURRENT_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
@@ -473,6 +477,7 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== STORAGE_DISK_CAPABILITY &&
       capability !== PROMPT_CACHE_TTL_CAPABILITY &&
       capability !== CLAUDE_API_KEY_CAPABILITY &&
-      capability !== WORKFLOWS_CAPABILITY,
+      capability !== WORKFLOWS_CAPABILITY &&
+      capability !== AGENT_THREADS_CAPABILITY,
   );
 }

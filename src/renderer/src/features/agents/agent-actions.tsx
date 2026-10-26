@@ -16,6 +16,7 @@ import { useNavigation } from "../../navigation";
 import { createScopeGuard } from "../../scope-lifetime";
 import { createSimpleContext } from "../../simple-context";
 import { useTurns } from "../../turns";
+import { useAgentThreads } from "../agent-threads/agent-threads-context";
 import { useConversation } from "../conversation/conversation-context";
 import { agentConversationKey } from "../conversation/conversation-keys";
 import { useDirectMessages } from "../conversation/direct-messages-context";
@@ -69,6 +70,7 @@ const AgentActions = createSimpleContext({
       applyUserHiddenAgents,
     } = useAgents();
     const { initializeConversation, removeConversation } = useConversation();
+    const threads = useAgentThreads();
     const { setActiveTurns, setFailedTurns, setQueues, setPendingPrompts } = useTurns();
     const { sidebarLayout, setSidebarLayout, applySidebarLayoutAction, removePinnedSidebarItemEverywhere } =
       useSidebar();
@@ -293,6 +295,7 @@ const AgentActions = createSimpleContext({
         }
         if (!scopeIsCurrent()) return;
         forgetHiddenAgent(agentId);
+        threads.forgetAgent(agentId);
         removeConversation(agentId);
         setUiErrors((current) => withoutAgent(current, agentConversationKey(serverId, agentId)));
         setActiveTurns((current) => withoutAgent(current, agentId));

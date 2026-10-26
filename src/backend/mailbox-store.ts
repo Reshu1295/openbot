@@ -835,6 +835,24 @@ export class MailboxStore {
     );
   }
 
+  /** Every queued, starting or running delivery that runs in a task, with the task id. */
+  unfinishedTaskDeliveries(): Array<{ agentId: string; deliveryId: string; taskId: string; queued: boolean }> {
+    const messages = this.#messagesById();
+    return this.#state.deliveries.flatMap((delivery) => {
+      const taskId = isActiveDelivery(delivery) ? this.#taskIdOf(delivery, messages) : null;
+      return taskId
+        ? [
+            {
+              agentId: delivery.recipientAgentId,
+              deliveryId: delivery.id,
+              taskId,
+              queued: delivery.status === "queued",
+            },
+          ]
+        : [];
+    });
+  }
+
   /**
    * Moves a queued message of the person into a task, so it runs beside the agent's own chat. Only a
    * message with one recipient and no channel or external origin can move.
@@ -860,7 +878,7 @@ export class MailboxStore {
         message.taskId ||
         recipients.length !== 1
       )
-        throw new Error(sourceText("error.backend.taskMoveRefused"));
+        throw new Error(sourceText("error.backend.threadMoveRefused"));
       const previous = this.#state.messages;
       this.#state.messages = previous.map((candidate) => (candidate === message ? { ...message, taskId } : candidate));
       this.#changes.messageIds.add(message.id);
@@ -2010,6 +2028,17 @@ export class MailboxStore {
       (delivery) =>
         delivery.recipientAgentId === agentId &&
         (delivery.status === "queued" || delivery.status === "starting" || delivery.status === "running"),
+    );
+  }
+
+  /** As {@link hasUnfinishedDelivery}, without the work of the agent's tasks, which run in their own threads. */
+  hasUnfinishedDeliveryOutsideTasks(agentId: string): boolean {
+    const messages = this.#messagesById();
+    return this.#state.deliveries.some(
+      (delivery) =>
+        delivery.recipientAgentId === agentId &&
+        isActiveDelivery(delivery) &&
+        this.#taskIdOf(delivery, messages) === null,
     );
   }
 

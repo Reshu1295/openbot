@@ -903,6 +903,33 @@ export class ConversationRuntime {
     );
   }
 
+  /**
+   * As `withConversationTransaction`, for one side thread of the agent. The cached snapshot changes,
+   * and the conversation is published, only after the commit, so a rollback has nothing to restore.
+   */
+  withThreadTransaction<T>(
+    agentId: string,
+    threadId: string,
+    work: (transaction: ConversationTransaction) => ConversationTransactionResult<T>,
+  ): T {
+    const current = this.ensureSnapshot(agentId, threadId);
+    let published: ConversationSnapshot | undefined;
+    return withDatabaseTransaction(
+      this.#store.database,
+      () => {
+        const outcome = work({ threadId, snapshot: structuredClone(current) });
+        published = outcome.snapshot;
+        return outcome.result;
+      },
+      undefined,
+      () => {
+        if (!published) return;
+        this.setSnapshot(agentId, published);
+        this.publishConversation(published);
+      },
+    );
+  }
+
   requireKnownAgent(agentId: string): AgentSummary {
     const agent = this.#listAgents().find((candidate) => candidate.id === agentId);
     if (!agent) throw new Error(sourceText("error.agent.unknown", { id: agentId }));

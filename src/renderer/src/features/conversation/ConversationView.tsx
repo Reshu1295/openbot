@@ -5,6 +5,7 @@ import { currentDevicePlatform } from "../../send-shortcut-preference";
 import { ConversationComposer } from "./ConversationComposer";
 import { ConversationHeader } from "./ConversationHeader";
 import { ConversationPanels } from "./ConversationPanels";
+import { ConversationThread } from "./ConversationThread";
 import { ConversationTimeline } from "./ConversationTimeline";
 import { ConversationViewScopeContext, createConversationViewScope } from "./conversation-scope";
 import type { ConversationProps } from "./conversation-types";
@@ -24,7 +25,6 @@ export function ConversationView(props: ConversationProps) {
     dropActive,
     filePreviewOpen,
     filesOpen,
-    taskPanelOpen,
     activeRightPanel,
     settingsOpen,
     sidePanel,
@@ -58,7 +58,6 @@ export function ConversationView(props: ConversationProps) {
               browserSidebarOpen() ||
               filePreviewOpen() ||
               filesOpen() ||
-              taskPanelOpen() ||
               activeRightPanel() === "question" ||
               activeRightPanel() === "voice" ||
               activeRightPanel() === "subagent" ||
@@ -97,9 +96,18 @@ export function ConversationView(props: ConversationProps) {
         <ConversationHeader />
         {props.notice}
 
-        <ConversationTimeline />
-
-        <ConversationComposer />
+        {/* A side thread takes the place of the agent's own chat and its message box. */}
+        <Show
+          when={props.threads?.open !== undefined}
+          fallback={
+            <>
+              <ConversationTimeline />
+              <ConversationComposer />
+            </>
+          }
+        >
+          <ConversationThread />
+        </Show>
 
         <ConversationPanels onOpenUsage={props.onOpenUsage} />
       </main>

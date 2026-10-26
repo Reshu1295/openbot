@@ -80,8 +80,6 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "Acesso do agente",
   "agentSettings.runtime.busyMessage": "Durante o trabalho",
   "agentSettings.runtime.busyMessageLabel": "Mensagens enquanto o agente trabalha",
-  "agentSettings.runtime.taskLimit": "Tarefas paralelas",
-  "agentSettings.runtime.taskLimitLabel": "Tarefas executadas ao mesmo tempo",
   "agentSettings.runtime.workingDirectory": "Diretório de trabalho",
   "agentSettings.runtime.notAvailable": "Ainda não disponível",
   "agentSettings.runtime.fullAccessNote":
@@ -99,8 +97,6 @@ export const messages = {
   "agentSettings.busyMessage.steerUnsupported":
     "{provider} não pode orientar um turno em andamento. As mensagens enviadas enquanto ele trabalha esperam na fila.",
   "agentSettings.taskLimit.default": "Padrão ({count})",
-  "agentSettings.taskLimit.oneTurn":
-    "{provider} executa um turno por vez. As tarefas e o chat deste agente esperam uns pelos outros.",
   "agentSettings.notifications.title": "Notificações",
   "agentSettings.newChat.title": "Novo chat",
   "agentSettings.newChat.description": "O agente esquece este chat. Sua configuração é mantida.",
