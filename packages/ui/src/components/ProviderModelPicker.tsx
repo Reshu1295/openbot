@@ -1,4 +1,4 @@
-import { ProviderLogo } from "@openbot/brand";
+import { ModelLogo, ProviderLogo } from "@openbot/brand";
 import type {
   AgentModelId,
   AgentProviderId,
@@ -488,7 +488,7 @@ export function ProviderModelPicker(props: ProviderModelPickerProps) {
                       when={props.foreignProvider === undefined}
                       fallback={<ProviderLogo provider="unknown" class="provider-model-mark" />}
                     >
-                      <ProviderMark provider={provider()} />
+                      <ProviderMark provider={provider()} model={selectedModel()} />
                     </Show>
                   </span>
                 );
@@ -884,6 +884,15 @@ export function ProviderModelPicker(props: ProviderModelPickerProps) {
                                 }}
                               >
                                 <span class="provider-model-option-name">
+                                  {/* Magpie serves the models of many makers, so each row shows its maker. */}
+                                  <Show when={model.provider === "magpie"}>
+                                    <ModelLogo
+                                      provider={model.provider}
+                                      model={model.id}
+                                      modelName={model.name}
+                                      class="provider-model-mark"
+                                    />
+                                  </Show>
                                   <span>{displayModelName(model.name, model.id)}</span>
                                   <Show when={model.free}>
                                     <small>{t("provider.model.free")}</small>
@@ -1135,12 +1144,20 @@ function EffortSegments(props: {
   );
 }
 
-/** A custom endpoint has no brand mark and must not borrow one, so the rail draws sliders instead. */
-function ProviderMark(props: { provider: RailId; large?: boolean }) {
+/**
+ * A custom endpoint has no brand mark and must not borrow one, so the rail draws sliders instead.
+ * With `model`, a Magpie mark is the mark of the model's maker.
+ */
+function ProviderMark(props: { provider: RailId; large?: boolean; model?: { id: string; name: string } | undefined }) {
   const classes = () => cx("provider-model-mark", props.large && "provider-model-mark-large");
   return (
     <Show when={props.provider !== CUSTOM_RAIL} fallback={<SlidersHorizontal class={classes()} />}>
-      <ProviderLogo provider={wireProvider(props.provider)} class={classes()} />
+      <ModelLogo
+        provider={wireProvider(props.provider)}
+        model={props.model?.id}
+        modelName={props.model?.name}
+        class={classes()}
+      />
     </Show>
   );
 }

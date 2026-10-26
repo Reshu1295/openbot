@@ -5,4 +5,10 @@ export {
   type PlatformLogoProps,
   type PlatformLogoVariant,
 } from "./PlatformLogo";
-export { ProviderLogo, type ProviderLogoProps, type ProviderLogoVariant } from "./ProviderLogo";
+export {
+  ModelLogo,
+  type ModelLogoProps,
+  ProviderLogo,
+  type ProviderLogoProps,
+  type ProviderLogoVariant,
+} from "./ProviderLogo";

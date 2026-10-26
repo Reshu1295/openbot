@@ -16,6 +16,7 @@
     "./app-logo-shape": "./src/app-logo-shape.ts",
     "./wordmark-shape": "./src/wordmark-shape.ts",
     "./provider-logo-shape": "./src/provider-logo-shape.ts",
+    "./model-brand-mark": "./src/model-brand-mark.ts",
     "./connector-mark-shape": "./src/connector-mark-shape.ts"
   },
   "scripts": {

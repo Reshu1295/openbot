@@ -1,4 +1,4 @@
-import { ProviderLogo } from "@openbot/brand";
+import { ModelLogo } from "@openbot/brand";
 import { agentProviderName, isKnownAgentProvider } from "@openbot/contracts/agent-providers";
 import {
   AGENT_BACKUP_MODEL_LIMIT,
@@ -109,10 +109,15 @@ function useOptionLabel() {
       : option.model;
 }
 
-function OptionLogo(props: { provider: AgentProviderId }) {
+/** The provider mark, or for a Magpie model the mark of the model's maker. */
+function OptionLogo(props: { option: BackupModelOption }) {
   return (
     <span class="backup-model-logo" aria-hidden="true">
-      <ProviderLogo provider={props.provider} />
+      <ModelLogo
+        provider={props.option.choice.provider}
+        model={props.option.choice.model}
+        modelName={props.option.model}
+      />
     </span>
   );
 }
@@ -121,7 +126,7 @@ function OptionContent(props: { option: BackupModelOption }) {
   const label = useOptionLabel();
   return (
     <span class="backup-model-option">
-      <OptionLogo provider={props.option.choice.provider} />
+      <OptionLogo option={props.option} />
       {label(props.option)}
     </span>
   );
@@ -202,7 +207,7 @@ export function BackupModelsPage(props: BackupModelsPageProps) {
                   <span class="backup-models-number" aria-hidden="true">
                     {index() + 1}
                   </span>
-                  <OptionLogo provider={entry.choice.provider} />
+                  <OptionLogo option={entry} />
                   <span class="backup-models-text">
                     <span class="backup-models-name">{label(entry)}</span>
                     <Show when={entry.state !== "ready"}>

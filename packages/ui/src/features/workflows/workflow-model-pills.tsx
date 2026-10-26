@@ -3,7 +3,7 @@
  * board, so the list has the models that the host can run.
  */
 
-import { ProviderLogo } from "@openbot/brand";
+import { ModelLogo, ProviderLogo } from "@openbot/brand";
 import {
   type AgentModelId,
   type AgentReasoningEffort,
@@ -123,7 +123,12 @@ export function ModelPill(props: {
         aria-label={t("workflow.model.label", { name: current()?.name ?? props.value })}
         disabled={props.disabled}
       >
-        <ProviderLogo provider={wfKnownProvider(props.provider)} class="wfn-model-logo" />
+        <ModelLogo
+          provider={wfKnownProvider(props.provider)}
+          model={props.value}
+          modelName={current()?.name}
+          class="wfn-model-logo"
+        />
         <span>{current()?.name ?? props.value}</span>
         <ChevronDown aria-hidden="true" />
       </Popover.Trigger>
