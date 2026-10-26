@@ -114,7 +114,7 @@
     "start": "expo start",
     "start:go": "bunx expo start --go --clear",
     "start:go:tunnel": "bunx expo start --go --clear --tunnel",
-    "android": "expo run:android",
+    "android": "bun ../../scripts/mobile-android.ts",
     "ios": "bun ../../scripts/mobile-ios.ts",
     "ios:rocketsim": "bun ../../scripts/mobile-ios.ts --rocketsim",
     "ios:build:local": "bunx eas-cli@latest build --platform ios --profile production --local --output /private/tmp/openbot-testflight.ipa",
