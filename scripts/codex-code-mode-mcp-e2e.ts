@@ -78,7 +78,7 @@ interface ModelTool {
 }
 
 interface ModelRequest {
-  input?: Array<{ type?: string; tools?: ModelTool[]; output?: unknown }>;
+  input?: Array<{ type?: string; tools?: ModelTool[] }>;
   tools?: ModelTool[];
 }
 
