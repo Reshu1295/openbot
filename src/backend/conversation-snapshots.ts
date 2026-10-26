@@ -121,7 +121,7 @@ export function mergeProviderHistoryMessages(
   imported: readonly ConversationMessage[],
   provider?: AgentProviderId,
 ): ConversationMessage[] {
-  if (provider === "claude") {
+  if (provider === "claude" || provider === "magpie") {
     const kept = stored.filter((message) => !isStoredClaudeNotice(message));
     return mergeConversationMessages(kept, reconcileClaudeHistoryMessages(kept, imported));
   }

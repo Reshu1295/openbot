@@ -31,6 +31,7 @@ export const AGENT_PROVIDERS = [
   "muse",
   "inception",
   "deepseek",
+  "magpie",
   "acp",
 ] as const;
 export type AgentProviderId = (typeof AGENT_PROVIDERS)[number];
@@ -418,6 +419,30 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     reportsUsage: false,
     approvalsInFullAccess: true,
   },
+  // Magpie is a local LLM gateway that the user runs (`magpie serve`). Its models run in Claude Code,
+  // pointed at the gateway's Anthropic-compatible API, with no Claude account. There is no key to
+  // paste: the provider is signed in while the gateway answers on this computer.
+  magpie: {
+    id: "magpie",
+    displayName: "Magpie",
+    cliName: "Claude Code",
+    onboardingDescription: "Models from your local Magpie gateway",
+    signInMessage: "Start Magpie with magpie serve, then try again.",
+    installGuideLink: null,
+    defaultModel: "",
+    legacyModelPrefix: null,
+    authKind: "magpie",
+    pickerOrder: 11,
+    localCodeSignIn: null,
+    signInPageEnd: "callback",
+    // The Claude client runs it, so these are the Claude row's values.
+    skillFolders: [".claude/skills"],
+    workspaceEnforcement: "tool-sandbox",
+    steer: "native",
+    concurrentTurns: true,
+    reportsUsage: false,
+    approvalsInFullAccess: false,
+  },
   // One provider for every Agent Client Protocol agent the user adds by command. The model id names
   // the agent (`<customAgentId>/<agentModel>`), so one provider row serves them all and the shipped
   // provider CHECK lists grow by one word only once.
@@ -497,8 +522,8 @@ export function isManagedRuntimeProvider(provider: AgentProviderId): provider is
 
 /**
  * The providers that only newer Team API protocols carry: Gemini and custom ACP agents from protocol
- * 5, Cursor and Cline from protocol 6, Pi and Muse from protocol 7. No protocol carries Inception or
- * DeepSeek yet.
+ * 5, Cursor and Cline from protocol 6, Pi and Muse from protocol 7. No protocol carries Inception,
+ * DeepSeek or Magpie yet.
  * A joined server's settings list one only when the host's status names it.
  */
 export const LOCAL_ONLY_PROVIDERS = [
@@ -509,6 +534,7 @@ export const LOCAL_ONLY_PROVIDERS = [
   "muse",
   "inception",
   "deepseek",
+  "magpie",
   "acp",
 ] as const satisfies readonly AgentProviderId[];
 
@@ -525,6 +551,16 @@ export type KeyOnlyProviderId = (typeof KEY_ONLY_PROVIDERS)[number];
 
 export function isKeyOnlyProvider(provider: AgentProviderRef): provider is KeyOnlyProviderId {
   return isOneOf(KEY_ONLY_PROVIDERS, provider);
+}
+
+/**
+ * The providers that run with the host's own key or gateway, so no Team API peer sees them: the
+ * key-only providers, in the host's Pi CLI, and Magpie, a gateway on the host computer.
+ */
+export const HOST_ONLY_PROVIDERS = [...KEY_ONLY_PROVIDERS, "magpie"] as const satisfies readonly AgentProviderId[];
+
+export function isHostOnlyProvider(provider: AgentProviderRef): boolean {
+  return isOneOf(HOST_ONLY_PROVIDERS, provider);
 }
 
 /**

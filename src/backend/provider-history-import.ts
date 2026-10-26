@@ -228,7 +228,7 @@ function importCompletedTurn(
       const pageMessages =
         routine === "none" ? partial.messages : partial.messages.flatMap(keptRoutineMessage(routine));
       const reconciled =
-        input.provider === "claude"
+        input.provider === "claude" || input.provider === "magpie"
           ? mergeProviderHistoryMessages(
               // Claude can use a new provider ID for a reply that OpenBot already published under the
               // live turn ID. Read only matching IDs from SQLite, so reconciliation never materializes
