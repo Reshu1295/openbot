@@ -209,6 +209,14 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.errors": "過去 1 時間にエラーを記録した Cloudflare Workers はどれですか？",
   "marketplace.plugin.cloudflare.prompt.dns":
     "自分の Cloudflare アカウントの各ゾーンの DNS レコードを一覧表示してください。",
+  "marketplace.plugin.supabase.tagline": "データベース、ログ、Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase を使うと、エージェントはプロジェクトを一覧表示し、SQL を実行し、テーブルのスキーマとログを読み、advisors のセキュリティとパフォーマンスの指摘を確認し、Edge Functions とブランチを管理し、Supabase のドキュメントを検索できます。各ユーザーはブラウザーで自分の Supabase アカウントにサインインし、組織を選びます。エージェントにはフルアクセスが与えられます。データを変更または削除する SQL の実行、マイグレーションの適用、Edge Functions のデプロイ、プロジェクトの作成と一時停止ができます。",
+  "marketplace.plugin.supabase.app":
+    "データベース、ログ、Edge Functions を、ブラウザーでサインインする Supabase の MCP サーバーで提供します。",
+  "marketplace.plugin.supabase.prompt.projects": "自分の Supabase 組織にはどのプロジェクトがありますか？",
+  "marketplace.plugin.supabase.prompt.tables": "自分の Supabase データベースのテーブルと列を一覧表示してください。",
+  "marketplace.plugin.supabase.prompt.errors": "自分の Supabase プロジェクトが過去 1 時間に記録したエラーは何ですか？",
   "marketplace.plugin.context7.tagline": "最新のライブラリドキュメント",
   "marketplace.plugin.context7.description":
     "Context7 はライブラリとフレームワークの最新のドキュメントと API リファレンスを取得するので、回答はプロジェクトが実際に使っているバージョンに基づきます。アカウントもキーも不要です。",

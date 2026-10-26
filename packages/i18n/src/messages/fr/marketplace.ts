@@ -216,6 +216,15 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.errors":
     "Quels Workers Cloudflare ont enregistré des erreurs au cours de la dernière heure ?",
   "marketplace.plugin.cloudflare.prompt.dns": "Listez les enregistrements DNS de chaque zone de mon compte Cloudflare.",
+  "marketplace.plugin.supabase.tagline": "Bases de données, journaux et edge functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase permet aux agents de lister les projets, d’exécuter du SQL, de lire les schémas des tables et les journaux, de consulter les recommandations de sécurité et de performance des advisors, de gérer les edge functions et les branches, et de chercher dans la documentation Supabase. Chaque utilisateur se connecte à son propre compte Supabase dans le navigateur et choisit une organisation. Les agents ont un accès complet : ils peuvent exécuter du SQL qui modifie ou supprime des données, appliquer des migrations, déployer des edge functions et créer ou mettre en pause des projets.",
+  "marketplace.plugin.supabase.app":
+    "Bases de données, journaux et edge functions, via le serveur MCP de Supabase avec connexion dans le navigateur.",
+  "marketplace.plugin.supabase.prompt.projects": "Quels projets se trouvent dans mon organisation Supabase ?",
+  "marketplace.plugin.supabase.prompt.tables": "Listez les tables et les colonnes de ma base de données Supabase.",
+  "marketplace.plugin.supabase.prompt.errors":
+    "Quelles erreurs mon projet Supabase a-t-il enregistrées au cours de la dernière heure ?",
   "marketplace.plugin.context7.tagline": "Documentation à jour des bibliothèques",
   "marketplace.plugin.context7.description":
     "Context7 récupère la documentation et les références d’API à jour des bibliothèques et des frameworks, pour que les réponses utilisent la version que le projet exécute réellement. Il ne demande ni compte ni clé.",

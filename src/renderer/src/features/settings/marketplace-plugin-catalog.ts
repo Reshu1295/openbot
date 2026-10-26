@@ -490,6 +490,46 @@ const CLOUDFLARE: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/cloudflare",
 };
 
+const SUPABASE: MarketplacePluginDetail = {
+  id: "plugin-supabase",
+  slug: "supabase",
+  name: "Supabase",
+  tagline: "Databases, logs and edge functions",
+  description:
+    "Supabase lets agents list projects, run SQL, read table schemas and logs, check security and performance advisors, manage edge functions and branches, and search the Supabase docs. Each user signs in to their own Supabase account through the browser and chooses an organization. Agents get full access: they can run SQL that changes or deletes data, apply migrations, deploy edge functions, and create or pause projects.",
+  category: "coding",
+  creatorName: "supabase.com",
+  iconUrl: "https://supabase.com/favicon/favicon.ico",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-projects", text: "Which projects are in my Supabase organization?" },
+    { id: "prompt-tables", text: "List the tables and columns of my Supabase database." },
+    { id: "prompt-errors", text: "Which errors did my Supabase project log in the last hour?" },
+  ],
+  apps: [
+    {
+      id: "app-supabase-mcp",
+      name: "Supabase",
+      description: "Databases, logs, and edge functions, over Supabase's MCP server with browser sign-in.",
+      iconUrl: "https://supabase.com/favicon/favicon.ico",
+      server: {
+        name: "supabase",
+        transport: "http",
+        url: "https://mcp.supabase.com/mcp",
+        auth: [{ id: "supabase-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://supabase.com",
+  privacyPolicyUrl: "https://supabase.com/privacy",
+  termsUrl: "https://supabase.com/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/supabase",
+};
+
 const CONTEXT7: MarketplacePluginDetail = {
   id: "plugin-context7",
   slug: "context7",
@@ -911,6 +951,7 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   SENTRY,
   VERCEL,
   CLOUDFLARE,
+  SUPABASE,
   CONTEXT7,
   STRIPE,
   POSTHOG,

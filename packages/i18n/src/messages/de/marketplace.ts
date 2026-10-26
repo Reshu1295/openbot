@@ -216,6 +216,15 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.errors":
     "Welche Cloudflare Workers haben in der letzten Stunde Fehler protokolliert?",
   "marketplace.plugin.cloudflare.prompt.dns": "Liste die DNS-Einträge jeder Zone in meinem Cloudflare-Konto auf.",
+  "marketplace.plugin.supabase.tagline": "Datenbanken, Logs und Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Mit Supabase listen Agenten Projekte auf, führen SQL aus, lesen Tabellenschemas und Logs, prüfen die Sicherheits- und Leistungshinweise der Advisors, verwalten Edge Functions und Branches und durchsuchen die Supabase-Dokumentation. Jeder Nutzer meldet sich im Browser bei seinem eigenen Supabase-Konto an und wählt eine Organisation. Agenten erhalten vollen Zugriff: Sie können SQL ausführen, das Daten ändert oder löscht, Migrationen anwenden, Edge Functions bereitstellen und Projekte erstellen oder pausieren.",
+  "marketplace.plugin.supabase.app":
+    "Datenbanken, Logs und Edge Functions über den MCP-Server von Supabase mit Anmeldung im Browser.",
+  "marketplace.plugin.supabase.prompt.projects": "Welche Projekte gibt es in meiner Supabase-Organisation?",
+  "marketplace.plugin.supabase.prompt.tables": "Liste die Tabellen und Spalten meiner Supabase-Datenbank auf.",
+  "marketplace.plugin.supabase.prompt.errors":
+    "Welche Fehler hat mein Supabase-Projekt in der letzten Stunde protokolliert?",
   "marketplace.plugin.context7.tagline": "Aktuelle Bibliotheksdokumentation",
   "marketplace.plugin.context7.description":
     "Context7 ruft aktuelle Dokumentation und API-Referenzen für Bibliotheken und Frameworks ab, damit Antworten die Version verwenden, die das Projekt tatsächlich nutzt. Es braucht kein Konto und keinen Schlüssel.",

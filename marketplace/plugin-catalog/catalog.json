@@ -14,6 +14,7 @@
     "sentry",
     "vercel",
     "cloudflare",
+    "supabase",
     "context7",
     "stripe",
     "posthog",

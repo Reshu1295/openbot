@@ -210,6 +210,14 @@ export const messages = defineMessages("marketplace", {
   "marketplace.plugin.cloudflare.prompt.workers": "Which Workers are deployed in my Cloudflare account?",
   "marketplace.plugin.cloudflare.prompt.errors": "Which Cloudflare Workers logged errors in the last hour?",
   "marketplace.plugin.cloudflare.prompt.dns": "List the DNS records of each zone in my Cloudflare account.",
+  "marketplace.plugin.supabase.tagline": "Databases, logs and edge functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase lets agents list projects, run SQL, read table schemas and logs, check security and performance advisors, manage edge functions and branches, and search the Supabase docs. Each user signs in to their own Supabase account through the browser and chooses an organization. Agents get full access: they can run SQL that changes or deletes data, apply migrations, deploy edge functions, and create or pause projects.",
+  "marketplace.plugin.supabase.app":
+    "Databases, logs, and edge functions, over Supabase's MCP server with browser sign-in.",
+  "marketplace.plugin.supabase.prompt.projects": "Which projects are in my Supabase organization?",
+  "marketplace.plugin.supabase.prompt.tables": "List the tables and columns of my Supabase database.",
+  "marketplace.plugin.supabase.prompt.errors": "Which errors did my Supabase project log in the last hour?",
   "marketplace.plugin.context7.tagline": "Current library documentation",
   "marketplace.plugin.context7.description":
     "Context7 fetches current documentation and API references for libraries and frameworks, so answers use the version the project actually runs. It needs no account and no key.",

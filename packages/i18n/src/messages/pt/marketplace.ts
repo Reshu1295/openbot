@@ -198,6 +198,14 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.workers": "Quais Workers estão implantados na minha conta do Cloudflare?",
   "marketplace.plugin.cloudflare.prompt.errors": "Quais Workers do Cloudflare registraram erros na última hora?",
   "marketplace.plugin.cloudflare.prompt.dns": "Liste os registros DNS de cada zona da minha conta do Cloudflare.",
+  "marketplace.plugin.supabase.tagline": "Bancos de dados, logs e edge functions",
+  "marketplace.plugin.supabase.description":
+    "O Supabase permite que os agentes listem projetos, executem SQL, leiam esquemas de tabelas e logs, verifiquem as recomendações de segurança e desempenho dos advisors, gerenciem edge functions e branches e pesquisem a documentação do Supabase. Cada usuário entra na própria conta do Supabase pelo navegador e escolhe uma organização. Os agentes têm acesso total: podem executar SQL que altera ou exclui dados, aplicar migrações, implantar edge functions e criar ou pausar projetos.",
+  "marketplace.plugin.supabase.app":
+    "Bancos de dados, logs e edge functions, pelo servidor MCP do Supabase com login no navegador.",
+  "marketplace.plugin.supabase.prompt.projects": "Quais projetos estão na minha organização do Supabase?",
+  "marketplace.plugin.supabase.prompt.tables": "Liste as tabelas e colunas do meu banco de dados do Supabase.",
+  "marketplace.plugin.supabase.prompt.errors": "Quais erros meu projeto do Supabase registrou na última hora?",
   "marketplace.plugin.context7.tagline": "Documentação atual de bibliotecas",
   "marketplace.plugin.context7.description":
     "O Context7 busca documentação e referências de API atuais para bibliotecas e frameworks, então as respostas usam a versão que o projeto realmente roda. Não precisa de conta nem de chave.",
