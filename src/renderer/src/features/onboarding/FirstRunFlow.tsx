@@ -8,6 +8,7 @@ import { ComputerUseSetup } from "../computer-use/ComputerUseSetup";
 import { FirstRunChoice } from "./FirstRunChoice";
 import { FirstRunLaunch } from "./FirstRunLaunch";
 import { FirstRunPlanStep } from "./FirstRunPlanStep";
+import { clearFirstRunResume, readFirstRunResume, writeFirstRunResume } from "./first-run-resume";
 import { firstRunTransition } from "./first-run-transition";
 import { OnboardingComputerVisual } from "./OnboardingComputerVisual";
 import { createOnboardingAvatarVariant, createOnboardingTeam, onboardingSessionSeed } from "./onboarding-avatars";
@@ -53,19 +54,26 @@ interface FirstRunState {
  */
 export function FirstRunFlow(props: FirstRunFlowProps) {
   const { t, errorMessage } = useText();
+  // macOS asks for a quit and reopen after a Screen Recording grant. First run then opens on the
+  // permission step again, with the choices the user made before it. Other systems have no such step.
+  const resume = untrack(() => (props.platform === "darwin" ? readFirstRunResume() : null));
   const [state, setState] = createStore<FirstRunState>({
-    step: "choose",
-    path: null,
+    step: resume ? "computer" : "choose",
+    path: resume?.path ?? null,
     saving: false,
     finishWhenReady: false,
-    skipped: false,
+    skipped: resume?.skipped ?? false,
   });
   /**
    * The first-run screen sits on the dialog layer, so a row menu portalled to `body` would paint
    * behind it. Menus mount here instead.
    */
   const [screenElement, setScreenElement] = createSignal<HTMLElement | undefined>();
-  const providers = createSetupProviders(props, undefined, { includeFree: () => state.path !== "plan" });
+  const providers = createSetupProviders(
+    props,
+    resume ? { provider: resume.provider, customModel: () => resume.customModel } : undefined,
+    { includeFree: () => state.path !== "plan" },
+  );
   const next = createSetupNext(providers);
   const nextReasonId = createUniqueId();
   const computerAvatar = createOnboardingAvatarVariant(onboardingSessionSeed(), "computer");
@@ -148,6 +156,21 @@ export function FirstRunFlow(props: FirstRunFlowProps) {
         setState((current) => {
           current.finishWhenReady = false;
         });
+    },
+  );
+
+  // Only the permission step is kept for a relaunch: an earlier step has nothing that a quit loses.
+  createEffect(
+    () => ({
+      step: state.step,
+      path: state.path,
+      skipped: state.skipped,
+      provider: providers.selectedProvider(),
+      customModel: providers.customSelected() ? providers.customModel() : null,
+    }),
+    ({ step, path, skipped, provider, customModel }) => {
+      if (step === "computer" && path && provider) writeFirstRunResume({ path, provider, customModel, skipped });
+      else clearFirstRunResume();
     },
   );
 
@@ -274,6 +297,7 @@ export function FirstRunFlow(props: FirstRunFlowProps) {
         ...(state.path ? { path: state.path } : {}),
         skipped: state.skipped,
       });
+      clearFirstRunResume();
     } catch (cause) {
       providers.setError(errorMessage(cause, t("onboarding.error.finish")), cause);
       setState((current) => {
