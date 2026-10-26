@@ -148,7 +148,8 @@ export const messages = {
   "settings.tab.voice.title": "语音",
   "settings.tab.voice.description": "消息框中的听写。本地模型在本机运行，ElevenLabs 在云端运行。",
   "settings.tab.computerUse.title": "Computer Use",
-  "settings.tab.computerUse.description": "允许 OpenBot 查看并操作这台电脑上的应用。",
+  "settings.tab.computerUse.description":
+    "允许这台电脑上 OpenBot 的助手查看并操作这台电脑上的应用。其他服务器上的助手使用那台服务器的电脑。",
   "settings.tab.profile.title": "个人资料",
   "settings.tab.profile.description": "管理你在 OpenBot 中的显示方式。",
   "settings.tab.mobileConnect.title": "手机连接",

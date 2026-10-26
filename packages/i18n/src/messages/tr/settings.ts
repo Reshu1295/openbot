@@ -133,7 +133,7 @@ export const messages = {
     "Mesaj kutusunda dikte. Yerel modeller bu bilgisayarda, ElevenLabs ise bulutta çalışır.",
   "settings.tab.computerUse.title": "Bilgisayar Kullanımı",
   "settings.tab.computerUse.description":
-    "OpenBot'un bu bilgisayardaki uygulamaları görmesine ve bunlarla etkileşime girmesine izin verin.",
+    "Bu bilgisayardaki OpenBot ajanlarının buradaki uygulamaları görmesine ve kullanmasına izin verin. Başka bir sunucudaki ajanlar o sunucunun bilgisayarını kullanır.",
   "settings.tab.profile.title": "Profil",
   "settings.tab.profile.description": "OpenBot'ta nasıl göründüğünüzü yönetin.",
   "settings.tab.mobileConnect.title": "Mobil Bağlantı",

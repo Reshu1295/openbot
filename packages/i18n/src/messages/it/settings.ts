@@ -135,7 +135,8 @@ export const messages = {
   "settings.tab.voice.description":
     "Dettatura nella casella del messaggio. I modelli locali funzionano su questo computer; ElevenLabs funziona nel cloud.",
   "settings.tab.computerUse.title": "Controllo PC",
-  "settings.tab.computerUse.description": "Consenti a OpenBot di vedere e usare le app su questo computer.",
+  "settings.tab.computerUse.description":
+    "Consenti agli agenti dell'OpenBot di questo computer di vedere e usare le sue app. Gli agenti su un altro server usano il computer di quel server.",
   "settings.tab.profile.title": "Profilo",
   "settings.tab.profile.description": "Gestisci come appari in OpenBot.",
   "settings.tab.mobileConnect.title": "Mobile Connect",

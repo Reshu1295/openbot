@@ -130,7 +130,8 @@ export const messages = {
   "settings.tab.voice.description":
     "メッセージ欄での音声入力です。ローカルモデルはこのコンピューター上で、ElevenLabs はクラウドで動作します。",
   "settings.tab.computerUse.title": "Computer Use",
-  "settings.tab.computerUse.description": "このコンピューターのアプリを OpenBot が見て操作できるようにします。",
+  "settings.tab.computerUse.description":
+    "このコンピューターの OpenBot のエージェントが、このコンピューターのアプリを見て操作できるようにします。別のサーバーのエージェントは、そのサーバーのコンピューターを使います。",
   "settings.tab.profile.title": "プロフィール",
   "settings.tab.profile.description": "OpenBot での自分の表示を設定します。",
   "settings.tab.mobileConnect.title": "Mobile Connect",

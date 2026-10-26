@@ -133,7 +133,8 @@ export const messages = {
   "settings.tab.voice.description":
     "Ditado na caixa de mensagem. Os modelos locais rodam neste computador; o ElevenLabs roda na nuvem.",
   "settings.tab.computerUse.title": "Uso do computador",
-  "settings.tab.computerUse.description": "Permita que o OpenBot veja e interaja com apps neste computador.",
+  "settings.tab.computerUse.description":
+    "Permita que os agentes do OpenBot deste computador vejam e usem os apps dele. Agentes de outro servidor usam o computador desse servidor.",
   "settings.tab.profile.title": "Perfil",
   "settings.tab.profile.description": "Gerencie como você aparece no OpenBot.",
   "settings.tab.mobileConnect.title": "Conectar celular",

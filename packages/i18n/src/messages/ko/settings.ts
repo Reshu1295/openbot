@@ -149,7 +149,8 @@ export const messages = {
   "settings.tab.voice.description":
     "메시지 입력란의 음성 받아쓰기예요. 로컬 모델은 이 컴퓨터에서, ElevenLabs는 클라우드에서 실행돼요.",
   "settings.tab.computerUse.title": "컴퓨터 제어",
-  "settings.tab.computerUse.description": "OpenBot이 이 컴퓨터의 앱을 보고 조작하도록 허용해요.",
+  "settings.tab.computerUse.description":
+    "이 컴퓨터의 OpenBot 에이전트가 이 컴퓨터의 앱을 보고 조작하도록 허용해요. 다른 서버의 에이전트는 그 서버의 컴퓨터를 사용해요.",
   "settings.tab.profile.title": "프로필",
   "settings.tab.profile.description": "OpenBot에서 내가 표시되는 방식을 관리해요.",
   "settings.tab.mobileConnect.title": "모바일 연결",

@@ -133,7 +133,8 @@ export const messages = {
   "settings.tab.voice.description":
     "Диктовка в поле сообщения. Локальные модели работают на этом компьютере, ElevenLabs — в облаке.",
   "settings.tab.computerUse.title": "Управление ПК",
-  "settings.tab.computerUse.description": "Разрешите OpenBot видеть приложения на этом компьютере и работать с ними.",
+  "settings.tab.computerUse.description":
+    "Разрешите агентам OpenBot на этом компьютере видеть его приложения и работать с ними. Агенты на другом сервере используют компьютер этого сервера.",
   "settings.tab.profile.title": "Профиль",
   "settings.tab.profile.description": "Как вы выглядите в OpenBot.",
   "settings.tab.mobileConnect.title": "Mobile Connect",

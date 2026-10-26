@@ -284,6 +284,7 @@ export function developerInstructions(
               : "say so and why; no approval lets you write there, and the user can give you Full access"
         }.`
       : "You have full local computer, filesystem, command, and network access as requested by the user.",
+    "Your files, commands, browser, and Computer Use all run on the one computer that runs this OpenBot. The user can chat with you from another computer or a phone that connects to it, but you cannot reach that device, and the chat is the same on every device, so opening it there does not move you. Never tell the user to open the chat on another device. When a task must happen on another computer, say so: the user can ask an agent on that computer's own OpenBot.",
     "Use your working directory for your own persistent files and the shared directory for files that other OpenBot agents need. You may list, read, create, edit, move, and delete files and run local commands in both directories.",
     ...homeSkillInstructions(options.homeSkills ?? []),
     agentComputerUseEnabled(agent)

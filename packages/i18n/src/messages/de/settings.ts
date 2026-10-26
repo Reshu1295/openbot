@@ -136,7 +136,8 @@ export const messages = {
   "settings.tab.voice.description":
     "Diktat im Nachrichtenfeld. Lokale Modelle laufen auf diesem Computer, ElevenLabs läuft in der Cloud.",
   "settings.tab.computerUse.title": "PC-Steuerung",
-  "settings.tab.computerUse.description": "OpenBot erlauben, Apps auf diesem Computer zu sehen und zu bedienen.",
+  "settings.tab.computerUse.description":
+    "Agenten im OpenBot dieses Computers dürfen seine Apps sehen und bedienen. Agenten auf einem anderen Server nutzen dessen Computer.",
   "settings.tab.profile.title": "Profil",
   "settings.tab.profile.description": "Verwalte, wie du in OpenBot angezeigt wirst.",
   "settings.tab.mobileConnect.title": "Mobilverbindung",
