@@ -161,7 +161,7 @@ interface SidebarThreadRequest {
   threadId?: string | undefined;
 }
 
-export interface SidebarChannelWaitsInput {
+interface SidebarChannelWaitsInput {
   channels: readonly Pick<ChannelSummary, "id" | "archived" | "threads">[];
   prompts: readonly (SidebarThreadRequest & { questions?: readonly { question: string }[] })[];
   takeovers: readonly SidebarThreadRequest[];
