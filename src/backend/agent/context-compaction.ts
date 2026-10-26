@@ -245,7 +245,9 @@ export class ContextCompaction {
 
   contextInputCharacters(threadId: string): number {
     const budget = this.#budgets.get(threadId);
-    return budget ? Math.min(120_000, Math.floor(budget.contextWindow * 2)) : 120_000;
+    // A session that `#rotate` started holds a window of 1 until its first usage report: no window is
+    // known yet, and a budget of 2 characters would summarize the channel one character at a time.
+    return budget && budget.contextWindow > 1 ? Math.min(120_000, Math.floor(budget.contextWindow * 2)) : 120_000;
   }
 
   /** `manual`: the user asked, so the thread compacts below the threshold too. */

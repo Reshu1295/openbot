@@ -692,6 +692,18 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     });
   }
 
+  /**
+   * The agent compacted the session by itself. The summary replaced the prompt that carried the
+   * instructions, and the channel messages that the session read, so the next turn sends both again.
+   */
+  #compacted(thread: AcpThread): void {
+    thread.instructionsSent = null;
+    this.emit("notification", {
+      method: "openbot/context-compaction",
+      params: { threadId: thread.id, status: "completed" },
+    });
+  }
+
   releaseIdleThreads(): Effect.Effect<void, ProviderClientOperationError> {
     return this.#threads.releaseIdle();
   }
@@ -1870,7 +1882,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     // before the prompt result. Antigravity sends the last one after a turn that OpenBot already ended.
     if (update.sessionUpdate === "usage_update") {
       if (thread.contextUsed !== null && update.used < thread.contextUsed * ACP_COMPACTION_CONTEXT_RATIO)
-        thread.instructionsSent = null;
+        this.#compacted(thread);
       thread.contextUsed = update.used;
       const cost = update.cost;
       if (thread.activeTurn && cost?.currency === "USD" && Number.isFinite(cost.amount) && cost.amount >= 0)
@@ -1886,7 +1898,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       return;
     }
     if (update.sessionUpdate === "compaction_update") {
-      if (update.status === "completed") thread.instructionsSent = null;
+      if (update.status === "completed") this.#compacted(thread);
       return;
     }
     const turn = thread.activeTurn;

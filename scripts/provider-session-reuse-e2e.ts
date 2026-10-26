@@ -207,6 +207,10 @@ function handle(message) {
   if (message.method === "session/prompt") {
     const text = params.prompt.map((block) => block.text ?? "").join("");
     log({ sessionId: params.sessionId, length: text.length, text });
+    // The context fill: a drop is a compaction that the agent does by itself, and a nearly full
+    // context makes OpenBot replace the session.
+    const used = text.includes("usage-high") ? 900000 : text.includes("usage-drop") ? 1000 : 400000;
+    write({ method: "session/update", params: { sessionId: params.sessionId, update: { sessionUpdate: "usage_update", used, size: 1000000 } } });
     write({ method: "session/update", params: { sessionId: params.sessionId, update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done." } } } });
     return write({ id: message.id, result: { stopReason: "end_turn" } });
   }
@@ -322,6 +326,9 @@ interface CaseDetails {
   prompts?: PromptReport[];
   firstPrompt?: PromptReport;
   secondPrompt?: PromptReport & { repeatsFirstRequest: boolean };
+  afterCompaction?: { sessionId: string; repeatsFirstRequest: boolean };
+  afterRotation?: { sessionId: string; repeatsFirstRequest: boolean };
+  channelPromptCount?: number;
   tasks?: string[];
 }
 
@@ -589,8 +596,15 @@ try {
     );
     const FIRST = "first-channel-request-7c1e";
     const SECOND = "second-channel-request-9b4d";
+    // The agent compacts by itself during this turn, so the next packet is complete again.
+    const THIRD = "third-channel-request-usage-drop-2f6a";
+    // The context is nearly full after this turn, so OpenBot replaces the channel session.
+    const FOURTH = "fourth-channel-request-usage-high-5d3c";
+    const FIFTH = "fifth-channel-request-a81b";
     const prompts = () => entries<{ sessionId: string; length: number; text: string }>(agyLog);
-    for (const text of [FIRST, SECOND]) {
+    // The agent's first chat turn is in the log too.
+    const beforeChannel = prompts().length;
+    for (const text of [FIRST, SECOND, THIRD, FOURTH, FIFTH]) {
       await runCauseEffect(
         agents.channels.command(
           {
@@ -624,6 +638,19 @@ try {
     details.tasks = agents.channels.store.tasks(channelId).map((task) => task.state);
     assert.equal(second.sessionId, first.sessionId, "Both channel prompts go to the same ACP session.");
     assert.ok(!second.text.includes(FIRST), "The second prompt has only the unread channel messages.");
+    const fourth = prompts().find((prompt) => prompt.text.includes(FOURTH));
+    const fifth = prompts().find((prompt) => prompt.text.includes(FIFTH));
+    assert.ok(fourth && fifth, "The later channel prompts reached Antigravity.");
+    details.afterCompaction = { sessionId: fourth.sessionId, repeatsFirstRequest: fourth.text.includes(FIRST) };
+    details.afterRotation = { sessionId: fifth.sessionId, repeatsFirstRequest: fifth.text.includes(FIRST) };
+    details.channelPromptCount = prompts().length - beforeChannel;
+    assert.equal(fourth.sessionId, first.sessionId, "A compaction by the agent keeps the session.");
+    assert.ok(fourth.text.includes(FIRST), "After the agent compacts, the next packet is complete.");
+    assert.notEqual(fifth.sessionId, first.sessionId, "A nearly full channel session is replaced.");
+    assert.ok(fifth.text.includes(FIRST), "The replacement channel session gets the complete packet.");
+    // A channel summary would run as more prompts: the new session's unknown window must not shrink
+    // the packet budget to a few characters.
+    assert.equal(prompts().length - beforeChannel, 5, "Each channel message is one prompt, with no summary prompts.");
   });
 
   report.passed = report.cases.length === 3 && report.cases.every((entry) => entry.passed);

@@ -999,10 +999,10 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         const session = agent ? this.#store.database.activeProviderSession(threadId, agent.provider) : null;
         return session ? this.#compaction.contextInputCharacters(session.externalSessionId) : 120_000;
       },
-      // Claude and the app-server providers report each compaction. A `handoff` provider compacts
-      // only when OpenBot replaces its session, and the new session gets the complete packet. Another
-      // ACP agent or Pi can compact on its own with no report, so its next packet would leave out
-      // what the summary dropped.
+      // Claude and the app-server providers report each compaction. A `handoff` provider is
+      // compacted by OpenBot, which gives the new session the complete packet, and the ACP client
+      // reports a compaction that the agent does by itself. Another ACP agent or Pi can compact with
+      // no signal, so its next packet would leave out what the summary dropped.
       reportsCompactions: (agentId) => {
         const agent = this.#store.list().find((item) => item.id === agentId);
         const mode = agent ? this.#providers.clientForAgent(agent)?.contextCompaction : undefined;
