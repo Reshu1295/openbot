@@ -206,6 +206,31 @@ const EMPTY_SERVER: MobileServer = {
   role: "member",
 };
 
+/**
+ * The reads that make a server usable, chosen by its capabilities. Each connection reads the hidden
+ * list again, because the events of an interrupted connection are lost. A failed hidden read keeps
+ * the last list and does not stop the connection.
+ */
+function startWorkspaceReads(client: RemoteTeamTransportRef, capabilities: readonly string[]) {
+  const sections = capabilities.includes(SIDEBAR_LAYOUT_CAPABILITY)
+    ? client.request("GET", TEAM_API_ROUTES.sidebarLayout.state, decodeSidebarLayout)
+    : null;
+  const agents = client.request("GET", TEAM_API_ROUTES.agents.all, decodeAgentSummaries);
+  // The hidden list loads with the agents, so a hidden agent does not show for a moment.
+  const hidden = readHostHiddenAgents(
+    (method, path, decode, body) => client.request(method, path, decode, body),
+    capabilities,
+  ).catch(() => undefined);
+  // Reads that start before the compatibility check can lose their reader when the check fails.
+  sections?.catch(() => undefined);
+  agents.catch(() => undefined);
+  return { sections, agents, hidden };
+}
+
+function sameCapabilities(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((capability) => b.includes(capability));
+}
+
 /** The record without `keys`, or the same record when it has none of them. */
 function withoutKeys<T>(record: Record<string, T>, keys: ReadonlySet<string>): Record<string, T> {
   return Object.keys(record).some((key) => keys.has(key))
@@ -692,7 +717,29 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       await client.connect(serverId, publicKey);
       if (!context.isCurrent()) return;
       context.stage = "compatibility";
-      const compatibility = await client.request("GET", TEAM_API_ROUTES.compatibility, decodeTeamProtocolSupportV7Base);
+      const compatibilityRead = client.request("GET", TEAM_API_ROUTES.compatibility, decodeTeamProtocolSupportV7Base);
+      // On a reconnect the capabilities of the last connection are known, so the workspace reads go
+      // out with the compatibility read and do not wait one more round trip. Their results apply only
+      // after the check. The read state applies when it arrives: it does not depend on the protocol,
+      // and its refresh must start now to keep its order with the event reads.
+      const known = serverCapabilities.current.get(serverId);
+      const loadReads = () =>
+        runTeamEffect(
+          readRefresh.refresh(
+            serverId,
+            () =>
+              Effect.tryPromise(() =>
+                client.request("GET", TEAM_API_ROUTES.agents.conversationReads, decodeConversationReads),
+              ),
+            applyConversationReads,
+            () => context.isCurrent() && !removedServers.current.has(serverId),
+          ),
+        );
+      const early = known
+        ? { capabilities: known, reads: startWorkspaceReads(client, known), conversationReads: loadReads() }
+        : null;
+      early?.conversationReads.catch(() => undefined);
+      const compatibility = await compatibilityRead;
       if (!context.isCurrent()) return;
       supportLog.add(
         "info",
@@ -718,6 +765,12 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
           })
           .catch(() => undefined);
       }
+      // A host that changed its capabilities, such as after an update, gets the reads that they select.
+      const reads =
+        early && sameCapabilities(early.capabilities, compatibility.capabilities)
+          ? early.reads
+          : startWorkspaceReads(client, compatibility.capabilities);
+      const conversationReads = early?.conversationReads ?? loadReads();
       // The sections, the agents and the read state do not depend on each other, so they load together.
       // The first read that fails names the stage.
       let failed = false;
@@ -727,8 +780,8 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
           failed = true;
           throw error;
         });
-      const sections = compatibility.capabilities.includes(SIDEBAR_LAYOUT_CAPABILITY)
-        ? client.request("GET", TEAM_API_ROUTES.sidebarLayout.state, decodeSidebarLayout).then(
+      const sections = reads.sections
+        ? reads.sections.then(
             (layout) => {
               if (context.isCurrent()) applySidebarLayout(serverId, layout);
             },
@@ -746,40 +799,18 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
             },
           )
         : setSidebarByServer((current) => ({ ...current, [serverId]: { layout: null, error: null } }));
-      // The hidden list of the host loads with the agents, so a hidden agent does not show for a moment.
-      // Each connection reads it again, because the events of an interrupted connection are lost. A failed
-      // read keeps the last list and does not stop the connection.
-      const hidden = readHostHiddenAgents(
-        (method, path, decode, body) => client.request(method, path, decode, body),
-        compatibility.capabilities,
-      ).catch(() => undefined);
       const [summaries] = await Promise.all([
         step(
           "agents",
-          Promise.all([client.request("GET", TEAM_API_ROUTES.agents.all, decodeAgentSummaries), hidden]).then(
-            ([summaries, hiddenAgents]) => {
-              if (context.isCurrent()) {
-                if (hiddenAgents !== undefined) applyHostHidden(serverId, hiddenAgents);
-                replaceServerAgents(serverId, summaries);
-              }
-              return summaries;
-            },
-          ),
+          Promise.all([reads.agents, reads.hidden]).then(([summaries, hiddenAgents]) => {
+            if (context.isCurrent()) {
+              if (hiddenAgents !== undefined) applyHostHidden(serverId, hiddenAgents);
+              replaceServerAgents(serverId, summaries);
+            }
+            return summaries;
+          }),
         ),
-        step(
-          "reads",
-          runTeamEffect(
-            readRefresh.refresh(
-              serverId,
-              () =>
-                Effect.tryPromise(() =>
-                  client.request("GET", TEAM_API_ROUTES.agents.conversationReads, decodeConversationReads),
-                ),
-              applyConversationReads,
-              () => context.isCurrent() && !removedServers.current.has(serverId),
-            ),
-          ),
-        ),
+        step("reads", conversationReads),
         sections,
       ]);
       if (!context.isCurrent()) return;

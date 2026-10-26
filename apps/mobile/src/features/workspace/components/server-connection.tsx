@@ -203,6 +203,7 @@ export const ServerConnection = memo(function ServerConnection({
   }, [client, hostId, publicKey, register, load, onStatus, analytics]);
 
   useEffect(() => {
+    const returned = active && inactiveSince.current !== null;
     if (!active) {
       generation.current += 1;
       analytics.background();
@@ -229,6 +230,10 @@ export const ServerConnection = memo(function ServerConnection({
       inactiveSince.current = null;
     }
     controller.current?.setActive(active);
+    // The user opened the app to use this server. A wait from before, such as the cooldown after five
+    // failed attempts, does not continue: one attempt starts now, and a failure starts the backoff again.
+    const phase = lastStatus.current?.status.phase;
+    if (returned && (phase === "waiting" || phase === "cooldown")) controller.current?.refresh();
     if (active && membershipRefreshPending.current) {
       membershipRefreshPending.current = false;
       void onMembershipChanged?.().catch(() => undefined);
