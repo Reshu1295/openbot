@@ -498,7 +498,11 @@ export function ThreadTabs(props: ThreadHeaderProps) {
               <ArrowRightToLine class="agent-context-icon size-4" aria-hidden="true" />
               <span>{t("conversation.threads.closeRight")}</span>
             </ContextMenu.Item>
-            {/* The agent's own chat and a new thread have no archive or delete. A running thread stops first. */}
+            {/*
+              The agent's own chat and a new thread have no archive or delete. A running thread stops first.
+              The archive of a delete cancels the queued messages, and Undo cannot bring them back, so a
+              queued thread has no delete.
+            */}
             <Show when={isSide()}>
               <ContextMenu.Separator />
               <ContextMenu.Item disabled={targetBusy()} onSelect={() => props.onArchive(targetId())}>
@@ -508,7 +512,7 @@ export function ThreadTabs(props: ThreadHeaderProps) {
               <Show when={canDelete()}>
                 <ContextMenu.Item
                   class="ui-action-menu-danger"
-                  disabled={targetBusy()}
+                  disabled={targetBusy() || target()?.status.kind === "queued"}
                   onSelect={() => props.onDelete?.(targetId())}
                 >
                   <Trash2 class="agent-context-icon size-4" aria-hidden="true" />
