@@ -139,11 +139,9 @@ export function webProviderRelay(request: (serverId?: string) => TeamApiRequest)
       if (query === null) throw new Error(sourceText("error.mcp.relayAddressInvalid"));
       // The host already completes the sign-in: a second grant would change nothing.
       if (entry.accepted) return;
+      // The page stays while the host takes the grant, so the form can show why a send failed.
+      const status = await run(completeSignInRelay(request(serverId), entry.flowId, query));
       entry.accepted = true;
-      const status = await run(completeSignInRelay(request(serverId), entry.flowId, query)).catch((error: unknown) => {
-        entry.accepted = false;
-        throw error;
-      });
       if (status.result) entry.result = { error: status.result.error ?? null };
     },
     cancelRelaySignIn: async (provider, serverId) => {
