@@ -197,6 +197,15 @@ export const messages = {
     "Bu depodaki stilleri kullan ve Paper'da bir ayarlar sayfası tasarla.",
   "marketplace.plugin.paper.prompt.tokens":
     "Açık Paper dosyasındaki tasarım token'larını listele ve temamızla karşılaştır.",
+  "marketplace.plugin.appleApps.tagline": "Mac'inizde Mail, Takvim ve daha fazlası",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps, ajanların bu Mac'te Mail, Takvim, Kişiler, Anımsatıcılar, Notlar, Mesajlar ve Safari'yi kullanmasını sağlar. Yalnızca macOS'te çalışır. OpenBot, Apple veya OpenBot tarafından yapılmamış bir topluluk sunucusu olan mcp-icloud'u başlatır. Sunucu uygulamaları bu bilgisayarda AppleScript ile kontrol eder ve hesap ya da anahtar gerektirmez. Bir ajan bir uygulamayı ilk kez kullandığında macOS, OpenBot'un onu kontrol edip edemeyeceğini sorar. Bunu daha sonra değiştirmek için Sistem Ayarları › Gizlilik ve Güvenlik › Otomasyon'u açın. Ajanlar e-posta ve iMessage gönderebilir, etkinlikleri, kişileri ve anımsatıcıları değiştirebilir veya silebilir; bu yüzden her yazma işlemini onaylamadan önce gözden geçirin. Araçların okuduğu içerik, örneğin e-posta metni, ajanın model sağlayıcısına gider.",
+  "marketplace.plugin.appleApps.app":
+    "Yerel mcp-icloud sunucusu üzerinden Mail, Takvim, Kişiler, Anımsatıcılar, Notlar, Mesajlar ve Safari. macOS ve Otomasyon izni gerekir.",
+  "marketplace.plugin.appleApps.prompt.unread": "Apple Mail'deki bugünkü okunmamış e-postalarımı özetle.",
+  "marketplace.plugin.appleApps.prompt.today": "Bugün ve yarın Apple Takvim'imde neler var?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Proje toplantısıyla ilgili en son e-postayı bul ve toplantıyı takvimime ekle.",
   "marketplace.plugin.sentry.tagline": "Hatalar ve çökme önceliklendirme",
   "marketplace.plugin.sentry.description":
     "Sentry, ajanların son hataları aramasına, yığın izlerini ve etkilenen sürümleri incelemesine ve bir dağıtımdan sonra neyin bozulduğunu özetlemesine olanak tanır. Her kullanıcı tarayıcı üzerinden kendi Sentry hesabında oturum açar.",

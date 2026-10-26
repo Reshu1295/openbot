@@ -185,6 +185,15 @@ export const messages = {
     "Użyj stylów z tego repozytorium i zaprojektuj stronę ustawień w Paper.",
   "marketplace.plugin.paper.prompt.tokens":
     "Wypisz tokeny projektu z otwartego pliku Paper i porównaj je z naszym motywem.",
+  "marketplace.plugin.appleApps.tagline": "Mail, Kalendarz i więcej na Twoim Macu",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps pozwala agentom korzystać z aplikacji Mail, Kalendarz, Kontakty, Przypomnienia, Notatki, Wiadomości i Safari na tym Macu. Działa tylko w macOS. OpenBot uruchamia mcp-icloud, serwer społeczności, którego nie tworzy Apple ani OpenBot. Serwer steruje aplikacjami przez AppleScript na tym komputerze i nie wymaga konta ani klucza. Gdy agent po raz pierwszy używa aplikacji, macOS pyta, czy OpenBot może nią sterować. Aby zmienić to później, otwórz Ustawienia systemowe › Prywatność i ochrona › Automatyzacja. Agenci mogą wysyłać e-maile i wiadomości iMessage oraz zmieniać lub usuwać wydarzenia, kontakty i przypomnienia, więc sprawdź każdy zapis, zanim go zatwierdzisz. To, co odczytują narzędzia, na przykład treść e-maili, trafia do dostawcy modelu agenta.",
+  "marketplace.plugin.appleApps.app":
+    "Mail, Kalendarz, Kontakty, Przypomnienia, Notatki, Wiadomości i Safari przez lokalny serwer mcp-icloud. Wymaga macOS i dostępu w Automatyzacji.",
+  "marketplace.plugin.appleApps.prompt.unread": "Podsumuj moje dzisiejsze nieprzeczytane e-maile w Apple Mail.",
+  "marketplace.plugin.appleApps.prompt.today": "Co mam w Kalendarzu Apple dziś i jutro?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Znajdź najnowszy e-mail o spotkaniu projektowym i dodaj to spotkanie do mojego kalendarza.",
   "marketplace.plugin.sentry.tagline": "Błędy i analiza awarii",
   "marketplace.plugin.sentry.description":
     "Sentry pozwala agentom przeszukiwać ostatnie błędy, sprawdzać ślady stosu i dotknięte wydania oraz podsumowywać, co się zepsuło po wdrożeniu. Każdy użytkownik loguje się na własne konto Sentry przez przeglądarkę.",

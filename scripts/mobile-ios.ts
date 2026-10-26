@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const mobileRoot = fileURLToPath(new URL("../apps/mobile", import.meta.url));
@@ -41,6 +41,10 @@ if (useRocketSim) {
   run("open", ["-a", app]);
   process.env.OPENBOT_ROCKETSIM_FRAMEWORK = framework;
 }
+
+// Keep the Xcode build in the ignored ios/ directory of this worktree. See mobile-ios-bin/xcodebuild.
+process.env.OPENBOT_XCODE_DERIVED_DATA ??= join(mobileRoot, "ios/build/DerivedData");
+process.env.PATH = [fileURLToPath(new URL("mobile-ios-bin", import.meta.url)), process.env.PATH].join(delimiter);
 
 // run:ios skips prebuild when ios/ exists. Apply config plugins to existing projects too.
 run("node", [expo, "prebuild", "--platform", "ios", "--no-clean", "--no-install"]);

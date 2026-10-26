@@ -51,6 +51,12 @@
       "detailSha256": "cfc59276d82b8b54ae133336032b611613b5f8c0e93672f8f07009d126c39464"
     },
     {
+      "slug": "apple-apps",
+      "version": "1.0.0",
+      "featured": false,
+      "detailSha256": "9b424dc121ed978177e46c443e63e525c477e707a04318f5f5c17b90318d5ee5"
+    },
+    {
       "slug": "sentry",
       "version": "1.0.0",
       "featured": false,

@@ -177,6 +177,15 @@ export const messages = {
     "Usa gli stili di questo repository e progetta una pagina delle impostazioni in Paper.",
   "marketplace.plugin.paper.prompt.tokens":
     "Elenca i design token del file Paper aperto e confrontali con il nostro tema.",
+  "marketplace.plugin.appleApps.tagline": "Mail, Calendario e altro sul tuo Mac",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps consente agli agenti di usare Mail, Calendario, Contatti, Promemoria, Note, Messaggi e Safari su questo Mac. Funziona solo su macOS. OpenBot avvia mcp-icloud, un server della community che non è fatto da Apple né da OpenBot. Il server controlla le app tramite AppleScript, su questo computer, e non richiede account né chiavi. La prima volta che un agente usa un'app, macOS chiede se OpenBot può controllarla. Per cambiarlo in seguito, apri Impostazioni di Sistema › Privacy e sicurezza › Automazione. Gli agenti possono inviare email e iMessage e modificare o eliminare eventi, contatti e promemoria, quindi controlla ogni scrittura prima di approvarla. Ciò che gli strumenti leggono, come il testo delle email, va al provider del modello dell'agente.",
+  "marketplace.plugin.appleApps.app":
+    "Mail, Calendario, Contatti, Promemoria, Note, Messaggi e Safari, tramite il server locale mcp-icloud. Richiede macOS e l'accesso in Automazione.",
+  "marketplace.plugin.appleApps.prompt.unread": "Riassumi le mie email non lette di oggi in Apple Mail.",
+  "marketplace.plugin.appleApps.prompt.today": "Cosa c'è nel mio Calendario Apple oggi e domani?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Trova l'email più recente sulla riunione del progetto e aggiungi la riunione al mio calendario.",
   "marketplace.plugin.sentry.tagline": "Errori e triage dei crash",
   "marketplace.plugin.sentry.description":
     "Sentry permette agli agenti di cercare gli errori recenti, ispezionare stack trace e versioni coinvolte e riassumere cosa si è rotto dopo un deploy. Ogni utente accede al proprio account Sentry dal browser.",

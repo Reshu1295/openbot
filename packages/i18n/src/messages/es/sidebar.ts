@@ -54,6 +54,7 @@ export const messages = {
   "sidebar.pinned.agent": "{name}, agente fijado",
   "sidebar.pinned.agentWithState": "{name}, agente fijado. {state}",
   "sidebar.pinned.channel": "{name}, canal fijado",
+  "sidebar.pinned.channelWithState": "{name}, canal fijado. {state}",
   "sidebar.agentMenu.label": "Acciones del agente",
   "sidebar.agentMenu.edit": "Editar agente",
   "sidebar.agentMenu.duplicate": "Duplicar agente",
@@ -92,8 +93,8 @@ export const messages = {
   "sidebar.state.waitingDetail": "{state}: {detail}",
   "sidebar.waiting.title": "Te necesita",
   "sidebar.waiting.label": {
-    one: "Te necesita, {count} agente",
-    other: "Te necesitan, {count} agentes",
+    one: "Te necesita, {count} chat",
+    other: "Te necesitan, {count} chats",
   },
   "sidebar.waiting.action.question": "Responder",
   "sidebar.waiting.action.approval": "Revisar",

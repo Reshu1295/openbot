@@ -105,6 +105,18 @@ const PLUGIN_TEXT = {
       "prompt-tokens": "marketplace.plugin.paper.prompt.tokens",
     },
   },
+  "apple-apps": {
+    tagline: "marketplace.plugin.appleApps.tagline",
+    description: "marketplace.plugin.appleApps.description",
+    apps: {
+      "app-apple-apps-mcp": "marketplace.plugin.appleApps.app",
+    },
+    prompts: {
+      "prompt-unread": "marketplace.plugin.appleApps.prompt.unread",
+      "prompt-today": "marketplace.plugin.appleApps.prompt.today",
+      "prompt-schedule": "marketplace.plugin.appleApps.prompt.schedule",
+    },
+  },
   sentry: {
     tagline: "marketplace.plugin.sentry.tagline",
     description: "marketplace.plugin.sentry.description",

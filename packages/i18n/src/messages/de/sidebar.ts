@@ -54,6 +54,7 @@ export const messages = {
   "sidebar.pinned.agent": "{name}, angehefteter Agent",
   "sidebar.pinned.agentWithState": "{name}, angehefteter Agent. {state}",
   "sidebar.pinned.channel": "{name}, angehefteter Kanal",
+  "sidebar.pinned.channelWithState": "{name}, angehefteter Kanal. {state}",
   "sidebar.agentMenu.label": "Agentenaktionen",
   "sidebar.agentMenu.edit": "Agenten bearbeiten",
   "sidebar.agentMenu.duplicate": "Agenten duplizieren",
@@ -92,8 +93,8 @@ export const messages = {
   "sidebar.state.waitingDetail": "{state}: {detail}",
   "sidebar.waiting.title": "Braucht dich",
   "sidebar.waiting.label": {
-    one: "Braucht dich, {count} Agent",
-    other: "Brauchen dich, {count} Agenten",
+    one: "Braucht dich, {count} Chat",
+    other: "Brauchen dich, {count} Chats",
   },
   "sidebar.waiting.action.question": "Antworten",
   "sidebar.waiting.action.approval": "Prüfen",

@@ -177,6 +177,15 @@ export const messages = defineMessages("marketplace", {
     "Use the styles in this repository and design a settings page in Paper.",
   "marketplace.plugin.paper.prompt.tokens":
     "List the design tokens in the open Paper file and compare them with our theme.",
+  "marketplace.plugin.appleApps.tagline": "Mail, Calendar and more on your Mac",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps lets agents use Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari on this Mac. It works on macOS only. OpenBot starts mcp-icloud, a community server that is not made by Apple or OpenBot. The server controls the apps through AppleScript, on this computer, and needs no account and no key. The first time an agent uses an app, macOS asks if OpenBot can control it. To change this later, open System Settings › Privacy & Security › Automation. Agents can send email and iMessages, and change or delete events, contacts and reminders, so review each write before you approve it. What the tools read, such as email text, goes to the model provider of the agent.",
+  "marketplace.plugin.appleApps.app":
+    "Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari, over the local mcp-icloud server. Needs macOS and Automation access.",
+  "marketplace.plugin.appleApps.prompt.unread": "Summarize my unread email in Apple Mail from today.",
+  "marketplace.plugin.appleApps.prompt.today": "What is on my Apple Calendar today and tomorrow?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Find the latest email about the project meeting and add the meeting to my calendar.",
   "marketplace.plugin.sentry.tagline": "Errors and crash triage",
   "marketplace.plugin.sentry.description":
     "Sentry lets agents search recent errors, inspect stack traces and affected releases, and summarize what broke after a deploy. Each user signs in to their own Sentry account through the browser.",

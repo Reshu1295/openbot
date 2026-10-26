@@ -179,6 +179,15 @@ export const messages = {
     "Utilisez les styles de ce dépôt et concevez une page de réglages dans Paper.",
   "marketplace.plugin.paper.prompt.tokens":
     "Listez les tokens de design du fichier Paper ouvert et comparez-les avec notre thème.",
+  "marketplace.plugin.appleApps.tagline": "Mail, Calendrier et plus sur votre Mac",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps permet aux agents d’utiliser Mail, Calendrier, Contacts, Rappels, Notes, Messages et Safari sur ce Mac. Il fonctionne uniquement sous macOS. OpenBot démarre mcp-icloud, un serveur communautaire qui n’est fait ni par Apple ni par OpenBot. Le serveur contrôle les apps via AppleScript, sur cet ordinateur, et ne demande ni compte ni clé. La première fois qu’un agent utilise une app, macOS demande si OpenBot peut la contrôler. Pour changer ce choix plus tard, ouvrez Réglages Système › Confidentialité et sécurité › Automatisation. Les agents peuvent envoyer des e-mails et des iMessages, et modifier ou supprimer des événements, des contacts et des rappels : vérifiez chaque écriture avant de l’approuver. Ce que les outils lisent, comme le texte des e-mails, est envoyé au fournisseur du modèle de l’agent.",
+  "marketplace.plugin.appleApps.app":
+    "Mail, Calendrier, Contacts, Rappels, Notes, Messages et Safari, via le serveur local mcp-icloud. Demande macOS et l’accès Automatisation.",
+  "marketplace.plugin.appleApps.prompt.unread": "Résumez mes e-mails non lus d’aujourd’hui dans Apple Mail.",
+  "marketplace.plugin.appleApps.prompt.today": "Qu’y a-t-il dans mon Calendrier Apple aujourd’hui et demain ?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Trouvez le dernier e-mail sur la réunion du projet et ajoutez la réunion à mon calendrier.",
   "marketplace.plugin.sentry.tagline": "Erreurs et tri des plantages",
   "marketplace.plugin.sentry.description":
     "Sentry permet aux agents de rechercher les erreurs récentes, d’inspecter les traces de pile et les versions touchées, et de résumer ce qui a cassé après un déploiement. Chaque utilisateur se connecte à son propre compte Sentry dans le navigateur.",

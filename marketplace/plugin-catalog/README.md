@@ -75,3 +75,25 @@ Troubleshooting:
 
 - The connection is refused: Obsidian is closed, or the HTTP server is off.
 - The server replies 401: the API key is wrong. Copy it again from the plugin settings.
+
+## Apple apps
+
+The listing starts the community server `mcp-icloud`
+(<https://github.com/MrGo2/icloud-mcp>, MIT) through `npx`. The version is
+pinned because the server can read and send mail and iMessages. To update it,
+review the upstream changes, change the version in `args`, and increase the
+listing `version`. The server has no read-only mode and no setting that limits
+it to some apps.
+
+The listing uses local mode only: the server controls the apps on this Mac
+through AppleScript and needs no key. Its cloud mode needs
+`USE_LOCAL_MODE=false`, and a listing cannot set a fixed environment value.
+
+Troubleshooting:
+
+- An error `-1743` ("not authorized to send Apple events"): the user refused
+  the Automation prompt. Turn OpenBot on for the app in System Settings ›
+  Privacy & Security › Automation, or run `tccutil reset AppleEvents` to get
+  the prompts again.
+- Mail or Calendar tools time out: AppleScript is slow on large mailboxes and
+  on many subscribed calendars. Ask for one folder and a smaller count.
