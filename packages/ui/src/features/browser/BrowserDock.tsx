@@ -62,8 +62,9 @@ export interface BrowserDockProps {
   onReorder: (deliveryIds: string[]) => void;
   /** Gives the page to the user, or back. Absent when the host cannot. */
   onHandoff?: (() => void) | undefined;
-  /** Offer "Save to Vault" on a password card: only on the local server. */
+  /** Offer saving a password when the selected host supports and permits it. */
   vaultSave?: boolean | undefined;
+  vaultScope?: "local" | "server" | undefined;
   onRespondSecret: (input: LocalBrowserSecretResponse) => Promise<void>;
   /** Resolves true when the host has the answers. An empty record cancels the questions. */
   onAnswerPrompt: (requestId: string | number, answers: Record<string, string[]>) => Promise<boolean>;
@@ -284,6 +285,7 @@ export function BrowserDock(props: BrowserDockProps) {
               sendShortcut={props.sendShortcut}
               onHandoff={props.onHandoff}
               vaultSave={props.vaultSave}
+              vaultScope={props.vaultScope}
               onRespondSecret={props.onRespondSecret}
               onAnswerPrompt={props.onAnswerPrompt}
               onRespondApproval={props.onRespondApproval}

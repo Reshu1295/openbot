@@ -1,30 +1,32 @@
 import type { BrowserPreview, BrowserTakeoverRequest, LocalBrowserSecretResponse } from "@openbot/contracts/ipc";
-import { Button, Checkbox, ErrorReference, Input, Lock, Maximize2, Monitor, ShieldCheck, X } from "@openbot/ui";
+import { Button, Checkbox, ErrorReference, Input, Lock, Maximize2, Monitor, ShieldCheck, Text, X } from "@openbot/ui";
 import { OtpInput } from "@openbot/ui/features/account/OtpInput";
 import { BrowserTakeoverPreview } from "@openbot/ui/features/conversation/BrowserTakeoverPreview";
 import { useText } from "@openbot/ui/text";
 import { errorReference } from "@openbot/user-errors";
-import { createEffect, createSignal, createUniqueId, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, createUniqueId, onCleanup, Show, untrack } from "solid-js";
 
 /**
  * The code or the password that the agent asks for: the site at the top, the value in the middle and Submit
  * at the end. Cancel is the X. The `card` variant is the timeline card and shows the sign-in page under the
- * value; the `island` variant is the glass card over the browser page. The value goes only to the agent, and
+ * value; the `island` variant is the glass card over the browser page. The value goes to the host browser, and
  * the card clears it after each answer. With `vaultSave`, a password can also go to the Vault of this
- * computer; the box starts checked.
+ * computer or the connected server. Saving on a server requires an explicit selection.
  */
 export function BrowserSecretCard(props: {
   request: BrowserTakeoverRequest;
   variant?: "card" | "island";
   onOpen?: (() => void) | undefined;
   loadPreview?: ((tabId: string) => Promise<BrowserPreview>) | undefined;
-  /** Offer "Save to Vault" for a password. Only the local server has a Vault. */
+  /** Offer saving a password when the selected host supports and permits it. */
   vaultSave?: boolean | undefined;
+  /** Server saving starts unchecked and names the shared host scope. Local saving starts checked. */
+  vaultScope?: "local" | "server" | undefined;
   onRespond: (input: LocalBrowserSecretResponse) => Promise<void>;
 }) {
   const { t } = useText();
   const saveId = `browser-secret-save-${createUniqueId()}`;
-  const [saveToVault, setSaveToVault] = createSignal(true);
+  const [saveToVault, setSaveToVault] = createSignal(untrack(() => props.vaultScope !== "server"));
   const [preview, setPreview] = createSignal<BrowserPreview | null>(null);
   const [previewStatus, setPreviewStatus] = createSignal<"loading" | "ready" | "failed">("loading");
   const [previewHidden, setPreviewHidden] = createSignal(false);
@@ -53,20 +55,28 @@ export function BrowserSecretCard(props: {
   const valid = () => (password() ? value().length > 0 : value().length === digits());
   onCleanup(() => setValue(""));
   createEffect(
-    () => ({ requestId: props.request.requestId, showPreview: variant() === "card" }),
-    ({ showPreview }) => {
+    () => ({
+      requestId: props.request.requestId,
+      agentId: props.request.agentId,
+      showPreview: variant() === "card",
+      vaultScope: props.vaultScope,
+      loadPreview: props.loadPreview,
+      tabId: props.request.tabId,
+    }),
+    ({ showPreview, vaultScope, loadPreview, tabId }) => {
+      setSaveToVault(vaultScope !== "server");
       setValue("");
       setError("");
       setPreview(null);
       setPreviewHidden(false);
       setPreviewStatus("loading");
       if (!showPreview) return;
-      if (!props.loadPreview) {
+      if (!loadPreview) {
         setPreviewStatus("failed");
         return;
       }
       let active = true;
-      void props.loadPreview(props.request.tabId).then(
+      void loadPreview(tabId).then(
         (image) => {
           if (!active || previewHidden()) return;
           setPreview(image);
@@ -189,8 +199,13 @@ export function BrowserSecretCard(props: {
                 disabled={pending()}
                 onChange={(event) => setSaveToVault(event.currentTarget.checked)}
               />
-              {t("browser.secret.saveToVault")}
+              {props.vaultScope === "server" ? t("browser.secret.saveToServerVault") : t("browser.secret.saveToVault")}
             </label>
+            <Show when={props.vaultScope === "server"}>
+              <Text as="p" tone="muted" variant="caption">
+                {t("browser.secret.serverVaultShared")}
+              </Text>
+            </Show>
           </Show>
         </div>
       </Show>

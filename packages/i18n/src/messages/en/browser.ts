@@ -85,6 +85,8 @@ export const messages = defineMessages("browser", {
   "browser.secret.codeLength": "{digits}-digit code",
   "browser.secret.password": "Password",
   "browser.secret.saveToVault": "Save to Vault",
+  "browser.secret.saveToServerVault": "Save to server Vault",
+  "browser.secret.serverVaultShared": "Saved on this server and shared by all its agents.",
   "browser.secret.signInPage": "Sign-in page",
   "browser.secret.openSignInPage": "Open sign-in page in browser",
   "browser.secret.openInBrowser": "Open in browser",

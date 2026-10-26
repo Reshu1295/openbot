@@ -32,7 +32,7 @@ import { createMemo, createSignal, For, Loading, lazy, onCleanup, Show, untrack 
 import { useShowAgentSteps } from "../../agent-steps-preference";
 import { planItems, planTitle } from "../../app-message-projection";
 import { currentDevicePlatform, deviceSendShortcut } from "../../send-shortcut-preference";
-import { remoteRoutineRecovery } from "../servers/server-capabilities";
+import { remoteRoutineRecovery, serverCanSaveBrowserSecret } from "../servers/server-capabilities";
 import { speechModelReady } from "../speech/speech-model";
 import { recordingGone, speechReading, spokenReply } from "../speech/speech-playback";
 import {
@@ -1476,7 +1476,8 @@ export function ConversationTimeline() {
                   signInBlocked={localSignIn.blockedTakeover()}
                   browserSecret={{
                     loadPreview: runtime.browser.capturePreview,
-                    vaultSave: props.server?.kind === "local",
+                    vaultSave: serverCanSaveBrowserSecret(props.server),
+                    vaultScope: props.server?.kind === "remote" ? "server" : "local",
                     onRespond: runtime.agent.respondToBrowserSecret,
                   }}
                 />

@@ -603,6 +603,12 @@ is not included in analytics; provider output uses the application's secret reda
   its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
   chat shows each change, and an item that an agent adds keeps the agent's name. A password that the
   user types into the secure sign-in card goes to the Vault only while Save to Vault is checked. The
+  desktop and web clients can also save a submitted password to a connected server's Vault when
+  both ends support `browser-secret-vault-v1` and the account is an owner or admin. This option
+  starts unchecked and states that all agents on the server can use the login. The password goes
+  over the existing encrypted connection to the server's secure sign-in handler and encrypted Vault;
+  it does not enter the agent's messages or tool arguments, and the client does not keep a copy.
+  Without the option, remote sign-in submits the password without saving it. The
   first card fill on a site waits for the server owner's approval; team members and messaging
   services cannot give it. The card then keeps that site and the origins of its card frames, and
   later fills there need no approval; the user can remove a site in the card. The

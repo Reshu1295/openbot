@@ -15,6 +15,7 @@ import {
   assertHostAnalyticsScope,
   BROWSER_SECRET_RESPONSE_PATH,
   CHANNEL_DELETE_CAPABILITY,
+  canAdministerServer,
   DEFAULT_PROVIDER_ACCOUNT_ID,
   decodeAgentProfileDraft,
   decodeChannel,
@@ -39,6 +40,11 @@ import {
 import { isDynamicRecord } from "@openbot/contracts/runtime-values";
 import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
 import { AGENT_TASKS_CAPABILITY, AGENT_TASKS_ROUTES } from "@openbot/contracts/team-protocol/agent-tasks-v1";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+  parseBrowserSecretVaultSaveInput,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import { CHANNEL_ROUTES } from "@openbot/contracts/team-protocol/channels-v1";
 import { CONTEXT_RESET_CAPABILITY, CONTEXT_RESET_ROUTES } from "@openbot/contracts/team-protocol/context-reset-v1";
 import {
@@ -768,13 +774,29 @@ export function agentIpcHandlers({
       }),
       respondToBrowserSecret: scopedHandler(parseLocalBrowserSecretResponse, {
         local: (parsed) => runCauseEffect(service.respondToBrowserSecret(parsed)),
-        remote: (parsed, serverId) =>
-          runCauseEffect(
+        remote: (parsed, serverId) => {
+          if (parsed.saveToVault) {
+            if (
+              !remoteServers.supportsCapability(serverId, BROWSER_SECRET_VAULT_CAPABILITY) ||
+              !remoteServers.supportsCapability(serverId, "browser-secret-handoff")
+            )
+              throw new Error(sourceText("error.team.secureAuthUnsupported"));
+            const role = remoteServers.list().find((server) => server.id === serverId)?.role;
+            if (!role || !canAdministerServer(role)) throw new Error(sourceText("error.team.adminRequired"));
+            return runCauseEffect(
+              remoteServers.request(serverId, BROWSER_SECRET_VAULT_ROUTES.respondAndSave, decodeVoid, {
+                method: "POST",
+                body: parseBrowserSecretVaultSaveInput(parsed),
+              }),
+            );
+          }
+          return runCauseEffect(
             remoteServers.request(serverId, BROWSER_SECRET_RESPONSE_PATH, decodeVoid, {
               method: "POST",
               body: remoteBrowserSecretResponse(parsed),
             }),
-          ),
+          );
+        },
       }),
       respondToBrowserTakeover: scopedHandler(parseBrowserTakeoverResponse, {
         local: (parsed) => runCauseEffect(service.respondToBrowserTakeover(parsed)),

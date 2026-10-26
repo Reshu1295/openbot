@@ -269,8 +269,9 @@ interface BrowserTakeoverCardProps {
   signInBlocked?: { server: string; signingIn: boolean } | undefined;
   browserSecret?: {
     loadPreview?: (tabId: string) => Promise<BrowserPreview>;
-    /** Offer "Save to Vault" for a password: only on the local server. */
+    /** Offer saving a password when the selected host supports and permits it. */
     vaultSave?: boolean | undefined;
+    vaultScope?: "local" | "server" | undefined;
     onRespond: (input: LocalBrowserSecretResponse) => Promise<void>;
   };
 }
@@ -289,6 +290,7 @@ export function BrowserTakeoverCard(props: BrowserTakeoverCardProps) {
             onOpen={props.onOpen}
             loadPreview={actions.loadPreview}
             vaultSave={actions.vaultSave}
+            vaultScope={actions.vaultScope}
             onRespond={actions.onRespond}
           />
         );

@@ -25,10 +25,10 @@ import type {
   EditQueuedMessageInput,
   HiddenAgentsSnapshot,
   InvitePreview,
+  LocalBrowserSecretResponse,
   QueueSnapshot,
   ReorderQueueInput,
   RespondToApprovalInput,
-  RespondToBrowserSecretInput,
   RespondToBrowserTakeoverInput,
   RespondToPromptInput,
   Routine,
@@ -118,6 +118,7 @@ import {
   interruptAgentTurn,
   reorderQueue,
   respondToBrowserSecret,
+  respondToBrowserSecretAndSave,
   respondToBrowserTakeover,
   steerQueuedMessage,
   type TeamApiRequest,
@@ -181,7 +182,7 @@ export interface WebWorkspaceRuntime {
   /** Behind `browser-user-control`: the owning agent waits on the tab until the release. */
   takeBrowserControl(tabId: string): Promise<void>;
   releaseBrowserControl(tabId: string): Promise<void>;
-  respondToBrowserSecret?: (input: RespondToBrowserSecretInput) => Promise<void>;
+  respondToBrowserSecret?: (input: LocalBrowserSecretResponse) => Promise<void>;
   getSidebarLayout?: () => Promise<SidebarLayoutSnapshot>;
   mutateSidebarLayout?: (action: SidebarLayoutAction) => Promise<SidebarLayoutSnapshot>;
   /** The host's channel routes. A channel page arrives without host file URLs. */
@@ -818,8 +819,18 @@ export function createWebWorkspaceRuntime(
       if (!isDynamicRecord(value)) throw new Error(currentText().t("error.remote.invalidData"));
       return requiredString(value, "id");
     },
-    respondToBrowserSecret: (input) =>
-      Effect.runPromise(respondToBrowserSecret(teamApi, input).pipe(Effect.mapError((error) => error.cause))),
+    respondToBrowserSecret: (input) => {
+      if (input.decision === "submit" && input.saveToVault === true) {
+        if (!connectedHost || !canAdministerServer(connectedHost.role))
+          return Promise.reject(new Error(currentText().t("error.team.adminRequired")));
+        return Effect.runPromise(
+          respondToBrowserSecretAndSave(teamApi, { ...input, saveToVault: true }, capabilities).pipe(
+            Effect.mapError((error) => error.cause),
+          ),
+        );
+      }
+      return Effect.runPromise(respondToBrowserSecret(teamApi, input).pipe(Effect.mapError((error) => error.cause)));
+    },
     respondToTakeover: (input) =>
       Effect.runPromise(respondToBrowserTakeover(teamApi, input).pipe(Effect.mapError((error) => error.cause))),
     listHosts: () => runTeamEffect(directory.listHosts()),

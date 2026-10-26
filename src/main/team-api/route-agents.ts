@@ -25,6 +25,11 @@ import { isAvatarMimeType } from "@openbot/contracts/avatar-images";
 import { AVATAR_IMAGE_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import { type CreateAgentInput, type DuplicateAgentResult, WORKFLOWS_USAGE_ID } from "@openbot/contracts/ipc";
 import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+  parseBrowserSecretVaultSaveInput,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import { V5_AGENT_MODEL } from "@openbot/contracts/team-protocol/v5-adapter";
 import { V6_AGENT_MODEL } from "@openbot/contracts/team-protocol/v6-adapter";
 import { WORKFLOWS_CAPABILITY } from "@openbot/contracts/team-protocol/workflows-v1";
@@ -50,6 +55,7 @@ import {
   promptRequestId,
   readBinary,
   readJson,
+  requireAdmin,
   requireAgentLevel,
   stringField,
 } from "./request-helpers";
@@ -322,6 +328,18 @@ export async function routeAgents(
     const input = parseBrowserSecretResponse(await readJson(request));
     // The agent service refuses an agent ID that is not the request's own.
     requireRequestAgent(input.agentId);
+    await runCauseEffect(agents.respondToBrowserSecret(input));
+    return empty(204);
+  }
+  if (method === "POST" && url.pathname === BROWSER_SECRET_VAULT_ROUTES.respondAndSave) {
+    if (!capabilities.has(BROWSER_SECRET_VAULT_CAPABILITY) || !capabilities.has("browser-secret-handoff"))
+      throw new HttpError(400, sourceText("error.team.secureAuthUnsupported"));
+    requireAdmin(member);
+    const input = parseBrowserSecretVaultSaveInput(await readJson(request));
+    requireVisible(input.agentId);
+    requireRequestAgent(input.agentId);
+    if (agents.agentIdForRequest(input.requestId) !== input.agentId)
+      throw new HttpError(400, sourceText("error.backend.authRequestInactive"));
     await runCauseEffect(agents.respondToBrowserSecret(input));
     return empty(204);
   }

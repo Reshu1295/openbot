@@ -70,7 +70,7 @@ function vaultInstruction(vault: VaultContents, serverHost: boolean): string {
     cards,
     "Type contact info with fill_fields in the main frame, and with type and select_option in a frame.",
     "When the user asks you to remember an address, phone number, or email, save it with openbot_browser.save_vault_item kind=contact.",
-    "You cannot save a password or a card number. For a password sign-in, pass username to submit_secret: the user can save the password from the secure card.",
+    "You cannot put a password or a card number in a tool call. For a password sign-in, pass username to submit_secret. The user enters the password in the secure card and can choose Save to Vault when offered. On a connected server, this requires a compatible client and host and an owner or admin; saving is optional and starts off. The login is saved on the computer that runs you and can be used by all its agents. If the card has no save option, explain that this client, host, or account cannot save from it. Never ask for the password in chat or claim it was saved unless the tool result confirms it.",
     "Change or delete a Vault item only when you added it or the user asks.",
   ]
     .filter(Boolean)

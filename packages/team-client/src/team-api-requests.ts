@@ -1,3 +1,4 @@
+import { sourceText } from "@openbot/i18n/source";
 import { Effect, Schema } from "effect";
 // Team API requests that the web client and the mobile app send in the same way.
 //
@@ -14,6 +15,7 @@ import {
   type AgentTasksSnapshot,
   type ApplyAgentImportInput,
   type AttachmentSummary,
+  BROWSER_SECRET_CAPABILITY,
   BROWSER_SECRET_RESPONSE_PATH,
   type CancelQueuedMessageInput,
   type ConversationSnapshot,
@@ -65,6 +67,11 @@ import {
   AGENT_MEMORY_SELECTION_PAGE_ROUTE,
 } from "@openbot/contracts/team-protocol/agent-memories-v1";
 import { AGENT_TASKS_ROUTES } from "@openbot/contracts/team-protocol/agent-tasks-v1";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+  type BrowserSecretVaultSaveInput,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import { CHANNEL_ROUTES } from "@openbot/contracts/team-protocol/channels-v1";
 import { CONTEXT_RESET_ROUTES } from "@openbot/contracts/team-protocol/context-reset-v1";
 import { ROUTINE_FLOWS_ROUTES } from "@openbot/contracts/team-protocol/routine-flows-v1";
@@ -290,6 +297,27 @@ export const respondToBrowserSecret = Effect.fn("TeamClient.respondToBrowserSecr
   // Only the released fields: `saveToVault` is for the Vault of the local computer.
   return yield* teamCall(() =>
     request("POST", BROWSER_SECRET_RESPONSE_PATH, ignoreResponse, { ...remoteBrowserSecretResponse(input) }),
+  );
+});
+
+/** The optional host Vault route. Never fall back to a submit that silently drops save consent. */
+export const respondToBrowserSecretAndSave = Effect.fn("TeamClient.respondToBrowserSecretAndSave")(function* (
+  request: TeamApiRequest,
+  input: BrowserSecretVaultSaveInput,
+  capabilities: readonly string[],
+): Effect.fn.Return<void, TeamRequestError> {
+  if (!capabilities.includes(BROWSER_SECRET_CAPABILITY) || !capabilities.includes(BROWSER_SECRET_VAULT_CAPABILITY))
+    return yield* Effect.fail(
+      new TeamRequestError({ cause: new Error(sourceText("error.team.secureAuthUnsupported")) }),
+    );
+  return yield* teamCall(() =>
+    request("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, ignoreResponse, {
+      requestId: input.requestId,
+      agentId: input.agentId,
+      decision: "submit",
+      secret: input.secret,
+      saveToVault: true,
+    }),
   );
 });
 

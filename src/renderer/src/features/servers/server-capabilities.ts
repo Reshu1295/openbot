@@ -2,10 +2,12 @@ import {
   AGENT_PROVIDERS,
   type AgentProviderId,
   agentProviderDescriptor,
+  BROWSER_SECRET_CAPABILITY,
   canAdministerServer,
   pasteCodeSignInSupported,
   type ServerSummary,
 } from "@openbot/contracts/ipc";
+import { BROWSER_SECRET_VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import type { TeamCurrentCapability } from "@openbot/contracts/team-protocol/current";
 import { PROVIDER_HOST_SIGN_IN_PROVIDERS } from "@openbot/contracts/team-protocol/provider-host-sign-in-v1";
 import { PROVIDERS_ADMIN_CODE_SIGN_IN_PROVIDERS } from "@openbot/contracts/team-protocol/providers-v1";
@@ -81,7 +83,8 @@ export function serverSupportsCapability(
       capability === "instance-transfer-v1" ||
       capability === "agent-hidden-v1" ||
       capability === "agent-tasks-v1" ||
-      capability === "side-question-v1") &&
+      capability === "side-question-v1" ||
+      capability === BROWSER_SECRET_VAULT_CAPABILITY) &&
     server?.kind === "remote"
   ) {
     return server.compatibility?.capabilities.includes(capability) === true;
@@ -221,4 +224,12 @@ export function remoteUpdateServer(server: ServerSummary | undefined): ServerSum
   return serverSupportsCapability(server, "host-member-update-v1")
     ? server
     : remoteAdminServer(server, "host-update-v1");
+}
+
+/** Password saving needs explicit support for secure input and the host's shared Vault. */
+export function serverCanSaveBrowserSecret(server: ServerSummary | undefined): boolean {
+  return (
+    serverCanAdminister(server, BROWSER_SECRET_VAULT_CAPABILITY) &&
+    serverSupportsCapability(server, BROWSER_SECRET_CAPABILITY)
+  );
 }

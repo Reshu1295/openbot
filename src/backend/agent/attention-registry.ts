@@ -168,7 +168,7 @@ const MESSAGING_QUESTION_REFUSED =
 /** The agent reads these, not the user. */
 const VAULT_UNAVAILABLE = "No Vault is available on this computer. Ask the user.";
 const VAULT_LOGIN_ADD_REFUSED =
-  "You cannot add a login: a password comes only from the user. Sign in with submit_secret, and the user can save the password from the card. Or ask the user to add the login in Server settings > Vault.";
+  "You cannot add a login through this tool: a password comes only from the user. For a password sign-in, call submit_secret with username. The user can choose Save to Vault in a compatible secure card; a connected server requires an owner or admin. When the card has no save option, explain that this client, host, or account does not support it. Never ask for a password in chat. Report a saved login only when the tool result confirms it.";
 const VAULT_CARD_ADD_REFUSED =
   "You cannot add a card: its number comes only from the user. Ask the user to add it in Server settings > Vault.";
 const VAULT_FIELDS: Record<BrowserToolArguments<"save_vault_item">["kind"], readonly string[]> = {

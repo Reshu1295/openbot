@@ -16,7 +16,7 @@ import { browserActionLabel } from "@openbot/ui/features/browser/browser-action-
 import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, Show, snapshot, untrack } from "solid-js";
 import { deviceSendShortcut } from "../../send-shortcut-preference";
-import { serverSupportsCapability } from "../servers/server-capabilities";
+import { serverCanSaveBrowserSecret, serverSupportsCapability } from "../servers/server-capabilities";
 import { conversationPort } from "./conversation-port";
 import { conversationRuntime } from "./conversation-runtime";
 import { useConversationViewScope } from "./conversation-scope";
@@ -410,7 +410,8 @@ export function BrowserDockAdapter(adapterProps: { tab: BrowserTab | undefined; 
             onCancelEdit={() => void cancelQueuedMessageEdit()}
             onReorder={reorderPresentedQueue}
             onHandoff={onHandoff()}
-            vaultSave={props.server?.kind === "local"}
+            vaultSave={serverCanSaveBrowserSecret(props.server)}
+            vaultScope={props.server?.kind === "remote" ? "server" : "local"}
             onRespondSecret={(input) => conversationRuntime(props).agent.respondToBrowserSecret(input)}
             onAnswerPrompt={answerPrompt}
             onRespondApproval={respondApproval}

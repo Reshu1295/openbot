@@ -281,6 +281,23 @@ version (`apps/auth-api/src/server/mobile-features-config.ts`).
 secret-request metadata. The attention registry creates a fresh request ID and owns the pending
 response. The secret travels through a dedicated typed IPC endpoint or the optional
 `browser-secret-handoff` Team API capability, never a prompt answer or provider tool argument.
+
+`browser-secret-vault-v1` adds `POST /v1/browser-secrets/respond-and-save` for a password entered
+in the secure card of a connected host. The route requires both capabilities, owner/admin access,
+and the existing agent visibility and pending-request checks. Its frozen codec accepts only a
+submitted secret with `saveToVault: true`. The released `browser-secret-handoff` route and client
+still omit the save flag. An older host therefore keeps its existing sign-in behavior.
+
+Desktop and web show this save option only to an owner or admin of a capable host. It starts
+unchecked for every remote request and states that the login belongs to the server's Vault and
+can be used by all its agents. Local cards keep their existing checked default. An unchecked
+submission, cancellation, or takeover uses the released route. Native mobile keeps its existing
+sign-in path and does not show the new option.
+
+The attention registry saves only a user-entered password after its secure submission succeeds;
+it never saves an OTP or an existing automatic Vault fill. The existing Vault service owns
+matching, encryption, atomic writes, and failure handling. A save failure preserves the Vault and
+does not cancel sign-in. The agent receives a saved/not-saved result, never the password.
 Frozen protocol projections continue to show ordinary takeover to older clients. Current codecs
 carry validated metadata beside those projections. There is no database schema change.
 

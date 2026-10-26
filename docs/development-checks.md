@@ -103,7 +103,7 @@ Its main jobs are:
 | Job | Runner | Commands |
 | --- | --- | --- |
 | Check | `ubuntu-latest` | `bun run knip:check`, `bun run check:assets`, `bun run check:doc-links`, `bun run check:desktop:static`, then `bun run i18n:check` and `bun run types:ratchet` in parallel |
-| Browser smoke | `ubuntu-latest` | `xvfb-run -a bun run test:browser`, then `xvfb-run -a bun run test:browser-agent-session` |
+| Browser smoke | `ubuntu-latest` | `xvfb-run -a bun run test:browser`, then `xvfb-run -a bun run test:browser-agent-session`, then `xvfb-run -a node --import tsx scripts/remote-vault-save-ui-e2e.ts` |
 | Tests (desktop 1/2, 2/2) | `ubuntu-latest` | `bun run test:desktop -- --shard=<n>/2` |
 | Signal E2E | `ubuntu-latest` | `bun run test:signal`, when `remote/` or `scripts/` changes |
 | Local scripts CLI E2E | `ubuntu-latest` | `bun run test:automation-cli` |
@@ -113,6 +113,11 @@ Its main jobs are:
 | Surfaces | `ubuntu-latest` | Parallel groups described below, then `bun run remote:check:compose` |
 | API | `ubuntu-latest` | `bun run check:api`, then, for a pull request from this repository, upload `apps/auth-api/dist` |
 | Storybook build | `ubuntu-latest` | `bun run build-storybook` |
+
+The reverse-actions lane also runs `bun scripts/remote-vault-save-e2e.ts`. It checks secure consent,
+encrypted persistence and failure handling on temporary data and uploads
+`.openbot-build/remote-vault-save-e2e/`. The Team API routes E2E uses the same domain fixture to
+check remote authorization and released-route compatibility over HTTP.
 
 CI uses native GitHub Actions `parallel` groups. Each group waits for all its steps and fails
 if a step fails. The steps have separate logs. The groups run in this order:

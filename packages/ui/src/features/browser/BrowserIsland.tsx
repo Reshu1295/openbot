@@ -46,8 +46,9 @@ export interface BrowserIslandFaceProps {
   handoffPending?: boolean | undefined;
   sendShortcut?: SendShortcut | undefined;
   onHandoff?: (() => void) | undefined;
-  /** Offer "Save to Vault" on a password card: only on the local server. */
+  /** Offer saving a password when the selected host supports and permits it. */
   vaultSave?: boolean | undefined;
+  vaultScope?: "local" | "server" | undefined;
   onRespondSecret: (input: LocalBrowserSecretResponse) => Promise<void>;
   /** Resolves true when the host has the answers. An empty record cancels the questions. */
   onAnswerPrompt: (requestId: string | number, answers: Record<string, string[]>) => Promise<boolean>;
@@ -110,6 +111,7 @@ export function BrowserIslandFace(props: BrowserIslandFaceProps) {
               variant="island"
               request={current().request}
               vaultSave={props.vaultSave}
+              vaultScope={props.vaultScope}
               onRespond={props.onRespondSecret}
             />
           </div>

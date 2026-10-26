@@ -1,0 +1,7 @@
+{
+  "requestId": "secure-input-1",
+  "agentId": "agent-1",
+  "decision": "submit",
+  "secret": "synthetic-password-for-wire-fixture",
+  "saveToVault": true
+}

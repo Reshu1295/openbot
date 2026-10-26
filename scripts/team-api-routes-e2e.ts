@@ -20,6 +20,8 @@ import {
   type AgentSummary,
   type AttachmentDataInput,
   type BitwardenConnectorStatus,
+  BROWSER_SECRET_CAPABILITY,
+  BROWSER_SECRET_RESPONSE_PATH,
   type CentralAuthUser,
   DEFAULT_AGENT_DEFAULTS,
   type HiddenAgentsSnapshot,
@@ -45,6 +47,10 @@ import {
   BROWSER_PROFILES_CAPABILITY,
   BROWSER_PROFILES_ROUTES,
 } from "@openbot/contracts/team-protocol/browser-profiles-v1";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import {
   PROVIDER_USAGE_RESET_CAPABILITY,
   PROVIDER_USAGE_RESET_ROUTES,
@@ -80,6 +86,7 @@ import type { TeamApiAgents, TeamApiBrowser, TeamApiMailbox } from "../src/main/
 import { isPeerHiddenProvider } from "../src/main/team-api/provider-visibility";
 import { TeamApiServer } from "../src/main/team-api-server";
 import { TeamStore } from "../src/main/team-store";
+import { createRemoteVaultSaveFixture } from "./remote-vault-save-e2e";
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/team-api-routes-e2e");
 const APP_VERSION = "0.43.0";
@@ -125,6 +132,7 @@ const root = mkdtempSync(join(tmpdir(), "openbot-team-api-routes-"));
 const checks: Check[] = [];
 const calls: RecordedCall[] = [];
 const logged: string[] = [];
+let vaultFixture: Awaited<ReturnType<typeof createRemoteVaultSaveFixture>> | undefined;
 // The uploads that reached `prepareImportedAttachments`, with their bytes.
 const uploads: AttachmentDataInput[] = [];
 let clock = Date.now();
@@ -377,10 +385,26 @@ const fakeAgents: TeamApiAgents = {
   sendMessage: unused("sendMessage"),
   setMessageReaction: unused("setMessageReaction"),
   clearAgentContext: unused("clearAgentContext"),
-  agentIdForRequest: () => undefined,
+  agentIdForRequest: (requestId) => vaultFixture?.registry.agentIdForRequest(requestId),
   respondToPrompt: unused("respondToPrompt"),
   respondToApproval: unused("respondToApproval"),
-  respondToBrowserSecret: unused("respondToBrowserSecret"),
+  respondToBrowserSecret: (input) =>
+    Effect.suspend(() => {
+      assert.ok(vaultFixture);
+      record("respondToBrowserSecret", {
+        agentId: input.agentId,
+        requestId: input.requestId,
+        decision: input.decision,
+        saveToVault: input.saveToVault === true,
+      });
+      return vaultFixture.registry
+        .respondToBrowserSecret(input)
+        .pipe(
+          Effect.mapError(
+            (failure) => new AgentLifecycleFailed({ operation: "respondToBrowserSecret", cause: failure.cause }),
+          ),
+        );
+    }),
   respondToBrowserTakeover: unused("respondToBrowserTakeover"),
 };
 
@@ -532,6 +556,7 @@ try {
   const OWNER_PASSWORD = "owner-password-e2e";
   await runCauseEffect(store.configure("E2E Server", "owner", OWNER_PASSWORD));
   await runCauseEffect(database.initialize());
+  vaultFixture = await createRemoteVaultSaveFixture(join(root, "vault-host"));
   const owner = await runCauseEffect(store.login("owner", OWNER_PASSWORD));
   const serverId = store.getIdentity()?.serverId;
   assert.ok(serverId, "The team store has no identity after configure.");
@@ -1491,6 +1516,220 @@ try {
     );
   }
 
+  // ---- Remote password save (browser-secret-vault-v1) ----
+  {
+    assert.ok(vaultFixture);
+    const fixture = vaultFixture;
+    const capabilities = [AGENT_HIDDEN_CAPABILITY, BROWSER_SECRET_CAPABILITY, BROWSER_SECRET_VAULT_CAPABILITY];
+    const flow = await fixture.begin();
+    const body = {
+      agentId: flow.request.agentId,
+      requestId: flow.request.requestId,
+      decision: "submit",
+      secret: FAKE_SECRET,
+      saveToVault: true,
+    };
+    const writes = callsOf("respondToBrowserSecret").length;
+    const pending = () => fixture.registry.agentIdForRequest(flow.request.requestId) === flow.request.agentId;
+    const refusedMember = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      token: bobToken,
+      json: body,
+      capabilities,
+    });
+    check(
+      "a member cannot save a remote password and the secure request remains unanswered",
+      errorIs(refusedMember, 403, sourceText("error.team.adminRequired")) &&
+        pending() &&
+        callsOf("respondToBrowserSecret").length === writes &&
+        fixture.metrics().submitted === 0 &&
+        fixture.vault.state().items.length === 0,
+      summary(refusedMember),
+    );
+    for (const missing of [BROWSER_SECRET_CAPABILITY, BROWSER_SECRET_VAULT_CAPABILITY]) {
+      const reply = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+        token: adaToken,
+        json: body,
+        capabilities: capabilities.filter((capability) => capability !== missing),
+      });
+      check(
+        `remote password save requires ${missing} without consuming the pending request`,
+        errorIs(reply, 400, sourceText("error.team.secureAuthUnsupported")) &&
+          pending() &&
+          callsOf("respondToBrowserSecret").length === writes,
+        summary(reply),
+      );
+    }
+    const unauthenticated = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      json: body,
+      capabilities,
+    });
+    check(
+      "remote password save requires an authenticated session before reaching the secret service",
+      unauthenticated.status === 401 && pending() && callsOf("respondToBrowserSecret").length === writes,
+      summary(unauthenticated),
+    );
+    const forged = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      token: adaToken,
+      json: { ...body, agentId: "agent-oc" },
+      capabilities,
+    });
+    const expired = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      token: adaToken,
+      json: { ...body, requestId: "not-an-active-request" },
+      capabilities,
+    });
+    check(
+      "a forged or inactive request identity is refused before the service and leaves the real request pending",
+      [forged, expired].every((reply) => errorIs(reply, 400, sourceText("error.backend.authRequestInactive"))) &&
+        pending() &&
+        callsOf("respondToBrowserSecret").length === writes,
+      [summary(forged), summary(expired)],
+    );
+    const malformed = [];
+    for (const input of [
+      { ...body, saveToVault: false },
+      { ...body, saveToVault: undefined },
+      { ...body, decision: "cancel" },
+      { ...body, secret: { value: FAKE_SECRET } },
+      { ...body, secret: "" },
+      { ...body, requestId: "" },
+      { ...body, extra: FAKE_SECRET },
+    ])
+      malformed.push(
+        await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, { token: adaToken, json: input, capabilities }),
+      );
+    check(
+      "malformed remote save payloads are secret-safe and neither invoke the service nor consume the request",
+      malformed.every((reply) => reply.status === 400 && !reply.text.includes(FAKE_SECRET)) &&
+        pending() &&
+        callsOf("respondToBrowserSecret").length === writes &&
+        logged.every((line) => !line.includes(FAKE_SECRET)),
+      malformed.map((reply) => ({ status: reply.status })),
+    );
+    const hiddenFlow = await fixture.begin({ agentId: "agent-pi", username: "hidden" });
+    const hiddenReply = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      token: adaToken,
+      protocol: 6,
+      capabilities,
+      json: { ...body, agentId: hiddenFlow.request.agentId, requestId: hiddenFlow.request.requestId },
+    });
+    check(
+      "a protocol-hidden agent's password cannot be saved and its request stays pending",
+      errorIs(hiddenReply, 404, sourceText("error.team.agentNotFound")) &&
+        fixture.registry.agentIdForRequest(hiddenFlow.request.requestId) === "agent-pi" &&
+        callsOf("respondToBrowserSecret").length === writes,
+      summary(hiddenReply),
+    );
+    await runCauseEffect(
+      fixture.registry.respondToBrowserSecret({
+        agentId: hiddenFlow.request.agentId,
+        requestId: hiddenFlow.request.requestId,
+        decision: "cancel",
+      }),
+    );
+    await hiddenFlow.completed;
+    const saved = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      token: owner.sessionToken,
+      json: body,
+      capabilities,
+    });
+    const ownerResult = await flow.completed;
+    const item = fixture.vault.state().items[0];
+    assert.ok(item?.kind === "login");
+    const reopened = await fixture.reopen();
+    check(
+      "the owner answers the same pending request and saves an encrypted host login that reopens",
+      saved.status === 204 &&
+        ownerResult.success &&
+        fixture.received(FAKE_SECRET) &&
+        reopened.reveal({ id: item.id, field: "password" }) === FAKE_SECRET &&
+        !readFileSync(fixture.path, "utf8").includes(FAKE_SECRET) &&
+        callsOf("respondToBrowserSecret").length === writes + 1,
+      { status: saved.status, items: reopened.state().items.length },
+    );
+    const adminFlow = await fixture.begin();
+    const replacement = `${FAKE_SECRET}-replacement`;
+    const adminSaved = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      token: adaToken,
+      capabilities,
+      json: { ...body, requestId: adminFlow.request.requestId, secret: replacement },
+    });
+    await adminFlow.completed;
+    check(
+      "an admin updates the same host login without adding an item and the replacement survives reopen",
+      adminSaved.status === 204 &&
+        fixture.vault.state().items.length === 1 &&
+        fixture.vault.state().items[0]?.id === item.id &&
+        (await fixture.reopen()).reveal({ id: item.id, field: "password" }) === replacement,
+      { status: adminSaved.status, items: fixture.vault.state().items.length },
+    );
+    const acceptedWrites = fixture.metrics().encryptionWrites;
+    const legacy = await fixture.begin({ username: "legacy-no-save" });
+    const legacyReply = await call("POST", BROWSER_SECRET_RESPONSE_PATH, {
+      token: bobToken,
+      capabilities,
+      json: { ...body, requestId: legacy.request.requestId },
+    });
+    await legacy.completed;
+    check(
+      "the released secret response strips a forged save flag and remains usable by a member without saving",
+      legacyReply.status === 204 &&
+        fixture.metrics().encryptionWrites === acceptedWrites &&
+        fixture.vault.state().items.length === 1 &&
+        isDeepStrictEqual(callsOf("respondToBrowserSecret").at(-1), [
+          {
+            agentId: legacy.request.agentId,
+            requestId: legacy.request.requestId,
+            decision: "submit",
+            saveToVault: false,
+          },
+        ]),
+      { status: legacyReply.status, items: fixture.vault.state().items.length },
+    );
+    for (const method of ["otp", "authenticator"] as const) {
+      const codeFlow = await fixture.begin({ method, username: method });
+      const reply = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+        token: adaToken,
+        capabilities,
+        json: { ...body, requestId: codeFlow.request.requestId, secret: "729104" },
+      });
+      await codeFlow.completed;
+      check(
+        `a remote ${method} submission never saves a login even with the save capability`,
+        reply.status === 204 &&
+          fixture.metrics().encryptionWrites === acceptedWrites &&
+          fixture.vault.state().items.length === 1,
+        { status: reply.status, items: fixture.vault.state().items.length },
+      );
+    }
+    const beforeFailure = readFileSync(fixture.path, "utf8");
+    fixture.failEncryption(true);
+    const failureFlow = await fixture.begin({ username: "storage-failure" });
+    const failureReply = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respondAndSave, {
+      token: adaToken,
+      capabilities,
+      json: { ...body, requestId: failureFlow.request.requestId },
+    });
+    const failureResult = await failureFlow.completed;
+    fixture.failEncryption(false);
+    check(
+      "host encryption failure preserves the saved Vault and completes remote sign-in with a secret-free save failure result",
+      failureReply.status === 204 &&
+        failureResult.success &&
+        JSON.stringify(failureResult).includes("not saved") &&
+        !JSON.stringify(failureResult).includes(FAKE_SECRET) &&
+        readFileSync(fixture.path, "utf8") === beforeFailure,
+      { status: failureReply.status, items: fixture.vault.state().items.length },
+    );
+    check(
+      "remote save responses, provider results, events, recorded calls and logs contain no synthetic password",
+      !fixture.publicData().includes(FAKE_SECRET) &&
+        !JSON.stringify(callsOf("respondToBrowserSecret")).includes(FAKE_SECRET) &&
+        logged.every((line) => !line.includes(FAKE_SECRET)),
+      { serviceCalls: callsOf("respondToBrowserSecret").length - writes },
+    );
+  }
+
   // ---- Browser profiles (browser-profiles-v1) ----
   {
     const profileCapabilities = [AGENT_HIDDEN_CAPABILITY, TEAM_QUEUE_EDIT_CAPABILITY, BROWSER_PROFILES_CAPABILITY];
@@ -2431,6 +2670,7 @@ try {
   );
 } finally {
   if (server) await Effect.runPromise(server.stop());
+  await vaultFixture?.close();
   database.close();
   rmSync(root, { recursive: true, force: true });
 }
