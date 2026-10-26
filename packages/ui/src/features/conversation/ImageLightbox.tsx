@@ -298,14 +298,26 @@ export function ImageLightbox(props: {
     camera = image ? settled(next, image) : FIT;
     const isZoomed = camera.scale > 1;
     setZoomed(isZoomed);
-    stage?.toggleAttribute("data-zoomed", isZoomed);
-    if (!image) return;
+    if (!image) {
+      stage?.removeAttribute("data-zoomed");
+      return;
+    }
     // Layout sizes, not `getBoundingClientRect`: the zoom and the animations transform the image.
     setZoom((camera.scale * image.offsetWidth) / image.naturalWidth);
-    if (animate && motion) image.dataset.settling = "";
-    else delete image.dataset.settling;
-    if (isZoomed) image.dataset.zoomed = "";
-    else delete image.dataset.zoomed;
+    const glide = animate && motion;
+    image.toggleAttribute("data-settling", glide);
+    // A glide back to fit keeps the clip and the sharp drawing until the image is fitted.
+    if (glide && !isZoomed && image.hasAttribute("data-zoomed")) {
+      const fitted = () => {
+        if (camera.scale > 1) return;
+        stage?.removeAttribute("data-zoomed");
+        image.removeAttribute("data-zoomed");
+      };
+      image.addEventListener("transitionend", fitted, { once: true });
+    } else {
+      stage?.toggleAttribute("data-zoomed", isZoomed);
+      image.toggleAttribute("data-zoomed", isZoomed);
+    }
     image.style.scale = isZoomed ? String(camera.scale) : "";
     image.style.translate = isZoomed ? `${camera.x}px ${camera.y}px` : "";
   };
@@ -357,8 +369,10 @@ export function ImageLightbox(props: {
       move({ ...camera, x: camera.x - sideways, y: camera.y - down });
     };
     const onDown = (event: PointerEvent) => {
-      // A touch can start a pinch; a mouse only drags an image that is zoomed in.
+      // A touch can start a pinch; a mouse only drags an image that is zoomed in. The step buttons
+      // on the stage keep their clicks.
       if (event.button !== 0 || !zoomImage() || (event.pointerType === "mouse" && !zoomed())) return;
+      if (event.target instanceof Element && event.target.closest("button")) return;
       pointers.set(event.pointerId, stagePoint(event));
       startGesture();
     };
@@ -391,7 +405,11 @@ export function ImageLightbox(props: {
       if (zoomed()) move(FIT, true);
       else move(zoomAround(camera, stagePoint(event), DOUBLE_CLICK_ZOOM), true);
     };
-    const onResize = new ResizeObserver(() => move(camera));
+    const onResize = new ResizeObserver(() => {
+      // A new fitted size keeps the zoom level, the percent of the natural size.
+      const image = zoomImage();
+      move(image && zoomed() ? { ...camera, scale: (zoom() * image.naturalWidth) / image.offsetWidth } : camera);
+    });
     area.addEventListener("wheel", onWheel, { passive: false });
     area.addEventListener("pointerdown", onDown);
     area.addEventListener("pointermove", onMove);
@@ -573,6 +591,8 @@ export function ImageLightbox(props: {
             if (offset !== undefined) step(offset);
             else if (event.key === "Home") go(0, -1);
             else if (event.key === "End") go(images().length - 1, 1);
+            // With Command, Ctrl or Alt, the keys are the app's own zoom shortcuts.
+            else if (event.metaKey || event.ctrlKey || event.altKey) return;
             else if (event.key === "+" || event.key === "=") zoomBy(ZOOM_STEP);
             else if (event.key === "-") zoomBy(1 / ZOOM_STEP);
             else if (event.key === "0") move(FIT, true);
@@ -599,7 +619,6 @@ export function ImageLightbox(props: {
                   class="image-lightbox-action"
                   aria-label={t("chat.preview.zoomOut")}
                   title={t("chat.preview.zoomOut")}
-                  disabled={!zoomed()}
                   onClick={() => zoomBy(1 / ZOOM_STEP)}
                 >
                   <Minus aria-hidden="true" />
@@ -611,7 +630,6 @@ export function ImageLightbox(props: {
                   class="image-lightbox-action image-lightbox-zoom-level"
                   aria-label={t("chat.preview.zoomFit", { zoom: format.percent(zoom(), { maximumFractionDigits: 0 }) })}
                   title={t("chat.preview.zoomFit", { zoom: format.percent(zoom(), { maximumFractionDigits: 0 }) })}
-                  disabled={!loaded[current()?.id ?? ""]}
                   onClick={() => move(FIT, true)}
                 >
                   {format.percent(zoom(), { maximumFractionDigits: 0 })}
@@ -623,7 +641,6 @@ export function ImageLightbox(props: {
                   class="image-lightbox-action"
                   aria-label={t("chat.preview.zoomIn")}
                   title={t("chat.preview.zoomIn")}
-                  disabled={!loaded[current()?.id ?? ""]}
                   onClick={() => zoomBy(ZOOM_STEP)}
                 >
                   <Plus aria-hidden="true" />

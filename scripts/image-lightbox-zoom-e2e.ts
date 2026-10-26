@@ -141,7 +141,8 @@ try {
   await card.waitFor({ timeout: UI_WAIT_MS });
   await card.click();
   await image().waitFor({ timeout: UI_WAIT_MS });
-  await waitFor(desktop, "the zoom controls are ready", () => fitButton().isEnabled(), Boolean, UI_WAIT_MS);
+  // The level shows 100% until the image loads and has its fitted size.
+  await waitFor(desktop, "the image has its fitted size", percent, (value) => value < 100, UI_WAIT_MS);
 
   // 1. The image opens fitted.
   const fittedBox = await settledBox();
