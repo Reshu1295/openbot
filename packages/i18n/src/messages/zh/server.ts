@@ -235,8 +235,6 @@ export const messages = {
   "server.settings.importDescription": "把 Grok Bot 或 Hermes Agent 中的助手迁移到该服务器。",
   "server.settings.transferTitle": "迁移",
   "server.settings.transferDescription": "把该服务器的助手和服务器设置导出到文件，或从文件导入。",
-  "server.settings.connectorsTitle": "连接器",
-  "server.settings.connectorsDescription": "连接该服务器上所有助手都可使用的账号。",
   "server.settings.routinesTitle": "自动化任务",
   "server.settings.routinesDescription": "在日历应用中显示该电脑的自动化任务日程。",
   "server.routineFeed.title": "日历订阅",

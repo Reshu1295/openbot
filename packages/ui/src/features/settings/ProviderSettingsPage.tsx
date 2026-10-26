@@ -289,7 +289,7 @@ function ProviderList(props: ProviderSettingsPageProps & { onOpen: (id: PageId) 
   );
 }
 
-/** A row that opens a page. The whole row is the button, as on the Connectors list. */
+/** A row that opens a page. The whole row is the button. */
 function NavRow(props: { logo: JSX.Element; name: string; summary: string; end?: JSX.Element; onOpen: () => void }) {
   const { t } = useText();
   return (

@@ -2,7 +2,7 @@ import type { PartialTranslation } from "../../message";
 import type { messages as source } from "../en/connector";
 
 export const messages = {
-  // Server settings > Connectors: the built-in GitHub connection of this computer.
+  // Marketplace > Apps > GitHub: the built-in GitHub connection.
   "connector.github.title": "GitHub",
   "connector.github.description": "这台电脑上的每个助手都可以使用你的 GitHub 仓库、Issue 和拉取请求，以及 gh 和 git。",
   "connector.github.connect": "连接 GitHub",
@@ -35,7 +35,6 @@ export const messages = {
   "connector.github.statusConnected": "已连接",
   "connector.github.statusConnecting": "连接中",
   "connector.github.statusExpired": "已过期",
-  "connector.github.statusNotSetUp": "未设置",
   "connector.github.accountTitle": "账号",
   // {count} is the number of repositories in the list, such as 12.
   "connector.github.filterPlaceholder": { one: "筛选 {count} 个仓库", other: "筛选 {count} 个仓库" },
@@ -79,23 +78,10 @@ export const messages = {
 
   "connector.statusUnknown": "未知",
   "connector.readFailed": "OpenBot 无法读取该连接的状态。",
-  // Server settings > Connectors: the list of integrations. Each row opens its page.
-  "connector.hub.onThisComputer": "在这台电脑上",
-  "connector.hub.onHost": "在 {host} 上",
-  "connector.hub.notSetUp": "未设置",
-  "connector.hub.available": "可用",
-  "connector.hub.localOnly": "仅限你的电脑",
-  // {name} is the name of an integration, such as Slack.
-  "connector.hub.open": "打开 {name}",
-  "connector.hub.setUp": "设置",
-  // {names} lists the agents, such as "Chief, Research".
-  "connector.hub.usedBy": "被 {names} 使用",
-
-  // Server settings > Connectors > Slack: a workspace installs the one OpenBot app, and the Slack
+  // Marketplace > Apps > Slack: a workspace installs the one OpenBot app, and the Slack
   // Orchestrator agent receives each request, asks the team and answers.
   "connector.slack.title": "Slack",
   "connector.slack.description": "人们在 Slack 中提及 @OpenBot 或给它发私信，Slack 调度助手会找到合适的助手来回答。",
-  "connector.slack.statusNotSetUp": "未设置",
   "connector.slack.statusConnected": "已连接",
   "connector.slack.statusAttention": "需要关注",
   // {workspace} is the Slack workspace name.
@@ -112,6 +98,9 @@ export const messages = {
   "connector.slack.workspaceTitle": "工作区",
   "connector.slack.workspaceDescription": "人们提及 @OpenBot 或给它发私信。",
   "connector.slack.disconnectWorkspace": "断开连接",
+  "connector.slack.disconnectAllTitle": "断开 Slack",
+  "connector.slack.disconnectAllSummary": "所有工作区都将断开，其他人无法再通过 @OpenBot 联系你的助手。",
+  "connector.slack.disconnectAllSummaryOrchestrator": "所有工作区都将断开，Slack 调度助手及其对话将从 OpenBot 中删除。",
   "connector.slack.missingScopes": "OpenBot 在 Slack 中缺少这些权限：{scopes}。请断开该工作区后重新连接。",
   "connector.slack.retryAt": "Slack 要求 OpenBot 等待，将于 {time} 重试。",
   "connector.slack.reconnect": "重新连接",
@@ -162,13 +151,12 @@ export const messages = {
   "connector.slack.limitReached": { other: "最多可连接 {count} 个工作区。" },
   // {count} is the number of Slack workspaces: two or more.
   "connector.slack.summaryMany": { other: "{count} 个工作区 · 由 Slack 调度助手回答" },
-  // Server settings > Connectors > Discord: a Discord server (a guild) adds the one OpenBot bot, and
+  // Marketplace > Apps > Discord: a Discord server (a guild) adds the one OpenBot bot, and
   // the Discord Orchestrator agent receives each request, asks the team and answers. Always write
   // "Discord server": "server" alone is an OpenBot server.
   "connector.discord.title": "Discord",
   "connector.discord.description":
     "人们在 Discord 服务器的频道中提及 @OpenBot，Discord 调度助手会找到合适的助手来回答。",
-  "connector.discord.statusNotSetUp": "未设置",
   "connector.discord.statusConnected": "已连接",
   "connector.discord.statusAttention": "需要关注",
   // {workspace} is the Discord server name.
@@ -185,6 +173,10 @@ export const messages = {
   "connector.discord.workspaceTitle": "Discord 服务器",
   "connector.discord.workspaceDescription": "在频道中提及 @OpenBot，回复 OpenBot 可继续对话。",
   "connector.discord.disconnectWorkspace": "断开连接",
+  "connector.discord.disconnectAllTitle": "断开 Discord",
+  "connector.discord.disconnectAllSummary": "所有服务器都将断开，其他人无法再通过 @OpenBot 联系你的助手。",
+  "connector.discord.disconnectAllSummaryOrchestrator":
+    "所有服务器都将断开，Discord 调度助手及其对话将从 OpenBot 中删除。",
   "connector.discord.missingScopes": "OpenBot 在 Discord 中缺少这些权限：{scopes}。请断开该 Discord 服务器后重新连接。",
   "connector.discord.retryAt": "Discord 要求 OpenBot 等待，将于 {time} 重试。",
   "connector.discord.reconnect": "重新连接",
@@ -252,12 +244,11 @@ export const messages = {
   "connector.discord.accessSave": "保存",
   // {host} is the joined server's name.
   "connector.discord.accessHostUpdate": "请更新 {host} 上的 OpenBot，以选择角色。",
-  // Server settings > Connectors > Telegram: each chat adds the one OpenBot bot, and the Telegram
+  // Marketplace > Apps > Telegram: each chat adds the one OpenBot bot, and the Telegram
   // Orchestrator agent receives the messages of all chats, asks the team and answers.
   "connector.telegram.title": "Telegram",
   "connector.telegram.description":
     "把 OpenBot 机器人加入 Telegram 群组，或与它开启私聊。Telegram 调度助手会找到合适的助手来回答。",
-  "connector.telegram.statusNotSetUp": "未设置",
   "connector.telegram.statusConnected": "已连接",
   "connector.telegram.statusAttention": "需要关注",
   // {count} is the number of linked Telegram chats.
@@ -291,11 +282,13 @@ export const messages = {
   "connector.telegram.resume": "恢复",
   "connector.telegram.reconnect": "重新连接",
   "connector.telegram.disconnectChat": "断开连接",
+  "connector.telegram.disconnectAllTitle": "断开 Telegram",
+  "connector.telegram.disconnectAllSummary": "所有聊天都将断开，其他人无法再通过 OpenBot 机器人联系你的助手。",
+  "connector.telegram.disconnectAllSummaryOrchestrator":
+    "所有聊天都将断开，Telegram 调度助手及其对话将从 OpenBot 中删除。",
   // {action} is a button, such as Pause; {name} is the chat name.
   "connector.telegram.rowAction": "{action}：{name}",
-  "connector.telegram.linkTitle": "关联其他聊天",
-  "connector.telegram.linkDescription": "Telegram 会在浏览器中打开。关联完成后聊天会显示在这里。",
-  "connector.telegram.linkWaiting": "正在等待 Telegram，请在 Telegram 中选择聊天。",
+  "connector.telegram.linkChat": "关联聊天",
   "connector.telegram.addToGroup": "加入群组",
   "connector.telegram.openDirectChat": "开启私聊",
   "connector.telegram.orchestratorTitle": "Telegram 调度助手",
@@ -359,7 +352,8 @@ export const messages = {
   "connector.onePassword.stepVaultTitle": "创建共享保险库",
   "connector.onePassword.stepVaultDescription":
     "OpenBot 会创建“Shared with OpenBot”保险库和一个只能读取它的服务账号。1Password 会请求你批准。",
-  "connector.onePassword.useToken": "改用服务账号令牌",
+  "connector.onePassword.useTokenDescription": "不走这些步骤，改为粘贴 1Password.com 上的服务账号令牌。",
+  "connector.onePassword.useTokenAction": "使用令牌",
   "connector.onePassword.tokenLabel": "服务账号令牌",
   "connector.onePassword.tokenPlaceholder": "ops_…",
   "connector.onePassword.connectWithToken": "连接",
@@ -380,7 +374,6 @@ export const messages = {
   "connector.onePassword.actionFailed": "OpenBot 无法更改 1Password 连接。",
   "connector.onePassword.statusConnected": "已连接",
   "connector.onePassword.statusConnecting": "连接中",
-  "connector.onePassword.statusNotSetUp": "未设置",
   // The same page for the connection of a joined server. {host} is the server name, such as Studio.
   "connector.onePassword.descriptionHost":
     "通过服务账号把一个专用的 1Password 保险库共享给 {host} 上的 OpenBot，让 {host} 上的助手可以在其浏览器中登录网站。",
@@ -399,8 +392,12 @@ export const messages = {
   "connector.bitwarden.sessionKey": "Bitwarden 会话密钥",
   "connector.bitwarden.connect": "连接 Bitwarden",
   "connector.bitwarden.disconnect": "断开 Bitwarden",
+  "connector.bitwarden.disconnectAction": "断开",
+  "connector.bitwarden.disconnectSummary":
+    "OpenBot 会忘记会话密钥。代理将无法再从 Bitwarden 填写登录信息。其他 Bitwarden 客户端保持解锁状态。",
+  "connector.bitwarden.disconnectSummaryHost":
+    "{host} 会删除 API 密钥和主密码。{host} 上的代理将无法再从 Bitwarden 填写登录信息。",
   "connector.bitwarden.connected": "已连接",
-  "connector.bitwarden.disconnected": "未连接",
   "connector.bitwarden.actionFailed": "OpenBot 无法更改 Bitwarden 连接。",
   "connector.bitwarden.descriptionHost": "在 {host} 上用 Bitwarden 或 Vaultwarden 填充浏览器登录信息。",
   "connector.bitwarden.setupHost":
@@ -410,9 +407,12 @@ export const messages = {
   "connector.bitwarden.sessionHost":
     "{host} 会加密保存 API 密钥和主密码，因此重启后可以再次解锁。这台电脑不保存它们。断开连接会把它们从 {host} 上移除。{host} 必须能通过 HTTPS 访问该服务器地址。",
   "connector.bitwarden.serverUrl": "服务器地址",
+  "connector.bitwarden.folderTitle": "共享文件夹",
+  "connector.bitwarden.folderDescription": "在 Bitwarden 中把登录信息移入该文件夹，助手即可用它登录。移出后即停止。",
+  "connector.bitwarden.folderName": "Shared with OpenBot",
+  "connector.bitwarden.folderKind": "Bitwarden 中的文件夹",
   "connector.bitwarden.clientId": "API 密钥 client_id",
   "connector.bitwarden.clientSecret": "API 密钥 client_secret",
   "connector.bitwarden.masterPassword": "主密码",
   "connector.bitwarden.connecting": "正在连接",
-  "connector.bitwarden.connectedServer": "已连接到 {server}。",
 } as const satisfies PartialTranslation<typeof source>;

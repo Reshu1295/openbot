@@ -21,10 +21,12 @@ export const messages = {
 
   // The dialog frame: title, close and tabs.
   "marketplace.title": "Pazaryeri",
-  "marketplace.close": "Pazaryerini kapat",
   "marketplace.kinds": "Pazaryeri içerik türleri",
   "marketplace.tab.agents": "Ajanlar",
   "marketplace.tab.skills": "Beceriler",
+  "marketplace.description.apps": "Ajanlarınızın çalıştığı araçları ve hizmetleri bağlayın.",
+  "marketplace.description.agents": "Kendi talimatları ve becerileri olan hazır ajanlar.",
+  "marketplace.description.skills": "Bir ajana bir görevi veya aracı öğreten talimatlar.",
 
   // A plugin link.
   "marketplace.plugins.missing": "Bu eklenti OpenBot kataloğunda yok.",
@@ -106,18 +108,24 @@ export const messages = {
   "marketplace.app.reconnectNamed": "{name} uygulamasına yeniden bağlan",
   "marketplace.app.connected": "Bağlandı",
   "marketplace.app.attention": "Dikkat gerekiyor",
+  "marketplace.app.partialTitle": "{name} tamamlanmadı",
+  "marketplace.app.partialDescription": "Bazı uygulamaları veya becerileri yüklü değil. Yeniden bağlan bunları yükler.",
   "marketplace.app.notConnected": "Bağlı değil",
   "marketplace.app.custom": "MCP sunucusu",
   "marketplace.app.githubTagline": "Depolar, sorunlar ve çekme istekleri",
   "marketplace.app.onePasswordTagline": "Paylaştığınız oturum bilgileriyle sitelerde oturum açın",
+  "marketplace.app.slackTagline": "Slack'te bahsetmeler ve doğrudan mesajlar",
+  "marketplace.app.discordTagline": "Discord'da bahsetmeler ve doğrudan mesajlar",
+  "marketplace.app.telegramTagline": "Telegram'da gruplar ve doğrudan sohbetler",
+  "marketplace.app.bitwardenTagline": "Paylaşılan bir klasördeki oturum bilgileriyle sitelerde oturum açın",
   // The category row in the 1Password page's information.
   "marketplace.app.onePasswordCategory": "Oturum açma ve kimlik bilgisi yönetimi",
   "marketplace.app.yourApps": "Uygulamalarınız",
-  "marketplace.app.moreApps": "Daha fazla uygulama",
+  "marketplace.app.addCustom": "Özel ekle",
   "marketplace.app.server": "Sunucu",
   "marketplace.app.command": "Komut",
   "marketplace.app.address": "Adres",
-  "marketplace.app.disconnect.title": "Bağlantıyı kes",
+  "marketplace.app.disconnect.title": "{name} bağlantısını kes",
   "marketplace.app.disconnect.description":
     "{name} uygulamasını ve becerilerini bu bilgisayardan kaldırın. Daha sonra tekrar bağlayabilirsiniz.",
   "marketplace.app.disconnect.action": "Bağlantıyı kes",
@@ -126,6 +134,17 @@ export const messages = {
   "marketplace.app.remove.action": "Kaldır",
   "marketplace.app.remove.confirmTitle": "{name} kaldırılsın mı?",
   "marketplace.app.remove.keep": "Koru",
+  "marketplace.app.connection": "Bağlantı",
+  "marketplace.app.setup.account": "Tarayıcıda {name} hesabınızla oturum açın.",
+  "marketplace.app.setup.key": "{name} hesabınızdan bir API anahtarı gerekir.",
+  "marketplace.app.setup.keySaved": "{field}, {host} üzerinde kayıtlı.",
+  "marketplace.app.setup.desktop": "{name} masaüstü uygulamasında {address} adresinde çalışır.",
+  "marketplace.app.setup.desktopConnected": "{address} adresine bağlı.",
+  "marketplace.app.setup.open": "Oturum açma veya anahtar gerekmez.",
+  "marketplace.app.connectAgain": "Tekrar bağlan",
+  "marketplace.app.signInTitle": "{name} hesabında yeniden oturum açın",
+  "marketplace.app.signInDescription":
+    "{name} kayıtlı oturumu reddetti. Yeniden oturum açana kadar ajanlarınız bu uygulamayı kullanamaz.",
 
   // The catalog apps' listing text, by slug. Each English text is the catalog's own text, byte for
   // byte: a key whose English no longer matches the catalog is not used. The prompts are requests that
@@ -316,6 +335,65 @@ export const messages = {
   "marketplace.plugin.composio.hint.url": "Composio hesabınızdaki bir MCP sunucusunun URL'si",
   "marketplace.plugin.composio.hint.apiKey":
     "Composio hesabınızda, Settings > Sessions & API Key altında bulabilirsiniz.",
+  "marketplace.plugin.neon.tagline": "Postgres projeleri, dalları ve geçişleri",
+  "marketplace.plugin.neon.description":
+    "Neon, ajanların projeleri ve dalları listelemesine, SQL çalıştırmasına, tablo şemalarını okumasına, şema değişikliklerini geçici bir dalda test etmesine, yavaş sorguları bulmasına ve Neon belgelerinde arama yapmasına olanak tanır. Her kullanıcı tarayıcı üzerinden kendi Neon hesabında oturum açar ve yetki verirken salt okunur erişimi seçebilir. Tam erişimle ajanlar verileri değiştiren veya silen SQL çalıştırabilir; dalları, veritabanlarını ve projeleri oluşturabilir, sıfırlayabilir veya silebilir. Neon, MCP sunucusunu üretim veritabanları için değil, geliştirme ve test için önerir.",
+  "marketplace.plugin.neon.app":
+    "Postgres projeleri, dalları, SQL ve geçişler, tarayıcıda oturum açmayla Neon'un MCP sunucusu üzerinden.",
+  "marketplace.plugin.neon.prompt.projects": "Neon hesabımda hangi projeler ve dallar var?",
+  "marketplace.plugin.neon.prompt.slowQueries": "Neon veritabanımda en yavaş sorgular hangileri ve neden?",
+  "marketplace.plugin.neon.prompt.migration":
+    "Geçici bir dalda orders tablosuna bir dizin ekle ve uygulamadan önce sonucu bana göster.",
+  "marketplace.plugin.prisma.tagline": "Postgres veritabanları, yedekler ve Compute uygulamaları",
+  "marketplace.plugin.prisma.description":
+    "Prisma, ajanların Prisma Postgres veritabanlarını listelemesine ve oluşturmasına, şemaları okumasına, SQL çalıştırmasına, yedekleri listeleyip yeni bir veritabanına geri yüklemesine, Object Storage kovalarını yönetmesine, Compute derlemelerini ve günlüklerini okumasına ve Prisma belgelerinde arama yapmasına olanak tanır. Her kullanıcı tarayıcı üzerinden kendi Prisma hesabında oturum açar ve bir çalışma alanı seçer. Ajanlar tam erişim alır: verileri değiştiren veya silen SQL çalıştırabilir, şemaları güncelleyebilir, veritabanlarını ve kovaları silebilir, Compute dağıtımlarını durdurabilir, geri alabilir veya silebilirler.",
+  "marketplace.plugin.prisma.app":
+    "Veritabanları, SQL, yedekler ve Compute uygulamaları, tarayıcıda oturum açmayla Prisma'nın MCP sunucusu üzerinden.",
+  "marketplace.plugin.prisma.prompt.databases": "Prisma çalışma alanımda hangi veritabanları var?",
+  "marketplace.plugin.prisma.prompt.backups": "Veritabanımın kullanılabilir tüm yedeklerini bana göster.",
+  "marketplace.plugin.prisma.prompt.logs": "En son Compute dağıtımımın çalışma zamanı günlüklerini göster.",
+  "marketplace.plugin.netlify.tagline": "Projeler, dağıtımlar ve istek günlükleri",
+  "marketplace.plugin.netlify.description":
+    "Netlify, ajanların projeleri ve dağıtımları listelemesine, uç istek günlüklerini okumasına, proje oluşturmasına ve mevcut bir projeye kod dağıtmasına olanak tanır. Her kullanıcı tarayıcı üzerinden kendi Netlify hesabında oturum açar. Ajanlar, kullanıcının hesabıyla aynı erişime sahiptir: ortam değişkenlerini, formları ve ziyaretçi erişimini değiştirebilir, uzantı kurabilir veya kaldırabilir, form gönderimlerini ve ortam değişkenlerini silebilirler.",
+  "marketplace.plugin.netlify.app":
+    "Projeler, dağıtımlar, istek günlükleri ve site ayarları, tarayıcıda oturum açmayla Netlify'ın MCP sunucusu üzerinden.",
+  "marketplace.plugin.netlify.prompt.latestDeploy": "Netlify projelerimin her birinde en son dağıtımın durumu nedir?",
+  "marketplace.plugin.netlify.prompt.errors": "Son bir günde sitemin hangi URL'leri sunucu hatası döndürdü?",
+  "marketplace.plugin.netlify.prompt.deploy": "Bu klasörü mevcut Netlify projeme dağıt.",
+  "marketplace.plugin.railway.tagline": "Projeler, servisler ve dağıtımlar",
+  "marketplace.plugin.railway.description":
+    "Railway, ajanların projeleri ve servisleri listelemesine, proje oluşturmasına, servisleri yeniden dağıtmasına ve özellik bayraklarını yönetmesine olanak tanır. Ajanlar çok adımlı işleri Railway Agent'a da verebilir. Railway Agent günlükleri okur, bir dağıtımın neden başarısız olduğunu bulur, servis oluşturur ve değişken ayarlar. Her kullanıcı tarayıcı üzerinden kendi Railway hesabında oturum açar ve ajanların kullanabileceği çalışma alanlarını ve projeleri seçer. Bu projelerde ajanlar tam erişime sahiptir: hazırlanan değişiklikleri dağıtabilir, özellik bayraklarını silebilir ve Railway Agent üzerinden servisleri, değişkenleri, veritabanlarını ve ağı değiştirebilirler.",
+  "marketplace.plugin.railway.app":
+    "Projeler, servisler ve dağıtımlar, tarayıcıda oturum açmayla Railway'in MCP sunucusu üzerinden.",
+  "marketplace.plugin.railway.prompt.projects": "Railway çalışma alanımda hangi projeler ve servisler var?",
+  "marketplace.plugin.railway.prompt.crash": "Railway'deki backend servisim dağıtımda neden çöküyor?",
+  "marketplace.plugin.railway.prompt.redeploy": "Railway projemdeki API servisini yeniden dağıt.",
+  "marketplace.plugin.atlassian.tagline": "Jira iş öğeleri ve Confluence sayfaları",
+  "marketplace.plugin.atlassian.description":
+    "Atlassian, ajanların Jira iş öğelerini, Confluence sayfalarını ve Bitbucket çekme isteklerini aramasına ve okumasına, iş öğeleri, sayfalar ve yorumlar oluşturmasına veya güncellemesine olanak tanır. Her kullanıcı tarayıcı üzerinden kendi Atlassian hesabında oturum açar ve erişimi bir onay ekranında onaylar. Ajanlar kullanıcıyla aynı yetkilere sahiptir: iş öğelerini ve sayfaları değiştirebilir, sayfa izinlerini değiştirebilir ve çekme isteklerini birleştirebilirler. Jira verilerini silen araçlar, bir kuruluş yöneticisi açana kadar kapalı kalır. Her araç çağrısı Rovo kredisi kullanır.",
+  "marketplace.plugin.atlassian.app":
+    "Jira, Confluence ve Bitbucket, tarayıcıda oturum açmayla Atlassian'ın MCP sunucusu üzerinden.",
+  "marketplace.plugin.atlassian.prompt.assigned": "Bana atanmış açık Jira iş öğeleri hangileri?",
+  "marketplace.plugin.atlassian.prompt.releasePage": "Sürüm sürecimizle ilgili Confluence sayfasını bul ve özetle.",
+  "marketplace.plugin.atlassian.prompt.newItem":
+    "Oturum açma hatası için yeniden oluşturma adımlarıyla bir Jira iş öğesi oluştur.",
+  "marketplace.plugin.todoist.tagline": "Görevler, projeler ve hatırlatıcılar",
+  "marketplace.plugin.todoist.description":
+    "Todoist, ajanların görevleri tarihe, metne, etikete veya filtreye göre bulmasını, görev eklemesini ve yeniden planlamasını, projeleri, bölümleri, etiketleri, yorumları ve hatırlatıcıları yönetmesini sağlar. Her kullanıcı tarayıcıda kendi Todoist hesabıyla oturum açar. Ajanlar okuma ve yazma erişimi alır: görevleri, projeleri ve diğer öğeleri değiştirebilir, tamamlayabilir ve silebilir.",
+  "marketplace.plugin.todoist.app":
+    "Görevler, projeler ve hatırlatıcılar, tarayıcıda oturum açmayla Todoist'in MCP sunucusu üzerinden.",
+  "marketplace.plugin.todoist.prompt.today": "Bugün hangi Todoist görevlerinin süresi doluyor?",
+  "marketplace.plugin.todoist.prompt.capture": "Bu yapılacak maddeleri Todoist Gelen Kutuma ekle.",
+  "marketplace.plugin.todoist.prompt.overdue": "Geciken Todoist görevlerimi yarına taşı.",
+  "marketplace.plugin.huggingface.tagline": "Hub'daki modeller, veri kümeleri ve makaleler",
+  "marketplace.plugin.huggingface.description":
+    "Hugging Face, ajanların Hugging Face Hub'da modelleri, veri kümelerini, Spaces'i, koleksiyonları ve makaleleri aramasına, model kartlarını ve depo dosyalarını okumasına, veri kümelerini önizlemesine ve Hugging Face belgelerinde arama yapmasına olanak tanır. Herkese açık Hub verilerini kullanır ve hesap ya da anahtar gerektirmez. Araçlar yalnızca okur: ajanlar depo oluşturamaz ve iş (job) çalıştıramaz.",
+  "marketplace.plugin.huggingface.app":
+    "Model, veri kümesi, Space, makale ve belge araması, oturum açmadan Hugging Face'in MCP sunucusu üzerinden.",
+  "marketplace.plugin.huggingface.prompt.models": "Hugging Face'te konuşma tanıma için küçük açık modeller bul.",
+  "marketplace.plugin.huggingface.prompt.papers": "Bugün Hugging Face'te hangi makaleler gündemde?",
+  "marketplace.plugin.huggingface.prompt.dataset":
+    "Hava durumu zaman serilerinden oluşan bir veri kümesi bul ve sütunlarını göster.",
   "marketplace.auth.apiKey": "API anahtarı",
   "marketplace.auth.personalApiKey": "Kişisel API anahtarı",
   "marketplace.auth.mcpUrl": "MCP URL'si",

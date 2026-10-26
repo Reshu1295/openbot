@@ -12,11 +12,15 @@ import { WebWorkspace } from "../src/features/web-client/WebWorkspace";
 import type { WebRuntimeFactory } from "../src/features/web-client/web-client-context";
 import { WebHostIncompatibleError } from "../src/features/web-client/web-runtime";
 import { createBenchWebRuntime } from "../src/preview/bench-web-runtime";
+import { mockAccountCatalogFetch } from "../src/preview/mock-account-catalog";
 import { MOCK_HOSTED_SERVER_CATALOG } from "../src/preview/mock-hosted-servers";
 import { createMockOpenBot } from "../src/preview/mock-openbot";
 import { createMockWebRuntime, mockWebRuntimeFor } from "../src/preview/mock-web-runtime";
 import { AGENT_ID, TABS_KEY, THREAD_OPTIONS } from "./agent-threads-fixtures";
 import "../src/features/web-client/web-client.css";
+
+/** The account service: the marketplace catalog is a mock, and other routes go to the network. */
+const accountFetch = mockAccountCatalogFetch();
 
 const meta = {
   title: "Web/Workspace",
@@ -26,7 +30,7 @@ const meta = {
     accountId: "preview-account",
     accountEmail: "you@example.com",
     accountName: "Preview User",
-    accountFetch: fetch,
+    accountFetch,
     onSessionCheck: async () => {},
     onLogout: async () => {},
     createRuntime: createMockWebRuntime,
@@ -44,6 +48,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Connected: Story = {};
+
+/** The Marketplace page, opened on an app by a `/app?plugin=<slug>` link. */
+export const MarketplaceApp: Story = {
+  args: { pluginSlug: "linear" },
+};
 
 /** A long conversation. `bun run perf:web` streams replies into it and counts the host requests. */
 export const LongConversation: Story = {
@@ -277,7 +286,7 @@ const checkoutFetch: typeof fetch = async (input) => {
           ],
         }
       : null;
-  return body ? Response.json(body) : fetch(input);
+  return body ? Response.json(body) : accountFetch(input);
 };
 
 /** The return from Stripe Checkout: the add server dialog opens on the new server's setup. */
@@ -314,7 +323,7 @@ const sleepingFetch: typeof fetch = async (input, init) => {
       createdAt: "2026-09-29T09:30:00.000Z",
       updatedAt: "2026-09-29T09:34:00.000Z",
     });
-  return fetch(input, init);
+  return accountFetch(input, init);
 };
 
 export const HostedServerAsleep: Story = {

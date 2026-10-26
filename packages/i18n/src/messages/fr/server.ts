@@ -221,8 +221,6 @@ export const messages = {
   "server.settings.transferTitle": "Transfert",
   "server.settings.transferDescription":
     "Déplacez les agents et les réglages de ce serveur vers un fichier ou depuis un fichier.",
-  "server.settings.connectorsTitle": "Connecteurs",
-  "server.settings.connectorsDescription": "Connectez des comptes que chaque agent de ce serveur peut utiliser.",
   "server.settings.routinesTitle": "Routines",
   "server.settings.routinesDescription":
     "Affichez la planification des routines de cet ordinateur dans une application de calendrier.",

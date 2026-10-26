@@ -19,10 +19,12 @@ export const messages = {
   "marketplace.version": "Version {version}",
 
   "marketplace.title": "Marketplace",
-  "marketplace.close": "Fermer la Marketplace",
   "marketplace.kinds": "Types de contenu de la Marketplace",
   "marketplace.tab.agents": "Agents",
   "marketplace.tab.skills": "Compétences",
+  "marketplace.description.apps": "Connectez les outils et les services avec lesquels vos agents travaillent.",
+  "marketplace.description.agents": "Des agents prêts à l’emploi, avec leurs propres instructions et compétences.",
+  "marketplace.description.skills": "Des instructions qui apprennent une tâche ou un outil à un agent.",
 
   "marketplace.plugins.missing": "Ce plugin n’est pas dans le catalogue OpenBot.",
 
@@ -86,17 +88,24 @@ export const messages = {
   "marketplace.app.reconnectNamed": "Reconnecter {name}",
   "marketplace.app.connected": "Connecté",
   "marketplace.app.attention": "Action requise",
+  "marketplace.app.partialTitle": "{name} n’est pas complet",
+  "marketplace.app.partialDescription":
+    "Certaines de ses apps ou compétences ne sont pas installées. Reconnecter les installe.",
   "marketplace.app.notConnected": "Non connecté",
   "marketplace.app.custom": "Serveur MCP",
   "marketplace.app.githubTagline": "Dépôts, tickets et pull requests",
   "marketplace.app.onePasswordTagline": "Connectez-vous aux sites avec les identifiants que vous partagez",
+  "marketplace.app.slackTagline": "Mentions et messages directs dans Slack",
+  "marketplace.app.discordTagline": "Mentions et messages directs dans Discord",
+  "marketplace.app.telegramTagline": "Groupes et discussions privées dans Telegram",
+  "marketplace.app.bitwardenTagline": "Connectez-vous aux sites avec les identifiants d’un dossier partagé",
   "marketplace.app.onePasswordCategory": "Gestion des identifiants et des connexions",
   "marketplace.app.yourApps": "Vos apps",
-  "marketplace.app.moreApps": "Autres apps",
+  "marketplace.app.addCustom": "Ajout personnalisé",
   "marketplace.app.server": "Serveur",
   "marketplace.app.command": "Commande",
   "marketplace.app.address": "Adresse",
-  "marketplace.app.disconnect.title": "Déconnecter",
+  "marketplace.app.disconnect.title": "Déconnecter {name}",
   "marketplace.app.disconnect.description":
     "Supprimer {name} et ses compétences de cet ordinateur. Vous pourrez le connecter à nouveau plus tard.",
   "marketplace.app.disconnect.action": "Déconnecter",
@@ -105,6 +114,17 @@ export const messages = {
   "marketplace.app.remove.action": "Supprimer",
   "marketplace.app.remove.confirmTitle": "Supprimer {name} ?",
   "marketplace.app.remove.keep": "Conserver",
+  "marketplace.app.connection": "Connexion",
+  "marketplace.app.setup.account": "Connectez-vous avec votre compte {name} dans le navigateur.",
+  "marketplace.app.setup.key": "Nécessite une clé API de votre compte {name}.",
+  "marketplace.app.setup.keySaved": "{field} est enregistré sur {host}.",
+  "marketplace.app.setup.desktop": "S’exécute dans l’app de bureau {name} à l’adresse {address}.",
+  "marketplace.app.setup.desktopConnected": "Connecté à {address}.",
+  "marketplace.app.setup.open": "Aucune connexion ni clé requise.",
+  "marketplace.app.connectAgain": "Reconnecter",
+  "marketplace.app.signInTitle": "Reconnectez-vous à {name}",
+  "marketplace.app.signInDescription":
+    "{name} a refusé la connexion enregistrée. Vos agents ne peuvent pas l’utiliser tant que vous ne vous reconnectez pas.",
 
   "marketplace.plugin.aave.tagline": "Données et transactions Aave",
   "marketplace.plugin.aave.description":
@@ -306,6 +326,71 @@ export const messages = {
   "marketplace.plugin.composio.hint.url": "L’URL d’un serveur MCP dans votre compte Composio",
   "marketplace.plugin.composio.hint.apiKey":
     "Vous la trouverez dans votre compte Composio, sous Settings > Sessions & API Key.",
+  "marketplace.plugin.neon.tagline": "Projets, branches et migrations Postgres",
+  "marketplace.plugin.neon.description":
+    "Neon permet aux agents de lister les projets et les branches, d’exécuter du SQL, de lire les schémas des tables, de tester des changements de schéma sur une branche temporaire, de trouver les requêtes lentes et de chercher dans la documentation Neon. Chaque utilisateur se connecte à son propre compte Neon dans le navigateur et peut choisir un accès en lecture seule lors de l’autorisation. Avec un accès complet, les agents peuvent exécuter du SQL qui modifie ou supprime des données, et créer, réinitialiser ou supprimer des branches, des bases de données et des projets. Neon recommande son serveur MCP pour le développement et les tests, pas pour les bases de données de production.",
+  "marketplace.plugin.neon.app":
+    "Projets, branches, SQL et migrations Postgres, via le serveur MCP de Neon avec connexion dans le navigateur.",
+  "marketplace.plugin.neon.prompt.projects": "Quels projets et quelles branches y a-t-il dans mon compte Neon ?",
+  "marketplace.plugin.neon.prompt.slowQueries":
+    "Quelles requêtes sont les plus lentes sur ma base de données Neon, et pourquoi ?",
+  "marketplace.plugin.neon.prompt.migration":
+    "Ajoutez un index sur la table orders dans une branche temporaire, et montrez-moi le résultat avant de l’appliquer.",
+  "marketplace.plugin.prisma.tagline": "Bases de données Postgres, sauvegardes et apps Compute",
+  "marketplace.plugin.prisma.description":
+    "Prisma permet aux agents de lister et de créer des bases de données Prisma Postgres, de lire les schémas, d’exécuter du SQL, de lister les sauvegardes et de les restaurer dans une nouvelle base de données, de gérer les buckets Object Storage, de lire les builds et les journaux Compute, et de chercher dans la documentation Prisma. Chaque utilisateur se connecte à son propre compte Prisma dans le navigateur et choisit un workspace. Les agents ont un accès complet : ils peuvent exécuter du SQL qui modifie ou supprime des données, mettre à jour les schémas, supprimer des bases de données et des buckets, et arrêter, restaurer une version précédente ou supprimer des déploiements Compute.",
+  "marketplace.plugin.prisma.app":
+    "Bases de données, SQL, sauvegardes et apps Compute, via le serveur MCP de Prisma avec connexion dans le navigateur.",
+  "marketplace.plugin.prisma.prompt.databases": "Quelles bases de données y a-t-il dans mon workspace Prisma ?",
+  "marketplace.plugin.prisma.prompt.backups": "Montrez-moi toutes les sauvegardes disponibles de ma base de données.",
+  "marketplace.plugin.prisma.prompt.logs": "Affichez les journaux d’exécution de mon dernier déploiement Compute.",
+  "marketplace.plugin.netlify.tagline": "Projets, déploiements et journaux de requêtes",
+  "marketplace.plugin.netlify.description":
+    "Netlify permet aux agents de lister les projets et les déploiements, de lire les journaux des requêtes edge, de créer des projets et de déployer du code dans un projet existant. Chaque utilisateur se connecte à son propre compte Netlify dans le navigateur. Les agents ont le même accès que le compte de l’utilisateur : ils peuvent modifier les variables d’environnement, les formulaires et l’accès des visiteurs, installer ou retirer des extensions, et supprimer des soumissions de formulaires et des variables d’environnement.",
+  "marketplace.plugin.netlify.app":
+    "Projets, déploiements, journaux de requêtes et paramètres du site, via le serveur MCP de Netlify avec connexion dans le navigateur.",
+  "marketplace.plugin.netlify.prompt.latestDeploy":
+    "Quel est le statut du dernier déploiement de chacun de mes projets Netlify ?",
+  "marketplace.plugin.netlify.prompt.errors":
+    "Quelles URL de mon site ont renvoyé des erreurs serveur au cours du dernier jour ?",
+  "marketplace.plugin.netlify.prompt.deploy": "Déployez ce dossier dans mon projet Netlify existant.",
+  "marketplace.plugin.railway.tagline": "Projets, services et déploiements",
+  "marketplace.plugin.railway.description":
+    "Railway permet aux agents de lister les projets et les services, de créer des projets, de redéployer des services et de gérer les feature flags. Les agents peuvent aussi confier un travail en plusieurs étapes au Railway Agent, qui lit les journaux, trouve pourquoi un déploiement a échoué, crée des services et définit des variables. Chaque utilisateur se connecte à son propre compte Railway dans le navigateur et choisit les espaces de travail et les projets que les agents peuvent utiliser. Dans ces projets, les agents ont un accès complet : ils peuvent déployer les modifications en attente, supprimer des feature flags, et modifier les services, les variables, les bases de données et le réseau via le Railway Agent.",
+  "marketplace.plugin.railway.app":
+    "Projets, services et déploiements, via le serveur MCP de Railway avec connexion dans le navigateur.",
+  "marketplace.plugin.railway.prompt.projects":
+    "Quels projets et services se trouvent dans mon espace de travail Railway ?",
+  "marketplace.plugin.railway.prompt.crash": "Pourquoi mon service backend sur Railway plante-t-il au déploiement ?",
+  "marketplace.plugin.railway.prompt.redeploy": "Redéploie le service API de mon projet Railway.",
+  "marketplace.plugin.atlassian.tagline": "Éléments de travail Jira et pages Confluence",
+  "marketplace.plugin.atlassian.description":
+    "Atlassian permet aux agents de rechercher et de lire les éléments de travail Jira, les pages Confluence et les pull requests Bitbucket, et de créer ou de mettre à jour des éléments de travail, des pages et des commentaires. Chaque utilisateur se connecte à son propre compte Atlassian dans le navigateur et approuve l’accès sur un écran de consentement. Les agents ont les mêmes droits que l’utilisateur : ils peuvent modifier les éléments de travail et les pages, modifier les autorisations des pages et fusionner des pull requests. Les outils qui suppriment des données Jira restent désactivés jusqu’à ce qu’un administrateur de l’organisation les active. Chaque appel d’outil consomme des crédits Rovo.",
+  "marketplace.plugin.atlassian.app":
+    "Jira, Confluence et Bitbucket, via le serveur MCP d’Atlassian avec connexion dans le navigateur.",
+  "marketplace.plugin.atlassian.prompt.assigned": "Quels éléments de travail Jira ouverts me sont attribués ?",
+  "marketplace.plugin.atlassian.prompt.releasePage":
+    "Trouve la page Confluence sur notre processus de release et résume-la.",
+  "marketplace.plugin.atlassian.prompt.newItem":
+    "Crée un élément de travail Jira pour le bug de connexion avec les étapes pour le reproduire.",
+  "marketplace.plugin.todoist.tagline": "Tâches, projets et rappels",
+  "marketplace.plugin.todoist.description":
+    "Todoist permet aux agents de trouver des tâches par date, texte, étiquette ou filtre, d’ajouter et de replanifier des tâches, et de gérer les projets, sections, étiquettes, commentaires et rappels. Chaque utilisateur se connecte à son propre compte Todoist dans le navigateur. Les agents ont un accès en lecture et en écriture : ils peuvent modifier, terminer et supprimer des tâches, des projets et d'autres éléments.",
+  "marketplace.plugin.todoist.app":
+    "Tâches, projets et rappels, via le serveur MCP de Todoist avec connexion dans le navigateur.",
+  "marketplace.plugin.todoist.prompt.today": "Quelles tâches Todoist sont à faire aujourd’hui ?",
+  "marketplace.plugin.todoist.prompt.capture": "Ajoute ces actions à ma boîte de réception Todoist.",
+  "marketplace.plugin.todoist.prompt.overdue": "Reporte mes tâches Todoist en retard à demain.",
+  "marketplace.plugin.huggingface.tagline": "Modèles, jeux de données et articles sur le Hub",
+  "marketplace.plugin.huggingface.description":
+    "Hugging Face permet aux agents de rechercher des modèles, des jeux de données, des Spaces, des collections et des articles sur le Hugging Face Hub, de lire les model cards et les fichiers des dépôts, de prévisualiser des jeux de données et de rechercher dans la documentation de Hugging Face. Il utilise les données publiques du Hub et ne demande ni compte ni clé. Les outils ne font que lire : les agents ne peuvent pas créer de dépôts ni lancer de jobs.",
+  "marketplace.plugin.huggingface.app":
+    "Recherche de modèles, jeux de données, Spaces, articles et documentation, via le serveur MCP de Hugging Face sans connexion.",
+  "marketplace.plugin.huggingface.prompt.models":
+    "Trouve de petits modèles ouverts de reconnaissance vocale sur Hugging Face.",
+  "marketplace.plugin.huggingface.prompt.papers": "Quels articles sont en tendance sur Hugging Face aujourd’hui ?",
+  "marketplace.plugin.huggingface.prompt.dataset":
+    "Trouve un jeu de données de séries temporelles météo et montre ses colonnes.",
   "marketplace.auth.apiKey": "Clé API",
   "marketplace.auth.personalApiKey": "Clé API personnelle",
   "marketplace.auth.mcpUrl": "URL MCP",

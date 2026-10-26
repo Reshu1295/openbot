@@ -2,11 +2,13 @@ import { type BitwardenConnectorStatus, DISCONNECTED_BITWARDEN_CONNECTOR } from 
 import { BitwardenConnectorPanel } from "@openbot/ui/features/settings/BitwardenConnectorPanel";
 import { fn } from "storybook/test";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import { SettledArgs } from "./settled-args";
 
 const meta = {
   title: "Settings/BitwardenConnectorPanel",
   component: BitwardenConnectorPanel,
   parameters: { layout: "padded", a11y: { test: "error" } },
+  render: (args) => <SettledArgs>{() => <BitwardenConnectorPanel {...args} />}</SettledArgs>,
 } satisfies Meta<typeof BitwardenConnectorPanel>;
 
 export default meta;

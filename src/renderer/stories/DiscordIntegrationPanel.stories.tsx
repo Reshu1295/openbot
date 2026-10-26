@@ -8,12 +8,14 @@ import {
 import { fn } from "storybook/test";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { STORY_AGENT_SUMMARIES } from "./fixtures";
+import { SettledArgs } from "./settled-args";
 
-/** Server settings > Connectors > Discord: the Slack page with `platform` "discord". */
+/** Marketplace > Apps > Discord: the Slack page with `platform` "discord". */
 const meta = {
   title: "Settings/DiscordIntegrationPanel",
   component: SlackIntegrationPanel,
   parameters: { layout: "padded", a11y: { test: "error" } },
+  render: (args) => <SettledArgs>{() => <SlackIntegrationPanel {...args} />}</SettledArgs>,
 } satisfies Meta<typeof SlackIntegrationPanel>;
 
 export default meta;
@@ -79,6 +81,7 @@ const args = (connections: MessagingConnection[], busy = false) => ({
   busy,
   onConnectWorkspace: fn(),
   onDisconnectWorkspace: fn(),
+  onDisconnectAll: fn(),
   onReconnect: fn(),
   onSetEnabled: fn(),
   onAddOrchestrator: fn(),
@@ -109,7 +112,7 @@ export const Removed: Story = { args: args([guild({ state: "invalid_token" })]) 
 
 export const RelayUnavailable: Story = { args: args([guild({ state: "relay_unavailable" })]) };
 
-/** Two Discord servers. One orchestrator answers both, and Add connects another. */
+/** Two Discord servers. One orchestrator answers both, and Add Discord server connects another. */
 export const TwoServers: Story = { args: args([guild(), guild(SECOND_GUILD)]) };
 
 /** An earlier build gave each Discord server its own orchestrator. The page shows both, and keeps them. */
@@ -127,7 +130,7 @@ export const SecondServerNoOrchestrator: Story = {
   args: args([guild(), guild({ ...SECOND_GUILD, orchestratorAgentId: null })]),
 };
 
-/** The page has the maximum number of Discord servers, so Add server is off. */
+/** The page has the maximum number of Discord servers, so Add Discord server is off. */
 export const AtLimit: Story = {
   args: args(
     Array.from({ length: MESSAGING_LIMITS.connections }, (_, index) =>

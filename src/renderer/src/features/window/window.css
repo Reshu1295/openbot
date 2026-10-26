@@ -427,14 +427,15 @@
       .routine-planner-body,
       .routine-planner-empty,
       .routine-planner-error,
-      .marketplace-crumbs,
+      .marketplace-heading,
+      .marketplace-nav,
       .skills-marketplace-body
     ) {
     pointer-events: auto;
   }
 
-  /* The Marketplace page: its crumbs go in the top row, as the usage title does, and the rest of the
-   * Marketplace scrolls in the card below it. */
+  /* The Marketplace page: the path of a page goes in the top row, as the usage title does. The side panel and the
+   * list are below it. */
   .app-window > .app-frame-edge > .window-page > .skills-marketplace-page {
     grid-template-rows: var(--left-header-height) minmax(0, 1fr);
   }
@@ -446,7 +447,7 @@
     -webkit-app-region: drag;
   }
 
-  .app-window > .app-frame-edge > .window-page .marketplace-crumbs {
+  .app-window > .app-frame-edge > .window-page .marketplace-heading {
     flex: 0 1 auto;
     -webkit-app-region: no-drag;
   }

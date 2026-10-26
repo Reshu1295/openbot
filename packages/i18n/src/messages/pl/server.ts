@@ -219,8 +219,6 @@ export const messages = {
   "server.settings.importDescription": "Przenieś swoich agentów z Grok Bot lub Hermes Agent na ten serwer.",
   "server.settings.transferTitle": "Przeniesienie",
   "server.settings.transferDescription": "Przenieś agentów i ustawienia tego serwera do pliku lub z pliku.",
-  "server.settings.connectorsTitle": "Konektory",
-  "server.settings.connectorsDescription": "Połącz konta, których może używać każdy agent na tym serwerze.",
   "server.settings.routinesTitle": "Rutyny",
   "server.settings.routinesDescription": "Pokaż harmonogram rutyn tego komputera w aplikacji kalendarza.",
   "server.routineFeed.title": "Subskrypcja kalendarza",

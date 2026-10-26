@@ -1,14 +1,20 @@
-import { Button, ChevronRight, Dialog, ErrorReference, IconButton, X } from "@openbot/ui";
+import { Button, ChevronRight, ErrorReference, IconButton, X } from "@openbot/ui";
 import { createScrollFades } from "@openbot/ui/components/createScrollFades";
 import { useText } from "@openbot/ui/text";
 import { createEffect, For, Match, onCleanup, onSettled, Show, Switch } from "solid-js";
 import { MarketplaceAgentPage } from "./MarketplaceAgentPage";
 import { MarketplaceAppPage } from "./MarketplaceAppPage";
-import { MarketplaceBrowse } from "./MarketplaceBrowse";
+import { createBrowseLists, MarketplaceBrowse } from "./MarketplaceBrowse";
+import { MarketplaceNav } from "./MarketplaceNav";
 import { MarketplaceSkillPage } from "./MarketplaceSkillPage";
 import { createMarketplaceListing } from "./marketplace-listing";
 import type { MarketplaceModel } from "./marketplace-model";
-import type { MarketplaceNavigation, MarketplaceScope, MarketplaceView } from "./marketplace-view";
+import {
+  MARKETPLACE_TAB_LABEL,
+  type MarketplaceNavigation,
+  type MarketplaceScope,
+  type MarketplaceView,
+} from "./marketplace-view";
 
 export interface MarketplaceProps {
   model: MarketplaceModel;
@@ -16,8 +22,6 @@ export interface MarketplaceProps {
   nav: MarketplaceNavigation;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** A dialog over the window, or a page of the window that the page rail leaves. Default: dialog. */
-  variant?: "dialog" | "page" | undefined;
 }
 
 function viewTitle(scope: MarketplaceScope, view: MarketplaceView, fallback: string): string {
@@ -32,19 +36,24 @@ function viewTitle(scope: MarketplaceScope, view: MarketplaceView, fallback: str
   }
 }
 
-/** Marketplace › Linear. A parent crumb goes back to that view. */
-function Crumbs(props: { scope: MarketplaceScope; page: boolean }) {
+/**
+ * The path to the open page: Apps › GitHub. Each part of the path goes back to its view. The top row already has the
+ * Back and Forward arrows of the chats, so the path is the way back here. A list has no path: the side panel names it.
+ */
+function MarketplaceHeader(props: { scope: MarketplaceScope }) {
   const { t } = useText();
   const stack = () => props.scope.nav.state.stack;
-  const title = (view: MarketplaceView) => viewTitle(props.scope, view, t("marketplace.title"));
+  const title = (view: MarketplaceView) =>
+    viewTitle(props.scope, view, t(MARKETPLACE_TAB_LABEL[props.scope.nav.state.tab]));
   return (
-    <nav class="marketplace-crumbs" aria-label={t("marketplace.crumbs.label")}>
+    <nav class="marketplace-heading" aria-label={t("marketplace.crumbs.label")} hidden={stack().length < 2}>
       <For each={stack().slice(0, -1)}>
         {(view, index) => (
           <>
             <Button
               type="button"
               variant="ghost"
+              size="xs"
               class="marketplace-crumb-parent"
               data-cuelume-tap="navigate"
               onClick={() => props.scope.nav.backTo(index())}
@@ -55,15 +64,7 @@ function Crumbs(props: { scope: MarketplaceScope; page: boolean }) {
           </>
         )}
       </For>
-      {/* A dialog title needs its dialog, so the page has a plain heading. */}
-      <Show
-        when={props.page}
-        fallback={
-          <Dialog.Title class="marketplace-title" tabindex={-1}>
-            {title(stack().at(-1) ?? { kind: "browse" })}
-          </Dialog.Title>
-        }
-      >
+      <Show when={stack().length > 1}>
         <h2 class="marketplace-title" tabindex={-1}>
           {title(stack().at(-1) ?? { kind: "browse" })}
         </h2>
@@ -97,6 +98,7 @@ function MarketplaceWindow(props: MarketplaceProps) {
       category: () => nav.state.skillCategory,
     }),
   };
+  const lists = createBrowseLists(scope);
   let body: HTMLDivElement | undefined;
   // A tab, a search or a new view changes the content height but not the body size, so the frame
   // is observed too.
@@ -114,42 +116,44 @@ function MarketplaceWindow(props: MarketplaceProps) {
     places[depth] = { top: 0, opener: null, ...places[depth], ...place };
   };
   // A new view moves the focus to its name, as a route change does. The first view keeps the focus.
+  // The side panel can replace the open view with another at the same depth, which is a new view too.
   createEffect(
-    () => nav.state.stack.length,
-    (length, previous) => {
+    () => [nav.state.stack.length, nav.state.stack.at(-1)] as const,
+    ([length, view], previous) => {
       if (previous === undefined) return;
-      const place = length < previous ? places[length - 1] : undefined;
-      places.length = length;
+      const [previousLength, previousView] = previous;
+      if (length === previousLength && view === previousView) return;
+      const place = length < previousLength ? places[length - 1] : undefined;
+      // Back keeps the place it returns to. Another view at a depth starts with no place there.
+      places.length = length < previousLength ? length : length - 1;
       body?.scrollTo({ top: place?.top ?? 0 });
+      // A click in the side panel keeps the focus on the panel.
+      if (document.activeElement?.closest(".marketplace-nav")) return;
       const opener = place?.opener
         ? body?.querySelector<HTMLElement>(`[aria-label="${CSS.escape(place.opener)}"]`)
         : null;
       const heading = length > 1 ? body?.querySelector<HTMLElement>(".marketplace-view h3") : null;
       if (heading && !heading.hasAttribute("tabindex")) heading.tabIndex = -1;
-      (opener ?? heading ?? document.querySelector<HTMLElement>(".skills-marketplace .marketplace-title"))?.focus({
+      (opener ?? heading ?? document.querySelector<HTMLElement>(".skills-marketplace .marketplace-nav-title"))?.focus({
         preventScroll: true,
       });
+    },
+  );
+  // Another kind is a new list, so it starts at the top.
+  createEffect(
+    () => nav.state.tab,
+    (_tab, previous) => {
+      if (previous !== undefined) body?.scrollTo({ top: 0 });
     },
   );
 
   return (
     <>
+      {/* The page rail is the way back from the page, so the top bar has no close button. */}
       <header class="skills-marketplace-topbar">
-        <Crumbs scope={scope} page={props.variant === "page"} />
-        {/* The page rail is the way back from the page. */}
-        <Show when={props.variant !== "page"}>
-          <div class="skills-marketplace-topbar-actions">
-            <IconButton
-              label={t("marketplace.close")}
-              variant="ghost"
-              data-cuelume-tap="close"
-              onClick={() => props.onOpenChange(false)}
-            >
-              <X />
-            </IconButton>
-          </div>
-        </Show>
+        <MarketplaceHeader scope={scope} />
       </header>
+      <MarketplaceNav scope={scope} lists={lists} />
       <div
         class={["skills-marketplace-body", fades.classes()]}
         ref={(element) => {
@@ -174,7 +178,7 @@ function MarketplaceWindow(props: MarketplaceProps) {
             {(view) => (
               <Switch>
                 <Match when={view.kind === "browse"}>
-                  <MarketplaceBrowse scope={scope} />
+                  <MarketplaceBrowse scope={scope} lists={lists} />
                 </Match>
                 <Match when={view.kind === "agent" && view.listing} keyed>
                   {(listing) => <MarketplaceAgentPage scope={scope} listing={listing} />}
@@ -218,21 +222,36 @@ function MarketplaceWindow(props: MarketplaceProps) {
   );
 }
 
+/** The Marketplace: agents, apps and skills, and a page for each. It is a page of the window. */
+export function Marketplace(props: MarketplaceProps) {
+  // A closed window starts again from the first tab, with no search and no filter.
+  createEffect(
+    () => props.open,
+    (open, previous) => {
+      if (previous && !open) props.nav.reset();
+    },
+  );
+  return (
+    <Show when={props.open}>
+      <MarketplacePage {...props} />
+    </Show>
+  );
+}
+
 /**
- * The Marketplace as a page of the window. The title takes the focus, as a new page does, and the
- * control that opened the page gets it back when the page closes with the focus in it. Escape goes
- * back one view, or else clears the search, or else closes the page, as it closed the dialog. A view
- * keeps the search but does not show it, so the view goes back first. The handler is on the document
- * and after the delegated handlers, so a control that handles Escape keeps it. The focus can stay on
- * the control that opened the page, so a target outside the page also counts, except an open popup or
- * a text field.
+ * The open Marketplace page. The title takes the focus, as a new page does, and the control that
+ * opened the page gets it back when the page closes with the focus in it. Escape goes back one view,
+ * or else clears the search, or else closes the page. A view keeps the search but does not show it,
+ * so the view goes back first. The handler is on the document and after the delegated handlers, so a
+ * control that handles Escape keeps it. The focus can stay on the control that opened the page, so a
+ * target outside the page also counts, except an open popup or a text field.
  */
 function MarketplacePage(props: MarketplaceProps) {
   const { t } = useText();
   let root!: HTMLElement;
   const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   onSettled(() => {
-    root.querySelector<HTMLElement>(".marketplace-title")?.focus({ preventScroll: true });
+    root.querySelector<HTMLElement>(".marketplace-nav-title")?.focus({ preventScroll: true });
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || event.defaultPrevented) return;
       const target = event.target instanceof Element ? event.target : null;
@@ -265,36 +284,5 @@ function MarketplacePage(props: MarketplaceProps) {
     <section ref={root} class="skills-marketplace skills-marketplace-page" aria-label={t("marketplace.title")}>
       <MarketplaceWindow {...props} />
     </section>
-  );
-}
-
-/** The Marketplace window: agents, apps and skills, and a page for each. */
-export function Marketplace(props: MarketplaceProps) {
-  // A closed window starts again from the first tab, with no search and no filter.
-  createEffect(
-    () => props.open,
-    (open, previous) => {
-      if (previous && !open) props.nav.reset();
-    },
-  );
-  return (
-    <Show
-      when={props.variant === "page"}
-      fallback={
-        <Dialog.Root open={props.open} onOpenChange={props.onOpenChange}>
-          <Dialog.Portal>
-            <Dialog.Overlay class="skills-marketplace-backdrop">
-              <Dialog.Content class="skills-marketplace" onOpenAutoFocus={(event: Event) => event.preventDefault()}>
-                <MarketplaceWindow {...props} />
-              </Dialog.Content>
-            </Dialog.Overlay>
-          </Dialog.Portal>
-        </Dialog.Root>
-      }
-    >
-      <Show when={props.open}>
-        <MarketplacePage {...props} />
-      </Show>
-    </Show>
   );
 }
