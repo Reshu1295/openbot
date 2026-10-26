@@ -71,6 +71,8 @@ export interface SidebarProps {
   directThreads: DirectThreadSummary[];
   activeDirectMemberId: string | null;
   agentStates: Record<string, SidebarAgentState>;
+  /** The wait of each channel that waits for the user, from `sidebarChannelWaits`. A missing entry does not wait. */
+  channelWaits?: Record<string, SidebarChannelWait> | undefined;
   /** The face each agent wears, from `computeAgentAvatarMoods`. A missing entry rests. */
   agentMoods: Record<string, AvatarMood>;
   layout: SidebarLayoutSnapshot;
@@ -155,6 +157,9 @@ export type SidebarAgentState =
   | { kind: "routine"; phase: SidebarRoutinePhase; count: number }
   /** The provider plan is spent, so the queue waits. `resetsAt` is in epoch seconds, `null` when unknown. */
   | { kind: "limited"; resetsAt: number | null };
+
+/** What a channel waits for. Its row shows it in "Needs you" the same way an agent row does. */
+export type SidebarChannelWait = Extract<SidebarAgentState, { kind: "waiting" }>;
 
 /** A pin paired with the chat it names, so the pinned strip renders the same two kinds the list does. */
 export type ResolvedPinnedItem = { ref: SidebarPinnedItem; chat: SidebarChatItem };

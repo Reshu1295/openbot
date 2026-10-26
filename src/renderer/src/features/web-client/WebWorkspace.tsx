@@ -88,7 +88,11 @@ import type { SettingsPagePlacement } from "@openbot/ui/features/settings/Settin
 import { createSettingsHostedServersStore } from "@openbot/ui/features/settings/stores/hosted-servers-store";
 import { Sidebar } from "@openbot/ui/features/sidebar/Sidebar";
 import { SidebarCommunityCard } from "@openbot/ui/features/sidebar/SidebarCommunityCard";
-import { computeSidebarAgentStates, sidebarAgentWaits } from "@openbot/ui/features/sidebar/sidebar-agent-states";
+import {
+  computeSidebarAgentStates,
+  sidebarAgentWaits,
+  sidebarChannelWaits,
+} from "@openbot/ui/features/sidebar/sidebar-agent-states";
 import type { SidebarView } from "@openbot/ui/features/sidebar/sidebar-types";
 import { PageRail, type PageRailPage } from "@openbot/ui/features/window/PageRail";
 import { useText } from "@openbot/ui/text";
@@ -1291,6 +1295,15 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     };
   });
   const sidebarAgentStates = createMemo(() => computeSidebarAgentStates(sidebarActivity()));
+  // A wait in a channel thread goes to the channel instead. Selecting the channel opens the view that answers it.
+  const sidebarChannelWaitStates = createMemo(() =>
+    sidebarChannelWaits({
+      channels: channelsListed() ? channels.state.channels : [],
+      prompts: workspace.state.prompts,
+      takeovers: workspace.state.takeovers,
+      approvals: workspace.state.approvals,
+    }),
+  );
   const agentWaits = createMemo(() => sidebarAgentWaits(sidebarActivity()));
   const sidebarAgentMoods = createMemo(() => computeAgentAvatarMoods(sidebarActivity()));
   const browserEnabled = createMemo(
@@ -1765,6 +1778,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                   directThreads={[]}
                   activeDirectMemberId={null}
                   agentStates={sidebarAgentStates()}
+                  channelWaits={sidebarChannelWaitStates()}
                   agentMoods={sidebarAgentMoods()}
                   layout={workspace.state.sidebarLayout}
                   layoutMutable={

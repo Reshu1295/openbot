@@ -5,7 +5,7 @@ import { Sidebar } from "@openbot/ui/features/sidebar/Sidebar";
 import { SidebarCommunityCard } from "@openbot/ui/features/sidebar/SidebarCommunityCard";
 import { SidebarMobileAppCard } from "@openbot/ui/features/sidebar/SidebarMobileAppCard";
 import { SidebarStorageCard } from "@openbot/ui/features/sidebar/SidebarStorageCard";
-import { computeSidebarAgentStates } from "@openbot/ui/features/sidebar/sidebar-agent-states";
+import { computeSidebarAgentStates, sidebarChannelWaits } from "@openbot/ui/features/sidebar/sidebar-agent-states";
 import { teamMemberName } from "@openbot/ui/features/team/TeamPersonAvatar";
 import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, onSettled, Show } from "solid-js";
@@ -158,6 +158,18 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
     }),
   );
 
+  /* A wait in a channel thread goes to the channel instead. Selecting the channel opens the view
+   * that answers it. */
+  const channelWaits = createMemo(() => {
+    const prompts = Object.values(pendingPrompts());
+    return sidebarChannelWaits({
+      channels: visibleChannels(),
+      prompts: prompts.flatMap((event) => (event?.type === "prompt" ? [event] : [])),
+      takeovers: prompts.flatMap((event) => (event?.type === "browser-takeover-requested" ? [event.request] : [])),
+      approvals: approvals(),
+    });
+  });
+
   /* The badge says what an agent is doing; the face says how it is going. `isAgentWorking` is
    * shared, and a routine mark only replaces the badge for that same agent. */
   const agentMoods = createMemo(() =>
@@ -230,6 +242,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
       directThreads={directThreads()}
       activeDirectMemberId={tasksOpen() ? null : activeDirectMemberId()}
       agentStates={sidebarAgentStates()}
+      channelWaits={channelWaits()}
       agentMoods={agentMoods()}
       layout={sidebarLayout()}
       layoutMutable={activeServerSupportsCapability("sidebar-layout")}
