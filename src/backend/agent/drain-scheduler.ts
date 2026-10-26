@@ -618,7 +618,7 @@ export class DrainScheduler {
       };
       yield* drainStep(requireServedModel);
       yield* this.#threads.applyPendingRuntimeRefresh(agent, new Set(batch.map((item) => item.delivery.id)));
-      releaseRuntimeRefresh = this.#threads.holdRuntimeRefresh(agent.id);
+      releaseRuntimeRefresh = this.#threads.holdRuntimeRefresh(agent.id, taskId !== null);
       const client = yield* this.#providers.ensureAgentClient(agent).pipe(toDeliveryStartFailed);
       const messaging = this.#messaging;
       const channels = this.#channels;
