@@ -279,7 +279,7 @@ export function ChannelConnectionRow(props: {
 }
 
 /** The face of an orchestrator that does not exist yet. */
-export function ChannelOrchestratorFace(props: { avatar: ChannelAvatar; size?: "md" | "lg" }) {
+function ChannelOrchestratorFace(props: { avatar: ChannelAvatar; size?: "md" | "lg" }) {
   return (
     <span class="integrations-agent-face" data-size={props.size ?? "md"}>
       <AgentAvatar seed={props.avatar.avatarSeed} hue={props.avatar.avatarHue} motion="idle" />
