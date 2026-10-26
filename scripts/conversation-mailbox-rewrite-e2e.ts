@@ -36,7 +36,8 @@ import { RoutineTimer } from "../src/backend/routine-timer";
 const OUT = resolve(import.meta.dirname, "../.openbot-build/conversation-mailbox-rewrite-e2e");
 /** More than `CONVERSATION_SNAPSHOT_MESSAGE_LIMIT`, so the runtime keeps only part of the chat. */
 const SEEDED_TURNS = 120;
-const ROUNDS = 5;
+const ROUNDS = 12;
+const TIMED_QUEUE_CHANGES = 50;
 
 type CaseName = "message-limit" | "byte-limit" | "provider-read";
 
@@ -54,10 +55,31 @@ interface CaseReport {
   checks: string[];
   rounds: Round[];
   passed: boolean;
+  /** The time of one queue change that changes nothing, after the rounds. */
+  unchangedQueueChangeMs?: number;
+  /** Warnings that a chat was sent again with no stored change. */
+  loopWarnings?: number;
   error?: string;
 }
 
 const report: { cases: CaseReport[]; passed: boolean } = { cases: [], passed: false };
+
+// The runtime writes its warnings to stderr. Count the one that shows the loop.
+const LOOP_WARNING = "[conversation-runtime] A chat was sent again with no stored change";
+let loopWarnings = 0;
+const writeStderr = process.stderr.write;
+Object.defineProperty(process.stderr, "write", {
+  configurable: true,
+  writable: true,
+  value: (
+    chunk: string | Uint8Array,
+    encoding?: BufferEncoding,
+    callback?: (error?: Error | null) => void,
+  ): boolean => {
+    if (String(chunk).includes(LOOP_WARNING)) loopWarnings += 1;
+    return writeStderr.call(process.stderr, chunk, encoding, callback);
+  },
+});
 
 function assistantMessage(turn: string, createdAt: string, text: string): ConversationMessage {
   // Mailbox sync sets the reactions of each message. Seed them, so only a real change differs.
@@ -79,6 +101,7 @@ function after(iso: string): string {
 }
 
 async function runCase(name: CaseName, result: CaseReport): Promise<void> {
+  const firstLoopWarning = loopWarnings;
   const root = await mkdtemp(join(tmpdir(), "openbot-conversation-rewrite-"));
   const database = new OpenBotDatabase(join(root, "state"));
   const store = new AgentStore(join(root, "state"), join(root, "home"), database);
@@ -266,6 +289,16 @@ async function runCase(name: CaseName, result: CaseReport): Promise<void> {
         ? "later queue changes write no rows"
         : "later queue changes write no rows and send no chat",
     );
+    const started = performance.now();
+    for (let index = 0; index < TIMED_QUEUE_CHANGES; index += 1) sync.emitQueue(agent.id);
+    result.unchangedQueueChangeMs = Number(((performance.now() - started) / TIMED_QUEUE_CHANGES).toFixed(3));
+    result.loopWarnings = loopWarnings - firstLoopWarning;
+    // Each round of the provider-read case reads the provider again, which sends the chat once.
+    // A real provider read happens when a thread loads, not ten times a minute.
+    if (name !== "provider-read") {
+      assert.equal(result.loopWarnings, 0, "No warning that the chat is sent again with no stored change.");
+      result.checks.push("no loop warning");
+    }
     result.passed = true;
   } finally {
     timer.dispose();

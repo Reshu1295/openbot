@@ -9,6 +9,7 @@ import {
   type QueueDeliveryStatus,
 } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
+import { createOpenBotLogger } from "@openbot/logging";
 import type { AgentClient } from "../agent-client";
 import type { AgentStore } from "../agent-store";
 import type { OpenBotDatabase } from "../openbot-database";
@@ -30,6 +31,17 @@ export const CONVERSATION_CACHE_BYTES_LIMIT = 8 * 1024 * 1024;
 
 /** The maximum serialized size retained by all completed conversation caches. */
 export const CONVERSATION_CACHE_TOTAL_BYTES_LIMIT = 64 * 1024 * 1024;
+
+/**
+ * A chat whose cache does not match what devices last got is sent whole again with no stored change.
+ * When that happens on each queue change, it made a hosted server too slow to answer Signal. One such
+ * send is normal, for example after a provider read, so the warning waits for a repeat and shows it
+ * at most once a minute for each chat.
+ */
+const UNSTORED_SENDS_WARNING_COUNT = 10;
+const UNSTORED_SENDS_WARNING_INTERVAL_MS = 60_000;
+
+const logger = createOpenBotLogger("conversation-runtime");
 
 /** Only the caller that opened the transaction holds a scope, so a nested call finds the owner's. */
 const openTransactions = new WeakMap<OpenBotDatabase, TransactionScope>();
@@ -176,6 +188,7 @@ export class ConversationRuntime {
   readonly #evictedSnapshots = new Map<string, EvictedSnapshot>();
   #evictionTimer: NodeJS.Timeout | null = null;
   readonly #conversationSignatures = new Map<string, string>();
+  readonly #unstoredSends = new Map<string, { since: number; sends: number }>();
   readonly #threadToAgent = new Map<string, string>();
   readonly #loadedThreads = new Map<string, AgentClient>();
   /**
@@ -666,7 +679,7 @@ export class ConversationRuntime {
           eventType,
           detail,
         });
-      }
+      } else this.#countUnstoredSend(snapshot, snapshot.threadId);
     }
     this.publishConversation(snapshot, signature);
     this.#retainPublishedSnapshot(snapshot);
@@ -706,6 +719,23 @@ export class ConversationRuntime {
       : untracked)
       changed.add(message);
     return snapshot.messages.filter((message) => changed.has(message));
+  }
+
+  #countUnstoredSend(snapshot: ConversationSnapshot, threadId: string): void {
+    const now = Date.now();
+    const window = this.#unstoredSends.get(threadId);
+    if (!window || now - window.since >= UNSTORED_SENDS_WARNING_INTERVAL_MS) {
+      this.#unstoredSends.set(threadId, { since: now, sends: 1 });
+      return;
+    }
+    window.sends += 1;
+    if (window.sends !== UNSTORED_SENDS_WARNING_COUNT) return;
+    logger.warn("A chat was sent again with no stored change many times in one minute.", {
+      agentId: snapshot.agentId,
+      threadId,
+      sends: window.sends,
+      messages: snapshot.messages.length,
+    });
   }
 
   #removedMessageIds(snapshot: ConversationSnapshot): string[] {
@@ -831,6 +861,7 @@ export class ConversationRuntime {
     this.#executionSnapshots.delete(threadId);
     this.#dropCachedExecutionSnapshot(threadId);
     this.#conversationSignatures.delete(threadId);
+    this.#unstoredSends.delete(threadId);
   }
 
   clearLoadedThreads(): void {
@@ -845,9 +876,13 @@ export class ConversationRuntime {
       this.#executionSnapshots.delete(id);
       this.#dropCachedExecutionSnapshot(id);
       this.#conversationSignatures.delete(id);
+      this.#unstoredSends.delete(id);
     }
     const threadId = (this.#snapshots.get(agentId) ?? this.#evictedSnapshots.get(agentId))?.threadId;
-    if (threadId) this.#conversationSignatures.delete(threadId);
+    if (threadId) {
+      this.#conversationSignatures.delete(threadId);
+      this.#unstoredSends.delete(threadId);
+    }
     this.#snapshots.delete(agentId);
     for (const [externalThreadId, owner] of this.#routineSessions)
       if (owner === agentId) this.#routineSessions.delete(externalThreadId);
