@@ -428,7 +428,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     onboardingDescription: "Many models with an OpenRouter API key",
     signInMessage: "Add an OpenRouter API key to continue.",
     installGuideLink: null,
-    defaultModel: "~anthropic/claude-sonnet-latest",
+    defaultModel: "anthropic/claude-sonnet-5.5",
     legacyModelPrefix: null,
     authKind: "openrouter",
     pickerOrder: 11,

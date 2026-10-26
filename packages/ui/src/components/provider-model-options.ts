@@ -67,11 +67,11 @@ function groupLabel(service: string): string {
 }
 
 /**
- * The lab of an OpenRouter model: its id starts `<lab>/`, or `~<lab>/` for an alias that follows the
- * lab's latest model. Most names start `<Lab>: `, which gives the heading for the lab's other models too.
+ * The lab of an OpenRouter model: its id starts `<lab>/`. Most names start `<Lab>: `, which gives the
+ * heading for the lab's other models too.
  */
 function openRouterLab(id: string): string {
-  return id.replace(/^~/, "").split("/", 1)[0] ?? "";
+  return id.split("/", 1)[0] ?? "";
 }
 
 function openRouterLabNames(options: readonly ClientAgentModelOption[]): Map<string, string> {

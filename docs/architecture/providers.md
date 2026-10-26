@@ -826,8 +826,9 @@ in Pi 1.1.0 and 1.4.0), so the extension registers only the key and the `Authori
 OpenBot keeps no OpenRouter model list. Pi sends some models to OpenRouter's Anthropic Messages
 endpoint and the others to its chat completions endpoint; both read the header. Model ids keep
 OpenRouter's `<lab>/<model>` form, such as `anthropic/claude-opus-5.5`, and the client passes them to
-Pi unchanged. Ids that start with `~`, such as the default `~anthropic/claude-sonnet-latest`, follow
-the lab's latest model. The model picker groups the models by lab (`openRouterLab` in
+Pi unchanged. The catalog drops the aliases that start with `~`, such as
+`~anthropic/claude-sonnet-latest`, because `isAgentModel` refuses that character, and the default is
+`anthropic/claude-sonnet-5.5`. The model picker groups the models by lab (`openRouterLab` in
 `provider-model-options.ts`) and marks the `:free` models as free. A 402 means the account has no
 credits. OpenRouter is local-only, as Inception is.
 
