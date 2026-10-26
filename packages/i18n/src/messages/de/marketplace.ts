@@ -181,6 +181,15 @@ export const messages = {
     "Verwende die Stile in diesem Repository und gestalte eine Einstellungsseite in Paper.",
   "marketplace.plugin.paper.prompt.tokens":
     "Liste die Design-Tokens in der geöffneten Paper-Datei auf und vergleiche sie mit unserem Theme.",
+  "marketplace.plugin.appleApps.tagline": "Mail, Kalender und mehr auf deinem Mac",
+  "marketplace.plugin.appleApps.description":
+    "Mit Apple apps nutzen Agenten Mail, Kalender, Kontakte, Erinnerungen, Notizen, Nachrichten und Safari auf diesem Mac. Es funktioniert nur unter macOS. OpenBot startet mcp-icloud, einen Community-Server, der nicht von Apple oder OpenBot stammt. Der Server steuert die Apps über AppleScript auf diesem Computer und braucht kein Konto und keinen Schlüssel. Wenn ein Agent eine App zum ersten Mal nutzt, fragt macOS, ob OpenBot sie steuern darf. Um das später zu ändern, öffne Systemeinstellungen › Datenschutz & Sicherheit › Automation. Agenten können E-Mails und iMessages senden und Termine, Kontakte und Erinnerungen ändern oder löschen, prüfe also jeden Schreibvorgang, bevor du ihn genehmigst. Was die Werkzeuge lesen, etwa E-Mail-Text, geht an den Modellanbieter des Agenten.",
+  "marketplace.plugin.appleApps.app":
+    "Mail, Kalender, Kontakte, Erinnerungen, Notizen, Nachrichten und Safari über den lokalen Server mcp-icloud. Benötigt macOS und Zugriff unter Automation.",
+  "marketplace.plugin.appleApps.prompt.unread": "Fasse meine ungelesenen E-Mails von heute in Apple Mail zusammen.",
+  "marketplace.plugin.appleApps.prompt.today": "Was steht heute und morgen in meinem Apple-Kalender?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Finde die neueste E-Mail zum Projekttreffen und trage das Treffen in meinen Kalender ein.",
   "marketplace.plugin.sentry.tagline": "Fehler- und Absturz-Triage",
   "marketplace.plugin.sentry.description":
     "Mit Sentry durchsuchen Agenten aktuelle Fehler, prüfen Stacktraces und betroffene Releases und fassen zusammen, was nach einem Deployment kaputtgegangen ist. Jeder Nutzer meldet sich im Browser bei seinem eigenen Sentry-Konto an.",

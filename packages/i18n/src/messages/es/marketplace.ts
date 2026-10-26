@@ -179,6 +179,15 @@ export const messages = {
     "Usa los estilos de este repositorio y diseña una página de ajustes en Paper.",
   "marketplace.plugin.paper.prompt.tokens":
     "Lista los tokens de diseño del archivo abierto de Paper y compáralos con nuestro tema.",
+  "marketplace.plugin.appleApps.tagline": "Mail, Calendario y más en tu Mac",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps permite a los agentes usar Mail, Calendario, Contactos, Recordatorios, Notas, Mensajes y Safari en este Mac. Solo funciona en macOS. OpenBot inicia mcp-icloud, un servidor de la comunidad que no es de Apple ni de OpenBot. El servidor controla las apps con AppleScript, en este equipo, y no necesita cuenta ni clave. La primera vez que un agente usa una app, macOS pregunta si OpenBot puede controlarla. Para cambiarlo después, abre Ajustes del Sistema › Privacidad y seguridad › Automatización. Los agentes pueden enviar correos e iMessages, y cambiar o eliminar eventos, contactos y recordatorios, así que revisa cada escritura antes de aprobarla. Lo que leen las herramientas, como el texto de los correos, va al proveedor del modelo del agente.",
+  "marketplace.plugin.appleApps.app":
+    "Mail, Calendario, Contactos, Recordatorios, Notas, Mensajes y Safari, mediante el servidor local mcp-icloud. Necesita macOS y acceso de Automatización.",
+  "marketplace.plugin.appleApps.prompt.unread": "Resume mis correos no leídos de hoy en Apple Mail.",
+  "marketplace.plugin.appleApps.prompt.today": "¿Qué hay en mi Calendario de Apple hoy y mañana?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Busca el correo más reciente sobre la reunión del proyecto y añade la reunión a mi calendario.",
   "marketplace.plugin.sentry.tagline": "Triaje de errores y fallos",
   "marketplace.plugin.sentry.description":
     "Sentry permite a los agentes buscar errores recientes, inspeccionar trazas de pila y versiones afectadas, y resumir qué se rompió tras un despliegue. Cada usuario inicia sesión en su propia cuenta de Sentry desde el navegador.",

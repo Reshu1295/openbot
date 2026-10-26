@@ -165,6 +165,15 @@ export const messages = {
   "marketplace.plugin.paper.prompt.codeToDesign":
     "Use os estilos deste repositório e desenhe uma página de configurações no Paper.",
   "marketplace.plugin.paper.prompt.tokens": "Liste os design tokens do arquivo Paper aberto e compare com nosso tema.",
+  "marketplace.plugin.appleApps.tagline": "Mail, Calendário e mais no seu Mac",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps permite que agentes usem Mail, Calendário, Contatos, Lembretes, Notas, Mensagens e Safari neste Mac. Funciona somente no macOS. O OpenBot inicia o mcp-icloud, um servidor da comunidade que não é feito pela Apple nem pelo OpenBot. O servidor controla os apps com AppleScript, neste computador, e não precisa de conta nem de chave. Na primeira vez que um agente usa um app, o macOS pergunta se o OpenBot pode controlá-lo. Para mudar isso depois, abra Ajustes do Sistema › Privacidade e Segurança › Automação. Os agentes podem enviar e-mails e iMessages, e alterar ou excluir eventos, contatos e lembretes, então revise cada gravação antes de aprová-la. O que as ferramentas leem, como o texto dos e-mails, vai para o provedor do modelo do agente.",
+  "marketplace.plugin.appleApps.app":
+    "Mail, Calendário, Contatos, Lembretes, Notas, Mensagens e Safari, pelo servidor local mcp-icloud. Requer macOS e acesso em Automação.",
+  "marketplace.plugin.appleApps.prompt.unread": "Resuma meus e-mails não lidos de hoje no Apple Mail.",
+  "marketplace.plugin.appleApps.prompt.today": "O que tem no meu Calendário da Apple hoje e amanhã?",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "Encontre o e-mail mais recente sobre a reunião do projeto e adicione a reunião ao meu calendário.",
   "marketplace.plugin.sentry.tagline": "Erros e triagem de crashes",
   "marketplace.plugin.sentry.description":
     "O Sentry permite que agentes pesquisem erros recentes, inspecionem stack traces e releases afetados, e resumam o que quebrou depois de um deploy. Cada usuário entra com a própria conta Sentry pelo navegador.",

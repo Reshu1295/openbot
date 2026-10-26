@@ -61,6 +61,12 @@ export const PLUGIN_CATALOG_INDEX: PluginCatalogIndex = {
       detailSha256: "cfc59276d82b8b54ae133336032b611613b5f8c0e93672f8f07009d126c39464",
     },
     {
+      slug: "apple-apps",
+      version: "1.0.0",
+      featured: false,
+      detailSha256: "9b424dc121ed978177e46c443e63e525c477e707a04318f5f5c17b90318d5ee5",
+    },
+    {
       slug: "sentry",
       version: "1.0.0",
       featured: false,
@@ -416,6 +422,39 @@ export const PLUGIN_CATALOG_DETAILS: Record<string, PluginCatalogDetail> = {
     websiteUrl: "https://paper.design",
     privacyPolicyUrl: "https://paper.design/legal/privacy",
     termsUrl: "https://paper.design/legal/tos",
+    skills: [],
+  },
+  "apple-apps": {
+    slug: "apple-apps",
+    name: "Apple apps",
+    tagline: "Mail, Calendar and more on your Mac",
+    description:
+      "Apple apps lets agents use Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari on this Mac. It works on macOS only. OpenBot starts mcp-icloud, a community server that is not made by Apple or OpenBot. The server controls the apps through AppleScript, on this computer, and needs no account and no key. The first time an agent uses an app, macOS asks if OpenBot can control it. To change this later, open System Settings › Privacy & Security › Automation. Agents can send email and iMessages, and change or delete events, contacts and reminders, so review each write before you approve it. What the tools read, such as email text, goes to the model provider of the agent.",
+    category: "productivity",
+    creatorName: "github.com/MrGo2",
+    iconUrl: "https://www.apple.com/favicon.ico",
+    version: "1.0.0",
+    prompts: [
+      { id: "prompt-unread", text: "Summarize my unread email in Apple Mail from today." },
+      { id: "prompt-today", text: "What is on my Apple Calendar today and tomorrow?" },
+      {
+        id: "prompt-schedule",
+        text: "Find the latest email about the project meeting and add the meeting to my calendar.",
+      },
+    ],
+    apps: [
+      {
+        id: "app-apple-apps-mcp",
+        name: "Apple apps",
+        description:
+          "Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari, over the local mcp-icloud server. Needs macOS and Automation access.",
+        iconUrl: "https://www.apple.com/favicon.ico",
+        server: { name: "apple-apps", transport: "stdio", command: "npx", args: ["-y", "mcp-icloud@2.1.3"] },
+      },
+    ],
+    websiteUrl: "https://github.com/MrGo2/icloud-mcp",
+    privacyPolicyUrl: "https://github.com/MrGo2/icloud-mcp/blob/main/PRIVACY.md",
+    termsUrl: "https://github.com/MrGo2/icloud-mcp/blob/main/LICENSE",
     skills: [],
   },
   sentry: {

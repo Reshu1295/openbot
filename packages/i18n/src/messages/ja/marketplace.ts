@@ -173,6 +173,15 @@ export const messages = {
     "このリポジトリのスタイルを使って、Paper で設定ページをデザインしてください。",
   "marketplace.plugin.paper.prompt.tokens":
     "開いている Paper のファイルにあるデザイントークンを一覧にして、私たちのテーマと比較してください。",
+  "marketplace.plugin.appleApps.tagline": "Mac のメール、カレンダーなど",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps を使うと、エージェントはこの Mac のメール、カレンダー、連絡先、リマインダー、メモ、メッセージ、Safari を使えます。macOS でのみ動作します。OpenBot は mcp-icloud を起動します。これは Apple や OpenBot が作ったものではない、コミュニティのサーバーです。サーバーはこのコンピューター上で AppleScript を使ってアプリを操作し、アカウントもキーも不要です。エージェントが初めてアプリを使うとき、macOS は OpenBot にそのアプリの操作を許可するか確認します。後で変更するには、システム設定 › プライバシーとセキュリティ › オートメーション を開いてください。エージェントはメールや iMessage を送信し、イベント、連絡先、リマインダーを変更・削除できるので、承認する前に各書き込みを確認してください。ツールが読んだ内容（メールの本文など）は、エージェントのモデルプロバイダーに送られます。",
+  "marketplace.plugin.appleApps.app":
+    "メール、カレンダー、連絡先、リマインダー、メモ、メッセージ、Safari を、ローカルの mcp-icloud サーバーで操作します。macOS とオートメーションの許可が必要です。",
+  "marketplace.plugin.appleApps.prompt.unread": "Apple のメールで、今日の未読メールを要約してください。",
+  "marketplace.plugin.appleApps.prompt.today": "今日と明日の Apple カレンダーの予定を教えてください。",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "プロジェクト会議に関する最新のメールを探して、その会議をカレンダーに追加してください。",
   "marketplace.plugin.sentry.tagline": "エラーとクラッシュのトリアージ",
   "marketplace.plugin.sentry.description":
     "Sentry を使うと、エージェントは最近のエラーを検索し、スタックトレースと影響を受けたリリースを調べ、デプロイ後に何が壊れたかをまとめられます。各ユーザーはブラウザーで自分の Sentry アカウントにサインインします。",
