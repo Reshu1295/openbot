@@ -25,7 +25,7 @@ import { createOpenBotLogger, type LogValue, redactText, toLogValue } from "@ope
 import { Deferred, Effect, Exit, Fiber, Result, Scope, Stream } from "effect";
 import lockValue from "../../native-runtime.lock.json";
 import { type AgentRuntimeLock, parseAgentRuntimeLock } from "../../scripts/agent-runtime-lock";
-import { type BundledProviderExecutables, configuredCliPath } from "../backend/cli";
+import { type BundledProviderExecutables, configuredCliPath, resolvePiCli } from "../backend/cli";
 import { runCauseEffect } from "../backend/effect-boundary";
 import { sha256File } from "../backend/file-hash";
 import { type McpToolRuntimes, NO_MCP_TOOL_RUNTIMES } from "../backend/mcp-provider-shapes";
@@ -633,18 +633,15 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
   }
   /**
    * Installs the Pi CLI that a key-only provider such as DeepSeek runs on, and waits for it. Only the
-   * Pi row has a Download button, so without this a saved key finds no CLI (#3273). A copy that
-   * OpenBot or the user already installed, even an older one, is kept as it is.
+   * Pi row has a Download button, so without this a saved key finds no CLI (#3273). A Pi that the
+   * provider can already start, from OpenBot or from the user, is kept.
    */
   ensureKeyProviderCli(provider: AgentProviderRef): Effect.Effect<void, ProviderRuntimeFailure> {
-    if (
-      !isKeyOnlyProvider(provider) ||
-      this.#statuses.pi.version !== null ||
-      this.#systemVersions.has("pi") ||
-      configuredCliPath("pi")
-    )
-      return Effect.void;
-    return this.downloadAndWait("pi");
+    if (!isKeyOnlyProvider(provider)) return Effect.void;
+    return resolvePiCli({ bundledExecutable: this.executablePath("pi") }).pipe(
+      Effect.asVoid,
+      Effect.catch(() => this.downloadAndWait("pi")),
+    );
   }
   cancel(runtime: ManagedRuntimeId): Effect.Effect<ProviderRuntimeSnapshot, ProviderRuntimeFailure> {
     return Effect.gen({ self: this }, function* (): Effect.fn.Return<ProviderRuntimeSnapshot, ProviderRuntimeFailure> {

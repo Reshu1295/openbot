@@ -632,7 +632,7 @@ const resolveNativeCli = Effect.fn("Cli.resolveNativeCli")(function* (
     providerFailure(
       new CodexCliError(
         sourceText(found ? "error.provider.nativeNotStarted" : "error.provider.nativeMissing", {
-          provider: provider === "pi" ? "Pi" : "Muse",
+          provider: agentProviderName(provider),
         }),
         found ? "invalid" : "missing",
       ),

@@ -361,10 +361,7 @@ interface TeamApiProviders {
     | "clearProviderCredential"
   >;
   credentials: Pick<ProviderCredentialStore, "status" | "set" | "clear">;
-  runtimes: Pick<
-    ProviderRuntimeManager,
-    "getStatus" | "download" | "cancel" | "checkForUpdates" | "ensureKeyProviderCli"
-  >;
+  runtimes: Pick<ProviderRuntimeManager, "getStatus" | "download" | "cancel" | "checkForUpdates">;
   customProviders: PeerCustomProviderChanges;
   /**
    * Whether this host can run the Claude pasted-code sign-in. `providers-v3` promises it, so a host

@@ -181,7 +181,6 @@ export async function routeProviders(
           body,
         );
         // The same step as the local handler: the key and the process that uses it change together.
-        await runCauseEffect(runtimes.ensureKeyProviderCli(input.provider));
         await runCauseEffect(
           service.changeProviderCredential(input.provider, () =>
             credentials
