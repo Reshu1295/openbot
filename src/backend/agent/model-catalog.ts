@@ -153,6 +153,10 @@ export class ModelCatalog {
             const sorted = [...models].sort(
               (left, right) => rank(left) - rank(right) || compareModelVersions(left, right),
             );
+            // A model that the provider names as its default leads, so new agents start on it.
+            const first = catalog.firstModel?.(this.#options.credentials) ?? null;
+            const firstIndex = first === null ? -1 : sorted.findIndex((model) => model.id === first);
+            if (firstIndex > 0) sorted.unshift(...sorted.splice(firstIndex, 1));
             // For a provider with a fallback, a successful but empty response is no more useful to
             // the picker than a timeout: it must not erase the built-in free tier on first
             // discovery. It is not a fresh catalog, so callers must not treat it as proof that

@@ -3335,6 +3335,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       );
   }
 
+  /** Lists the models again, for a change made outside OpenBot, such as the model Magpie set. */
+  refreshModels(): Effect.Effect<void> {
+    return this.#providers.refreshModels().pipe(Effect.ignore);
+  }
+
   refreshProvider(provider: AgentProvider): Effect.Effect<AgentStatus, AgentLifecycleFailed> {
     return this.#providers
       .refreshProvider(provider)

@@ -16,6 +16,7 @@ import {
   magpieOrigin,
   resolveMagpiePort,
 } from "../backend/magpie";
+import { type MagpieLink, NO_MAGPIE_LINK } from "../backend/magpie-link";
 import { PreferenceStore } from "./preference-file";
 
 /** How long a started gateway has to answer before OpenBot stops waiting for it. */
@@ -78,12 +79,16 @@ export interface MagpieGatewayDependencies {
   spawnServe?: (executable: string) => MagpieProcess;
   killProcess?: (child: MagpieProcess) => void;
   platform?: NodeJS.Platform;
+  /** What Magpie set for OpenBot on its Agents page (`magpie-link-watcher.ts`). */
+  link?: () => MagpieLink;
 }
 
 export interface MagpieGatewayStatus {
   origin: string;
   running: boolean;
   startedByOpenBot: boolean;
+  /** The model that Magpie set for OpenBot, or null. */
+  linkedModel: string | null;
 }
 
 /** Finds, starts and stops the gateway. One instance lives in main. */
@@ -101,8 +106,17 @@ export class MagpieGateway {
     return this.#deps.fetch ?? ((input, init) => fetch(input, init));
   }
 
-  /** The gateway's root address, from its settings file each time: the user can change the port. */
+  #link(): MagpieLink {
+    return this.#deps.link?.() ?? NO_MAGPIE_LINK;
+  }
+
+  /**
+   * The gateway's root address: the one Magpie gave OpenBot on its Agents page, else the port in
+   * Magpie's settings file, read each time because the user can change it.
+   */
   origin(): Effect.Effect<string> {
+    const linked = this.#link().baseUrl;
+    if (linked) return Effect.succeed(linked);
     return resolveMagpiePort(this.#deps.location ?? defaultMagpieLocation(), this.#deps.readSettings).pipe(
       Effect.map(magpieOrigin),
     );
@@ -117,13 +131,14 @@ export class MagpieGateway {
     return Effect.gen({ self: this }, function* () {
       const origin = yield* this.origin();
       const running = yield* checkMagpieHealth(this.#fetch(), origin);
-      return { origin, running, startedByOpenBot: this.#child !== null };
+      return { origin, running, startedByOpenBot: this.#child !== null, linkedModel: this.#link().model };
     });
   }
 
   models(): Effect.Effect<MagpieModel[], MagpieGatewayFailure> {
     return Effect.gen({ self: this }, function* () {
-      return yield* listMagpieModels(this.#fetch(), yield* this.origin());
+      const origin = yield* this.origin();
+      return yield* listMagpieModels(this.#fetch(), origin, undefined, this.#link().apiKey ?? undefined);
     });
   }
 

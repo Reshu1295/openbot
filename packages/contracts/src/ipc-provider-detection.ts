@@ -40,6 +40,9 @@ export const MAGPIE_DEFAULT_PORT = 3425;
  */
 export const MAGPIE_API_KEY = "magpie-openbot";
 
+/** The longest Magpie model id that OpenBot reads. */
+const MAGPIE_MODEL_ID_LIMIT = 200;
+
 export type DefaultModelServerId = keyof typeof DEFAULT_MODEL_SERVERS;
 
 /** The Magpie gateway on this computer, as Settings shows it. */
@@ -51,6 +54,8 @@ export interface MagpieGatewaySettings {
   origin: string;
   /** OpenBot started the gateway that runs, so it stops it on quit. */
   startedByOpenBot: boolean;
+  /** The default model that Magpie set for OpenBot on its Agents page, or null. */
+  linkedModel: string | null;
 }
 
 export function isMagpieGatewaySettings(value: unknown): value is MagpieGatewaySettings {
@@ -59,7 +64,8 @@ export function isMagpieGatewaySettings(value: unknown): value is MagpieGatewayS
     isBoolean(value.autoStart) &&
     isBoolean(value.running) &&
     isBoundedString(value.origin, CUSTOM_PROVIDER_LIMITS.baseUrl) &&
-    isBoolean(value.startedByOpenBot)
+    isBoolean(value.startedByOpenBot) &&
+    (value.linkedModel === null || isBoundedString(value.linkedModel, MAGPIE_MODEL_ID_LIMIT))
   );
 }
 

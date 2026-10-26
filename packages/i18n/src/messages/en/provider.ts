@@ -170,6 +170,9 @@ export const messages = defineMessages("provider", {
     "When no Magpie gateway answers, OpenBot runs magpie serve and stops it again on quit.",
   "provider.magpie.running": "Magpie answers at {origin}.",
   "provider.magpie.stopped": "Magpie does not answer at {origin}.",
+  "provider.magpie.linkedModel": "Set in Magpie",
+  "provider.magpie.linkedModelDescription":
+    "New Magpie agents start on {model}. Agents you already have keep their model. Change or disconnect it on Magpie's Agents page.",
 
   // The optional OpenCode Go key dialog.
   "provider.openCodeKey.title": "Sign in to OpenCode Go",

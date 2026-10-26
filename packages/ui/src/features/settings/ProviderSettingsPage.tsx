@@ -1301,7 +1301,10 @@ function RuntimeSection(props: SectionProps) {
 
 /* ---------------------------------------------- Magpie */
 
-/** Whether OpenBot starts the user's Magpie gateway, and whether it answers now. */
+/**
+ * Whether OpenBot starts the user's Magpie gateway, whether it answers now, and the default model
+ * that Magpie set for OpenBot on its Agents page.
+ */
 function MagpieSection(props: { magpie: ProviderMagpieGateway; disabled: boolean | undefined }) {
   const { t } = useText();
   return (
@@ -1329,6 +1332,16 @@ function MagpieSection(props: { magpie: ProviderMagpieGateway; disabled: boolean
                 />
               </ItemActions>
             </Item>
+            <Show when={value().linkedModel}>
+              {(model) => (
+                <Item class="settings-modal-row">
+                  <ItemContent>
+                    <ItemTitle>{t("provider.magpie.linkedModel")}</ItemTitle>
+                    <ItemDescription>{t("provider.magpie.linkedModelDescription", { model: model() })}</ItemDescription>
+                  </ItemContent>
+                </Item>
+              )}
+            </Show>
           </ItemGroup>
         </SettingsSection>
       )}

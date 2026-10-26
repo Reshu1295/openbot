@@ -78,6 +78,13 @@ describe("Magpie query environment", () => {
     configDirectory: "/data/provider-state/magpie-claude",
   };
 
+  it("sends the key that Magpie gave OpenBot, and the app key without one", () => {
+    expect(magpieQueryEnvironment({}, { ...input, apiKey: "magpie-lan-key" }).ANTHROPIC_AUTH_TOKEN).toBe(
+      "magpie-lan-key",
+    );
+    expect(magpieQueryEnvironment({}, { ...input, apiKey: null }).ANTHROPIC_AUTH_TOKEN).toBe(MAGPIE_API_KEY);
+  });
+
   it("points Claude Code at the gateway with the app key and the thread's hashed session", () => {
     const environment = magpieQueryEnvironment({ PATH: "/usr/bin", HOME: "/home/u" }, input);
     expect(environment.ANTHROPIC_BASE_URL).toBe("http://127.0.0.1:3425");
@@ -197,6 +204,17 @@ describe("Magpie models", () => {
     expect(auto?.reasoningEffortConfigurable).toBe(true);
     expect(plain?.supportedReasoningEfforts).toEqual([]);
     expect(plain?.reasoningEffortConfigurable).toBe(false);
+  });
+
+  it("puts the model that Magpie set first, and ignores one the gateway does not list", () => {
+    const models = parseMagpieModels(MODELS_FIXTURE);
+    expect(magpieModelOptions(models, "claude/claude-opus-5-5").map((option) => option.model)).toEqual([
+      "claude/claude-opus-5-5",
+      "codex/gpt-6-sol",
+      "auto/deepseek-v4.1-flash",
+      "local/plain",
+    ]);
+    expect(magpieModelOptions(models, "gone/model")[0]?.model).toBe("auto/deepseek-v4.1-flash");
   });
 
   it("keeps the gateway's first model first when no auto group is listed", () => {

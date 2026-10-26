@@ -553,7 +553,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
   let agentCounter = agents.length;
   let hostedSites = clone(STORY_HOSTED_SITES);
   let detectionSettings: ProviderDetectionSettings = clone(DEFAULT_PROVIDER_DETECTION_SETTINGS);
-  const magpiePreview = { autoStart: false, origin: "http://127.0.0.1:3425" };
+  const magpiePreview = { autoStart: false, origin: "http://127.0.0.1:3425", linkedModel: null };
   let customAgents: CustomAgentSummary[] = [];
   const registryEntry: AcpRegistryEntry = {
     id: "example-acp",

@@ -859,6 +859,11 @@ and is not a secret.
 - **Start and stop.** With auto-start on (`openbot-magpie-v1.json`), main runs `magpie serve` at
   start when no gateway answers and a `magpie` command is on PATH (`src/main/magpie-gateway.ts`). It
   stops the gateway on quit only when it started it.
+- **Set in Magpie.** Main makes `~/.config/openbot/magpie.json` (empty) at start and watches it
+  (`src/main/magpie-link-watcher.ts`, `src/backend/magpie-link.ts`). A Magpie agent plugin writes
+  `baseUrl`, `apiKey` and `model` there. A loopback http(s) `baseUrl` with an `apiKey` replaces the
+  gateway discovery; `model` comes first in the model list, so new Magpie agents start on it, and the
+  Magpie page shows it as "Set in Magpie". A value that fails a check counts as absent.
 
 ## Muse
 

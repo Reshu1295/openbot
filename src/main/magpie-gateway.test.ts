@@ -154,7 +154,12 @@ describe("Magpie start", () => {
     });
     const status = await Effect.runPromise(gateway.ensureStarted());
     expect(spawnServe).toHaveBeenCalledWith("/usr/bin/magpie");
-    expect(status).toEqual({ origin: "http://127.0.0.1:3425", running: true, startedByOpenBot: true });
+    expect(status).toEqual({
+      origin: "http://127.0.0.1:3425",
+      running: true,
+      startedByOpenBot: true,
+      linkedModel: null,
+    });
     await Effect.runPromise(gateway.ensureStarted());
     expect(spawnServe).toHaveBeenCalledTimes(1);
     await Effect.runPromise(gateway.stop());

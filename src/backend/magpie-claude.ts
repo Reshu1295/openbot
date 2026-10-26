@@ -49,6 +49,8 @@ export interface MagpieQueryEnvironmentInput {
   model: string | null;
   /** The Claude Code folder of the provider, apart from the user's own. */
   configDirectory: string;
+  /** The key that Magpie gave OpenBot on its Agents page. Without it, the public app key. */
+  apiKey?: string | null;
 }
 
 /**
@@ -82,7 +84,7 @@ export function magpieQueryEnvironment(
     CLAUDE_CONFIG_DIR: input.configDirectory,
     ANTHROPIC_BASE_URL: input.origin,
     // Sent as `Authorization: Bearer`. The app key is a public name, not a secret.
-    ANTHROPIC_AUTH_TOKEN: MAGPIE_API_KEY,
+    ANTHROPIC_AUTH_TOKEN: input.apiKey || MAGPIE_API_KEY,
     ANTHROPIC_CUSTOM_HEADERS: `X-Magpie-Session: ${magpieSessionId(input.threadId)}`,
     // No telemetry, error reports or update checks to Anthropic: the provider is the gateway.
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
@@ -119,11 +121,16 @@ export function magpieModelEfforts(
 }
 
 /**
- * The gateway's models as OpenBot lists them. The first `auto/` routing group comes first, else the
- * gateway's first model, because a provider with no fixed default model starts on its first one.
+ * The gateway's models as OpenBot lists them. The model that Magpie set for OpenBot comes first,
+ * else the first `auto/` routing group, else the gateway's first model, because a provider with no
+ * fixed default model starts on its first one.
  */
-export function magpieModelOptions(models: readonly MagpieModel[]): MagpieModelOption[] {
-  const preferred = models.findIndex((model) => model.id.startsWith("auto/"));
+export function magpieModelOptions(
+  models: readonly MagpieModel[],
+  linkedModel: string | null = null,
+): MagpieModelOption[] {
+  const linked = linkedModel === null ? -1 : models.findIndex((model) => model.id === linkedModel);
+  const preferred = linked >= 0 ? linked : models.findIndex((model) => model.id.startsWith("auto/"));
   const ordered = preferred > 0 ? [models[preferred], ...models.filter((_, index) => index !== preferred)] : models;
   return ordered.flatMap((model) => {
     if (!model) return [];

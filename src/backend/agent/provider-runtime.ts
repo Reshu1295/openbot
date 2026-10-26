@@ -1303,6 +1303,15 @@ export class ProviderRuntime implements ProviderPort {
     return yield* exit;
   }, Effect.uninterruptible).bind(this);
 
+  /**
+   * Lists the models of the running providers again and publishes the catalogue, for a change made
+   * outside OpenBot: the model that Magpie set for OpenBot on its Agents page.
+   */
+  readonly refreshModels = Effect.fn("ProviderRuntime.refreshModels")(function* (this: ProviderRuntime) {
+    yield* this.#refreshModelCatalog();
+    this.#setStatus({});
+  }).bind(this);
+
   readonly refreshProvider = Effect.fn("ProviderRuntime.refreshProvider")(function* (
     this: ProviderRuntime,
     provider: AgentProvider,

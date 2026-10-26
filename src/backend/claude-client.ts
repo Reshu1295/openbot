@@ -294,6 +294,10 @@ export interface ClaudeMagpieMode {
   origin: () => Effect.Effect<string>;
   /** The Claude Code folder of the provider, apart from the user's own. */
   configDirectory: string;
+  /** The key that Magpie gave OpenBot on its Agents page, read at each use. Null: the app key. */
+  apiKey?: () => string | null;
+  /** The model that Magpie set for OpenBot, read at each list. It leads the list. */
+  linkedModel?: () => string | null;
   fetch?: FetchLike;
 }
 
@@ -675,10 +679,13 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
     timeoutMs?: number,
   ): Effect.fn.Return<unknown[], ProviderClientOperationError> {
     const origin = yield* magpie.origin();
-    const models = yield* listMagpieModels(magpie.fetch ?? fetchGateway, origin, timeoutMs).pipe(
-      Effect.mapError((failure) => providerFailure(new Error(failure.message))),
-    );
-    const options = magpieModelOptions(models);
+    const models = yield* listMagpieModels(
+      magpie.fetch ?? fetchGateway,
+      origin,
+      timeoutMs,
+      magpie.apiKey?.() ?? undefined,
+    ).pipe(Effect.mapError((failure) => providerFailure(new Error(failure.message))));
+    const options = magpieModelOptions(models, magpie.linkedModel?.() ?? null);
     this.#modelEffortCapabilities.clear();
     this.#modelSdkValues.clear();
     for (const option of options) {
@@ -981,6 +988,7 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
                   threadId,
                   model,
                   configDirectory: this.#magpie.configDirectory,
+                  apiKey: this.#magpie.apiKey?.() ?? null,
                 })
               : environment,
         },

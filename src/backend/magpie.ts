@@ -209,13 +209,14 @@ export const listMagpieModels = Effect.fn("MagpieGateway.listModels")(function* 
   fetchFn: FetchLike,
   origin: string,
   timeoutMs = MODELS_TIMEOUT_MS,
+  apiKey: string = MAGPIE_API_KEY,
 ) {
   const body = yield* withTimeout(origin, timeoutMs, async (signal) => {
     const response = await fetchFn(`${origin}/v1/models`, {
       method: "GET",
       redirect: "manual",
       signal,
-      headers: { Accept: "application/json", Authorization: `Bearer ${MAGPIE_API_KEY}` },
+      headers: { Accept: "application/json", Authorization: `Bearer ${apiKey}` },
     });
     if (!response.ok) {
       await response.body?.cancel();
