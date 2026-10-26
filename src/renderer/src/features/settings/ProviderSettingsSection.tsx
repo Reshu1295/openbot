@@ -45,6 +45,7 @@ import {
 } from "@openbot/ui/features/settings/OpenCodeKeyDialog";
 import {
   type ProviderDefaultChoice,
+  type ProviderMagpieGateway,
   type ProviderPromptCache,
   type ProviderSettingsDetail,
   ProviderSettingsPage,
@@ -56,6 +57,7 @@ import { ProviderSignInDialogs } from "../../components/ProviderSignInDialogs";
 import type { ProviderConnectionApi } from "../../components/provider-connection-api";
 import { createCustomProviderHostState } from "../custom-providers/custom-provider-host-state";
 import { savedCustomModel } from "../onboarding/SetupProviderPicker";
+import { createProviderMagpieGateway } from "./provider-magpie-gateway";
 import { createProviderPromptCache, type ProviderPromptCacheSource } from "./provider-prompt-cache";
 import { createSettingsGeneralStore, type SettingsGeneralStore } from "./stores/general-store";
 
@@ -105,6 +107,7 @@ interface ProviderSettingsSectionProps {
   usage?: readonly AccountUsageProviderRow[] | undefined;
   onDetailChange?: ((detail: ProviderSettingsDetail | null) => void) | undefined;
   promptCache?: ProviderPromptCache | undefined;
+  magpie?: ProviderMagpieGateway | undefined;
 }
 
 /** The provider list of the computer the agents run on, with its custom endpoint dialogs. */
@@ -257,6 +260,7 @@ function ProviderSettingsSection(props: ProviderSettingsSectionProps) {
         menuMount={props.selectMount}
         onDetailChange={props.onDetailChange}
         promptCache={props.promptCache}
+        magpie={props.magpie}
         footer={
           <>
             <Show when={props.providerDetection}>
@@ -495,6 +499,9 @@ export function HostProviderSettingsPanel(
   },
 ) {
   const promptCache = createProviderPromptCache(() => props.promptCache);
+  // The Magpie gateway is of this computer: main holds it, and no Team API route reaches it. The web
+  // client has no `window.openbot`.
+  const magpie = createProviderMagpieGateway(() => props.hostName === undefined && "openbot" in window);
   const keys = createProviderKeyState({
     open: true,
     get providerKeys() {
@@ -556,6 +563,7 @@ export function HostProviderSettingsPanel(
         usage={props.usage}
         onDetailChange={props.onDetailChange}
         promptCache={promptCache()}
+        magpie={magpie()}
         detectionSettings={
           <Show when={props.detectionSettings}>
             {(value) => (

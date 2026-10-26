@@ -147,6 +147,7 @@ import {
   decodeHostedSite,
   decodeHostedSiteList,
   decodeLicenseState,
+  decodeMagpieGatewaySettings,
   decodeMobileConnectedDevices,
   decodeMobileConnectLink,
   decodeMobileConnectTicket,
@@ -898,6 +899,8 @@ const openbotApi: OpenBotDesktopApi = {
     discoverModels: decodeDiscoverModelsResult,
     getSettings: decodeProviderDetectionSettings,
     setSettings: decodeProviderDetectionSettings,
+    getMagpie: decodeMagpieGatewaySettings,
+    setMagpieAutoStart: decodeMagpieGatewaySettings,
   }),
   providerAdmin: bridgeGroup(IPC_ENDPOINTS.providerAdmin, {
     startCodeLogin: decodeProviderCodeLoginStart,

@@ -165,6 +165,11 @@ export const messages = defineMessages("provider", {
   "provider.deepseekKey.description":
     "Save a DeepSeek API key on this computer to use the DeepSeek models. OpenBot runs them in the Pi CLI that it downloads.",
   "provider.deepseekKey.label": "DeepSeek API key",
+  "provider.magpie.autoStart": "Start Magpie with OpenBot",
+  "provider.magpie.autoStartDescription":
+    "When no Magpie gateway answers, OpenBot runs magpie serve and stops it again on quit.",
+  "provider.magpie.running": "Magpie answers at {origin}.",
+  "provider.magpie.stopped": "Magpie does not answer at {origin}.",
 
   // The optional OpenCode Go key dialog.
   "provider.openCodeKey.title": "Sign in to OpenCode Go",

@@ -553,6 +553,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
   let agentCounter = agents.length;
   let hostedSites = clone(STORY_HOSTED_SITES);
   let detectionSettings: ProviderDetectionSettings = clone(DEFAULT_PROVIDER_DETECTION_SETTINGS);
+  const magpiePreview = { autoStart: false, origin: "http://127.0.0.1:3425" };
   let customAgents: CustomAgentSummary[] = [];
   const registryEntry: AcpRegistryEntry = {
     id: "example-acp",
@@ -1414,6 +1415,12 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       setSettings: async (settings) => {
         detectionSettings = clone(settings);
         return clone(detectionSettings);
+      },
+      // Preview runs no Magpie gateway.
+      getMagpie: async () => ({ ...magpiePreview, running: false, startedByOpenBot: false }),
+      setMagpieAutoStart: async (autoStart) => {
+        magpiePreview.autoStart = autoStart;
+        return { ...magpiePreview, running: false, startedByOpenBot: false };
       },
     },
     // Preview has one host, so every server answers for the same agents.
