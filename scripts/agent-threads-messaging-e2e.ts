@@ -1,0 +1,409 @@
+// Checks messages between agents and provider subagents together with side threads, in this worktree's
+// running dev app, through the preload bridge, agent service and a real provider. It changes the data
+// of the profile, so start the app with `bun run dev` (never `--shared`), and pass two agents whose
+// provider is signed in and runs turns at the same time. Subagent checks need Claude agents:
+// `bun scripts/agent-threads-messaging-e2e.ts --allow-mutations --from=<agent id> --to=<agent id>`.
+//
+// 1. From the agent's own chat, A asks B. B answers in its own chat, and the answer comes back to A's
+//    own chat. No thread starts.
+// 2. From a side thread, A asks B. B answers in its own chat. The script records where the answer
+//    comes back to A (a side thread gets no answer today; see `knownGaps`).
+// 3. B runs a long turn in a side thread when A asks it. B answers in its own chat while the side
+//    thread still runs, and neither conversation gets the other's messages.
+// 4. A starts a thread with `start_task` from its own chat. The thread runs the brief; the own chat
+//    does not get the thread's answer.
+// 5. In a side thread, `start_task` and `start_new_chat` are refused: no thread starts and the own
+//    chat keeps its messages.
+// 6. A Claude subagent in a side thread shows in that thread only.
+// 7. A background Claude subagent in a side thread ends after its turn. Its answer comes back to that
+//    side thread, not to the agent's own chat.
+// At the end it stops and deletes each thread that it started.
+// Writes .openbot-build/agent-threads-messaging-e2e/report.json.
+import assert from "node:assert/strict";
+import { agentProviderDescriptor, isAgentProvider } from "@openbot/contracts/agent-providers";
+import type { AgentTask, ConversationMessage, ConversationSnapshot } from "@openbot/contracts/ipc";
+import { argument, connectChannelE2e, waitFor, writeReport } from "./channel-e2e-support";
+
+const fromArgument = argument("from");
+const toArgument = argument("to");
+assert.ok(fromArgument && toArgument, "Pass --from=<agent id> and --to=<agent id> of two signed-in agents.");
+const from: string = fromArgument;
+const to: string = toArgument;
+const run = crypto.randomUUID().slice(0, 6);
+const TURN_MS = 240_000;
+/** `--only=3,5` runs only those steps. */
+const only = argument("only")?.split(",").map(Number);
+
+/** What a step saw, for the report. */
+type Details = Record<string, string | number | boolean | null | undefined>;
+
+interface Step {
+  name: string;
+  passed: boolean;
+  details: Details;
+  error?: string;
+}
+
+interface Report {
+  from: string;
+  to: string;
+  run: string;
+  steps: Step[];
+  knownGaps: string[];
+  pageErrors: string[];
+  passed: boolean;
+}
+
+const report: Report = { from, to, run, steps: [], knownGaps: [], pageErrors: [], passed: false };
+const session = await connectChannelE2e("agent-threads-messaging-e2e");
+const { page } = session;
+page.on("pageerror", (error) => report.pageErrors.push(error.stack ?? error.message));
+const started: Array<{ agentId: string; taskId: string }> = [];
+
+const bridge = {
+  agent: (id: string) =>
+    page.evaluate(async (agentId) => {
+      const found = (await window.openbot.agent.listAgents()).find((candidate) => candidate.id === agentId);
+      if (!found) throw new Error(`Unknown agent: ${agentId}`);
+      return { name: found.name, provider: found.provider };
+    }, id),
+  tasks: (id: string): Promise<AgentTask[]> =>
+    page.evaluate((agentId) => window.openbot.agent.listTasks(agentId).then((snapshot) => snapshot.tasks), id),
+  main: (id: string): Promise<ConversationSnapshot> =>
+    page.evaluate((agentId) => window.openbot.agent.readConversation(agentId), id),
+  side: (agentId: string, taskId: string): Promise<ConversationSnapshot> =>
+    page.evaluate((input) => window.openbot.agent.readTask(input), { agentId, taskId }),
+  send: (agentId: string, text: string) =>
+    page.evaluate((input) => window.openbot.agent.sendMessage({ ...input, clientMessageId: crypto.randomUUID() }), {
+      agentId,
+      text,
+    }),
+  startTask: async (agentId: string, text: string): Promise<AgentTask> => {
+    const task = await page.evaluate(
+      (input) => window.openbot.agent.startTask({ ...input, clientMessageId: crypto.randomUUID() }),
+      { agentId, text },
+    );
+    started.push({ agentId, taskId: task.id });
+    return task;
+  },
+};
+
+const has = (snapshot: ConversationSnapshot, accept: (message: ConversationMessage) => boolean) =>
+  snapshot.messages.some(accept);
+const answerWith = (word: string) => (message: ConversationMessage) =>
+  message.author === "assistant" && message.text.includes(word);
+const fromAgent = (agentId: string, word: string) => (message: ConversationMessage) =>
+  message.senderAgentId === agentId && message.text.includes(word);
+const idle = (snapshot: ConversationSnapshot) => snapshot.activeTurnId === null;
+const task = async (agentId: string, taskId: string) =>
+  (await bridge.tasks(agentId)).find((entry) => entry.id === taskId);
+
+let stepNumber = 0;
+async function step(name: string, body: (details: Details) => Promise<void>): Promise<void> {
+  stepNumber += 1;
+  if (only && !only.includes(stepNumber)) return;
+  const details: Details = {};
+  const entry: Step = { name, passed: false, details };
+  report.steps.push(entry);
+  try {
+    await body(details);
+    entry.passed = true;
+  } catch (error) {
+    entry.error = error instanceof Error ? error.message : String(error);
+  }
+  process.stdout.write(`${entry.passed ? "pass" : "FAIL"} ${name}${entry.error ? `: ${entry.error}` : ""}\n`);
+}
+
+const ask = (word: string, question: string, toName: string) =>
+  [
+    `Use openbot.send_message to send ${toName} (agent id "${to}") this message, with expectsReply true:`,
+    `"${word}: ${question} Answer with only the number."`,
+    "Then end your turn and reply with the single word SENT. Do not wait for the answer.",
+  ].join("\n");
+
+const fromAgentInfo = await bridge.agent(from);
+const toAgentInfo = await bridge.agent(to);
+for (const provider of [fromAgentInfo.provider, toAgentInfo.provider]) {
+  assert.ok(
+    isAgentProvider(provider) && agentProviderDescriptor(provider).concurrentTurns,
+    `${provider} runs one turn.`,
+  );
+}
+const claude = fromAgentInfo.provider === "claude";
+
+try {
+  // 1. Own chat to own chat.
+  await step("main asks another agent", async (details) => {
+    const word = `M1${run}`;
+    const tasksBefore = (await bridge.tasks(from)).length + (await bridge.tasks(to)).length;
+    await bridge.send(from, ask(word, "What is 2+2?", toAgentInfo.name));
+    await waitFor(
+      page,
+      "B gets the request in its own chat",
+      () => bridge.main(to),
+      (s) => has(s, fromAgent(from, word)),
+      TURN_MS,
+    );
+    const back = await waitFor(
+      page,
+      "A gets the answer in its own chat",
+      () => bridge.main(from),
+      (s) => has(s, (m) => m.senderAgentId === to && m.text.includes("4")) && idle(s),
+      TURN_MS,
+    );
+    details.answerInMain = has(back, (m) => m.senderAgentId === to);
+    const tasksAfter = (await bridge.tasks(from)).length + (await bridge.tasks(to)).length;
+    details.threadsStarted = tasksAfter - tasksBefore;
+    assert.equal(tasksAfter, tasksBefore, "A message between agents started a thread.");
+  });
+
+  // 2. Side thread to own chat.
+  await step("side thread asks another agent", async (details) => {
+    const word = `M2${run}`;
+    const side = await bridge.startTask(from, ask(word, "What is 3+3?", toAgentInfo.name));
+    details.taskId = side.id;
+    await waitFor(
+      page,
+      "B gets the request in its own chat",
+      () => bridge.main(to),
+      (s) => has(s, fromAgent(from, word)),
+      TURN_MS,
+    );
+    const toSides = await Promise.all((await bridge.tasks(to)).map((entry) => bridge.side(to, entry.id)));
+    details.requestInRecipientSideThread = toSides.some((s) => has(s, fromAgent(from, word)));
+    assert.equal(details.requestInRecipientSideThread, false, "The request reached a side thread of B.");
+    const answered = (s: ConversationSnapshot) => has(s, (m) => m.senderAgentId === to && m.text.includes("6"));
+    const lane = await waitFor(
+      page,
+      "A gets the answer",
+      async () => {
+        const [main, thread] = [await bridge.main(from), await bridge.side(from, side.id)];
+        return answered(thread) ? "side" : answered(main) ? "main" : null;
+      },
+      (value) => value !== null,
+      TURN_MS,
+    );
+    details.answerLane = lane;
+    if (lane === "main")
+      report.knownGaps.push("An answer to a request from a side thread comes back to the agent's own chat.");
+    const thread = await waitFor(page, "the side thread ends", () => bridge.side(from, side.id), idle, TURN_MS);
+    details.sideRepliedSent = has(thread, answerWith("SENT"));
+    details.sideState = (await task(from, side.id))?.state;
+  });
+
+  // 3. The recipient is busy in a side thread.
+  await step("recipient answers while its side thread runs", async (details) => {
+    const word = `M3${run}`;
+    const slept = `SLEPT${run}`;
+    const side = await bridge.startTask(
+      to,
+      `Run the shell command "sleep 90" in the foreground, with a timeout of 120000 ms, then reply with the single word ${slept}.`,
+    );
+    details.taskId = side.id;
+    await waitFor(
+      page,
+      "B's side thread runs",
+      () => task(to, side.id),
+      (entry) => entry?.state === "running",
+      TURN_MS,
+    );
+    // A timeline of B's two lanes, in milliseconds from the request, with the side thread's state.
+    const sentAt = Date.now();
+    const mark = async (key: string) => {
+      details[`${key}Ms`] = Date.now() - sentAt;
+      details[`${key}SideState`] = (await task(to, side.id))?.state ?? null;
+    };
+    await bridge.send(from, ask(word, "What is 5+5?", toAgentInfo.name));
+    const requestIndex = (s: ConversationSnapshot) => s.messages.findIndex(fromAgent(from, word));
+    await waitFor(
+      page,
+      "B gets the request",
+      () => bridge.main(to),
+      (s) => requestIndex(s) >= 0,
+      TURN_MS,
+    );
+    await mark("requestArrived");
+    await waitFor(
+      page,
+      "B's own chat starts a turn",
+      () => bridge.main(to),
+      (s) => s.activeTurnId !== null || s.messages.slice(requestIndex(s) + 1).some((m) => m.author === "assistant"),
+      TURN_MS,
+    );
+    await mark("mainTurnStarted");
+    await waitFor(
+      page,
+      "B answers in its own chat",
+      () => bridge.main(to),
+      (s) => s.messages.slice(requestIndex(s) + 1).some((m) => m.author === "assistant" && m.text.trim() !== ""),
+      TURN_MS,
+    );
+    await mark("mainAnswered");
+    assert.equal(details.requestArrivedSideState, "running", "B's side thread ended before the request came.");
+    assert.equal(details.mainTurnStartedSideState, "running", "B's own chat waited for its side thread.");
+    const thread = await waitFor(
+      page,
+      "B's side thread ends",
+      () => bridge.side(to, side.id),
+      (s) => idle(s) && has(s, answerWith(slept)),
+      TURN_MS,
+    );
+    const main = await bridge.main(to);
+    details.sideHasRequest = has(thread, (m) => m.text.includes(word));
+    details.mainHasSideAnswer = has(main, (m) => m.text.includes(slept) && m.author === "assistant");
+    assert.equal(details.sideHasRequest, false, "B's side thread got A's request.");
+    assert.equal(details.mainHasSideAnswer, false, "B's own chat got the side thread's answer.");
+  });
+
+  // 4. The agent starts a thread.
+  await step("agent starts a thread from its own chat", async (details) => {
+    const title = `Smoke sub ${run}`;
+    const pong = `PONG${run}`;
+    await bridge.send(
+      from,
+      `Call openbot.start_task with the title "${title}" and the brief "Reply with the single word ${pong}. Do not use tools." Then reply with the single word STARTED.`,
+    );
+    const created = await waitFor(
+      page,
+      "the thread starts",
+      async () => (await bridge.tasks(from)).find((entry) => entry.title === title),
+      Boolean,
+      TURN_MS,
+    );
+    assert.ok(created);
+    started.push({ agentId: from, taskId: created.id });
+    details.origin = created.origin;
+    await waitFor(
+      page,
+      "the thread answers",
+      () => bridge.side(from, created.id),
+      (s) => idle(s) && has(s, answerWith(pong)),
+      TURN_MS,
+    );
+    const main = await waitFor(
+      page,
+      "the own chat ends its turn",
+      () => bridge.main(from),
+      (s) => idle(s) && has(s, answerWith("STARTED")),
+      TURN_MS,
+    );
+    details.mainHasThreadAnswer = has(main, answerWith(pong));
+    assert.equal(details.mainHasThreadAnswer, false, "The own chat got the thread's answer.");
+  });
+
+  // 5. Refusals in a side thread.
+  await step("side thread cannot start threads or a new chat", async (details) => {
+    const title = `Refused ${run}`;
+    const mainBefore = await bridge.main(from);
+    const side = await bridge.startTask(
+      from,
+      [
+        "Call each tool once, in order, and do not retry. Then reply with the exact result text of each call, one per line.",
+        `1. openbot.start_task with the title "${title}" and the brief "Reply ok."`,
+        "2. openbot.start_new_chat with no arguments.",
+      ].join("\n"),
+    );
+    details.taskId = side.id;
+    const thread = await waitFor(page, "the side thread ends", () => bridge.side(from, side.id), idle, TURN_MS);
+    const last = thread.messages.filter((m) => m.author === "assistant").at(-1);
+    details.sideAnswer = last?.text.slice(0, 600);
+    details.threadStarted = (await bridge.tasks(from)).some((entry) => entry.title === title);
+    const mainAfter = await bridge.main(from);
+    details.mainKeptThread = mainAfter.threadId === mainBefore.threadId;
+    details.mainKeptMessages = mainBefore.messages.every((m) => mainAfter.messages.some((n) => n.id === m.id));
+    assert.equal(details.threadStarted, false, "A side thread started a thread.");
+    assert.ok(details.mainKeptThread && details.mainKeptMessages, "A side thread reset the own chat.");
+  });
+
+  if (claude) {
+    // 6. A subagent in a side thread.
+    await step("Claude subagent in a side thread", async (details) => {
+      const word = `SUBOK${run}`;
+      const mainBefore = await bridge.main(from);
+      const side = await bridge.startTask(
+        from,
+        `Use your Agent tool to start one subagent and tell it to reply with the single word ${word}, with no tools. Wait for it, then reply with its answer.`,
+      );
+      details.taskId = side.id;
+      const thread = await waitFor(
+        page,
+        "the side thread ends",
+        () => bridge.side(from, side.id),
+        (s) => idle(s) && has(s, answerWith(word)),
+        TURN_MS,
+      );
+      details.subagentsInSide = thread.messages.filter((m) => m.subagents?.length).length;
+      const mainAfter = await bridge.main(from);
+      details.subagentsAddedToMain = mainAfter.messages.filter(
+        (m) => m.subagents?.length && !mainBefore.messages.some((n) => n.id === m.id),
+      ).length;
+      assert.ok(Number(details.subagentsInSide) > 0, "The side thread shows no subagent.");
+      assert.equal(details.subagentsAddedToMain, 0, "The own chat shows the side thread's subagent.");
+    });
+
+    // 7. A background subagent ends after its side thread's turn.
+    await step("background Claude subagent in a side thread", async (details) => {
+      const word = `SUB2${run}`;
+      const follow = `FOLLOWUP2-${run}`;
+      const side = await bridge.startTask(
+        from,
+        [
+          "Use your Agent tool with run_in_background set to true to start one subagent. Tell it:",
+          `run the shell command "sleep 20" once in the foreground, then reply with the single word ${word}.`,
+          "Do not wait for it: reply with the single word STARTED2 now and end your turn.",
+          `When its result comes later, reply with ${follow} and its answer.`,
+        ].join(" "),
+      );
+      details.taskId = side.id;
+      const mainBefore = await bridge.main(from);
+      await waitFor(
+        page,
+        "the first turn ends",
+        () => bridge.side(from, side.id),
+        (s) => has(s, answerWith("STARTED2")),
+        TURN_MS,
+      );
+      const lane = await waitFor(
+        page,
+        "the subagent's answer comes back",
+        async () => {
+          const [thread, main] = [await bridge.side(from, side.id), await bridge.main(from)];
+          const followed = (s: ConversationSnapshot) => has(s, (m) => answerWith(follow)(m) && m.text.includes(word));
+          if (followed(thread)) return "side";
+          const added = main.messages.filter((m) => !mainBefore.messages.some((n) => n.id === m.id));
+          return added.some((m) => m.author === "assistant" && m.text.includes(word)) ? "main" : null;
+        },
+        (value) => value !== null,
+        TURN_MS,
+      );
+      details.answerLane = lane;
+      await waitFor(
+        page,
+        "the side thread is idle",
+        () => task(from, side.id),
+        (entry) => entry?.state === "idle",
+        TURN_MS,
+      );
+      details.finalState = "idle";
+      assert.equal(lane, "side", "The background subagent's answer went to the own chat.");
+    });
+  }
+  report.passed = report.steps.every((entry) => entry.passed);
+} finally {
+  for (const { agentId, taskId } of started.reverse()) {
+    await page.evaluate((input) => window.openbot.agent.stopTask(input), { agentId, taskId }).catch(() => undefined);
+    await waitFor(
+      page,
+      "the cleanup stop",
+      () => task(agentId, taskId),
+      (entry) => entry?.state !== "running",
+      30_000,
+    ).catch(() => undefined);
+    await page.evaluate((input) => window.openbot.agent.deleteTask(input), { agentId, taskId }).catch(() => undefined);
+  }
+  writeReport("agent-threads-messaging-e2e", report);
+  await session.close();
+}
+
+process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+if (!report.passed) process.exitCode = 1;
