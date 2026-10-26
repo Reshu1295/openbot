@@ -108,6 +108,10 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   const { t, format } = useText();
   const calls = () => props.calls ?? desktopMarketplaceCalls();
   const skillCalls = () => calls().agentSkills(props.hostServerId);
+  /* The window passes these as conditional props, which make a memo on each read. A memo made in an
+     effect callback halts the UI, and the skill reads run in effect callbacks, so read them once here. */
+  const agents = createMemo(() => props.agents);
+  const activeAgentId = createMemo(() => props.activeAgentId);
 
   const [error, setErrorText] = createSignal<string | null>(null);
   const [errorCode, setErrorCode] = createSignal<string | null>(null);
@@ -140,7 +144,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   const [added, setAdded] = createStore<Record<string, AddedRecord>>({});
   /** The user's copy of a listing: the one with an older version first. */
   function installation(listing: MarketplaceAgentSummary) {
-    const copies = props.agents.filter((agent) => agent.marketplaceSource?.listingId === listing.id);
+    const copies = agents().filter((agent) => agent.marketplaceSource?.listingId === listing.id);
     return copies.find((agent) => (agent.marketplaceSource?.version ?? 0) < listing.version) ?? copies[0];
   }
   /* A joined server's agent is updated only when its host serves `agent-update-v1`. */
@@ -189,7 +193,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
 
   function openChat(listingId: string) {
     const record = added[listingId];
-    const copy = props.agents.find((agent) => agent.marketplaceSource?.listingId === listingId);
+    const copy = agents().find((agent) => agent.marketplaceSource?.listingId === listingId);
     const target: AddedRecord | undefined =
       record ?? (copy ? { agent: { id: copy.id, name: copy.name }, serverId: props.hostServerId } : undefined);
     props.onOpenChange(false);
@@ -220,7 +224,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   const installedSkill = (agentId: string, skillId: string) =>
     skills.installed[agentId]?.find((skill) => skill.skillId === skillId);
   const agentName = (agentId: string) =>
-    props.agents.find((agent) => agent.id === agentId)?.name ?? t("marketplace.thisAgent");
+    agents().find((agent) => agent.id === agentId)?.name ?? t("marketplace.thisAgent");
 
   async function readInstalled(agentId: string) {
     const request = (skillReads.get(agentId) ?? 0) + 1;
@@ -247,7 +251,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
 
   function readSkills() {
     untrack(() => {
-      for (const agent of props.agents) {
+      for (const agent of agents()) {
         const state = skills.read[agent.id] ?? "idle";
         if (state === "idle" || state === "failed") void readInstalled(agent.id);
       }
@@ -352,7 +356,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   /** The row this app installed as, or nothing: a name on its own is not enough to claim a row. */
   const heldApp = (app: MarketplacePluginApp) => servers().find((held) => isPluginAppConfig(held, app));
   /** The agent that a plugin's skills go to: the open conversation, else the first agent. */
-  const pluginAgentId = () => props.activeAgentId || props.agents[0]?.id || "";
+  const pluginAgentId = () => activeAgentId() || agents()[0]?.id || "";
   const pluginSkillHeld = (skillId: string) => Boolean(installedSkill(pluginAgentId(), skillId));
   /** Connected when every app and skill is here. Something left from a partial install needs attention. */
   function pluginStatus(plugin: MarketplacePluginDetail): MarketplaceAppStatus {
@@ -771,8 +775,8 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
       return skillHomeCache(calls());
     },
     loadSkill,
-    agents: () => props.agents,
-    activeAgentId: () => props.activeAgentId,
+    agents,
+    activeAgentId,
     readSkills,
     skillRead: (agentId) => skills.read[agentId] ?? "idle",
     installedSkill,
