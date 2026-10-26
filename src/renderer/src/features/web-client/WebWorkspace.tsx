@@ -1222,7 +1222,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
   /** A new agent on the canvas starts on the model the agent form would pick. */
   const newAgentModels = createMemo((): DiagramModelChoice | undefined => {
     if (!workspace.state.capabilities.includes(TEAM_AGENT_CREATE_MODEL_CAPABILITY)) return undefined;
-    const initial = resolveCreationModel(serverSetupChoice(), models());
+    const initial = resolveCreationModel(serverSetupChoice(), models(), status());
     return initial
       ? { options: models(), status: status(), initial, customProviders: providerSettings()?.customProviders }
       : undefined;

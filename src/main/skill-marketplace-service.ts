@@ -36,7 +36,7 @@ import { toArrayBuffer } from "./agent-marketplace-service";
 import type { CentralAuthManager } from "./central-auth-manager";
 import type { LocalSkillLibrary } from "./local-skill-library";
 import { listManagedSkillsForChat, MANAGED_SKILL_FOLDERS, MANAGED_SKILL_SLUGS } from "./managed-skill-service";
-import { listFolderSkills } from "./skill-folder-discovery";
+import { listFolderSkills, listHomeFolderSkills } from "./skill-folder-discovery";
 import { archiveDirectory, inspectArchive, inspectSkillMarkdown, normalizedFiles } from "./skill-package";
 
 const DRAFT_LIFETIME_MS = 30 * 60 * 1000;
@@ -204,6 +204,7 @@ export class SkillMarketplaceService {
           ),
         );
       }
+      installed.push(...(yield* listHomeFolderSkills(new Set(installed.map((skill) => skill.slug)))));
       return installed.sort((a, b) => a.name.localeCompare(b.name));
     });
   }

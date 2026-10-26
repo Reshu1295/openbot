@@ -104,12 +104,13 @@ export class ChannelStore {
   /**
    * Only the ids, in one query. Placing channels in the sidebar layout needs the set of ids that
    * exist - archived ones included, so an archived channel keeps its section - and the scheduler
-   * works by id as well. `list` would read every message of every channel to answer either.
+   * works by id as well. `list` would read every message of every channel to answer either. The order
+   * is the order of `list`: the layout places the channels it has no order for in it, as the sidebar does.
    */
   ids(): string[] {
-    return databaseRows(this.database.connection.prepare("SELECT channel_id FROM projection_channels").all()).map(
-      (row) => requiredStringColumn(row, "channel_id"),
-    );
+    return databaseRows(
+      this.database.connection.prepare("SELECT channel_id FROM projection_channels ORDER BY rowid").all(),
+    ).map((row) => requiredStringColumn(row, "channel_id"));
   }
 
   /**

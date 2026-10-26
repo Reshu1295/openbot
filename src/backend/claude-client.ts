@@ -2,6 +2,7 @@ import { execFile, spawn } from "node:child_process";
 import { randomUUID, type UUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import {
@@ -65,6 +66,7 @@ import { claudeContextCategories } from "./claude-context-categories";
 import { type ClaudeHistoryOptions, claudeHistoryFromMessages, claudeHistoryReader } from "./claude-history";
 import {
   CLAUDE_WORKSPACE_MANAGED_SETTINGS,
+  claudeHomeSkillPlugin,
   claudeWorkspaceHooks,
   claudeWorkspaceSandbox,
   claudeWorkspaceSkillPlugin,
@@ -825,6 +827,23 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
     const stateDirectory = this.#stateDirectory;
     const skillPlugin =
       config.workspaceOnly && stateDirectory ? yield* claudeWorkspaceSkillPlugin(stateDirectory, config.cwd) : null;
+    const homeSkillPlugin =
+      stateDirectory && !config.profileGeneration
+        ? yield* claudeHomeSkillPlugin(
+            stateDirectory,
+            this.#agentEnvironment?.().CLAUDE_CONFIG_DIR ?? process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
+            config.cwd,
+          ).pipe(
+            // The home skills are an addition: a state folder that cannot hold the links must not stop the session.
+            Effect.catch((error) =>
+              Effect.sync(() => {
+                queryLogger.warn("Claude starts without the skills in ~/.agents/skills.", { error: error.cause });
+                return null;
+              }),
+            ),
+          )
+        : null;
+    const plugins = [skillPlugin, homeSkillPlugin].filter((plugin) => plugin !== null);
     const launchPath = yield* cliLaunchPath(this.#cli.executable, this.#cli.source);
     // `stop()` may have run during the await: a query created now would outlive the client.
     if (!this.#running) return yield* providerFailure(new Error("Claude Agent SDK is not running."));
@@ -875,9 +894,9 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
                 sandbox: claudeWorkspaceSandbox(config.additionalDirectories),
                 hooks: claudeWorkspaceHooks(config.cwd, config.additionalDirectories),
                 managedSettings: CLAUDE_WORKSPACE_MANAGED_SETTINGS,
-                plugins: skillPlugin ? [skillPlugin] : [],
               }
             : {}),
+          ...(plugins.length ? { plugins } : {}),
           mcpServers,
           env: {
             ...claudeEnvironment(this.#cli),

@@ -6,6 +6,7 @@ import {
   type AgentAuthState,
   type AgentModelOption,
   type AgentProviderId,
+  customProviderOfModel,
   DEFAULT_PROMPT_CACHE_TTL,
   type KeyOnlyProviderId,
   type PromptCacheTtl,
@@ -360,6 +361,14 @@ export interface ProviderClientContext {
    */
   readonly agentEnvironment?: (inherited?: NodeJS.ProcessEnv) => Readonly<Record<string, string>>;
   /**
+   * Variables that every provider process gets on a server, and so every program an agent starts: the
+   * marker that the server memory guard finds leftover processes by, and the CPU limit module for Node
+   * (`agentProcessEnvironment` in `src/main/server-memory.ts`). Fixed while the app runs. They are not
+   * part of `agentEnvironment`: Codex gets that in each thread configuration and replaces a session
+   * whose variables change, so Codex gets these in the spawn environment of its app-server instead.
+   */
+  readonly serverEnvironment?: Readonly<Record<string, string>>;
+  /**
    * The home folder variable of a provider account after the first, for a driver with `accounts`.
    * Every process the client starts gets it, the account check included, so the client signs in
    * and keeps its sessions in that folder only.
@@ -621,6 +630,7 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
     createClient: (cli, requestTimeoutMs, context) =>
       new CodexAppServerClient(cli.executable, requestTimeoutMs, {
         ...cliPathEnvironment(cli),
+        ...context.serverEnvironment,
         ...context.accountEnvironment,
       }),
     authState: (account) => ({ kind: "chatgpt", email: account?.email ?? null }),
@@ -747,6 +757,8 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         }),
         signInMessage: openCodeSignInMessage(context.customProviders().length),
         modelName: (id, name) => openCodeModelName(id, name, context.customProviders),
+        // A stalled turn on a custom endpoint names the endpoint, not OpenCode (#3234).
+        providerName: (modelId) => customProviderOfModel(modelId, context.customProviders())?.name ?? null,
         servesModel: context.servesModel,
         mcpServers: context.mcpServers,
         reportMcpDrops: context.reportMcpDrops,

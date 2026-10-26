@@ -19,6 +19,7 @@ import type { AgentClient, AgentProvider } from "../agent-client";
 import type { AgentStore } from "../agent-store";
 import type { ProviderSession } from "../database/provider-sessions";
 import { causeHelpers } from "../effect-boundary";
+import { type HomeSkill, listHomeSkills, skillFolderNames } from "../home-skills";
 import type { MailboxStore } from "../mailbox-store";
 import type { McpOperationError } from "../mcp-effects";
 import {
@@ -62,8 +63,9 @@ import {
   renderRoutineHandoff,
 } from "./handoff-history";
 import { decodeCapturedSteps, readCapturedSteps } from "./handoff-tool-steps";
+import { isProviderTimeout } from "./provider-status";
 import { sessionSettingsIdentity } from "./session-settings";
-import { isArchivedThreadError, isMissingProviderSessionError } from "./thread-items";
+import { isArchivedThreadError, isMissingProviderSessionError, providerLabel } from "./thread-items";
 import { VISIBLE_DYNAMIC_TOOLS } from "./tool-catalog";
 import { codexSandboxConfig, codexSandboxMode, workspaceWritableRoots } from "./workspace-sandbox";
 
@@ -540,7 +542,13 @@ export class ThreadLifecycle {
       sandbox: codexSandboxMode(agent),
       ...this.#workspaceOnlyParam(agent, client),
       ...this.#computerUseParam(agent, client),
-      ...this.#instructions(agent, client, section, this.#computerUseInOwnChat(owner, publicThreadId)),
+      ...this.#instructions(
+        agent,
+        client,
+        section,
+        this.#computerUseInOwnChat(owner, publicThreadId),
+        yield* this.#homeSkills(agent, client),
+      ),
       serviceName: "openbot",
       dynamicTools: VISIBLE_DYNAMIC_TOOLS,
     };
@@ -752,7 +760,9 @@ export class ThreadLifecycle {
    *
    * Each MCP server needs a saved registration for persistent tool approvals. A registration failure
    * stops the thread with recovery guidance. Without MCP servers, retain the existing empty
-   * result on a failed config read.
+   * result on a failed config read. An app server that timed out or is gone gets the timeout
+   * message: the guidance about `config.toml` would send the user to a file that is fine. The client
+   * ends a process that stopped answering, and the runtime starts it again.
    */
   private readonly codexOwnServersEffect = Effect.fn("ThreadLifecycle.codexOwnServers")(function* (
     this: ThreadLifecycle,
@@ -765,21 +775,30 @@ export class ThreadLifecycle {
     const usable = yield* usableMcpServers(configs, toolRuntimes).pipe(toThreadOperationFailed);
     const servers = (own: CodexOwnTransports) => codexMcpServers(usable, own).servers;
     return yield* codexDisabledServers(() => readCodexMcpConfig(client, servers).pipe(toMcpShapeFailed)).pipe(
-      Effect.catch(() =>
-        Object.keys(servers({})).length > 0
-          ? Effect.fail(
-              new ThreadOperationFailed({
-                cause: new Error(
-                  sourceText(
-                    configs.every((server) => server.id === COMPUTER_USE_MCP_SERVER_ID)
-                      ? "error.provider.computerUseConfig"
-                      : "error.provider.mcpConfig",
-                  ),
-                ),
-              }),
-            )
-          : Effect.succeed(NO_CODEX_OWN_SERVERS),
-      ),
+      Effect.catch((failure) => {
+        if (Object.keys(servers({})).length === 0) return Effect.succeed(NO_CODEX_OWN_SERVERS);
+        if (isProviderTimeout(failure.cause) || !client.running) {
+          return Effect.fail(
+            new ThreadOperationFailed({
+              cause: new Error(sourceText("error.provider.cliTimedOut", { provider: providerLabel(client.provider) })),
+            }),
+          );
+        }
+        logger.warn("Codex did not register the MCP servers.", {
+          message: failure.cause instanceof Error ? failure.cause.message : String(failure.cause),
+        });
+        return Effect.fail(
+          new ThreadOperationFailed({
+            cause: new Error(
+              sourceText(
+                configs.every((server) => server.id === COMPUTER_USE_MCP_SERVER_ID)
+                  ? "error.provider.computerUseConfig"
+                  : "error.provider.mcpConfig",
+              ),
+            ),
+          }),
+        );
+      }),
     );
   });
 
@@ -939,6 +958,7 @@ export class ThreadLifecycle {
     client: AgentClient,
     section = this.#sectionTeammates(agent.id),
     computerUseInOwnChat = false,
+    homeSkills: readonly HomeSkill[] = [],
   ): DynamicRecord {
     const memories = this.#memories.essentialFor(agent.id);
     const options = {
@@ -951,6 +971,7 @@ export class ThreadLifecycle {
       memoriesInTurns: client.provider === "claude",
       teammatesInTurns: client.provider === "claude",
       sectionTeammates: section,
+      homeSkills,
     };
     const instructions = developerInstructions(
       agent,
@@ -968,6 +989,19 @@ export class ThreadLifecycle {
         }
       : { developerInstructions: instructions };
   }
+
+  /**
+   * The skills in `~/.agents/skills` that the instructions name, for a CLI that does not read that
+   * folder. A skill that the CLI reads from a workspace skill folder of the same name is left out.
+   */
+  readonly #homeSkills = Effect.fn("ThreadLifecycle.homeSkills")(function* (agent: AgentSummary, client: AgentClient) {
+    const descriptor = agentProviderDescriptor(client.provider);
+    if (descriptor.homeSkills !== "instructions") return [];
+    const read = new Set<string>();
+    for (const folder of descriptor.skillFolders)
+      for (const name of yield* skillFolderNames(join(agent.workspacePath, folder))) read.add(name);
+    return (yield* listHomeSkills()).filter((skill) => !read.has(skill.slug));
+  });
 
   /**
    * What an existing provider session is addressed with. Read by `resumeThread` and by boot
@@ -996,7 +1030,13 @@ export class ThreadLifecycle {
       sandbox: codexSandboxMode(agent),
       ...this.#workspaceOnlyParam(agent, client),
       ...this.#computerUseParam(agent, client),
-      ...this.#instructions(agent, client, this.#sectionTeammates(agent.id), computerUseInOwnChat),
+      ...this.#instructions(
+        agent,
+        client,
+        this.#sectionTeammates(agent.id),
+        computerUseInOwnChat,
+        yield* this.#homeSkills(agent, client),
+      ),
       ...(client.provider === "codex" ? {} : { dynamicTools: VISIBLE_DYNAMIC_TOOLS }),
       ...(yield* this.codexConfigEffect(
         agent,

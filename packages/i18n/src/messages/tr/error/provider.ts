@@ -7,6 +7,7 @@ export const messages = {
   "error.provider.computerUseConfig":
     "OpenBot, Bilgisayar Kullanımını Codex yapılandırmasına kaydedemedi. Codex config.toml dosyanızın geçerli ve yazılabilir olduğunu denetleyin, ardından OpenBot'u yeniden başlatın. Onsuz devam etmek için ekip arkadaşı ayarlarından Bilgisayar Kullanımını kapatabilirsiniz.",
   // Provider, provider runtime and custom endpoint errors.
+  "error.provider.codexUnresponsive": "Codex yanıt vermeyi bıraktı, bu yüzden OpenBot işlemini sonlandırdı.",
   "error.provider.endpointsReadOnly":
     "Kayıtlı uç noktalar OpenBot'un daha yeni bir sürümü tarafından yazılmış veya dosya okunamıyor. Bunları değiştirmek için OpenBot'u güncelleyin.",
   "error.provider.endpointNoSecureStorage":

@@ -127,6 +127,15 @@ export interface AgentProviderDescriptor {
    */
   readonly skillFolders: readonly [string, ...string[]];
   /**
+   * How the CLI gets the user's skills in `~/.agents/skills`. `native`: the CLI reads that folder by
+   * itself. `plugin`: OpenBot gives the folder to Claude as a session plugin
+   * (`claudeHomeSkillPlugin`). `instructions`: the CLI does not read it, so the developer instructions
+   * name each skill and its `SKILL.md`. Sources: the strings and docs of the installed Codex, Grok,
+   * OpenCode, Cursor, Cline and Pi CLIs; the Antigravity ACP server reads only `$GEMINI_HOME`; Muse
+   * and a custom ACP agent are not known to read it.
+   */
+  readonly homeSkills: "native" | "plugin" | "instructions";
+  /**
    * How a Workspace only agent is held to its folders. `tool-sandbox`: the client checks each tool
    * and asks before an edit. `command-sandbox`: the CLI runs each command in a sandbox.
    * `confined-process`: the CLI runs in a sandboxed process of its own (`process-confinement.ts`).
@@ -180,6 +189,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "command-sandbox",
     steer: "native",
     concurrentTurns: true,
@@ -200,6 +210,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "paste",
     signInPageEnd: "callback",
     skillFolders: [".claude/skills"],
+    homeSkills: "plugin",
     workspaceEnforcement: "tool-sandbox",
     steer: "native",
     concurrentTurns: true,
@@ -220,6 +231,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -242,6 +254,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".opencode/skills", ".agents/skills", ".claude/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -264,6 +277,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".gemini/skills", ".agents/skills"],
+    homeSkills: "instructions",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -286,6 +300,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".cursor/skills", ".claude/skills", ".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -308,6 +323,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".cline/skills", ".clinerules/skills", ".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -328,6 +344,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -348,6 +365,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "page",
     skillFolders: [".agents/skills"],
+    homeSkills: "instructions",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -370,6 +388,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -392,6 +411,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -415,6 +435,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "instructions",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: false,

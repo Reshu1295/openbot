@@ -274,7 +274,7 @@ import { StatementTimings } from "./resource-summary";
 import { RoutineFeedServer } from "./routine-feed-server";
 import { clearRoutineHold, ROUTINE_HOLD_FILE, takeRoutineHold, writeRoutineHold } from "./routine-hold-file";
 import { ScreenCapturer } from "./screen-capture";
-import { ServerMemory } from "./server-memory";
+import { agentProcessEnvironment, ServerMemory } from "./server-memory";
 import { ServerMode, type ServerModeEnvironment } from "./server-mode";
 import { ServerTimezonePreferenceStore } from "./server-timezone-preference-store";
 import {
@@ -1052,8 +1052,18 @@ export async function createApplicationServices({
       ? new ServerMemory({
           hostedPlan: hostedServer !== null,
           onError: (message, error) => logger.warn(message, toLogValue(error)),
+          onAgentProcessStopped: (stopped) =>
+            logger.warn("Stopped a leftover agent process to free memory.", { ...stopped }),
         })
       : null;
+  // Every provider process on a server gets the marker of leftover agent processes and the CPU limit
+  // module for Node. The module must exist: Node does not start when a `--require` file is missing.
+  const cpuLimitModule = app.isPackaged
+    ? join(process.resourcesPath, "agent-runtime", "cpu-limit.cjs")
+    : resolve(__dirname, "../../resources/agent-runtime/cpu-limit.cjs");
+  const serverEnvironment = hostMemory
+    ? agentProcessEnvironment(existsSync(cpuLimitModule) ? cpuLimitModule : null)
+    : null;
   if (hostMemory) {
     hostMemory.start();
     teardown.push(TEARDOWN_ORDER.serverMemory, "the server memory reading", () => Effect.runPromise(hostMemory.stop()));
@@ -1671,6 +1681,7 @@ export async function createApplicationServices({
       mcpOAuthProxySettings,
       providerStateDirectory: join(app.getPath("userData"), "provider-state"),
       ...(process.platform === "win32" ? { providerTempDirectory } : {}),
+      ...(serverEnvironment ? { serverEnvironment } : {}),
       // The GitHub entries are paths only: `gh` and `git` read the token from the files the connection
       // keeps current. On a server with an agent display, `DISPLAY` names it, so a program an agent
       // starts opens where the driver sees it.

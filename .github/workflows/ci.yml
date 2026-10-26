@@ -373,6 +373,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:provider-exit-session
 
+      - name: Run the hung Codex app-server E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:codex-hung-app-server
+
       - name: Run the Codex missing rollout backfill E2E test
         if: ${{ !cancelled() }}
         run: bun run test:codex-missing-rollout
@@ -486,6 +490,7 @@ jobs:
             .openbot-build/provider-update-busy-e2e/
             .openbot-build/provider-update-after-app-upgrade-e2e/
             .openbot-build/provider-exit-session-e2e/
+            .openbot-build/codex-hung-app-server-e2e/
             .openbot-build/codex-missing-rollout-e2e/
             .openbot-build/codex-usage-metering-e2e/
             .openbot-build/codex-usage-reset-e2e/

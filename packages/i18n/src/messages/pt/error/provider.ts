@@ -6,6 +6,7 @@ export const messages = {
     "O OpenBot não conseguiu registrar os servidores MCP na configuração do Codex. Verifique se seu config.toml do Codex é válido e gravável, depois reinicie o OpenBot.",
   "error.provider.computerUseConfig":
     "O OpenBot não conseguiu registrar o Uso do computador na configuração do Codex. Verifique se seu config.toml do Codex é válido e gravável, depois reinicie o OpenBot. Você pode desativar o Uso do computador nas configurações do agente para continuar sem ele.",
+  "error.provider.codexUnresponsive": "O Codex parou de responder, então o OpenBot encerrou o processo dele.",
   "error.provider.endpointsReadOnly":
     "Os endpoints salvos foram gravados por uma versão mais recente do OpenBot, ou o arquivo não pode ser lido. Atualize o OpenBot para alterá-los.",
   "error.provider.endpointNoSecureStorage":

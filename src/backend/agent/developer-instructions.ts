@@ -14,6 +14,7 @@ import {
 } from "@openbot/contracts/ipc";
 import { redactText } from "@openbot/logging";
 import { automationRunCommand } from "../automation-command";
+import type { HomeSkill } from "../home-skills";
 
 export interface VaultContents {
   available: boolean;
@@ -45,6 +46,11 @@ export interface DeveloperInstructionOptions {
   sectionTeammates?: SectionTeammates | null;
   /** The session is a task of an agent with Computer Use on. The agent's own chat keeps Computer Use. */
   computerUseInOwnChat?: boolean;
+  /**
+   * The user's skills in `~/.agents/skills`, for a provider whose CLI does not read that folder
+   * (`homeSkills: "instructions"`). Omitted or empty, the instructions name none.
+   */
+  homeSkills?: readonly HomeSkill[];
   /** OpenBot runs on a server, so its browser has a data-center address. Fixed for the process. */
   serverHost?: boolean;
 }
@@ -279,6 +285,7 @@ export function developerInstructions(
         }.`
       : "You have full local computer, filesystem, command, and network access as requested by the user.",
     "Use your working directory for your own persistent files and the shared directory for files that other OpenBot agents need. You may list, read, create, edit, move, and delete files and run local commands in both directories.",
+    ...homeSkillInstructions(options.homeSkills ?? []),
     agentComputerUseEnabled(agent)
       ? `Use ${COMPUTER_USE_MCP_SERVER_NAME} for every GUI task outside the embedded browser, and never Codex Computer Use, the Sky computer use service, or another desktop-control plugin, because those drive the desktop outside OpenBot, show the user no OpenBot agent cursor, and can fight this one for the pointer. Read its structuredContent after every action, or, when your provider passes no structured content, the JSON copy of it at the end of the result text, because an effect of refused or suspected_noop means the action did not happen and you must not report it as done, an effect of unverifiable means the driver does not know, so read the window state again and report what you saw rather than what you sent, and a delivery.mode of foreground takes the screen away from the user. One application usually owns many windows, and most of them are small empty helpers, so select the window by its title and its size and never the first match, because a helper window holds no elements and every action sent to it fails or does nothing. The screen size and the desktop screenshot describe the main display alone, so a pixel coordinate means a point on that display only: work on a window on another display through its element token, or its element_index with the window_id and snapshot_id of the same read, or move the window to the main display first, and never take a coordinate from one display to act on another. Every step waits for your next answer, so take the shortest path: when the user names the application and the action, go to that window and act, and do not list other applications, inspect windows the task does not need, or repeat a read whose answer you already have. Every result stays in the conversation, and a long conversation makes each later step slower, so read a window again with query or include_screenshot false when you only need to find an element. Read skill://cua-driver/SKILL.md before the first GUI action of a conversation, not before each action.`
       : options.computerUseInOwnChat
@@ -308,5 +315,25 @@ function automationInstructions(agentId: string, root: string): string {
     waitId: "<waitId>",
     platform: process.platform,
   });
-  return `The user lets local scripts wake you through one of your routines. Use this instead of polling when a command must run after your turn ends, such as a long build, a download, or a worker CLI. Create a paused routine (active false) with openbot.create_routine whose instruction says what to do with the result, or reuse one that list_routines shows. Start the long command detached from your shell, so that it continues after your turn, and run this command after it in the same detached process, with a short payload such as the exit status and the log path: ${command} Before you end your turn, open a wait with openbot.await_event and put its waitId in the command, so that the run continues the user's request; leave out waitId when no request waits for the result. Then end your turn. OpenBot runs the routine and adds the payload to its task. The command reads a secret token from a file: never print, copy, or send the token, and do not use this for work that ends within your turn.`;
+  return `The user lets local scripts wake you through one of your routines. Use this instead of polling when a command must run after your turn ends, such as a long build, a download, or a worker CLI. Create a paused routine (active false) with openbot.create_routine whose instruction says what to do with the result, or reuse one that list_routines shows. Start the long command detached from your shell, so that it continues after your turn, and run this command after it in the same detached process, also when the long command fails (join them with ";", not "&&"), with a short payload such as the exit status and the log path: ${command} Before you end your turn, open a wait with openbot.await_event and put its waitId in the command, so that the run continues the user's request; leave out waitId when no request waits for the result. Then end your turn. OpenBot runs the routine and adds the payload to its task. The command reads a secret token from a file: never print, copy, or send the token, and do not use this for work that ends within your turn.`;
+}
+
+const MAX_HOME_SKILLS_IN_INSTRUCTIONS = 100;
+const MAX_HOME_SKILL_DESCRIPTION = 300;
+
+/** One line for each skill: the CLI does not load them, so the model reads a `SKILL.md` when a task matches. */
+function homeSkillInstructions(skills: readonly HomeSkill[]): string[] {
+  if (skills.length === 0) return [];
+  return [
+    "The user's own skills are in ~/.agents/skills, and your CLI does not load them. When a task matches the description of one, or the user names it, read its SKILL.md first and follow it:",
+    ...skills.slice(0, MAX_HOME_SKILLS_IN_INSTRUCTIONS).map((skill) => {
+      // Code points, so a cut never splits a surrogate pair.
+      const description = Array.from(redactText(skill.description).replace(/\s+/gu, " "));
+      const short =
+        description.length > MAX_HOME_SKILL_DESCRIPTION
+          ? `${description.slice(0, MAX_HOME_SKILL_DESCRIPTION - 1).join("")}…`
+          : description.join("");
+      return `- ${skill.slug}: ${short} (${skill.file})`;
+    }),
+  ];
 }

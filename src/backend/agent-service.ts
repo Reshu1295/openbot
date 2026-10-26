@@ -727,6 +727,17 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       // endpoint can refuse the prompt itself, after the waits every caller above it makes.
       credentials: {
         ...credentials,
+        // The server variables reach Claude and the ACP providers with the agent environment. The
+        // thread lifecycle below gets the agent environment without them, so the fingerprint of a
+        // Codex session stays the same; Codex reads them from the spawn environment of its app-server.
+        ...(credentials.serverEnvironment
+          ? {
+              agentEnvironment: (inherited) => ({
+                ...credentials.serverEnvironment,
+                ...credentials.agentEnvironment?.(inherited),
+              }),
+            }
+          : {}),
         history: (provider) => {
           const history = credentials.history
             ? credentials.history(provider)
@@ -1490,10 +1501,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
    * Every id the sidebar layout may place: agents and channels alike, because the user files and
    * orders both in the same sections. An id missing from this set is pruned as gone the next time
    * the layout is reconciled, which would silently drop where the user put a channel.
+   *
+   * Channels come first. The layout store appends the ids that `agentOrder` does not hold yet in this
+   * order, and the sidebar shows those channels above those agents. In another order, the first drop
+   * after a chat was filed with "Move to" lands in a different place than the sidebar showed (#3229).
    */
   sidebarChatIds(): Set<string> {
-    const ids = new Set(this.listAgents().map((agent) => agent.id));
-    for (const channelId of this.channels.store.ids()) ids.add(channelId);
+    const ids = new Set(this.channels.store.ids());
+    for (const agent of this.listAgents()) ids.add(agent.id);
     return ids;
   }
 

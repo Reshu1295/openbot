@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto";
+import { join } from "node:path";
 import { expandAttachmentReferences } from "@openbot/contracts/attachment-references";
 import { expandChatTagReferences } from "@openbot/contracts/chat-tag-references";
 import type { AgentSummary, AgentWait, ConversationSnapshot, QueueDelivery, RoutineRun } from "@openbot/contracts/ipc";
 import { redactText } from "@openbot/logging";
 import { wokenWaitsPromptText } from "../agent-waits/agent-waits";
+import { homeSkillRoot, homeSkillTagSlug } from "../home-skills";
 import type { DeliveryContext } from "../mailbox-store";
 import { quietRoutineRun, ROUTINE_NO_UPDATE_TOOL, ROUTINE_REPORT_FAILURE_TOOL } from "./routine-quiet-runs";
 
@@ -323,11 +325,25 @@ export function displayMessageReferences(
   return expandAttachmentReferences(
     expandChatTagReferences(
       text,
-      (reference) => (reference.kind === "agent" ? agentNames.get(reference.id) : undefined),
+      (reference) =>
+        reference.kind === "agent"
+          ? agentNames.get(reference.id)
+          : reference.kind === "skill" && options.fileHeadings
+            ? homeSkillTagName(reference.id, reference.name)
+            : undefined,
       options,
     ),
     (reference) => names.get(reference.attachmentId),
   );
+}
+
+/**
+ * A `$` tag of a skill in `~/.agents/skills` names its `SKILL.md` for the provider, because not every
+ * CLI loads that folder. A person reads the name alone.
+ */
+function homeSkillTagName(id: string, name: string): string | undefined {
+  const slug = homeSkillTagSlug(id);
+  return slug === null ? undefined : `${name} at ${join(homeSkillRoot(), slug, "SKILL.md")}`;
 }
 
 export function agentNamesById(agents: AgentSummary[]): ReadonlyMap<string, string> {

@@ -1,4 +1,4 @@
-import { isKnownAgentProvider, providerDisplayName } from "@openbot/contracts/agent-providers";
+import { isKnownAgentProvider } from "@openbot/contracts/agent-providers";
 import { supportedAttachmentExtensions } from "@openbot/contracts/attachment-files";
 import {
   type AgentWait,
@@ -123,6 +123,7 @@ export function ConversationComposer() {
     channel,
     providerSilentMinutes,
     providerOffline,
+    agentProviderName,
   } = useConversationViewScope();
   const { t, format, sourceText: localizeSourceText } = useText();
   const messageLabel = () =>
@@ -194,9 +195,8 @@ export function ConversationComposer() {
   };
   /** Why the running turn has no reply: the computer is offline, or the provider sends nothing. */
   const providerWaitNotice = createMemo(() => {
-    const agent = props.agent;
-    if (!agent) return null;
-    const provider = providerDisplayName(agent.provider);
+    const provider = agentProviderName();
+    if (!provider) return null;
     if (providerOffline())
       return { title: t("composer.providerWait.offlineTitle"), body: t("composer.providerWait.offline", { provider }) };
     const minutes = providerSilentMinutes();

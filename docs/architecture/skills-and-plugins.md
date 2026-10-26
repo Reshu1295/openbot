@@ -17,8 +17,8 @@ A skill follows the [Agent Skills specification](https://agentskills.io/specific
 | `<workspace>/.gemini/skills/` | the user, the agent | Gemini |
 | `<workspace>/.cursor/skills/` | the user, the agent | Cursor |
 | `<workspace>/.cline/skills/`, `<workspace>/.clinerules/skills/` | the user, the agent | Cline |
-| `~/.agents/skills/` | the user | Codex, Grok, OpenCode |
-| `~/.claude/skills/` | the user | Claude Code, OpenCode |
+| `~/.agents/skills/` | the user | Codex, Grok, OpenCode, Cursor, Cline, Pi; Claude through OpenBot (see below) |
+| `~/.claude/skills/` | the user | Claude Code, OpenCode, Grok, Cursor |
 | `~/.codex/skills/`, `~/.config/opencode/skills/` | the user | Codex, OpenCode |
 
 A confined agent (Grok, OpenCode, Gemini, Cursor, Cline, Pi, Muse or a custom agent, not in Full access) cannot write the workspace
@@ -38,8 +38,32 @@ folder that the agent's provider does not read. An agent keeps its workspace whe
 changes, so a skill in `.agents/skills` stops working after a change to Claude Code. A skill with a
 problem is not offered as a chat tag.
 
-OpenBot does not list the home-directory folders. They hold the host user's skills, which are the
-same for every agent, and each provider CLI changes its home-folder rules without notice.
+OpenBot does not show the home-directory folders in the Skills panel. They hold the host user's
+skills, which are the same for every agent, and each provider CLI changes its home-folder rules
+without notice. `~/.agents/skills` is the one exception, because it is the folder that the Agent
+Skills tools share, so every provider gets it. `src/backend/home-skills.ts` reads it and never writes
+to it; it lists each folder with a valid `SKILL.md`, at most 200. `homeSkills` in the provider
+descriptor says how each CLI gets these skills:
+
+- `native`: the CLI reads the folder by itself. OpenBot gives it nothing.
+- `plugin` (Claude Code): `claudeHomeSkillPlugin` (`src/backend/claude-workspace-sandbox.ts`) makes a
+  plugin named `agents` in the provider state folder, with one link for each skill, and each session
+  gets it. A skill whose folder name is also in `$CLAUDE_CONFIG_DIR/skills` (else `~/.claude/skills`)
+  or in `.claude/skills` of the workspace is left out, because `npx skills` links a skill into both
+  folders. Each set of skills has its own folder, named by its hash and never changed, so a running
+  query keeps its links. Claude lists a skill as `agents:<name>`.
+- `instructions` (Antigravity, Muse, custom ACP agents): these CLIs do not read the folder and have no
+  option for one. `ThreadLifecycle` gives the developer instructions a list of the skills, at most
+  100, with the first 300 characters of each description and the path of its `SKILL.md`, and the
+  model reads the file when a task matches. A skill whose folder name is in a workspace skill folder
+  of the provider is left out. Whether the model uses a skill depends on the model.
+
+The `$` list (`listInstalledForChatTags`) adds these skills after the others, with the id
+`home:<slug>` and the existing `workspace` origin, so older clients decode them. A slug that the list
+already has is left out. The desktop read-only Skills view reads the same route and leaves out the
+`home:` ids (`isHomeSkillId`), and so does the analytics skill count. The phone shows them in agent
+info with their `~/.agents/skills/<slug>` location. The provider text of a `home:<slug>` tag names the skill's `SKILL.md`
+(`displayMessageReferences`); a person, and the released Team API adapters, see the name alone.
 
 MCP servers do not use folders. `projection_mcp_servers` in SQLite is the source of truth for the
 whole computer. No shared MCP file format exists: Claude Code reads `.mcp.json` and

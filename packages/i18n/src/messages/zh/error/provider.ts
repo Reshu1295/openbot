@@ -7,6 +7,7 @@ export const messages = {
     "OpenBot 无法在 Codex 配置中注册 MCP 服务器。请确认 Codex 的 config.toml 有效且可写，然后重启 OpenBot。",
   "error.provider.computerUseConfig":
     "OpenBot 无法在 Codex 配置中注册 Computer Use。请确认 Codex 的 config.toml 有效且可写，然后重启 OpenBot。你可以在助手设置中关闭 Computer Use 以便继续。",
+  "error.provider.codexUnresponsive": "Codex 停止响应，OpenBot 已结束其进程。",
   "error.provider.endpointsReadOnly":
     "已保存的端点由更新版本的 OpenBot 写入，或文件无法读取。请更新 OpenBot 后再修改。",
   "error.provider.endpointNoSecureStorage":

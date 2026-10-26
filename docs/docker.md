@@ -138,6 +138,28 @@ only to `tmpfs` folders that count toward the memory limit: `/tmp` (8 GiB), `/va
 `/run/lock` and `/run/openbot`, and to the small tmpfs of its update requests. Before the image is mounted, root owns the folder, so the container cannot write to
 `/data` and stops. It never starts with an empty home folder.
 
+### CPU and memory of the instances
+
+`--cpus` is a CPU time limit. The container still sees every CPU of the host in `/proc/cpuinfo` and
+`/proc/stat`, so a program that sizes itself from the CPU count starts too many workers: `next build`
+started 63 on a 64-CPU host that gives the instance 8, and two builds filled 32 GiB. `setup`
+installs LXCFS with `--enable-cfs` (`lxcfs-openbot.conf`) as its last step; when that fails, it
+prints a warning and the rest of the setup stays done. When LXCFS runs, `openbot-instance` adds
+`lxcfs.yaml`: the container then reads its own CPU and memory limits in `/proc/cpuinfo`, `/proc/stat`,
+`/proc/meminfo`, `/proc/swaps` and `/sys/devices/system/cpu/online` (which glibc's
+`sysconf(_SC_NPROCESSORS_ONLN)` and Python's `os.cpu_count()` read). Without LXCFS, an instance still starts (an
+update from the app must not fail), and `ready` prints a warning. OpenBot then limits only the Node
+programs of agents (see [agent processes](hosted-servers.md#memory)).
+
+An instance gets the LXCFS files when its container is made again: run `openbot-instance up <name>`
+after `setup`. A restart of LXCFS breaks its files in the containers that run, so `setup` does not
+restart it while a container uses it; each `setup` prints a warning until LXCFS runs with
+`--enable-cfs`. Docker starts after LXCFS (`docker-openbot.conf`).
+
+`start` also checks that the container cannot swap (`memory.swap.max` is 0), and prints a warning if
+it can, or if it cannot read the value. A container that swaps stops for seconds at a time when its memory is full, and its clients
+lose the connection.
+
 ### Logs
 
 The container log goes through the `syslog` log driver to a socket of rsyslog,
@@ -381,7 +403,9 @@ sees only the memory of the host, so the guard uses it, and the log has one warn
 
 Main has an OOM score adjustment of 0 in the container, and each process that it starts gets 500.
 So when the container is out of memory, the kernel is more likely to stop a provider CLI, an MCP
-server or an agent tool than OpenBot.
+server or an agent tool than OpenBot. Agent processes also run at nice 10, and at the `critical` level
+main stops leftover agent processes, such as the workers of a build whose parent was stopped. See
+[agent processes](hosted-servers.md#memory).
 
 ## Environment
 

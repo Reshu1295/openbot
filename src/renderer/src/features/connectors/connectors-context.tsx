@@ -43,7 +43,12 @@ const context = createSimpleContext({
       return {
         modelOptions: options,
         agentStatus: agentStatus(),
-        initial: resolveCreationModel(serverSetupChoice() ?? setupState(), options, developmentCreation()),
+        initial: resolveCreationModel(
+          serverSetupChoice() ?? setupState(),
+          options,
+          agentStatus(),
+          developmentCreation(),
+        ),
         customProviders: endpoints.customProviders(),
         customAgents: localAgents.customAgents(),
       };
