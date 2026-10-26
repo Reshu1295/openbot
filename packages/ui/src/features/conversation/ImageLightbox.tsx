@@ -1,5 +1,5 @@
 import type { AttachmentSummary } from "@openbot/contracts/ipc";
-import { Button, ChevronLeft, ChevronRight, Dialog, Minus, Plus, Spinner, X } from "@openbot/ui";
+import { Button, ChevronLeft, ChevronRight, Dialog, Spinner, X } from "@openbot/ui";
 import { prefersReducedMotion } from "@openbot/ui/utils";
 import { createMemo, createSignal, createStore, For, onCleanup, onSettled, Show, untrack } from "solid-js";
 import { useText } from "../../text";
@@ -18,6 +18,7 @@ import {
   ZOOM_OUT,
   ZOOM_OUT_DURATION,
 } from "./lightbox-motion";
+import { type Camera, DOUBLE_CLICK_ZOOM, MAX_SCALE, WHEEL_ZOOM_RATE, ZOOM_STEP, ZoomControls } from "./ZoomControls";
 
 /** The images that the viewer steps through, the one it opens on, and the thumbnail it grows from. */
 export interface ImageLightboxOpening {
@@ -37,24 +38,10 @@ const GALLERY_GAP = 6;
 const GALLERY_MIN_RATIO = 0.5;
 const GALLERY_MAX_RATIO = 3;
 const SWIPE_DISTANCE = 48;
-/** The closest zoom shows each pixel of the image this many times larger. */
-const MAX_SCALE = 8;
-/** One button press or key press zooms by this factor. */
-const ZOOM_STEP = 1.25;
-/** A double-click zooms the fitted image in by this factor. */
-const DOUBLE_CLICK_ZOOM = 2.5;
-/** How fast a pinch or Ctrl and the wheel zooms, per pixel of wheel movement. */
-const WHEEL_ZOOM_RATE = 0.01;
 /** A drag of a zoomed image that moves this far is not a click, so it does not close the viewer. */
 const DRAG_DISTANCE = 4;
 
 /** The zoom of the shown image: its scale over the fitted size and its offset from the centre. */
-interface Camera {
-  x: number;
-  y: number;
-  scale: number;
-}
-
 const FIT: Camera = { x: 0, y: 0, scale: 1 };
 
 interface Point {
@@ -235,7 +222,7 @@ export function ImageLightbox(props: {
   onDownload?: ((attachment: AttachmentSummary) => void) | undefined;
   onClose: () => void;
 }) {
-  const { t, format } = useText();
+  const { t } = useText();
   const motion = !prefersReducedMotion();
   const originRect = untrack(() => (motion ? visibleRect(props.opening.origin) : undefined));
   const openedId = untrack(() => props.opening.images[props.opening.index]?.id);
@@ -299,6 +286,8 @@ export function ImageLightbox(props: {
     const isZoomed = camera.scale > 1;
     setZoomed(isZoomed);
     if (!image) {
+      // An image that is not loaded, or that failed, does not show the level of the one before.
+      setZoom(1);
       stage?.removeAttribute("data-zoomed");
       return;
     }
@@ -610,42 +599,16 @@ export function ImageLightbox(props: {
                 </span>
               </Show>
             </span>
-            <span class="image-lightbox-actions">
-              <span class="image-lightbox-zoom" role="toolbar" aria-label={t("chat.preview.zoomLabel")}>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  type="button"
-                  class="image-lightbox-action"
-                  aria-label={t("chat.preview.zoomOut")}
-                  title={t("chat.preview.zoomOut")}
-                  onClick={() => zoomBy(1 / ZOOM_STEP)}
-                >
-                  <Minus aria-hidden="true" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  class="image-lightbox-action image-lightbox-zoom-level"
-                  aria-label={t("chat.preview.zoomFit", { zoom: format.percent(zoom(), { maximumFractionDigits: 0 }) })}
-                  title={t("chat.preview.zoomFit", { zoom: format.percent(zoom(), { maximumFractionDigits: 0 }) })}
-                  onClick={() => move(FIT, true)}
-                >
-                  {format.percent(zoom(), { maximumFractionDigits: 0 })}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  type="button"
-                  class="image-lightbox-action"
-                  aria-label={t("chat.preview.zoomIn")}
-                  title={t("chat.preview.zoomIn")}
-                  onClick={() => zoomBy(ZOOM_STEP)}
-                >
-                  <Plus aria-hidden="true" />
-                </Button>
-              </span>
+            <div class="image-lightbox-actions">
+              <ZoomControls
+                class="image-lightbox-zoom"
+                levelClass="image-lightbox-zoom-level"
+                buttonClass="image-lightbox-action"
+                zoom={zoom()}
+                onZoomOut={() => zoomBy(1 / ZOOM_STEP)}
+                onFit={() => move(FIT, true)}
+                onZoomIn={() => zoomBy(ZOOM_STEP)}
+              />
               <Show when={props.onDownload && current()}>
                 {(shown) => (
                   <Button
@@ -673,7 +636,7 @@ export function ImageLightbox(props: {
               >
                 <CloseIcon />
               </Button>
-            </span>
+            </div>
           </header>
           <div ref={(element) => (stage = element)} class="image-lightbox-stage">
             <div ref={(element) => (track = element)} class="image-lightbox-track">
