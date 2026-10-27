@@ -240,25 +240,24 @@ const Turns = createSimpleContext({
       const agent = activeAgent();
       const prompt = agent ? pendingPrompts()[attentionKey(agent.id, threadId ?? agent.threadId)] : undefined;
       if (!agent || prompt?.type !== "prompt") return false;
-      return submitPromptAnswers(agent.id, prompt, answers, options, threadId === undefined);
+      // A side thread marks its answer by its own key: the agent id marks the agent's own chat.
+      const mark = threadId === undefined ? agent.id : attentionKey(agent.id, threadId);
+      return submitPromptAnswers(agent.id, mark, prompt, answers, options);
     }
 
-    /** `ownChat` marks the answer in flight. The marks belong to the agent's own chat, so a side thread leaves them. */
     async function submitPromptAnswers(
       agentId: string,
+      mark: string,
       prompt: PromptEvent,
       answers: Record<string, string[]>,
-      options: PromptAnswerOptions | undefined,
-      ownChat: boolean,
+      options?: PromptAnswerOptions,
     ): Promise<boolean> {
       const serverId = activeServerId();
       const analytics = desktopAnalytics.scope();
-      if (ownChat) {
-        setSubmittedPromptRequests((current) => ({
-          ...current,
-          [agentId]: promptRequestKey(prompt.turnId, prompt.requestId) ?? undefined,
-        }));
-      }
+      setSubmittedPromptRequests((current) => ({
+        ...current,
+        [mark]: promptRequestKey(prompt.turnId, prompt.requestId) ?? undefined,
+      }));
       try {
         await turnsPort().agent.respondToPrompt({
           requestId: prompt.requestId,
@@ -271,7 +270,7 @@ const Turns = createSimpleContext({
         });
         return true;
       } catch (error) {
-        if (ownChat) setSubmittedPromptRequests((current) => ({ ...current, [agentId]: undefined }));
+        setSubmittedPromptRequests((current) => ({ ...current, [mark]: undefined }));
         analytics.track("agent_input_action", {
           kind: "prompt",
           decision: "answered",
