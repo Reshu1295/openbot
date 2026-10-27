@@ -38,7 +38,6 @@ if (process.env[ROOT_VARIABLE] === undefined) {
     PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
   };
   delete env.ZDOTDIR;
-  delete env.OPENBOT_ANTIGRAVITY_PATH;
   const child = spawnSync(process.execPath, [import.meta.filename], { stdio: "inherit", env });
   await rm(root, { recursive: true, force: true });
   process.exit(child.status ?? 1);
@@ -64,7 +63,7 @@ async function mcpServerRun(cli: AntigravityCliInfo, recorded: string): Promise<
   const client = requireProviderDriver("antigravity").createClient(cli, 30_000, NO_PROVIDER_CREDENTIALS);
   clients.push(client);
   client.start();
-  return await new Promise<string>((done, fail) => {
+  const path = await new Promise<string>((done, fail) => {
     let expired = false;
     const deadline = setTimeout(() => {
       expired = true;
@@ -82,6 +81,9 @@ async function mcpServerRun(cli: AntigravityCliInfo, recorded: string): Promise<
       );
     poll();
   });
+  // The next case uses the same record file, so this server must not write to it again.
+  await runCauseEffect(client.stop());
+  return path;
 }
 
 try {

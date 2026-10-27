@@ -25,8 +25,8 @@ interface ResolvedCli {
   executable: string;
   version: string;
   /**
-   * The `PATH` that `--version` ran with, from `cliLaunchPath`. Each process of the CLI starts with
-   * it. Absent on Windows, which has no login shell, and when the CLI was not run.
+   * The `PATH` from `cliLaunchPath` that each process of the CLI starts with. `--version` runs with it
+   * too, when the resolver runs the CLI. Absent on Windows, which has no login shell.
    */
   launchPath?: string;
 }
