@@ -68,8 +68,7 @@ export const messages = {
   "customProvider.field.apiKey": "API-Schlüssel",
   "customProvider.field.apiKeyHint":
     "Optional. Lass das Feld leer, wenn du die Authentifizierung über Header verwaltest.",
-  "customProvider.field.apiKeyKeptHint":
-    "Ein Schlüssel ist gespeichert. Lass dieses Feld leer, um ihn und die gespeicherten Header zu behalten.",
+  "customProvider.field.apiKeyKeptHint": "Ein Schlüssel ist gespeichert. Lass dieses Feld leer, um ihn zu behalten.",
   "customProvider.models": "Modelle",
   "customProvider.model.id": "ID von Modell {number}",
   "customProvider.model.name": "Anzeigename von Modell {number}",
@@ -80,6 +79,7 @@ export const messages = {
   "customProvider.header.name": "Name von Header {number}",
   "customProvider.header.value": "Wert von Header {number}",
   "customProvider.header.valuePlaceholder": "Wert",
+  "customProvider.header.keptPlaceholder": "Gespeichert. Zum Beibehalten leer lassen.",
   "customProvider.header.remove": "Header {number} entfernen",
   "customProvider.header.add": "Header hinzufügen",
   "customProvider.submit": "Absenden",

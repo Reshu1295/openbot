@@ -409,3 +409,43 @@ export const CompletedAnswerReveal: Story = {
   },
   render: (storyArgs) => <MessageBodySurface args={storyArgs} variant="ghost" width="460px" />,
 };
+
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><rect width="240" height="240" rx="32" fill="#1f5c3a"/><path d="M60 170 L170 60 L185 75 L75 185 Z" fill="#d8dde3"/><rect x="40" y="168" width="40" height="22" rx="6" transform="rotate(-45 60 179)" fill="#8a5a2b"/></svg>`;
+const BANNER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 200"><rect width="480" height="200" fill="#f6a62f"/><circle cx="100" cy="100" r="60" fill="#12141a"/><rect x="190" y="80" width="240" height="40" rx="8" fill="#12141a"/></svg>`;
+const svgDataUrl = (svg: string) => `data:image/svg+xml;base64,${btoa(svg)}`;
+const NAMED_IMAGES: Record<string, string> = {
+  "/data/OpenBot/Shared/demo/maczeciarz/logo.svg": svgDataUrl(LOGO_SVG),
+  "/data/OpenBot/Shared/demo/maczeciarz/banner.svg": svgDataUrl(BANNER_SVG),
+};
+const loadNamedImage: Parameters<typeof MessageBody>[0]["loadImageFile"] = (file) =>
+  Promise.resolve(NAMED_IMAGES[file.path] ?? null);
+
+/** An agent names an image file it made. The chat shows it under the text, and a click opens the viewer. */
+export const NamedImageFile: Story = {
+  args: {
+    message: {
+      ...message,
+      id: "named-image-file",
+      body: "Done. Logo delivered to Boss:\n\n- `/data/OpenBot/Shared/demo/maczeciarz/logo.svg` — machete icon and wordmark.",
+      attachments: [],
+    },
+    onOpenSharedFile: fn(),
+    loadImageFile: loadNamedImage,
+  },
+  render: (storyArgs) => <MessageBodySurface args={storyArgs} variant="ghost" width="460px" />,
+};
+
+/** Two named image files show as a gallery. A file that does not load keeps only its chip. */
+export const NamedImageFiles: Story = {
+  args: {
+    message: {
+      ...message,
+      id: "named-image-files",
+      body: "Status: done\nResult: logo and banner are in the shared folder.\nEvidence: `/data/OpenBot/Shared/demo/maczeciarz/logo.svg`, `/data/OpenBot/Shared/demo/maczeciarz/banner.svg`, `/data/OpenBot/Shared/demo/maczeciarz/missing.png`",
+      attachments: [],
+    },
+    onOpenSharedFile: fn(),
+    loadImageFile: loadNamedImage,
+  },
+  render: (storyArgs) => <MessageBodySurface args={storyArgs} variant="ghost" width="460px" />,
+};

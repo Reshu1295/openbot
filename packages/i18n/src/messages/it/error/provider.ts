@@ -99,6 +99,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Il nome di un header è troppo lungo.",
   "error.provider.headerNameDuplicate": "Due header hanno lo stesso nome.",
   "error.provider.headerValueInvalid": "Il valore di un header manca o è troppo lungo.",
+  "error.provider.headerValueMissing": "Inserisci un valore per l'header {name}.",
   "error.provider.apiKeyTooLong": "La chiave API è troppo lunga.",
   "error.provider.localOnly": "I provider si possono modificare solo sul computer che esegue gli agenti.",
   "error.provider.keyRequired": "Serve una chiave del provider.",

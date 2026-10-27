@@ -136,7 +136,23 @@ export default function FilePreviewPanel(props: FilePreviewPanelProps) {
         setPreviewUrl(null);
         return;
       }
-      const url = URL.createObjectURL(new Blob([new Uint8Array(preview.bytes).buffer], { type: preview.mimeType }));
+      const blob = new Blob([new Uint8Array(preview.bytes).buffer], { type: preview.mimeType });
+      // The renderer policy allows `data:` images and no object URL images. A `data:` SVG also has
+      // no app origin when it is opened on its own. The reader encodes off the UI thread.
+      if (preview.previewKind === "image") {
+        let current = true;
+        setPreviewUrl(null);
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (current && typeof reader.result === "string") setPreviewUrl(reader.result);
+        };
+        reader.readAsDataURL(blob);
+        return () => {
+          current = false;
+          reader.abort();
+        };
+      }
+      const url = URL.createObjectURL(blob);
       currentPreviewUrl = url;
       setPreviewUrl(url);
     },
