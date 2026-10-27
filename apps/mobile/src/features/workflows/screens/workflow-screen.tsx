@@ -1,4 +1,3 @@
-import type { WorkflowRunDetail } from "@openbot/contracts/ipc";
 import * as Clipboard from "expo-clipboard";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { Button, Typography } from "heroui-native";
@@ -7,13 +6,12 @@ import PinOff from "lucide-react-native/icons/pin-off";
 import { useState } from "react";
 import { Alert, View } from "react-native";
 import { SettingsRow, SettingsSection } from "@/features/settings/components/settings-content";
-import { runStatusClass } from "@/features/workflows/components/workflow-row";
+import { WorkflowRunRow } from "@/features/workflows/components/workflow-run-row";
 import { workflowStepRows } from "@/features/workflows/components/workflow-steps-list";
 import { useWorkflowCommands } from "@/features/workflows/model/use-workflow-commands";
 import { useWorkflowDetail, useWorkflowRuns } from "@/features/workflows/model/use-workflows";
-import { formatRunDuration } from "@/features/workflows/model/workflow-duration";
 import { workflowOutline } from "@/features/workflows/model/workflow-outline";
-import { RUN_STATUS_LABEL, stepLabel } from "@/features/workflows/model/workflow-steps";
+import { stepLabel } from "@/features/workflows/model/workflow-steps";
 import {
   useMobileWorkspaceActions,
   useMobileWorkspaceSelector,
@@ -27,31 +25,8 @@ import { currentText, useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 
 const NO_IDS: readonly string[] = [];
-
-/** A run of the Runs group: its number, its status and when it started. */
-function RunRow({ detail, onPress }: { detail: WorkflowRunDetail; onPress: () => void }) {
-  const { t, format } = useText();
-  const { run } = detail;
-  const duration = formatRunDuration(run.startedAt, run.endedAt, t);
-  return (
-    <SettingsRow onPress={onPress}>
-      <Typography.Paragraph>{t("mobile.workflow.run.title", { number: run.number })}</Typography.Paragraph>
-      <Typography.Paragraph
-        className={runStatusClass({ status: run.status, at: run.startedAt })}
-        style={typeScale.caption}
-      >
-        {[t(RUN_STATUS_LABEL[run.status]), formatUpdatedAt(run.startedAt, format), duration]
-          .filter(Boolean)
-          .join(" · ")}
-      </Typography.Paragraph>
-      {run.error ? (
-        <Typography.Paragraph className="text-danger-text" numberOfLines={2} style={typeScale.caption}>
-          {run.error}
-        </Typography.Paragraph>
-      ) : null}
-    </SettingsRow>
-  );
-}
+/** The workflow page shows the newest runs; the Runs page shows them all. */
+const LATEST_RUNS = 3;
 
 /**
  * Drawer > Workflows > one workflow: run it, edit it, pin it to the drawer, and read its steps,
@@ -72,7 +47,9 @@ export function WorkflowScreen() {
   const [starting, setStarting] = useState(false);
   const workflow = detail.data;
   const title = workflow?.summary.title ?? t("mobile.app.route.workflow");
-  const latest = runs.data?.runs[0];
+  const runList = runs.data?.runs ?? [];
+  const latest = runList[0];
+  const moreRuns = runList.length > LATEST_RUNS || Boolean(runs.data?.nextBefore);
   const trigger = workflow?.graph.nodes.find((node) => node.kind === "trigger");
   const triggerState = workflow?.triggers.find((state) => state.nodeId === trigger?.id);
 
@@ -211,10 +188,16 @@ export function WorkflowScreen() {
               </SettingsSection>
             ) : null}
             <SettingsSection title={t("mobile.workflow.detail.runs")}>
-              {runs.data && runs.data.runs.length > 0 ? (
-                runs.data.runs.map((item) => (
-                  <RunRow key={item.run.id} detail={item} onPress={() => commands.openRun(workflowId, item.run.id)} />
-                ))
+              {runList.length > 0 ? (
+                runList
+                  .slice(0, LATEST_RUNS)
+                  .map((item) => (
+                    <WorkflowRunRow
+                      key={item.run.id}
+                      detail={item}
+                      onPress={() => commands.openRun(workflowId, item.run.id)}
+                    />
+                  ))
               ) : (
                 <SettingsRow disclosure={false}>
                   <Typography.Paragraph className="text-text-secondary">
@@ -226,6 +209,11 @@ export function WorkflowScreen() {
                   </Typography.Paragraph>
                 </SettingsRow>
               )}
+              {moreRuns ? (
+                <SettingsRow onPress={() => commands.openRuns(workflowId)}>
+                  <Typography.Paragraph>{t("mobile.workflow.detail.allRuns")}</Typography.Paragraph>
+                </SettingsRow>
+              ) : null}
             </SettingsSection>
             <SettingsSection
               footer={t("mobile.workflow.detail.revision", {

@@ -73,8 +73,12 @@ export function createWorkflowActions({
         baseRevision: input.baseRevision,
         graph: graphJson(input.graph),
       }),
-    loadWorkflowRuns: (workflowId, serverId) =>
-      send(serverId, WORKFLOWS_ROUTES.runs, decodeRemoteWorkflowRunPage, { workflowId, limit: RUN_PAGE_SIZE }),
+    loadWorkflowRuns: (workflowId, serverId, before) =>
+      send(serverId, WORKFLOWS_ROUTES.runs, decodeRemoteWorkflowRunPage, {
+        workflowId,
+        limit: RUN_PAGE_SIZE,
+        ...(before ? { before } : {}),
+      }),
     loadWorkflowRun: (runId, serverId) =>
       send(serverId, WORKFLOWS_ROUTES.run, decodeRemoteWorkflowRunDetail, { runId }),
     // Each press is a new request: a repeat of the same request would start the run only once.

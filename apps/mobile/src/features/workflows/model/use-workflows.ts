@@ -1,5 +1,5 @@
 import type { WorkflowRunDetail } from "@openbot/contracts/ipc";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useQueryScope } from "@/features/auth/context/mobile-session-context";
 import {
@@ -65,6 +65,22 @@ export function useWorkflowRuns(serverId: string, workflowId: string) {
     enabled: ready && Boolean(workflowId),
     retry: false,
     queryFn: () => loadWorkflowRuns(workflowId, serverId),
+  });
+}
+
+/** All runs of a workflow, newest first, a page at a time. */
+export function useWorkflowRunHistory(serverId: string, workflowId: string) {
+  const queryScope = useQueryScope();
+  const { loadWorkflowRuns } = useMobileWorkspaceActions();
+  const { ready } = useWorkflowsAvailable(serverId);
+  return useInfiniteQuery({
+    queryKey: queryKeys.workflow(queryScope, serverId, workflowId, "history"),
+    enabled: ready && Boolean(workflowId),
+    retry: false,
+    // An empty cursor asks for the newest runs.
+    initialPageParam: "",
+    queryFn: ({ pageParam }) => loadWorkflowRuns(workflowId, serverId, pageParam || undefined),
+    getNextPageParam: (page) => page.nextBefore ?? undefined,
   });
 }
 

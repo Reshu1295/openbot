@@ -45,6 +45,8 @@ export function useWorkflowCommands(serverId: string) {
     },
     open: (workflowId: string) =>
       router.push({ pathname: "/server-workflows/workflow", params: { serverId, workflowId } }),
+    openRuns: (workflowId: string) =>
+      router.push({ pathname: "/server-workflows/runs", params: { serverId, workflowId } }),
     openRun: (workflowId: string, runId?: string) =>
       router.push({
         pathname: "/server-workflows/run",

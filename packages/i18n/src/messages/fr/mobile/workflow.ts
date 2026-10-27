@@ -41,6 +41,8 @@ export const messages = {
   "mobile.workflow.detail.nextRun": "Prochaine exécution : {time}",
   "mobile.workflow.detail.copyWebhook": "Copier l’adresse du webhook",
   "mobile.workflow.detail.runs": "Exécutions",
+  "mobile.workflow.detail.allRuns": "Voir toutes les exécutions",
+  "mobile.workflow.runs.older": "Afficher les exécutions plus anciennes",
   "mobile.workflow.detail.runsFailed": "Impossible de charger les exécutions.",
   "mobile.workflow.detail.noRuns": "Aucune exécution.",
   "mobile.workflow.detail.revision": "Révision {revision} · enregistrée {time}",

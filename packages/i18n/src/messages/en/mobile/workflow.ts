@@ -38,6 +38,8 @@ export const messages = defineMessages("mobile.workflow", {
   "mobile.workflow.detail.nextRun": "Next run: {time}",
   "mobile.workflow.detail.copyWebhook": "Copy webhook address",
   "mobile.workflow.detail.runs": "Runs",
+  "mobile.workflow.detail.allRuns": "See all runs",
+  "mobile.workflow.runs.older": "Show older runs",
   "mobile.workflow.detail.runsFailed": "Could not load the runs.",
   "mobile.workflow.detail.noRuns": "No runs yet.",
   "mobile.workflow.detail.revision": "Revision {revision} · saved {time}",

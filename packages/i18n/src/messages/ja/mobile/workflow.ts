@@ -40,6 +40,8 @@ export const messages = {
   "mobile.workflow.detail.nextRun": "次回の実行: {time}",
   "mobile.workflow.detail.copyWebhook": "Webhook のアドレスをコピー",
   "mobile.workflow.detail.runs": "実行履歴",
+  "mobile.workflow.detail.allRuns": "すべての実行を表示",
+  "mobile.workflow.runs.older": "以前の実行を表示",
   "mobile.workflow.detail.runsFailed": "実行履歴を読み込めませんでした。",
   "mobile.workflow.detail.noRuns": "実行はまだありません。",
   "mobile.workflow.detail.revision": "リビジョン {revision} · {time} に保存",

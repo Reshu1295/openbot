@@ -159,12 +159,12 @@ export const queryKeys = {
   /** The workflows of a server. `workflows-changed` invalidates the list and the one workflow under it. */
   serverWorkflows: (scope: QueryScope, serverId: string) => ["server-workflows", ...scope, serverId],
   workflowList: (scope: QueryScope, serverId: string) => [...queryKeys.serverWorkflows(scope, serverId), "list"],
-  /** A workflow, its newest runs, and a run that is older than the first page. */
+  /** A workflow, its newest runs, all its runs page by page, and a run that is older than the first page. */
   workflow: (
     scope: QueryScope,
     serverId: string,
     workflowId: string,
-    ...part: [] | ["detail"] | ["runs"] | ["run", runId: string]
+    ...part: [] | ["detail"] | ["runs"] | ["history"] | ["run", runId: string]
   ) => [...queryKeys.serverWorkflows(scope, serverId), "workflow", workflowId, ...part],
   /** The query is the last part: a search that continues the typed query keeps its results on screen. */
   messageSearch: (scope: QueryScope, serverId: string, query: string) => ["message-search", ...scope, serverId, query],

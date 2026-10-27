@@ -461,6 +461,7 @@ function AuthenticatedStack() {
         <Stack.Screen name="server-tasks" options={largeTitlePage} />
         <Stack.Screen name="server-workflows/index" options={largeTitlePage} />
         <Stack.Screen name="server-workflows/workflow" options={largeTitlePage} />
+        <Stack.Screen name="server-workflows/runs" options={largeTitlePage} />
         <Stack.Screen name="server-workflows/run" options={largeTitlePage} />
         <Stack.Screen
           name="workflow-editor"

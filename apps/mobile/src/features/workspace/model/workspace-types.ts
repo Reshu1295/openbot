@@ -571,8 +571,8 @@ export interface MobileWorkspaceContextValue {
   deleteWorkflow: (workflowId: string, serverId: string) => Promise<void>;
   /** Answers a conflict with the saved workflow when another device saved it first. */
   saveWorkflowGraph: (input: SaveWorkflowGraphInput, serverId: string) => Promise<WorkflowSaveResult>;
-  /** The newest runs of a workflow. */
-  loadWorkflowRuns: (workflowId: string, serverId: string) => Promise<WorkflowRunPage>;
+  /** The newest runs of a workflow, or the runs older than `before`. */
+  loadWorkflowRuns: (workflowId: string, serverId: string, before?: string) => Promise<WorkflowRunPage>;
   loadWorkflowRun: (runId: string, serverId: string) => Promise<WorkflowRunDetail>;
   startWorkflowRun: (workflowId: string, serverId: string) => Promise<WorkflowRunDetail>;
   stopWorkflowRun: (runId: string, serverId: string) => Promise<void>;

@@ -40,6 +40,8 @@ export const messages = {
   "mobile.workflow.detail.nextRun": "Sonraki çalıştırma: {time}",
   "mobile.workflow.detail.copyWebhook": "Webhook adresini kopyala",
   "mobile.workflow.detail.runs": "Çalıştırmalar",
+  "mobile.workflow.detail.allRuns": "Tüm çalıştırmaları gör",
+  "mobile.workflow.runs.older": "Daha eski çalıştırmaları göster",
   "mobile.workflow.detail.runsFailed": "Çalıştırmalar yüklenemedi.",
   "mobile.workflow.detail.noRuns": "Henüz çalıştırma yok.",
   "mobile.workflow.detail.revision": "Sürüm {revision} · {time} kaydedildi",

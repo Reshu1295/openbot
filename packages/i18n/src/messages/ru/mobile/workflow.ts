@@ -55,6 +55,8 @@ export const messages = {
   "mobile.workflow.detail.nextRun": "Следующий запуск: {time}",
   "mobile.workflow.detail.copyWebhook": "Копировать адрес вебхука",
   "mobile.workflow.detail.runs": "Запуски",
+  "mobile.workflow.detail.allRuns": "Все запуски",
+  "mobile.workflow.runs.older": "Показать более ранние запуски",
   "mobile.workflow.detail.runsFailed": "Не удалось загрузить запуски.",
   "mobile.workflow.detail.noRuns": "Запусков пока нет.",
   "mobile.workflow.detail.revision": "Версия {revision} · сохранено {time}",

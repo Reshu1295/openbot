@@ -38,6 +38,8 @@ export const messages = {
   "mobile.workflow.detail.nextRun": "下次运行：{time}",
   "mobile.workflow.detail.copyWebhook": "复制 Webhook 地址",
   "mobile.workflow.detail.runs": "运行记录",
+  "mobile.workflow.detail.allRuns": "查看所有运行",
+  "mobile.workflow.runs.older": "显示更早的运行",
   "mobile.workflow.detail.runsFailed": "无法加载运行记录。",
   "mobile.workflow.detail.noRuns": "还没有运行记录。",
   "mobile.workflow.detail.revision": "版本 {revision} · 保存于 {time}",

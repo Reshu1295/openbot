@@ -39,6 +39,8 @@ export const messages = {
   "mobile.workflow.detail.nextRun": "다음 실행: {time}",
   "mobile.workflow.detail.copyWebhook": "웹훅 주소 복사",
   "mobile.workflow.detail.runs": "실행",
+  "mobile.workflow.detail.allRuns": "모든 실행 보기",
+  "mobile.workflow.runs.older": "이전 실행 보기",
   "mobile.workflow.detail.runsFailed": "실행 기록을 불러올 수 없어요.",
   "mobile.workflow.detail.noRuns": "아직 실행 기록이 없어요.",
   "mobile.workflow.detail.revision": "버전 {revision} · {time}에 저장됨",
