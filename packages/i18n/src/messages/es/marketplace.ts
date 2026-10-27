@@ -358,6 +358,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "¿Qué proyectos y servicios hay en mi espacio de trabajo de Railway?",
   "marketplace.plugin.railway.prompt.crash": "¿Por qué mi servicio de backend en Railway falla al desplegarse?",
   "marketplace.plugin.railway.prompt.redeploy": "Vuelve a desplegar el servicio de la API en mi proyecto de Railway.",
+  "marketplace.plugin.render.tagline": "Servicios, despliegues y registros",
+  "marketplace.plugin.render.description":
+    "Render permite a los agentes listar espacios de trabajo y servicios, leer registros, eventos y métricas, ver el historial de despliegues, iniciar despliegues y ejecutar SQL de solo lectura en Render Postgres. Una clave de API de Render va en un encabezado Authorization. La clave llega a todos los espacios de trabajo de la cuenta de Render. Los agentes pueden crear servicios web, sitios estáticos, tareas cron, bases de datos Postgres e instancias Key Value, lo que puede tener coste, y pueden reemplazar las variables de entorno de un servicio. El servidor no puede eliminar ningún recurso.",
+  "marketplace.plugin.render.app":
+    "Servicios, despliegues, registros y métricas, mediante el servidor MCP de Render con una clave de API.",
+  "marketplace.plugin.render.prompt.services": "¿Qué servicios hay en mi espacio de trabajo de Render?",
+  "marketplace.plugin.render.prompt.logs": "¿Qué errores registró mi servicio web de Render en la última hora?",
+  "marketplace.plugin.render.prompt.deploy": "¿Por qué falló el último despliegue de mi servicio de Render?",
   "marketplace.plugin.atlassian.tagline": "Elementos de trabajo de Jira y páginas de Confluence",
   "marketplace.plugin.atlassian.description":
     "Atlassian permite a los agentes buscar y leer elementos de trabajo de Jira, páginas de Confluence y pull requests de Bitbucket, y crear o actualizar elementos de trabajo, páginas y comentarios. Cada usuario inicia sesión en su propia cuenta de Atlassian desde el navegador y aprueba el acceso en una pantalla de consentimiento. Los agentes tienen los mismos permisos que el usuario: pueden cambiar elementos de trabajo y páginas, cambiar los permisos de las páginas y fusionar pull requests. Las herramientas que eliminan datos de Jira siguen desactivadas hasta que un administrador de la organización las activa. Cada llamada a una herramienta consume créditos de Rovo.",

@@ -319,6 +319,13 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "我的 Railway 工作区里有哪些项目和服务？",
   "marketplace.plugin.railway.prompt.crash": "我在 Railway 上的后端服务为什么在部署时崩溃？",
   "marketplace.plugin.railway.prompt.redeploy": "重新部署我 Railway 项目中的 API 服务。",
+  "marketplace.plugin.render.tagline": "服务、部署与日志",
+  "marketplace.plugin.render.description":
+    "Render 让助手列出工作区和服务，读取日志、事件和指标，查看部署历史，触发部署，并在 Render Postgres 上运行只读 SQL。Render API 密钥放在一个 Authorization 请求头中。该密钥可访问 Render 账号的所有工作区。助手可以创建 Web 服务、静态网站、定时任务、Postgres 数据库和 Key Value 实例，这可能产生费用；助手还可以替换服务的环境变量。服务器无法删除任何资源。",
+  "marketplace.plugin.render.app": "通过 Render 的 MCP 服务器和 API 密钥，提供服务、部署、日志与指标。",
+  "marketplace.plugin.render.prompt.services": "我的 Render 工作区里有哪些服务？",
+  "marketplace.plugin.render.prompt.logs": "我的 Render Web 服务在过去一小时记录了哪些错误？",
+  "marketplace.plugin.render.prompt.deploy": "我的 Render 服务最近一次部署为什么失败？",
   "marketplace.plugin.atlassian.tagline": "Jira 工作项与 Confluence 页面",
   "marketplace.plugin.atlassian.description":
     "Atlassian 让助手搜索和读取 Jira 工作项、Confluence 页面和 Bitbucket 拉取请求，并创建或更新工作项、页面和评论。每位用户通过浏览器登录自己的 Atlassian 账号，并在授权页面上批准访问。助手拥有与该用户相同的权限：可以修改工作项和页面、修改页面权限，以及合并拉取请求。删除 Jira 数据的工具默认关闭，直到组织管理员将其开启。每次调用工具都会消耗 Rovo 积分。",

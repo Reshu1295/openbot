@@ -18,6 +18,7 @@ import type { PluginGuide } from "./plugin-guide";
 import { POSTHOG_PLUGIN_GUIDE } from "./posthog";
 import { PRISMA_PLUGIN_GUIDE } from "./prisma";
 import { RAILWAY_PLUGIN_GUIDE } from "./railway";
+import { RENDER_PLUGIN_GUIDE } from "./render";
 import { RESEND_PLUGIN_GUIDE } from "./resend";
 import { SENTRY_PLUGIN_GUIDE } from "./sentry";
 import { STRIPE_PLUGIN_GUIDE } from "./stripe";
@@ -47,6 +48,7 @@ const PLUGIN_GUIDES: Readonly<Record<string, PluginGuide>> = {
   vercel: VERCEL_PLUGIN_GUIDE,
   todoist: TODOIST_PLUGIN_GUIDE,
   railway: RAILWAY_PLUGIN_GUIDE,
+  render: RENDER_PLUGIN_GUIDE,
   prisma: PRISMA_PLUGIN_GUIDE,
   netlify: NETLIFY_PLUGIN_GUIDE,
   neon: NEON_PLUGIN_GUIDE,

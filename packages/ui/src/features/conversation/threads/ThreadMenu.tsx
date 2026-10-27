@@ -23,7 +23,7 @@ function ThreadMenuList(props: ThreadHeaderProps) {
           >
             <span class="agent-threads-menu-title">{thread.title}</span>
             <ThreadStatusMark status={thread.status} />
-            <span class="agent-threads-menu-time">{sidebarMessageTime(thread.updatedAt, format)}</span>
+            <span class="agent-threads-menu-time ui-menu-trailing">{sidebarMessageTime(thread.updatedAt, format)}</span>
           </DropdownMenu.Item>
         )}
       </For>
@@ -71,7 +71,7 @@ function ThreadMenuTrigger(props: ThreadHeaderProps & { mode: ThreadRowMode }) {
   );
 }
 
-/** Every thread of the agent. A thread without a tab opens in a new tab. */
+/** Every side thread of the agent. A thread without a tab opens in a new tab. */
 export function ThreadMenu(props: ThreadHeaderProps & { mode: ThreadRowMode }) {
   const { t, format } = useText();
   return (
@@ -83,8 +83,10 @@ export function ThreadMenu(props: ThreadHeaderProps & { mode: ThreadRowMode }) {
             <MessageCirclePlus aria-hidden="true" />
             {t("conversation.threads.new")}
           </DropdownMenu.Item>
-          <DropdownMenu.Separator />
-          <ThreadMenuList {...props} />
+          <Show when={props.threads.length > 0}>
+            <DropdownMenu.Separator />
+            <ThreadMenuList {...props} />
+          </Show>
           <Show when={props.archived.length > 0}>
             <DropdownMenu.Separator />
             <DropdownMenu.Sub>
@@ -103,7 +105,9 @@ export function ThreadMenu(props: ThreadHeaderProps & { mode: ThreadRowMode }) {
                         onSelectAfterClose={() => props.onRestore(thread.id)}
                       >
                         <span class="agent-threads-menu-title">{thread.title}</span>
-                        <span class="agent-threads-menu-time">{sidebarMessageTime(thread.updatedAt, format)}</span>
+                        <span class="agent-threads-menu-time ui-menu-trailing">
+                          {sidebarMessageTime(thread.updatedAt, format)}
+                        </span>
                       </DropdownMenu.Item>
                     )}
                   </For>

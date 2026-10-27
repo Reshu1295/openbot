@@ -152,11 +152,12 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
     setOrder(agentId, next, next.includes(current) ? current : id);
   }
 
+  /** Moves a tab to an index among the shown tabs, which do not include the agent's own chat. */
   function move(agentId: string, id: string, index: number): void {
-    const order = tabOrder(agentId).filter((entry) => entry !== id);
+    const order = tabOrder(agentId).filter((entry) => entry !== id && entry !== MAIN_THREAD_ID);
     order.splice(index, 0, id);
     // The agent's own chat stays first, and the new thread stays last.
-    const sides = order.filter((entry) => entry !== MAIN_THREAD_ID && entry !== DRAFT_THREAD_ID);
+    const sides = order.filter((entry) => entry !== DRAFT_THREAD_ID);
     setOrder(agentId, [MAIN_THREAD_ID, ...sides, ...(hasDraft(agentId) ? [DRAFT_THREAD_ID] : [])], activeId(agentId));
   }
 

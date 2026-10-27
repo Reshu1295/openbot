@@ -429,6 +429,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:claude-usage-resume
 
+      - name: Run the Claude late steer E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:claude-late-steer
+
       - name: Run the provider session reuse E2E test
         if: ${{ !cancelled() }}
         run: bun run test:provider-session-reuse
@@ -440,6 +444,10 @@ jobs:
       - name: Run the ZIP attachment E2E test
         if: ${{ !cancelled() }}
         run: bun run test:zip-attachments
+
+      - name: Run the MP4 attachment E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:mp4-attachments
 
       - name: Run the agent MCP server tools E2E test
         if: ${{ !cancelled() }}
@@ -519,9 +527,11 @@ jobs:
             .openbot-build/agent-profile-accounts-e2e/
             .openbot-build/browser-profile-agents-e2e/
             .openbot-build/claude-usage-resume-e2e/
+            .openbot-build/claude-late-steer-e2e/
             .openbot-build/provider-session-reuse-e2e/
             .openbot-build/backup-model-failover-e2e/
             .openbot-build/zip-attachment-e2e/
+            .openbot-build/mp4-attachment-e2e/
             .openbot-build/agent-mcp-tools-e2e/
             .openbot-build/agent-update-agents-e2e/
             .openbot-build/antigravity-usage-e2e/

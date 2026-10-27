@@ -119,7 +119,7 @@ export const messages = {
   "mobile.chat.attachment.addFailed": "첨부 파일을 추가할 수 없어요",
   "mobile.chat.attachment.limit": "파일은 최대 {limit}개까지 첨부할 수 있어요.",
   "mobile.chat.attachment.unsupported":
-    "{name}: 이미지, MP3 오디오, MOV 동영상, ZIP 압축 파일, PDF, Office 문서, EML, 텍스트, Markdown, 데이터 또는 소스 파일을 선택해 주세요.",
+    "{name}: 이미지, MP3 오디오, MOV 또는 MP4 동영상, ZIP 압축 파일, PDF, Office 문서, EML, 텍스트, Markdown, 데이터 또는 소스 파일을 선택해 주세요.",
   "mobile.chat.attachment.hostRejectsType":
     "{name}: 호스트 컴퓨터가 {type} 파일을 받지 않아요. 첨부하려면 호스트의 OpenBot을 업데이트해 주세요.",
   "mobile.chat.attachment.hostRejects":

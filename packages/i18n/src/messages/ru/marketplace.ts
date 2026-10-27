@@ -364,6 +364,13 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Какие проекты и сервисы есть в моём рабочем пространстве Railway?",
   "marketplace.plugin.railway.prompt.crash": "Почему мой бэкенд-сервис на Railway падает при деплое?",
   "marketplace.plugin.railway.prompt.redeploy": "Заново задеплой сервис API в моём проекте Railway.",
+  "marketplace.plugin.render.tagline": "Сервисы, деплои и логи",
+  "marketplace.plugin.render.description":
+    "Render позволяет агентам просматривать рабочие пространства и сервисы, читать логи, события и метрики, смотреть историю деплоев, запускать деплои и выполнять SQL только для чтения в Render Postgres. API-ключ Render передаётся в одном заголовке Authorization. Ключ даёт доступ ко всем рабочим пространствам аккаунта Render. Агенты могут создавать веб-сервисы, статические сайты, cron-задачи, базы данных Postgres и экземпляры Key Value, что может стоить денег, а также заменять переменные окружения сервиса. Сервер не может удалить ни один ресурс.",
+  "marketplace.plugin.render.app": "Сервисы, деплои, логи и метрики через сервер MCP Render с API-ключом.",
+  "marketplace.plugin.render.prompt.services": "Какие сервисы есть в моём рабочем пространстве Render?",
+  "marketplace.plugin.render.prompt.logs": "Какие ошибки записал мой веб-сервис на Render за последний час?",
+  "marketplace.plugin.render.prompt.deploy": "Почему последний деплой моего сервиса на Render не удался?",
   "marketplace.plugin.atlassian.tagline": "Рабочие элементы Jira и страницы Confluence",
   "marketplace.plugin.atlassian.description":
     "Atlassian позволяет агентам искать и читать рабочие элементы Jira, страницы Confluence и пул-реквесты Bitbucket, а также создавать и обновлять рабочие элементы, страницы и комментарии. Каждый пользователь входит в свой аккаунт Atlassian через браузер и подтверждает доступ на экране согласия. У агентов те же права, что и у пользователя: они могут изменять рабочие элементы и страницы, менять права доступа к страницам и сливать пул-реквесты. Инструменты, которые удаляют данные Jira, остаются выключенными, пока администратор организации их не включит. Каждый вызов инструмента расходует кредиты Rovo.",

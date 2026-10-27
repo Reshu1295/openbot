@@ -321,6 +321,18 @@ const PLUGIN_TEXT = {
       "prompt-redeploy": "marketplace.plugin.railway.prompt.redeploy",
     },
   },
+  render: {
+    tagline: "marketplace.plugin.render.tagline",
+    description: "marketplace.plugin.render.description",
+    apps: {
+      "app-render-mcp": "marketplace.plugin.render.app",
+    },
+    prompts: {
+      "prompt-services": "marketplace.plugin.render.prompt.services",
+      "prompt-logs": "marketplace.plugin.render.prompt.logs",
+      "prompt-deploy": "marketplace.plugin.render.prompt.deploy",
+    },
+  },
   atlassian: {
     tagline: "marketplace.plugin.atlassian.tagline",
     description: "marketplace.plugin.atlassian.description",
