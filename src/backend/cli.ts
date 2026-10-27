@@ -315,7 +315,8 @@ export function antigravityHarnessName(target: string): "localharness_external" 
  * The Antigravity server is never looked for on `PATH`: the Antigravity IDE installs an
  * `antigravity` command that is an editor, not this server. Only the copy OpenBot downloaded, or the
  * path in `OPENBOT_ANTIGRAVITY_PATH`, is used. The server takes no `--version`, so the version comes
- * from the manifest two levels above the program, which a managed install writes.
+ * from the manifest two levels above the program, which a managed install writes. The server
+ * still gets `cliLaunchPath`: the MCP servers that it starts are commands such as bare `node` (#3418).
  *
  * A path the user set is the only candidate: when it cannot start, the error says so, and the
  * managed copy does not run in its place without a message.
@@ -342,7 +343,13 @@ export const resolveAntigravityCli: (input?: {
         Effect.gen(function* () {
           const manifest = join(dirname(dirname(candidate.executable)), ANTIGRAVITY_MANIFEST);
           const version = parseAntigravityVersion(yield* providerCall(() => readFile(manifest, "utf8")));
-          return { executable: candidate.executable, version, source: candidate.source };
+          const launchPath = yield* cliLaunchPath(candidate.executable, candidate.source);
+          return {
+            executable: candidate.executable,
+            version,
+            source: candidate.source,
+            ...(launchPath ? { launchPath } : {}),
+          };
         }).pipe(Effect.catchDefect((cause) => Effect.fail(providerFailure(cause)))),
       );
       if (Result.isSuccess(attempt)) return attempt.success;
