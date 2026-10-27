@@ -393,6 +393,7 @@ host advertises a capability only when its `TeamApiAdmin` member exists.
 | `host-timezone-v1` | Read and set the server timezone | `hostAdmin` |
 | `agent-memory-limit-v1` | Read and set how many memories each agent keeps | `hostAdmin` |
 | `prompt-cache-ttl-v1` | Read and set how long Claude keeps the prompt cache of the host's agents | `hostAdmin` |
+| `provider-default-v1` | Read and set the provider that a new agent of the host starts on | none: only the mobile app sends it |
 | `agent-access-v1` | Read and set the roles that give members access to agents (see [Roles](#roles)) | `hostAdmin` |
 | `discord-access-v1` | Read and set which Discord roles can use OpenBot in a Discord server; list its roles | `messaging` |
 | `events-v1` | Manage webhook routines, their secrets, and activity | `events` |
@@ -462,6 +463,16 @@ in the Claude settings or `CLAUDE_CODE_PROMPT_CACHE_TTL` on the host still wins.
 the next Claude process, not to a running one; an idle thread starts a new process when it resumes.
 The Cache section of the Claude page in Server settings → Providers sets it for this computer and
 for a joined server.
+
+`provider-default-v1` reads and sets the provider, and the model beside it, that a new agent of the
+host starts on when its creator chooses none. It is the setup choice of the host (`openbot-setup`
+file, `preferredProvider` and `preferredModel`): a set writes the file and calls
+`AgentService.setPreferredProvider`, as the local Settings save does. A read gives the provider that
+`AgentService.preferredProvider` uses now, so a host before its setup choice reads `codex`. A
+provider that the client's protocol does not show reads as none (`provider: null`), and the host
+refuses to set it. The phone's Server settings → Providers sets it. The desktop sets it only for this
+computer. A remote set also sends the new setup to each window of the host (`app.setupState`), so
+its Settings show the change at once.
 
 `claude-api-key-v1` has no routes. It tells a client that the host reads the key that the released
 `providers-v1` key routes save for `claude`. The host keeps the key as a Claude account with the

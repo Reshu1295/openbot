@@ -606,7 +606,9 @@ is not included in analytics; provider output uses the application's secret reda
   code or login notes. An agent can add and change contact info, change the username of a login (not
   its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
   chat shows each change, and an item that an agent adds keeps the agent's name. A password that the
-  user types into the secure sign-in card goes to the Vault only while Save to Vault is checked. The
+  user types into the secure sign-in card goes to the Vault only while Save to Vault is checked. On a
+  joined server, only an owner or admin can check it, the box starts unchecked, and the password goes
+  to that server's Vault, not to the Vault of the computer where it was typed. The
   first card fill on a site waits for the server owner's approval; team members and messaging
   services cannot give it. The card then keeps that site and the origins of its card frames, and
   later fills there need no approval; the user can remove a site in the card. The

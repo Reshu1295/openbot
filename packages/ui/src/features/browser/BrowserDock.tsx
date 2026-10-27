@@ -2,6 +2,7 @@ import type { LocalBrowserSecretResponse, QueueDelivery, QueueHold } from "@open
 import { ArrowUp, Button } from "@openbot/ui";
 import type { ComposerAgent, ComposerMcpServer, ComposerSkill } from "@openbot/ui/data";
 import { AgentAvatar } from "@openbot/ui/features/agents/AgentAvatar";
+import type { BrowserSecretVault } from "@openbot/ui/features/conversation/BrowserSecretCard";
 import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor";
 import { StopIcon } from "@openbot/ui/features/conversation/ConversationIcons";
 import { QueuePanel } from "@openbot/ui/features/conversation/QueuePanel";
@@ -62,8 +63,8 @@ export interface BrowserDockProps {
   onReorder: (deliveryIds: string[]) => void;
   /** Gives the page to the user, or back. Absent when the host cannot. */
   onHandoff?: (() => void) | undefined;
-  /** Offer "Save to Vault" on a password card: only on the local server. */
-  vaultSave?: boolean | undefined;
+  /** Offer "Save to Vault" on a password card. */
+  vault?: BrowserSecretVault | undefined;
   onRespondSecret: (input: LocalBrowserSecretResponse) => Promise<void>;
   /** Resolves true when the host has the answers. An empty record cancels the questions. */
   onAnswerPrompt: (requestId: string | number, answers: Record<string, string[]>) => Promise<boolean>;
@@ -283,7 +284,7 @@ export function BrowserDock(props: BrowserDockProps) {
               handoffPending={props.handoffPending}
               sendShortcut={props.sendShortcut}
               onHandoff={props.onHandoff}
-              vaultSave={props.vaultSave}
+              vault={props.vault}
               onRespondSecret={props.onRespondSecret}
               onAnswerPrompt={props.onAnswerPrompt}
               onRespondApproval={props.onRespondApproval}

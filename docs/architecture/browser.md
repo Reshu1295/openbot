@@ -287,6 +287,11 @@ response. The secret travels through a dedicated typed IPC endpoint or the optio
 Frozen protocol projections continue to show ordinary takeover to older clients. Current codecs
 carry validated metadata beside those projections. There is no database schema change.
 
+A password can also go to the Vault of the server that runs the agent. The local app sends
+`saveToVault` over IPC. A remote client sends the same submit on `browser-secret-vault-v1`, which
+only an owner or admin can use; the released route keeps its fields. The card shows the save box on
+every password request, and for a member or an older host it shows the box off with the reason.
+
 The browser host owns the protection state and serializes entry behind existing browser work. CDP
 resolves fields before consent and checks the document and origin again before entry. The host
 stops recording, suppresses page diagnostics, blocks inspection and capture, rejects remote input,

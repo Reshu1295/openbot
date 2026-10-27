@@ -2331,6 +2331,29 @@ export async function createApplicationServices({
       timezone: serverTimezone,
       memoryLimit: agentMemoryLimitSetting,
       promptCacheTtl,
+      // The local Settings save does the same two steps (`saveSetup`).
+      defaultProvider: {
+        // The provider that a new agent starts on now, also before a setup choice: `preferredProvider` above.
+        get: () =>
+          readSetupState(setupFile).pipe(
+            Effect.map((state) => ({
+              provider: service.preferredProvider(),
+              model: state.preferredProvider === service.preferredProvider() ? state.preferredModel : null,
+            })),
+          ),
+        set: (input) =>
+          writeSetupState(setupFile, input).pipe(
+            Effect.tap(() => service.setPreferredProvider(input.preferredProvider, input.preferredModel)),
+            // The window read the setup once at start, so it gets the new choice.
+            Effect.tap((state) =>
+              Effect.sync(() => {
+                for (const window of BrowserWindow.getAllWindows())
+                  sendToRenderer(window, IPC_ENDPOINTS.app.setupState, state);
+              }),
+            ),
+            Effect.map((state) => ({ provider: state.preferredProvider, model: state.preferredModel })),
+          ),
+      },
       routineResults: routineResultRuntime,
     },
     // The host's Team API routes share the IPC handlers' runtime preparation: a first server

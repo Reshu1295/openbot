@@ -30,12 +30,15 @@ import type { SkillMarketplaceService } from "../skill-marketplace-service";
 
 import type {
   AgentEvent,
+  AgentModelId,
+  AgentProviderId,
   CentralAuthUser,
   DirectMessageRealtimeEvent,
   DirectTypingRealtimeEvent,
   RoutineResultConnectionOption,
   RoutineResultDestination,
   RoutineResultRoutineInput,
+  SaveSetupInput,
   SetRoutineResultDestinationInput,
   SidebarLayoutSnapshot,
   TeamPresenceSnapshot,
@@ -295,6 +298,17 @@ export type TeamApiWorkflows = Pick<
 > &
   Pick<HostEventsService, "rotateWorkflowSecret">;
 
+/** The setup choice of this computer: the same file and the same service step as the local Settings save. */
+interface TeamApiDefaultProvider {
+  get(): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
+  set(input: SaveSetupInput): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
+}
+
+export interface ProviderDefaultSetting {
+  provider: AgentProviderId | null;
+  model: AgentModelId | null;
+}
+
 /**
  * The admin routes, one member per optional capability. A member's presence is what
  * `#protocolSupport` advertises its capability on; every route behind it requires an owner or admin.
@@ -342,6 +356,8 @@ export interface TeamApiAdmin {
   memoryLimit?: AgentMemoryLimitSetting;
   /** `prompt-cache-ttl-v1`: how long the provider keeps the prompt cache of this computer's agents. */
   promptCacheTtl?: Pick<PromptCacheTtlPreferenceStore, "get" | "set">;
+  /** `provider-default-v1`: the provider and model that a new agent of this computer starts on. */
+  defaultProvider?: TeamApiDefaultProvider;
   /** `routine-results-v1`: the place where an agent routine sends its answers. */
   routineResults?: TeamApiRoutineResults;
 }

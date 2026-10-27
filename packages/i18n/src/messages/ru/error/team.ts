@@ -91,6 +91,7 @@ export const messages = {
   "error.team.routineResultsUnsupported": "Это подключение не поддерживает места отправки рутин.",
   "error.team.agentMemoryLimitUnsupported": "Это подключение не поддерживает лимит памяти агентов.",
   "error.team.promptCacheTtlUnsupported": "Это подключение не поддерживает время кэша промптов.",
+  "error.team.providerDefaultUnsupported": "Это подключение не поддерживает провайдера по умолчанию.",
   "error.team.attachmentNameRequired": "Нужно безопасное имя вложения.",
   "error.team.attachmentNotFound": "Вложение не найдено.",
   "error.team.sharedFileTooLarge": "Общий файл превышает лимит 100 МБ.",

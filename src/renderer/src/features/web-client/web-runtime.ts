@@ -26,10 +26,10 @@ import type {
   EditQueuedMessageInput,
   HiddenAgentsSnapshot,
   InvitePreview,
+  LocalBrowserSecretResponse,
   QueueSnapshot,
   ReorderQueueInput,
   RespondToApprovalInput,
-  RespondToBrowserSecretInput,
   RespondToBrowserTakeoverInput,
   RespondToPromptInput,
   Routine,
@@ -182,7 +182,7 @@ export interface WebWorkspaceRuntime {
   /** Behind `browser-user-control`: the owning agent waits on the tab until the release. */
   takeBrowserControl(tabId: string): Promise<void>;
   releaseBrowserControl(tabId: string): Promise<void>;
-  respondToBrowserSecret?: (input: RespondToBrowserSecretInput) => Promise<void>;
+  respondToBrowserSecret?: (input: LocalBrowserSecretResponse) => Promise<void>;
   getSidebarLayout?: () => Promise<SidebarLayoutSnapshot>;
   mutateSidebarLayout?: (action: SidebarLayoutAction) => Promise<SidebarLayoutSnapshot>;
   /** The host's channel routes. A channel page arrives without host file URLs. */

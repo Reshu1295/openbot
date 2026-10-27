@@ -1,4 +1,4 @@
-import { type AgentProviderId, isAgentProvider, relayCallbackQuery } from "@openbot/contracts/ipc";
+import { type AgentProviderId, isAgentProvider, isKeyOnlyProvider, relayCallbackQuery } from "@openbot/contracts/ipc";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import { Stack, useLocalSearchParams } from "expo-router";
@@ -293,7 +293,7 @@ export function ServerProviderScreen() {
             </Typography.Paragraph>
           </SettingsRow>
         </SettingsSection>
-      ) : connectable && state !== "available" ? (
+      ) : connectable && state !== "available" && !(row.apiKey && isKeyOnlyProvider(provider)) ? (
         <SettingsNote>{t("mobile.server.providers.connectOnComputer")}</SettingsNote>
       ) : null}
       {signIn ? (
@@ -645,6 +645,7 @@ function ProviderKeySection({
       </SettingsSection>
       <SheetFormField
         label={t(saved ? "mobile.server.providers.replaceKey" : "mobile.server.providers.newKey")}
+        placeholder={t("mobile.server.providers.keyPlaceholder")}
         autoCapitalize="none"
         autoCorrect={false}
         secureTextEntry

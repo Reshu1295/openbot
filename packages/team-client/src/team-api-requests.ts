@@ -41,13 +41,13 @@ import {
   isRoutineFlowCanvas,
   isRoutineFlowLink,
   isRoutineRun,
+  type LocalBrowserSecretResponse,
   type OpenBotDesktopApi,
   type QueuedMessageReceipt,
   type RemoteAgentImportResult,
   type RenameAgentTaskInput,
   type ReorderQueueInput,
   type RespondToApprovalInput,
-  type RespondToBrowserSecretInput,
   type RespondToBrowserTakeoverInput,
   remoteBrowserSecretResponse,
   type SetAgentMemoryInclusionInput,
@@ -67,6 +67,7 @@ import {
 } from "@openbot/contracts/team-protocol/agent-memories-v1";
 import { AGENT_TASKS_ROUTES } from "@openbot/contracts/team-protocol/agent-tasks-v1";
 import { AGENT_THREADS_ROUTES } from "@openbot/contracts/team-protocol/agent-threads-v1";
+import { BROWSER_SECRET_VAULT_ROUTES } from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import { CHANNEL_ROUTES } from "@openbot/contracts/team-protocol/channels-v1";
 import { CONTEXT_RESET_ROUTES } from "@openbot/contracts/team-protocol/context-reset-v1";
 import { ROUTINE_FLOWS_ROUTES } from "@openbot/contracts/team-protocol/routine-flows-v1";
@@ -305,12 +306,15 @@ export const respondToBrowserTakeover = Effect.fn("TeamClient.respondToBrowserTa
 
 export const respondToBrowserSecret = Effect.fn("TeamClient.respondToBrowserSecret")(function* (
   request: TeamApiRequest,
-  input: RespondToBrowserSecretInput,
+  input: LocalBrowserSecretResponse,
 ): Effect.fn.Return<void, TeamRequestError> {
-  // Only the released fields: `saveToVault` is for the Vault of the local computer.
-  return yield* teamCall(() =>
-    request("POST", BROWSER_SECRET_RESPONSE_PATH, ignoreResponse, { ...remoteBrowserSecretResponse(input) }),
-  );
+  // The released route carries only the released fields. A save goes on `browser-secret-vault-v1`, which
+  // the caller offers only to an owner or admin of a host that serves it.
+  const path =
+    input.decision === "submit" && input.saveToVault
+      ? BROWSER_SECRET_VAULT_ROUTES.respond
+      : BROWSER_SECRET_RESPONSE_PATH;
+  return yield* teamCall(() => request("POST", path, ignoreResponse, { ...remoteBrowserSecretResponse(input) }));
 });
 
 /** The channel calls of the desktop IPC surface, which a remote desktop sends to the host the same way. */

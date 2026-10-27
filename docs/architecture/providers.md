@@ -36,7 +36,9 @@ receive them through the local MCP bridge.
 `agent/developer-instructions.ts` puts stable rules first, profile and workspace settings next,
 and memories last. Detailed browser, administration, routine, hosting, data, and visual guidance
 loads through `tool_search` or `tool_describe`. Essential secret handling and untrusted-content rules stay in the
-permanent instructions. ACP and Muse still insert these shorter instructions on each normal turn.
+permanent instructions. Each rule has one place: the Vault, wait, and memory-selection details are in
+their tool guidance or descriptions, and the teammate reply format and the rule against
+acknowledgement loops come with each teammate message (`agent/delivery-content.ts`). ACP and Muse still insert these shorter instructions on each normal turn.
 Retention after compaction is not assumed. Compaction thresholds are unchanged.
 
 `bun run check:agent-context` measures the instruction text, the visible tool definitions, the

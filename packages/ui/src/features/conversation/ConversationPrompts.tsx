@@ -21,7 +21,7 @@ import {
   X,
 } from "@openbot/ui";
 import { StandingApprovalConfirmation } from "@openbot/ui/components/StandingApprovalConfirmation";
-import { BrowserSecretCard } from "@openbot/ui/features/conversation/BrowserSecretCard";
+import { BrowserSecretCard, type BrowserSecretVault } from "@openbot/ui/features/conversation/BrowserSecretCard";
 import { BrowserTakeoverPreview } from "@openbot/ui/features/conversation/BrowserTakeoverPreview";
 import { type TextValue, useText } from "@openbot/ui/text";
 import { createMemo, createSignal, For, Show } from "solid-js";
@@ -269,8 +269,8 @@ interface BrowserTakeoverCardProps {
   signInBlocked?: { server: string; signingIn: boolean } | undefined;
   browserSecret?: {
     loadPreview?: (tabId: string) => Promise<BrowserPreview>;
-    /** Offer "Save to Vault" for a password: only on the local server. */
-    vaultSave?: boolean | undefined;
+    /** Offer "Save to Vault" for a password. */
+    vault?: BrowserSecretVault | undefined;
     onRespond: (input: LocalBrowserSecretResponse) => Promise<void>;
   };
 }
@@ -288,7 +288,7 @@ export function BrowserTakeoverCard(props: BrowserTakeoverCardProps) {
             request={request()}
             onOpen={props.onOpen}
             loadPreview={actions.loadPreview}
-            vaultSave={actions.vaultSave}
+            vault={actions.vault}
             onRespond={actions.onRespond}
           />
         );

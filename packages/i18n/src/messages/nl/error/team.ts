@@ -91,6 +91,7 @@ export const messages = {
   "error.team.routineResultsUnsupported": "Deze verbinding ondersteunt geen bestemmingen voor routines.",
   "error.team.agentMemoryLimitUnsupported": "Deze verbinding ondersteunt de geheugenlimiet van agents niet.",
   "error.team.promptCacheTtlUnsupported": "Deze verbinding ondersteunt de cachetijd van prompts niet.",
+  "error.team.providerDefaultUnsupported": "Deze verbinding ondersteunt de standaardaanbieder niet.",
   "error.team.agentAccessUnsupported": "Deze verbinding ondersteunt geen rollen.",
   "error.team.agentAccessStale": "Iemand heeft de rollen gewijzigd. Open ze opnieuw en breng je wijziging aan.",
   "error.team.agentViewOnly": "Je kunt deze agent alleen bekijken.",

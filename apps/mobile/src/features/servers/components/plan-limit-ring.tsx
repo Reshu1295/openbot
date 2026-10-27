@@ -1,44 +1,16 @@
-import { providerLogoShape } from "@openbot/brand/provider-logo-shape";
-import type { AgentProviderId } from "@openbot/contracts/ipc";
 import type { PlanLimitRow, PlanLimitTone } from "@openbot/team-client/plan-limits";
 import { useThemeColor } from "heroui-native/hooks";
 import { useId } from "react";
 import { View } from "react-native";
-import Svg, { Circle, Defs, G, Mask, Path, Rect } from "react-native-svg";
+import Svg, { Circle, Defs, G, Mask, Rect } from "react-native-svg";
 import { useCSSVariable } from "uniwind";
+import { ProviderMark } from "@/features/servers/components/provider-mark";
 import { planLimitWindowKey } from "@/features/servers/model/plan-limits";
 
 /** The desktop rail ring, scaled from its 34 pt: the stroke and the space between rings. */
 const STROKE_RATIO = 2.25 / 34;
 const SPACING_RATIO = 4.5 / 34;
 const LOGO_RATIO = 12 / 34;
-
-/** The colour of a provider mark. Codex, Grok and the others draw in the text colour. */
-function useProviderColor(provider: AgentProviderId): string {
-  const foreground = String(useThemeColor("foreground"));
-  const [claude, gemini] = useCSSVariable(["--openbot-provider-claude", "--openbot-provider-antigravity"]);
-  if (provider === "claude" && claude) return String(claude);
-  if (provider === "antigravity" && gemini) return String(gemini);
-  return foreground;
-}
-
-function ProviderMark({ provider, size }: { provider: AgentProviderId; size: number }) {
-  const color = useProviderColor(provider);
-  const shape = providerLogoShape(provider);
-  return (
-    <Svg width={size} height={size} viewBox={shape.viewBox}>
-      {shape.paths.map((path) => (
-        <Path
-          key={path.d}
-          d={path.d}
-          fill={color}
-          opacity={path.opacity}
-          fillRule={path.evenOdd ? "evenodd" : "nonzero"}
-        />
-      ))}
-    </Svg>
-  );
-}
 
 function useToneColors(): Record<PlanLimitTone, string> {
   const [success, warning, danger] = useCSSVariable(["--openbot-success", "--openbot-warning", "--openbot-danger"]);
