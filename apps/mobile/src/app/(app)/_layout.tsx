@@ -459,6 +459,22 @@ function AuthenticatedStack() {
           }}
         />
         <Stack.Screen name="server-tasks" options={largeTitlePage} />
+        <Stack.Screen name="server-workflows/index" options={largeTitlePage} />
+        <Stack.Screen name="server-workflows/workflow" options={largeTitlePage} />
+        <Stack.Screen name="server-workflows/runs" options={largeTitlePage} />
+        <Stack.Screen name="server-workflows/run" options={largeTitlePage} />
+        <Stack.Screen
+          name="workflow-editor"
+          // One sheet for the editor: its pages are in the stack of `workflow-editor/_layout.tsx`.
+          options={{
+            contentStyle: { backgroundColor: sheetBackground },
+            headerShown: false,
+            scrollEdgeEffects: { top: "hidden", bottom: "soft" },
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.85],
+            sheetGrabberVisible: true,
+          }}
+        />
         <Stack.Screen name="server-usage/index" options={largeTitlePage} />
         <Stack.Screen name="server-marketplace/index" options={largeTitlePage} />
         <Stack.Screen

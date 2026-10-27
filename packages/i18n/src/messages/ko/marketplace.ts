@@ -317,6 +317,13 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "내 Railway 워크스페이스에는 어떤 프로젝트와 서비스가 있나요?",
   "marketplace.plugin.railway.prompt.crash": "Railway의 백엔드 서비스가 배포할 때 왜 중단되나요?",
   "marketplace.plugin.railway.prompt.redeploy": "내 Railway 프로젝트의 API 서비스를 다시 배포해 줘.",
+  "marketplace.plugin.render.tagline": "서비스, 배포 및 로그",
+  "marketplace.plugin.render.description":
+    "Render를 사용하면 에이전트가 워크스페이스와 서비스를 나열하고, 로그, 이벤트, 지표를 읽고, 배포 기록을 보고, 배포를 시작하고, Render Postgres에서 읽기 전용 SQL을 실행할 수 있어요. Render API 키는 Authorization 헤더 하나에 들어가요. 이 키는 Render 계정의 모든 워크스페이스에 접근해요. 에이전트는 웹 서비스, 정적 사이트, 크론 작업, Postgres 데이터베이스, Key Value 인스턴스를 만들 수 있고, 이때 비용이 들 수 있어요. 서비스의 환경 변수를 바꿀 수도 있어요. 서버는 리소스를 삭제할 수 없어요.",
+  "marketplace.plugin.render.app": "서비스, 배포, 로그, 지표를 API 키 방식의 Render MCP 서버로 제공해요.",
+  "marketplace.plugin.render.prompt.services": "내 Render 워크스페이스에는 어떤 서비스가 있나요?",
+  "marketplace.plugin.render.prompt.logs": "내 Render 웹 서비스가 지난 1시간 동안 기록한 오류는 무엇인가요?",
+  "marketplace.plugin.render.prompt.deploy": "내 Render 서비스의 마지막 배포가 왜 실패했나요?",
   "marketplace.plugin.atlassian.tagline": "Jira 업무 항목 및 Confluence 페이지",
   "marketplace.plugin.atlassian.description":
     "Atlassian을 사용하면 에이전트가 Jira 업무 항목, Confluence 페이지, Bitbucket 풀 리퀘스트를 검색하고 읽고, 업무 항목, 페이지, 댓글을 만들거나 업데이트할 수 있어요. 사용자는 각자 브라우저에서 자신의 Atlassian 계정으로 로그인하고 동의 화면에서 접근을 승인해요. 에이전트는 사용자와 같은 권한을 가져요. 업무 항목과 페이지를 변경하고, 페이지 권한을 변경하고, 풀 리퀘스트를 병합할 수 있어요. Jira 데이터를 삭제하는 도구는 조직 관리자가 켤 때까지 꺼져 있어요. 도구를 호출할 때마다 Rovo 크레딧을 사용해요.",
@@ -332,6 +339,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "오늘 마감인 Todoist 작업은 뭐야?",
   "marketplace.plugin.todoist.prompt.capture": "이 실행 항목들을 내 Todoist 관리함에 추가해 줘.",
   "marketplace.plugin.todoist.prompt.overdue": "기한이 지난 Todoist 작업을 내일로 옮겨 줘.",
+  "marketplace.plugin.trello.tagline": "보드, 리스트, 카드",
+  "marketplace.plugin.trello.description":
+    "Trello를 사용하면 에이전트가 보드, 리스트, 카드, 체크리스트, 댓글을 검색하고 읽으며, 보드와 카드를 만들고, 리스트와 카드를 옮기고, 카드를 완료로 표시하고, 체크리스트, 댓글, 라벨을 추가할 수 있어요. 또한 사용자의 Trello 받은 편지함에서 카드를 읽고 추가하며, 연결된 Google 또는 Outlook 캘린더에서 올 수 있는 Planner 일정을 읽을 수 있어요. 사용자는 각자 브라우저에서 자신의 Trello 계정으로 로그인하고 동의 화면에서 워크스페이스를 선택해요. 에이전트는 그 워크스페이스에서 사용자와 같은 권한을 가져요. 카드와 리스트를 보관할 수 있지만, 서버는 어떤 것도 영구 삭제할 수 없어요.",
+  "marketplace.plugin.trello.app": "보드, 리스트, 카드를 브라우저 로그인 방식의 Trello MCP 서버로 제공해요.",
+  "marketplace.plugin.trello.prompt.myCards": "나에게 배정된 Trello 카드는 뭐야?",
+  "marketplace.plugin.trello.prompt.board": "내 Trello 보드에서 진행 중인 작업을 요약해 줘.",
+  "marketplace.plugin.trello.prompt.newCards": "이 실행 항목들을 내 Trello 보드에 카드로 추가해 줘.",
   "marketplace.plugin.huggingface.tagline": "Hub의 모델, 데이터셋, 논문",
   "marketplace.plugin.huggingface.description":
     "Hugging Face를 사용하면 에이전트가 Hugging Face Hub에서 모델, 데이터셋, Spaces, 컬렉션, 논문을 검색하고, 모델 카드와 저장소 파일을 읽고, 데이터셋을 미리 보고, Hugging Face 문서를 검색할 수 있어요. 공개 Hub 데이터를 사용하므로 계정도 키도 필요 없어요. 도구는 읽기만 해요. 에이전트는 저장소를 만들거나 작업(Jobs)을 실행할 수 없어요.",

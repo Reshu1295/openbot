@@ -4,6 +4,7 @@ import { z } from "zod";
 import { BROWSER_DYNAMIC_TOOLS, OPENBOT_BROWSER_NAMESPACE } from "../browser-tools";
 import { OPENBOT_DYNAMIC_TOOLS, OPENBOT_TOOL_DEFINITIONS } from "../openbot-tools";
 import type { DynamicToolCallParams } from "../protocol";
+import { advertisedJsonSchema } from "./advertised-json-schema";
 import { toolGuidance } from "./tool-guidance";
 
 /** Discovery changes visibility only. Original definitions and execution owners stay authoritative. */
@@ -81,7 +82,7 @@ export const VISIBLE_DYNAMIC_TOOLS = [
       type: "function" as const,
       name: definition.name,
       description: definition.description,
-      inputSchema: z.toJSONSchema(z.strictObject(definition.shape), { target: "draft-7" }),
+      inputSchema: advertisedJsonSchema(z.strictObject(definition.shape)),
     })),
   },
 ];

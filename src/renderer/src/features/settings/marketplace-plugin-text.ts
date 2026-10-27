@@ -321,6 +321,18 @@ const PLUGIN_TEXT = {
       "prompt-redeploy": "marketplace.plugin.railway.prompt.redeploy",
     },
   },
+  render: {
+    tagline: "marketplace.plugin.render.tagline",
+    description: "marketplace.plugin.render.description",
+    apps: {
+      "app-render-mcp": "marketplace.plugin.render.app",
+    },
+    prompts: {
+      "prompt-services": "marketplace.plugin.render.prompt.services",
+      "prompt-logs": "marketplace.plugin.render.prompt.logs",
+      "prompt-deploy": "marketplace.plugin.render.prompt.deploy",
+    },
+  },
   atlassian: {
     tagline: "marketplace.plugin.atlassian.tagline",
     description: "marketplace.plugin.atlassian.description",
@@ -343,6 +355,18 @@ const PLUGIN_TEXT = {
       "prompt-today": "marketplace.plugin.todoist.prompt.today",
       "prompt-capture": "marketplace.plugin.todoist.prompt.capture",
       "prompt-overdue": "marketplace.plugin.todoist.prompt.overdue",
+    },
+  },
+  trello: {
+    tagline: "marketplace.plugin.trello.tagline",
+    description: "marketplace.plugin.trello.description",
+    apps: {
+      "app-trello-mcp": "marketplace.plugin.trello.app",
+    },
+    prompts: {
+      "prompt-my-cards": "marketplace.plugin.trello.prompt.myCards",
+      "prompt-board": "marketplace.plugin.trello.prompt.board",
+      "prompt-new-cards": "marketplace.plugin.trello.prompt.newCards",
     },
   },
   huggingface: {

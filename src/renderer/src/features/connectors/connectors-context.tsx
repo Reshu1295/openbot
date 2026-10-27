@@ -9,6 +9,7 @@ import { useCustomAgents } from "../custom-agents/custom-agents-context";
 import { useCustomProviders } from "../custom-providers/custom-providers-context";
 import { useSetup } from "../onboarding/onboarding-context";
 import { remoteAdminServer } from "../servers/server-capabilities";
+import { useServerSettings } from "../servers/server-settings";
 import { useServers } from "../servers/servers-context";
 import { useSidebar } from "../sidebar/sidebar-context";
 import { hostBitwardenConnectorPort } from "./bitwarden-connector-port";
@@ -20,13 +21,14 @@ import {
 } from "./connector-registry";
 import { githubConnectorPort, hostGitHubConnectorPort } from "./github-connector-port";
 import { hostMessagingApi } from "./host-messaging-port";
-import { localMessagingApi, type MessagingConnectorOptions } from "./messaging-connector";
+import { localMessagingApi, type MessagingApi, type MessagingConnectorOptions } from "./messaging-connector";
 import { hostOnePasswordConnectorPort } from "./onepassword-connector-port";
 
 const context = createSimpleContext({
   name: "ConnectorsProvider",
   init: () => {
-    const { activeServer } = useServers();
+    const { activeServer, hostStatus } = useServers();
+    const { publishLocalServer } = useServerSettings();
     const { agentList, agentStatus, modelOptions, serverSetupChoice, developmentCreation } = useAgents();
     const { setupState } = useSetup();
     const endpoints = useCustomProviders();
@@ -51,8 +53,30 @@ const context = createSimpleContext({
         customAgents: localAgents.customAgents(),
       };
     };
+    const localMessaging = localMessagingApi();
+    // Slack, Discord and Telegram need this computer's server to have a name. Turning one on also
+    // publishes the server (#3393), which names it when it has no name, so the user does not have to
+    // do either first. A failed publish does not stop the connection: it reports its own error.
+    const publishFirst = async () => {
+      if (hostStatus().phase !== "online") await publishLocalServer().catch(() => undefined);
+    };
+    const messaging: MessagingApi = {
+      ...localMessaging,
+      connect: async (target) => {
+        await publishFirst();
+        await localMessaging.connect(target);
+      },
+      reconnect: async (platform, workspaceId) => {
+        await publishFirst();
+        await localMessaging.reconnect(platform, workspaceId);
+      },
+      setEnabled: async (platform, workspaceId, enabled) => {
+        if (enabled) await publishFirst();
+        await localMessaging.setEnabled(platform, workspaceId, enabled);
+      },
+    };
     const computer = createConnectorSet(
-      { github: githubConnectorPort, ...LOCAL_CONNECTOR_TRANSPORTS, messaging: localMessagingApi() },
+      { github: githubConnectorPort, ...LOCAL_CONNECTOR_TRANSPORTS, messaging },
       {
         agents: agentList,
         models,

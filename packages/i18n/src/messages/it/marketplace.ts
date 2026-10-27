@@ -353,6 +353,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Quali progetti e servizi ci sono nel mio spazio di lavoro Railway?",
   "marketplace.plugin.railway.prompt.crash": "Perché il mio servizio backend su Railway va in crash durante il deploy?",
   "marketplace.plugin.railway.prompt.redeploy": "Ripeti il deploy del servizio API nel mio progetto Railway.",
+  "marketplace.plugin.render.tagline": "Servizi, deploy e log",
+  "marketplace.plugin.render.description":
+    "Render consente agli agenti di elencare spazi di lavoro e servizi, leggere log, eventi e metriche, vedere la cronologia dei deploy, avviare deploy ed eseguire SQL in sola lettura su Render Postgres. Una chiave API di Render va in un'intestazione Authorization. La chiave raggiunge ogni spazio di lavoro dell'account Render. Gli agenti possono creare servizi web, siti statici, cron job, database Postgres e istanze Key Value, che possono avere un costo, e possono sostituire le variabili d'ambiente di un servizio. Il server non può eliminare alcuna risorsa.",
+  "marketplace.plugin.render.app":
+    "Servizi, deploy, log e metriche, tramite il server MCP di Render con una chiave API.",
+  "marketplace.plugin.render.prompt.services": "Quali servizi ci sono nel mio spazio di lavoro Render?",
+  "marketplace.plugin.render.prompt.logs": "Quali errori ha registrato il mio servizio web Render nell'ultima ora?",
+  "marketplace.plugin.render.prompt.deploy": "Perché l'ultimo deploy del mio servizio Render non è riuscito?",
   "marketplace.plugin.atlassian.tagline": "Elementi di lavoro Jira e pagine Confluence",
   "marketplace.plugin.atlassian.description":
     "Atlassian consente agli agenti di cercare e leggere elementi di lavoro Jira, pagine Confluence e pull request Bitbucket, e di creare o aggiornare elementi di lavoro, pagine e commenti. Ogni utente accede al proprio account Atlassian dal browser e approva l'accesso in una schermata di consenso. Gli agenti hanno gli stessi permessi dell'utente: possono modificare elementi di lavoro e pagine, modificare i permessi delle pagine ed eseguire il merge delle pull request. Gli strumenti che eliminano dati Jira restano disattivati finché un amministratore dell'organizzazione non li attiva. Ogni chiamata a uno strumento consuma crediti Rovo.",
@@ -371,6 +379,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Quali attività di Todoist scadono oggi?",
   "marketplace.plugin.todoist.prompt.capture": "Aggiungi queste azioni alla mia Posta in arrivo di Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Sposta a domani le mie attività scadute di Todoist.",
+  "marketplace.plugin.trello.tagline": "Bacheche, liste e schede",
+  "marketplace.plugin.trello.description":
+    "Trello permette agli agenti di cercare e leggere bacheche, liste, schede, checklist e commenti, creare bacheche e schede, spostare liste e schede, segnare le schede come completate e aggiungere checklist, commenti ed etichette. Gli agenti possono anche leggere e aggiungere schede nella Posta in arrivo di Trello dell’utente e leggere gli eventi del Planner, che possono venire da un calendario Google o Outlook collegato. Ogni utente accede al proprio account Trello dal browser e sceglie gli spazi di lavoro in una schermata di consenso. Gli agenti hanno gli stessi permessi dell’utente in quegli spazi di lavoro. Possono archiviare schede e liste, ma il server non può eliminare nulla in modo definitivo.",
+  "marketplace.plugin.trello.app": "Bacheche, liste e schede, tramite il server MCP di Trello con accesso dal browser.",
+  "marketplace.plugin.trello.prompt.myCards": "Quali schede di Trello sono assegnate a me?",
+  "marketplace.plugin.trello.prompt.board": "Riassumi cosa è in corso sulla mia bacheca Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Aggiungi queste azioni come schede alla mia bacheca Trello.",
   "marketplace.plugin.huggingface.tagline": "Modelli, dataset e paper sull'Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face permette agli agenti di cercare modelli, dataset, Spaces, collezioni e paper sull'Hugging Face Hub, leggere model card e file dei repository, vedere un'anteprima dei dataset e cercare nella documentazione di Hugging Face. Usa dati pubblici dell'Hub e non richiede account né chiave. Gli strumenti leggono soltanto: gli agenti non possono creare repository né eseguire job.",

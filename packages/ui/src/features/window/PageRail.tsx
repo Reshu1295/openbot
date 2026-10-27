@@ -64,25 +64,35 @@ const RING = { size: 34, stroke: 2.25, spacing: 4.5 };
 /**
  * The limits of one provider as concentric rings: the outer ring is the longest window, the inner
  * ring the shortest. Each arc shows how much is left, in the tone of that window. The hover card
- * shows the windows with their reset times.
+ * shows the windows with their reset times. `shared` are the readings that count the same quota, such
+ * as Cursor on a merged Grok plan: the card lists them, with no ring of their own. The ring draws the
+ * reading with the least left, so a shared reading that runs out first still shows.
  */
-function UsageRings(props: { row: AccountUsageProviderRow; onOpen: (button: HTMLElement) => void }) {
-  const { t } = useText();
+function UsageRings(props: {
+  row: AccountUsageProviderRow;
+  shared: readonly AccountUsageProviderRow[];
+  onOpen: (button: HTMLElement) => void;
+}) {
+  const { t, format } = useText();
+  const rows = () => [props.row, ...props.shared];
   const label = () =>
     t("app.rail.usageRings", {
-      name: props.row.name,
-      windows: props.row.windows
+      name: format.list(rows().map((row) => row.name)),
+      windows: rows()
+        .flatMap((row) => row.windows)
         .map((window) => t("account.usage.row.window", { window: window.label, percent: window.remainingPercent }))
         .join(", "),
     });
-  const windows = () => [...props.row.ringWindows].reverse().slice(0, 2);
+  const ringRow = () =>
+    rows().reduce((lowest, row) => ((row.remainingPercent ?? 100) < (lowest.remainingPercent ?? 100) ? row : lowest));
+  const windows = () => [...ringRow().ringWindows].reverse().slice(0, 2);
   const outerRadius = (RING.size - RING.stroke) / 2;
   return (
     <RailButton
       label={label()}
       card={() => (
         <AccountUsageDetails
-          rows={[props.row]}
+          rows={rows()}
           loading={false}
           error={null}
           refreshActive={false}
@@ -310,6 +320,18 @@ function RailLogo(props: { variant: AppLogoVariant; href: string | undefined }) 
  */
 export function PageRail(props: PageRailProps) {
   const { t } = useText();
+  /**
+   * One ring per reading, except a reading that counts the quota of another provider's own sign-in,
+   * such as Cursor on a merged Grok plan: that ring's card lists it instead.
+   */
+  const rings = createMemo(() => {
+    const rows = props.usageRows.filter((row) => row.reportsUsage && row.windows.length > 0);
+    const owner = (row: AccountUsageProviderRow) =>
+      rows.find((other) => other.accountId === null && other.provider === row.sharedQuotaWith);
+    return rows
+      .filter((row) => !owner(row))
+      .map((row) => ({ row, shared: rows.filter((other) => owner(other) === row) }));
+  });
   /** The pages that this server has, in rail order. */
   const pages = createMemo((): RailPage[] => {
     const list: RailPage[] = [];
@@ -359,11 +381,8 @@ export function PageRail(props: PageRailProps) {
       </div>
       <div class="window-rail-group">
         {/* A status update builds new rows. The key keeps each ring, and its open hover card, mounted. */}
-        <For
-          each={props.usageRows.filter((row) => row.reportsUsage && row.windows.length > 0)}
-          keyed={accountUsageRowKey}
-        >
-          {(row) => <UsageRings row={row()} onOpen={props.onUsage} />}
+        <For each={rings()} keyed={(ring) => accountUsageRowKey(ring.row)}>
+          {(ring) => <UsageRings row={ring().row} shared={ring().shared} onOpen={props.onUsage} />}
         </For>
         <For each={props.customAgentUsage ?? []} keyed={(row) => row.id}>
           {(row) => <CustomAgentUsageButton row={row()} onOpen={props.onUsage} />}

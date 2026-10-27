@@ -16,6 +16,7 @@ import { messages as mobileServer } from "./mobile/server";
 import { messages as mobileSettings } from "./mobile/settings";
 import { messages as mobileShare } from "./mobile/share";
 import { messages as mobileShared } from "./mobile/shared";
+import { messages as mobileWorkflow } from "./mobile/workflow";
 import { messages as mobileWorkspace } from "./mobile/workspace";
 import { shared } from "./shared";
 import { source } from "./source";
@@ -38,6 +39,7 @@ export const deMobile = {
   ...mobileMarketplace,
   ...mobileOnboarding,
   ...mobileWorkspace,
+  ...mobileWorkflow,
   ...mobileShare,
   ...mobileShared,
 } as const satisfies PartialTranslation<AppMobileMessages>;

@@ -130,6 +130,7 @@
     "./team-protocol/routine-results-v1": "./src/team-protocol/routine-results-v1.ts",
     "./team-protocol/webhook-tests-v1": "./src/team-protocol/webhook-tests-v1.ts",
     "./team-protocol/workflows-v1": "./src/team-protocol/workflows-v1.ts",
+    "./team-protocol/vault-v1": "./src/team-protocol/vault-v1.ts",
     "./team-protocol/live-activity-push-v1": "./src/team-protocol/live-activity-push-v1.ts",
     "./team-protocol/push-notifications-v1": "./src/team-protocol/push-notifications-v1.ts",
     "./team-protocol/push-notifications-android-v1": "./src/team-protocol/push-notifications-android-v1.ts",

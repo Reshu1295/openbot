@@ -357,6 +357,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Jakie projekty i usługi są w moim obszarze roboczym Railway?",
   "marketplace.plugin.railway.prompt.crash": "Dlaczego moja usługa backendu na Railway ulega awarii przy wdrożeniu?",
   "marketplace.plugin.railway.prompt.redeploy": "Wdróż ponownie usługę API w moim projekcie Railway.",
+  "marketplace.plugin.render.tagline": "Usługi, wdrożenia i logi",
+  "marketplace.plugin.render.description":
+    "Render pozwala agentom wyświetlać obszary robocze i usługi, czytać logi, zdarzenia i metryki, przeglądać historię wdrożeń, uruchamiać wdrożenia i wykonywać zapytania SQL tylko do odczytu w Render Postgres. Klucz API Render trafia do jednego nagłówka Authorization. Klucz daje dostęp do każdego obszaru roboczego konta Render. Agenci mogą tworzyć usługi webowe, strony statyczne, zadania cron, bazy danych Postgres i instancje Key Value, co może kosztować, oraz zastępować zmienne środowiskowe usługi. Serwer nie może usunąć żadnego zasobu.",
+  "marketplace.plugin.render.app": "Usługi, wdrożenia, logi i metryki przez serwer MCP Render z kluczem API.",
+  "marketplace.plugin.render.prompt.services": "Jakie usługi są w moim obszarze roboczym Render?",
+  "marketplace.plugin.render.prompt.logs":
+    "Jakie błędy zapisała moja usługa webowa na Render w ciągu ostatniej godziny?",
+  "marketplace.plugin.render.prompt.deploy": "Dlaczego ostatnie wdrożenie mojej usługi na Render się nie powiodło?",
   "marketplace.plugin.atlassian.tagline": "Elementy pracy w Jira i strony Confluence",
   "marketplace.plugin.atlassian.description":
     "Atlassian pozwala agentom wyszukiwać i czytać elementy pracy w Jira, strony Confluence i pull requesty w Bitbucket oraz tworzyć i aktualizować elementy pracy, strony i komentarze. Każdy użytkownik loguje się na własne konto Atlassian przez przeglądarkę i zatwierdza dostęp na ekranie zgody. Agenci mają takie same uprawnienia jak użytkownik: mogą zmieniać elementy pracy i strony, zmieniać uprawnienia stron i scalać pull requesty. Narzędzia, które usuwają dane Jira, pozostają wyłączone, dopóki administrator organizacji ich nie włączy. Każde wywołanie narzędzia zużywa kredyty Rovo.",
@@ -375,6 +383,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Które zadania w Todoist mają termin na dziś?",
   "marketplace.plugin.todoist.prompt.capture": "Dodaj te punkty do działania do mojej skrzynki odbiorczej w Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Przenieś moje zaległe zadania w Todoist na jutro.",
+  "marketplace.plugin.trello.tagline": "Tablice, listy i karty",
+  "marketplace.plugin.trello.description":
+    "Trello pozwala agentom wyszukiwać i czytać tablice, listy, karty, listy kontrolne i komentarze, tworzyć tablice i karty, przenosić listy i karty, oznaczać karty jako ukończone oraz dodawać listy kontrolne, komentarze i etykiety. Agenci mogą też czytać i dodawać karty w skrzynce odbiorczej Trello użytkownika oraz czytać wydarzenia z Plannera, które mogą pochodzić z połączonego kalendarza Google lub Outlook. Każdy użytkownik loguje się na własne konto Trello przez przeglądarkę i wybiera obszary robocze na ekranie zgody. Agenci mają w tych obszarach roboczych te same uprawnienia co użytkownik. Mogą archiwizować karty i listy, ale serwer nie może niczego trwale usunąć.",
+  "marketplace.plugin.trello.app": "Tablice, listy i karty przez serwer MCP Trello z logowaniem w przeglądarce.",
+  "marketplace.plugin.trello.prompt.myCards": "Które karty w Trello są przypisane do mnie?",
+  "marketplace.plugin.trello.prompt.board": "Podsumuj, co jest w toku na mojej tablicy w Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Dodaj te punkty do działania jako karty na mojej tablicy w Trello.",
   "marketplace.plugin.huggingface.tagline": "Modele, zbiory danych i publikacje w Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face pozwala agentom wyszukiwać modele, zbiory danych, Spaces, kolekcje i publikacje w Hugging Face Hub, czytać karty modeli i pliki repozytoriów, podglądać zbiory danych oraz przeszukiwać dokumentację Hugging Face. Korzysta z publicznych danych Hub i nie wymaga konta ani klucza. Narzędzia tylko czytają: agenci nie mogą tworzyć repozytoriów ani uruchamiać zadań.",

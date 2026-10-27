@@ -368,6 +368,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Railway çalışma alanımda hangi projeler ve servisler var?",
   "marketplace.plugin.railway.prompt.crash": "Railway'deki backend servisim dağıtımda neden çöküyor?",
   "marketplace.plugin.railway.prompt.redeploy": "Railway projemdeki API servisini yeniden dağıt.",
+  "marketplace.plugin.render.tagline": "Servisler, dağıtımlar ve günlükler",
+  "marketplace.plugin.render.description":
+    "Render, ajanların çalışma alanlarını ve servisleri listelemesine, günlükleri, olayları ve metrikleri okumasına, dağıtım geçmişini görmesine, dağıtım başlatmasına ve Render Postgres üzerinde salt okunur SQL çalıştırmasına olanak tanır. Bir Render API anahtarı tek bir Authorization başlığına girer. Anahtar, Render hesabının tüm çalışma alanlarına erişir. Ajanlar web servisleri, statik siteler, cron işleri, Postgres veritabanları ve Key Value örnekleri oluşturabilir; bunlar ücretli olabilir. Ayrıca bir servisin ortam değişkenlerini değiştirebilirler. Sunucu hiçbir kaynağı silemez.",
+  "marketplace.plugin.render.app":
+    "Servisler, dağıtımlar, günlükler ve metrikler, API anahtarıyla Render'ın MCP sunucusu üzerinden.",
+  "marketplace.plugin.render.prompt.services": "Render çalışma alanımda hangi servisler var?",
+  "marketplace.plugin.render.prompt.logs": "Render web servisim son bir saatte hangi hataları günlüğe yazdı?",
+  "marketplace.plugin.render.prompt.deploy": "Render servisimin son dağıtımı neden başarısız oldu?",
   "marketplace.plugin.atlassian.tagline": "Jira iş öğeleri ve Confluence sayfaları",
   "marketplace.plugin.atlassian.description":
     "Atlassian, ajanların Jira iş öğelerini, Confluence sayfalarını ve Bitbucket çekme isteklerini aramasına ve okumasına, iş öğeleri, sayfalar ve yorumlar oluşturmasına veya güncellemesine olanak tanır. Her kullanıcı tarayıcı üzerinden kendi Atlassian hesabında oturum açar ve erişimi bir onay ekranında onaylar. Ajanlar kullanıcıyla aynı yetkilere sahiptir: iş öğelerini ve sayfaları değiştirebilir, sayfa izinlerini değiştirebilir ve çekme isteklerini birleştirebilirler. Jira verilerini silen araçlar, bir kuruluş yöneticisi açana kadar kapalı kalır. Her araç çağrısı Rovo kredisi kullanır.",
@@ -385,6 +393,14 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Bugün hangi Todoist görevlerinin süresi doluyor?",
   "marketplace.plugin.todoist.prompt.capture": "Bu yapılacak maddeleri Todoist Gelen Kutuma ekle.",
   "marketplace.plugin.todoist.prompt.overdue": "Geciken Todoist görevlerimi yarına taşı.",
+  "marketplace.plugin.trello.tagline": "Panolar, listeler ve kartlar",
+  "marketplace.plugin.trello.description":
+    "Trello ile ajanlar panoları, listeleri, kartları, kontrol listelerini ve yorumları arayıp okur, pano ve kart oluşturur, listeleri ve kartları taşır, kartları tamamlandı olarak işaretler ve kontrol listesi, yorum ve etiket ekler. Ajanlar ayrıca kullanıcının Trello Gelen Kutusu'ndaki kartları okuyup kart ekleyebilir ve bağlı bir Google veya Outlook takviminden gelebilen Planner etkinliklerini okuyabilir. Her kullanıcı tarayıcıda kendi Trello hesabına giriş yapar ve bir onay ekranında çalışma alanlarını seçer. Ajanlar bu çalışma alanlarında kullanıcıyla aynı izinlere sahiptir. Kartları ve listeleri arşivleyebilirler, ancak sunucu hiçbir şeyi kalıcı olarak silemez.",
+  "marketplace.plugin.trello.app":
+    "Panolar, listeler ve kartlar, tarayıcıda giriş yapılan Trello MCP sunucusu üzerinden.",
+  "marketplace.plugin.trello.prompt.myCards": "Bana hangi Trello kartları atanmış?",
+  "marketplace.plugin.trello.prompt.board": "Trello panomda devam eden işleri özetle.",
+  "marketplace.plugin.trello.prompt.newCards": "Bu yapılacak maddeleri Trello panoma kart olarak ekle.",
   "marketplace.plugin.huggingface.tagline": "Hub'daki modeller, veri kümeleri ve makaleler",
   "marketplace.plugin.huggingface.description":
     "Hugging Face, ajanların Hugging Face Hub'da modelleri, veri kümelerini, Spaces'i, koleksiyonları ve makaleleri aramasına, model kartlarını ve depo dosyalarını okumasına, veri kümelerini önizlemesine ve Hugging Face belgelerinde arama yapmasına olanak tanır. Herkese açık Hub verilerini kullanır ve hesap ya da anahtar gerektirmez. Araçlar yalnızca okur: ajanlar depo oluşturamaz ve iş (job) çalıştıramaz.",

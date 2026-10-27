@@ -596,8 +596,10 @@ is not included in analytics; provider output uses the application's secret reda
   `~/Library/Application Support/OpenBot/openbot-vault-v1.json`, encrypted by the operating system's
   secret storage. It holds the logins, payment cards (number, expiry, security code, name) and
   contact info that the user saves. On a computer with no secret storage, such as Linux with no
-  keyring, the Vault saves nothing. The file never leaves this computer, and joined servers and team
-  members cannot read it. An agent gets the login sites and usernames, the card names with their last
+  keyring, the Vault saves nothing. The file never leaves this computer. An owner or admin of a joined
+  server can open that server's Vault in Server settings, from the desktop app or the web app: the
+  list goes over the encrypted connection with no password, card number or security code, and one of
+  those goes to them only when they show or copy it. Other team members cannot read it. An agent gets the login sites and usernames, the card names with their last
   four digits and expiry, and the contact info; it never gets a password, a card number, a security
   code or login notes. An agent can add and change contact info, change the username of a login (not
   its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
@@ -609,7 +611,8 @@ is not included in analytics; provider output uses the application's secret reda
   browser types those values into the page, where the page's own scripts can read them, as they read
   what a person types. Until that page navigates, the agent cannot take a screenshot, evaluate
   script or record in that tab, and its snapshots hide the card fields. Passwords and card numbers
-  are redacted from logs, exports and diagnostics. A CSV import is read on this computer only.
+  are redacted from logs, exports and diagnostics, also in the desktop app of an admin who showed
+  or copied one. A CSV import is read on this computer only, so a joined server's Vault has no import.
 - `~/Library/Application Support/OpenBot/logs/trace.ndjson` is a local trace of IPC calls,
   provider turns, main-process failures, and the steps of each connection to a joined server. Each
   line holds a time, the IPC channel name, the turn origin, the failure origin (`uncaughtException`

@@ -336,6 +336,46 @@ const TODOIST: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/todoist",
 };
 
+const TRELLO: MarketplacePluginDetail = {
+  id: "plugin-trello",
+  slug: "trello",
+  name: "Trello",
+  tagline: "Boards, lists and cards",
+  description:
+    "Trello lets agents search and read boards, lists, cards, checklists and comments, create boards and cards, move lists and cards, mark cards done, and add checklists, comments and labels. Agents can also read and add cards in the user's Trello Inbox, and read Planner events, which can come from a connected Google or Outlook calendar. Each user signs in to their own Trello account through the browser and chooses the workspaces on a consent screen. Agents get the same permissions as the user in those workspaces. They can archive cards and lists, but the server cannot delete anything permanently.",
+  category: "productivity",
+  creatorName: "Atlassian",
+  iconUrl: "https://trello.com/favicon.ico",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-my-cards", text: "Which Trello cards are assigned to me?" },
+    { id: "prompt-board", text: "Summarize what is in progress on my Trello board." },
+    { id: "prompt-new-cards", text: "Add these action items as cards to my Trello board." },
+  ],
+  apps: [
+    {
+      id: "app-trello-mcp",
+      name: "Trello",
+      description: "Boards, lists, and cards, over Trello's MCP server with browser sign-in.",
+      iconUrl: "https://trello.com/favicon.ico",
+      server: {
+        name: "trello",
+        transport: "http",
+        url: "https://mcp.trello.com/v1",
+        auth: [{ id: "trello-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://trello.com",
+  privacyPolicyUrl: "https://www.atlassian.com/legal/privacy-policy",
+  termsUrl: "https://www.atlassian.com/legal/atlassian-customer-agreement",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/trello",
+};
+
 const COBRAIN: MarketplacePluginDetail = {
   id: "plugin-cobrain",
   slug: "cobrain",
@@ -831,6 +871,64 @@ const RAILWAY: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/railway",
 };
 
+const RENDER: MarketplacePluginDetail = {
+  id: "plugin-render",
+  slug: "render",
+  name: "Render",
+  tagline: "Services, deploys and logs",
+  description:
+    "Render lets agents list workspaces and services, read logs, events and metrics, see the deploy history, trigger deploys, and run read-only SQL on Render Postgres. A Render API key goes into one Authorization header. The key reaches every workspace of the Render account. Agents can create web services, static sites, cron jobs, Postgres databases and Key Value instances, which can cost money, and they can replace the environment variables of a service. The server cannot delete a resource.",
+  category: "coding",
+  creatorName: "Render",
+  iconUrl: "https://dashboard.render.com/favicon-light.png",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-services", text: "Which services are in my Render workspace?" },
+    { id: "prompt-logs", text: "Which errors did my Render web service log in the last hour?" },
+    { id: "prompt-deploy", text: "Why did the last deploy of my Render service fail?" },
+  ],
+  apps: [
+    {
+      id: "app-render-mcp",
+      name: "Render",
+      description: "Services, deploys, logs, and metrics, over Render's MCP server with an API key.",
+      iconUrl: "https://dashboard.render.com/favicon-light.png",
+      server: {
+        name: "render",
+        transport: "http",
+        url: "https://mcp.render.com/mcp",
+        auth: [
+          {
+            id: "render-key",
+            kind: "key",
+            label: "API key",
+            fields: [
+              {
+                id: "token",
+                label: "API key",
+                header: "Authorization",
+                prefix: "Bearer ",
+                placeholder: "rnd_…",
+                hint: "Render Account settings → API keys",
+              },
+            ],
+            docsUrl: "https://dashboard.render.com/u/settings?add-api-key",
+            docsLabel: "Create a key",
+          },
+        ],
+      },
+    },
+  ],
+  websiteUrl: "https://render.com",
+  privacyPolicyUrl: "https://render.com/privacy",
+  termsUrl: "https://render.com/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/render",
+};
+
 const CONTEXT7: MarketplacePluginDetail = {
   id: "plugin-context7",
   slug: "context7",
@@ -1283,6 +1381,7 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   OBSIDIAN,
   ATLASSIAN,
   TODOIST,
+  TRELLO,
   COBRAIN,
   FIGMA,
   PAPER,
@@ -1295,6 +1394,7 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   PRISMA,
   NETLIFY,
   RAILWAY,
+  RENDER,
   CONTEXT7,
   HUGGINGFACE,
   STRIPE,

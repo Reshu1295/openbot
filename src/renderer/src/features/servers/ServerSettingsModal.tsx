@@ -217,7 +217,7 @@ export interface ServerSettingsModalProps {
    * a host that serves `browser-profiles-v1` to an owner or admin.
    */
   browserProfiles?: ServerBrowserProfilesOptions | undefined;
-  /** The Vault section appears only for this computer: a joined server keeps its Vault on its host. */
+  /** The Vault section: this computer, or a joined server that serves `vault-v1` to an owner or admin. */
   vault?: ServerVaultOptions | undefined;
   /** The section to show when the dialog opens. Updates shows General when the server has no Updates section. */
   initialSection?: ServerSettingsSection | null;
@@ -425,7 +425,7 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
     },
   );
 
-  /** Only this computer has a Vault section. */
+  /** A server with no Vault for this account has no Vault section. */
   createEffect(
     () => section() === "vault" && !props.vault,
     (gone) => {

@@ -350,6 +350,13 @@ export const messages = defineMessages("marketplace", {
   "marketplace.plugin.railway.prompt.projects": "Which projects and services are in my Railway workspace?",
   "marketplace.plugin.railway.prompt.crash": "Why does my backend service on Railway crash on deploy?",
   "marketplace.plugin.railway.prompt.redeploy": "Redeploy the API service in my Railway project.",
+  "marketplace.plugin.render.tagline": "Services, deploys and logs",
+  "marketplace.plugin.render.description":
+    "Render lets agents list workspaces and services, read logs, events and metrics, see the deploy history, trigger deploys, and run read-only SQL on Render Postgres. A Render API key goes into one Authorization header. The key reaches every workspace of the Render account. Agents can create web services, static sites, cron jobs, Postgres databases and Key Value instances, which can cost money, and they can replace the environment variables of a service. The server cannot delete a resource.",
+  "marketplace.plugin.render.app": "Services, deploys, logs, and metrics, over Render's MCP server with an API key.",
+  "marketplace.plugin.render.prompt.services": "Which services are in my Render workspace?",
+  "marketplace.plugin.render.prompt.logs": "Which errors did my Render web service log in the last hour?",
+  "marketplace.plugin.render.prompt.deploy": "Why did the last deploy of my Render service fail?",
   "marketplace.plugin.atlassian.tagline": "Jira work items and Confluence pages",
   "marketplace.plugin.atlassian.description":
     "Atlassian lets agents search and read Jira work items, Confluence pages and Bitbucket pull requests, and create or update work items, pages and comments. Each user signs in to their own Atlassian account through the browser and approves the access on a consent screen. Agents get the same permissions as the user: they can change work items and pages, change page permissions, and merge pull requests. Tools that delete Jira data stay off until an organization admin turns them on. Each tool call uses Rovo credits.",
@@ -366,6 +373,13 @@ export const messages = defineMessages("marketplace", {
   "marketplace.plugin.todoist.prompt.today": "Which Todoist tasks are due today?",
   "marketplace.plugin.todoist.prompt.capture": "Add these action items to my Todoist Inbox.",
   "marketplace.plugin.todoist.prompt.overdue": "Move my overdue Todoist tasks to tomorrow.",
+  "marketplace.plugin.trello.tagline": "Boards, lists and cards",
+  "marketplace.plugin.trello.description":
+    "Trello lets agents search and read boards, lists, cards, checklists and comments, create boards and cards, move lists and cards, mark cards done, and add checklists, comments and labels. Agents can also read and add cards in the user's Trello Inbox, and read Planner events, which can come from a connected Google or Outlook calendar. Each user signs in to their own Trello account through the browser and chooses the workspaces on a consent screen. Agents get the same permissions as the user in those workspaces. They can archive cards and lists, but the server cannot delete anything permanently.",
+  "marketplace.plugin.trello.app": "Boards, lists, and cards, over Trello's MCP server with browser sign-in.",
+  "marketplace.plugin.trello.prompt.myCards": "Which Trello cards are assigned to me?",
+  "marketplace.plugin.trello.prompt.board": "Summarize what is in progress on my Trello board.",
+  "marketplace.plugin.trello.prompt.newCards": "Add these action items as cards to my Trello board.",
   "marketplace.plugin.huggingface.tagline": "Models, datasets and papers on the Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face lets agents search models, datasets, Spaces, collections and papers on the Hugging Face Hub, read model cards and repository files, preview datasets, and search the Hugging Face documentation. It uses public Hub data and needs no account and no key. The tools only read: agents cannot create repositories or run jobs.",
