@@ -335,24 +335,33 @@ export function MessageBody(props: {
       imageGenerationStatus(props.message.streaming, props.message.status) !== "completed"
     );
   });
+  const referencedAttachmentIds = createMemo(
+    () =>
+      new Set(
+        messageFileReferences(props.message.body, props.message.attachments ?? [])
+          .filter((reference) => reference.kind === "attachment")
+          .map((reference) => reference.attachment.id),
+      ),
+  );
   const standaloneAttachments = createMemo(() => {
-    const referencedIds = new Set(
-      messageFileReferences(props.message.body, props.message.attachments ?? [])
-        .filter((reference) => reference.kind === "attachment")
-        .map((reference) => reference.attachment.id),
-    );
+    const referencedIds = referencedAttachmentIds();
     const generatedAttachmentId = generatedImageShown() ? props.message.attachments?.[0]?.id : undefined;
     return (props.message.attachments ?? []).filter(
       (attachment) => !referencedIds.has(attachment.id) && attachment.id !== generatedAttachmentId,
     );
   });
   /* The image files that a finished agent message names show under it like attached images. A
-     file that the message also shows as an attachment shows once, as the attachment. An attachment
-     that the text names by path does not show on its own, so its image shows here. */
+     file that the message also attaches shows once, as the attachment. An attachment that the text
+     names by path does not show on its own, so its image shows here. */
   const namedImageFiles = createMemo(
     () => {
       if (props.message.author !== "agent" || props.message.streaming || !props.loadImageFile) return [];
-      const attached = new Set(standaloneAttachments().map((attachment) => attachment.name));
+      const referencedIds = referencedAttachmentIds();
+      const attached = new Set(
+        (props.message.attachments ?? [])
+          .filter((attachment) => !referencedIds.has(attachment.id))
+          .map((attachment) => attachment.name),
+      );
       const texts = messageContentBlocks(props.message.body, false).flatMap((block) =>
         block.type === "text" ? [block.text] : [],
       );

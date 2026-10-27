@@ -2,6 +2,7 @@ import { constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
 import { basename, isAbsolute } from "node:path";
 import { sortConversationMessages } from "@openbot/contracts/conversation-order";
+import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type { AgentEvent, ConversationSnapshot } from "@openbot/contracts/ipc";
 import { Deferred, Effect, Result } from "effect";
 import {
@@ -45,6 +46,7 @@ const WORKSPACE_OR_SHARED: AttachmentSourceScope = { allowAnyReadablePath: false
 
 /** A file that an answer only names is attached up to this size; a larger one stays a path. */
 const ANSWER_FILE_BYTES = 25 * 1024 * 1024;
+const MAX_ANSWER_FILES = INPUT_LIMITS.attachments;
 
 export interface AttachmentGatewayOptions {
   conversation: ConversationRuntime;
@@ -114,7 +116,8 @@ export class AttachmentGateway {
    * Attaches the files that a finished answer names by path to that answer, as if the agent had attached
    * them. Each path gets the attachment checks on its own: a path outside the permitted folders, a
    * folder, a missing or large file is skipped, not an error. A name that the turn already attached is
-   * skipped too. The caller saves and publishes the conversation after this.
+   * skipped too, and the first files that pass fill the limit. The caller saves and publishes the
+   * conversation after this.
    */
   readonly attachAnswerFiles = Effect.fn("AttachmentGateway.attachAnswerFiles")(function* (
     this: AttachmentGateway,
@@ -128,24 +131,22 @@ export class AttachmentGateway {
         .filter((message) => message.turnId === answer.turnId)
         .flatMap((message) => (message.attachments ?? []).map((attachment) => attachment.name)),
     );
-    const candidates = paths.filter((path) => !attachedNames.has(basename(path)));
-    if (candidates.length === 0) return;
-    const opened = yield* Effect.forEach(candidates, (path) =>
-      Effect.result(this.#openSourceEffect(agentId, path, WORKSPACE_OR_SHARED)),
-    );
     const sources: GeneratedAttachmentSource[] = [];
-    const skipped: GeneratedAttachmentSource[] = [];
-    for (const result of opened) {
-      if (Result.isFailure(result)) continue;
-      const source = result.success;
+    for (const path of paths) {
+      if (sources.length === MAX_ANSWER_FILES) break;
+      if (attachedNames.has(basename(path))) continue;
+      const opened = yield* Effect.result(this.#openSourceEffect(agentId, path, WORKSPACE_OR_SHARED));
+      if (Result.isFailure(opened)) continue;
+      const source = opened.success;
       const metadata = yield* Effect.result(attachmentCall(() => source.handle.stat()));
-      const keep =
+      if (
         Result.isSuccess(metadata) &&
         metadata.success.size <= ANSWER_FILE_BYTES &&
-        !sources.some((kept) => kept.path === source.path);
-      (keep ? sources : skipped).push(source);
+        !sources.some((kept) => kept.path === source.path)
+      )
+        sources.push(source);
+      else yield* attachmentCall(() => source.handle.close()).pipe(Effect.ignore);
     }
-    yield* attachmentCall(() => Promise.allSettled(skipped.map((source) => source.handle.close())));
     if (sources.length === 0) return;
     yield* Effect.gen({ self: this }, function* () {
       const attachments = yield* this.#mailbox
@@ -160,8 +161,8 @@ export class AttachmentGateway {
           { turnId: answer.turnId, messageId: answer.id, attachmentCount: attachments.length },
           attachments.map((attachment) => attachment.id),
         );
+        // No remembered signature: the turn end saves and publishes its other changes after this.
         snapshot.revision = persisted.revision;
-        this.#conversation.rememberConversationSignature(snapshot);
       } catch (error) {
         if (previous) answer.attachments = previous;
         else delete answer.attachments;
