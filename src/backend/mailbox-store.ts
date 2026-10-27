@@ -82,6 +82,11 @@ interface StoredMessage {
    * and the public chat do not show it, like channel work. A task message has one recipient.
    */
   taskId?: string;
+  /**
+   * The side thread an agent sent this message from. An answer to it runs in that thread, and the
+   * sender's own chat does not show it. Never sent to a client.
+   */
+  senderTaskId?: string;
   id: string;
   sender:
     | { kind: "user" }
@@ -168,6 +173,7 @@ interface EnqueueInput {
   messaging?: MessagingOrigin;
   messagingReturn?: MessagingOrigin;
   taskId?: string;
+  senderTaskId?: string;
   sender: StoredMessage["sender"];
   senderMember?: ConversationMessageSender;
   recipientAgentIds: string[];
@@ -423,6 +429,21 @@ export class MailboxStore {
   }
 
   /**
+   * The side thread that an agent's answer goes back to: the one the request was sent from, when the
+   * answer goes to the agent that sent the request, and to no one else, and its sender received it.
+   */
+  answerTaskId(senderAgentId: string, replyToMessageId: string, recipientAgentIds: readonly string[]): string | null {
+    if (recipientAgentIds.length !== 1) return null;
+    const request = this.#state.messages.find((message) => message.id === replyToMessageId);
+    if (!request?.senderTaskId || request.sender.kind !== "agent" || request.sender.agentId !== recipientAgentIds[0])
+      return null;
+    const received = this.#state.deliveries.some(
+      (delivery) => delivery.messageId === request.id && delivery.recipientAgentId === senderAgentId,
+    );
+    return received ? request.senderTaskId : null;
+  }
+
+  /**
    * The deliveries of requests that an agent sent from one messaging link, whose answer goes back to
    * it, and that have not ended.
    */
@@ -545,6 +566,7 @@ export class MailboxStore {
         ...(messaging ? { messaging } : {}),
         ...(input.messagingReturn ? { messagingReturn: input.messagingReturn } : {}),
         ...(input.taskId ? { taskId: input.taskId } : {}),
+        ...(input.senderTaskId ? { senderTaskId: input.senderTaskId } : {}),
         id: messageId,
         sender: input.sender,
         ...(input.sender.kind === "user" && input.senderMember ? { senderMember: input.senderMember } : {}),
@@ -848,20 +870,26 @@ export class MailboxStore {
   ): Effect.fn.Return<void, StoredStateFailure> {
     try {
       const found = () => {
-        const ids = new Set(
-          this.#state.messages.filter((message) => message.taskId === taskId).map((message) => message.id),
-        );
-        const deliveries = this.#state.deliveries.filter((delivery) => ids.has(delivery.messageId));
+        const lane = this.#state.messages.filter((message) => message.taskId === taskId);
+        const laneIds = new Set(lane.map((message) => message.id));
         // A task message has one recipient, the thread's agent.
-        if (deliveries.some((delivery) => delivery.recipientAgentId !== agentId || isActiveDelivery(delivery)))
+        if (
+          this.#state.deliveries.some(
+            (delivery) =>
+              laneIds.has(delivery.messageId) && (delivery.recipientAgentId !== agentId || isActiveDelivery(delivery)),
+          )
+        )
           throw new Error(sourceText("error.backend.threadStillRunning"));
+        // A teammate's answer to the thread is also in the teammate's own chat, so it stays.
+        const ids = new Set(lane.filter((message) => message.sender.kind !== "agent").map((message) => message.id));
+        const deliveries = this.#state.deliveries.filter((delivery) => ids.has(delivery.messageId));
         return { ids, deliveries };
       };
       if (found().ids.size === 0) return;
       // The path checks wait, so they run before the state changes, as in `deleteStoredFile`.
       const managedPaths = new Map<string, string | null>();
       for (const message of this.#state.messages) {
-        if (message.taskId !== taskId) continue;
+        if (message.taskId !== taskId || message.sender.kind === "agent") continue;
         for (const file of messageFiles(message)) {
           if (file.deletedAt || managedPaths.has(file.path)) continue;
           managedPaths.set(file.path, yield* this.#files.managedTransferFile(file.path).pipe(toStoredStateFailure));
@@ -1017,12 +1045,15 @@ export class MailboxStore {
     let completedCount = 0;
     for (let index = this.#state.messages.length - 1; index >= 0; index -= 1) {
       const message = this.#state.messages[index];
-      if (!message || message.channelId || message.messaging || message.taskId) continue;
-      // A request the agent sent from a Slack thread belongs to that thread, not to its own chat.
-      // The teammate it went to still sees it.
-      if (message.messagingReturn && message.sender.kind === "agent" && message.sender.agentId === agentId) continue;
-      const deliveries = deliveriesByMessage.get(message.id) ?? [];
+      if (!message || message.channelId || message.messaging) continue;
       const ownMessage = message.sender.kind === "agent" && message.sender.agentId === agentId;
+      // A task message runs in a side thread of its recipient. A teammate's answer to that thread
+      // still shows in the teammate's own chat.
+      if (message.taskId && !ownMessage) continue;
+      // A request the agent sent from a Slack thread or a side thread belongs to that thread, not to
+      // its own chat. The teammate it went to still sees it.
+      if ((message.messagingReturn || message.senderTaskId) && ownMessage) continue;
+      const deliveries = deliveriesByMessage.get(message.id) ?? [];
       let relevant = ownMessage;
       let active = false;
       for (const delivery of deliveries) {
@@ -1260,12 +1291,13 @@ export class MailboxStore {
     const message = this.#requireMessage(next.messageId);
     const requestId = isAnswer(message) ? message.replyToMessageId : null;
     if (message.sender.kind !== "user" && !requestId) return [];
-    // A teammate's answer runs in the agent's own chat, so a task message starts alone.
-    if (message.taskId) return [];
+    // One turn runs in one lane: the agent's own chat, or the side thread that sent the request.
+    const lane = message.taskId ?? null;
     const messages = this.#messagesById();
     return this.#contexts(
       this.#queuedFor(next.recipientAgentId).filter((candidate) => {
-        if (candidate.id === next.id || !this.#mayStart(candidate) || this.#taskIdOf(candidate, messages)) return false;
+        if (candidate.id === next.id || !this.#mayStart(candidate) || this.#taskIdOf(candidate, messages) !== lane)
+          return false;
         if (!requestId) return this.#isHeldReply(candidate);
         const reply = this.#requireMessage(candidate.messageId, messages);
         return isAnswer(reply) && reply.replyToMessageId === requestId;
@@ -2830,6 +2862,7 @@ function isStoredMessage(value: unknown): value is StoredMessage {
     (value.messaging === undefined || isMessagingOrigin(value.messaging)) &&
     (value.messagingReturn === undefined || isMessagingOrigin(value.messagingReturn)) &&
     (value.taskId === undefined || isString(value.taskId)) &&
+    (value.senderTaskId === undefined || isString(value.senderTaskId)) &&
     isString(value.id) &&
     isRecord(value.sender) &&
     (value.sender.kind === "user" ||

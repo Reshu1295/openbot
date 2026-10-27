@@ -6,8 +6,8 @@
 //
 // 1. From the agent's own chat, A asks B. B answers in its own chat, and the answer comes back to A's
 //    own chat. No thread starts.
-// 2. From a side thread, A asks B. B answers in its own chat. The script records where the answer
-//    comes back to A (a side thread gets no answer today; see `knownGaps`).
+// 2. From a side thread, A asks B. The request arrives in B's own chat, and B answers there. The answer
+//    comes back to A's side thread, and A's own chat shows neither the request nor the answer.
 // 3. B runs a long turn in a side thread when A asks it. B answers in its own chat while the side
 //    thread still runs, and neither conversation gets the other's messages.
 // 4. A starts a thread with `start_task` from its own chat. The thread runs the brief; the own chat
@@ -49,12 +49,11 @@ interface Report {
   to: string;
   run: string;
   steps: Step[];
-  knownGaps: string[];
   pageErrors: string[];
   passed: boolean;
 }
 
-const report: Report = { from, to, run, steps: [], knownGaps: [], pageErrors: [], passed: false };
+const report: Report = { from, to, run, steps: [], pageErrors: [], passed: false };
 const session = await connectChannelE2e("agent-threads-messaging-e2e");
 const { page } = session;
 page.on("pageerror", (error) => report.pageErrors.push(error.stack ?? error.message));
@@ -157,9 +156,17 @@ try {
     assert.equal(tasksAfter, tasksBefore, "A message between agents started a thread.");
   });
 
-  // 2. Side thread to own chat.
+  // 2. Side thread to own chat, and the answer back to the side thread.
   await step("side thread asks another agent", async (details) => {
     const word = `M2${run}`;
+    // Earlier runs leave answers with "6" in both chats; count only the new ones.
+    const answer = (m: ConversationMessage) => m.senderAgentId === to && m.text.includes("6");
+    const outgoing = (message: ConversationMessage) => message.exchange?.direction === "outgoing";
+    const sentAnswer = (m: ConversationMessage) => outgoing(m) && m.text.includes("6");
+    const count = (s: ConversationSnapshot, match: (m: ConversationMessage) => boolean) =>
+      s.messages.filter(match).length;
+    const answersBefore = count(await bridge.main(from), answer);
+    const sentBefore = count(await bridge.main(to), sentAnswer);
     const side = await bridge.startTask(from, ask(word, "What is 3+3?", toAgentInfo.name));
     details.taskId = side.id;
     await waitFor(
@@ -172,23 +179,35 @@ try {
     const toSides = await Promise.all((await bridge.tasks(to)).map((entry) => bridge.side(to, entry.id)));
     details.requestInRecipientSideThread = toSides.some((s) => has(s, fromAgent(from, word)));
     assert.equal(details.requestInRecipientSideThread, false, "The request reached a side thread of B.");
-    const answered = (s: ConversationSnapshot) => has(s, (m) => m.senderAgentId === to && m.text.includes("6"));
     const lane = await waitFor(
       page,
       "A gets the answer",
       async () => {
         const [main, thread] = [await bridge.main(from), await bridge.side(from, side.id)];
-        return answered(thread) ? "side" : answered(main) ? "main" : null;
+        return has(thread, answer) ? "side" : count(main, answer) > answersBefore ? "main" : null;
       },
       (value) => value !== null,
       TURN_MS,
     );
     details.answerLane = lane;
-    if (lane === "main")
-      report.knownGaps.push("An answer to a request from a side thread comes back to the agent's own chat.");
-    const thread = await waitFor(page, "the side thread ends", () => bridge.side(from, side.id), idle, TURN_MS);
+    assert.equal(lane, "side", "The answer came back to A's own chat.");
+    await waitFor(
+      page,
+      "the side thread reads the answer",
+      () => task(from, side.id),
+      (entry) => entry?.state === "idle",
+      TURN_MS,
+    );
+    const thread = await bridge.side(from, side.id);
     details.sideRepliedSent = has(thread, answerWith("SENT"));
-    details.sideState = (await task(from, side.id))?.state;
+    details.sideReadAnswer = thread.messages.slice(thread.messages.findIndex(answer) + 1).some(answerWith(""));
+    const ownChat = await bridge.main(from);
+    details.requestInSenderChat = has(ownChat, (m) => outgoing(m) && m.text.includes(word));
+    details.answerInSenderChat = count(ownChat, answer) > answersBefore;
+    assert.equal(details.requestInSenderChat, false, "A's own chat shows the request from its side thread.");
+    assert.equal(details.answerInSenderChat, false, "A's own chat shows the answer to its side thread.");
+    details.answerInRecipientChat = count(await bridge.main(to), sentAnswer) > sentBefore;
+    assert.ok(details.answerInRecipientChat, "B's own chat does not show its answer.");
   });
 
   // 3. The recipient is busy in a side thread.

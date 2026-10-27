@@ -1321,6 +1321,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
             );
         },
         taskForThread: (threadId) => this.#tasks.taskForThread(threadId),
+        taskOpen: (taskId) => this.#tasks.threadId(taskId) !== null,
         taskFailed: (taskId, message) => this.#tasks.failed(taskId, this.#mcp.redact(message)),
       },
     });
@@ -4147,8 +4148,8 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       throw new Error(sourceText("error.backend.threadStillRunning"));
     });
     yield* this.#forgetExecutionThread(task.threadId);
-    // The person's messages and their files go with the thread. A message that the agent sent from the
-    // thread to another agent has no task id: it stays in the recipient's history.
+    // The person's messages and their files go with the thread. A message between the agent and another
+    // agent stays in the other agent's history: a request from the thread and a teammate's answer to it.
     yield* this.#mailbox
       .deleteTaskMessages(task.agentId, task.taskId)
       .pipe(Effect.mapError(({ cause }) => new AgentLifecycleFailed({ operation: "delete task messages", cause })));
