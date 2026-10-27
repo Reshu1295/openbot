@@ -17,7 +17,7 @@ import { sidebarPort } from "./sidebar-port";
 /** A closed card stays closed on this computer, per server, until another metric or level alerts. */
 const DISMISSED_KEY_PREFIX = "openbot:machine-card-dismissed:";
 
-export interface MachineCardState {
+interface MachineCardState {
   metric: MachineMetric;
   percent: number;
   level: number;
@@ -29,7 +29,7 @@ export interface MachineCardState {
  * The metric furthest above its level, or null when none passed one. Far above the level (95%, or
  * 10 points above a higher level) it is critical, as the Storage panel shows it in red.
  */
-export function machineCardState(metrics: MachineMetrics, alerts: MachineAlertSettings): MachineCardState | null {
+function machineCardState(metrics: MachineMetrics, alerts: MachineAlertSettings): MachineCardState | null {
   let worst: MachineCardState | null = null;
   for (const metric of MACHINE_METRICS) {
     const ratio = machineMetricRatio(metrics, metric);

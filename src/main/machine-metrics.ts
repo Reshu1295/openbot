@@ -199,7 +199,7 @@ const readVmStat = Effect.callback<string, Error>((resume) => {
  * wired memory, and the compressor. The rest, with the file cache, is available. Null when the
  * output has an unknown shape.
  */
-export function darwinMemory(text: string, totalBytes: number): MemoryReading | null {
+function darwinMemory(text: string, totalBytes: number): MemoryReading | null {
   const pageSize = Number(/page size of (\d+) bytes/u.exec(text)?.[1]);
   const pages = (label: string): number => Number(new RegExp(`^${label}:\\s+(\\d+)\\.`, "mu").exec(text)?.[1]);
   const used =

@@ -1,4 +1,4 @@
-import type { ChatWindowTarget } from "@openbot/contracts/ipc";
+import { type ChatWindowTarget, canAdministerServer } from "@openbot/contracts/ipc";
 import { AGENT_HIDDEN_CAPABILITY } from "@openbot/contracts/team-protocol/current";
 import { computeAgentAvatarMoods } from "@openbot/ui/features/agents/agent-avatar-mood";
 import { Sidebar } from "@openbot/ui/features/sidebar/Sidebar";
@@ -144,13 +144,30 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
       machineCard.refresh();
     }
   });
-  // The machine card covers the disk too, so the storage card shows only when it does not.
-  const footerCard = () => machineCard.card() ?? storageCard.card();
+  // One warning card at a time. A disk machine card covers the disk, so it replaces the storage
+  // card. A memory or CPU card gives way to a full disk, unless it is critical itself.
+  const footerCard = createMemo(() => {
+    const machine = machineCard.card();
+    const storage = storageCard.card();
+    if (machine && (machine.metric === "disk" || !storage || (machine.critical && storage.level !== "full")))
+      return { kind: "machine" as const, card: machine };
+    return storage ? { kind: "storage" as const, card: storage } : null;
+  });
+  const shownMachineCard = () => {
+    const shown = footerCard();
+    return shown?.kind === "machine" ? shown.card : null;
+  };
+  const shownStorageCard = () => {
+    const shown = footerCard();
+    return shown?.kind === "storage" ? shown.card : null;
+  };
+  // As the host picks it: the responsible member while an active admin, otherwise the owner.
   const machineRecipient = (memberId: string | null) => {
     const members = teamPresence().members;
     const member =
-      members.find((candidate) => candidate.id === memberId && !candidate.disabled) ??
-      members.find((candidate) => candidate.role === "owner");
+      members.find(
+        (candidate) => candidate.id === memberId && !candidate.disabled && canAdministerServer(candidate.role),
+      ) ?? members.find((candidate) => candidate.role === "owner");
     return member ? member.name?.trim() || member.username : null;
   };
 
@@ -316,7 +333,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
         <>
           {/* One card at a time. A machine over its alert level comes first, then a disk that is
            * almost full; the community card waits until the mobile app card is dismissed. */}
-          <Show when={machineCard.card()}>
+          <Show when={shownMachineCard()}>
             {(card) => (
               <SidebarMachineCard
                 serverName={activeServer()?.name ?? ""}
@@ -331,7 +348,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
               />
             )}
           </Show>
-          <Show when={!machineCard.card() && storageCard.card()}>
+          <Show when={shownStorageCard()}>
             {(card) => (
               <SidebarStorageCard
                 level={card().level}
