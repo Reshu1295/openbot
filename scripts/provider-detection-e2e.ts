@@ -179,12 +179,13 @@ try {
   assert.deepEqual(cipherAfter, cipherBefore, "A kept key keeps its ciphertext.");
 
   // 4. Load models for the saved endpoint with an empty key field: the server gets the stored key.
+  // With no header rows, the saved header is not sent: the user removed it in the form.
   await Effect.runPromise(
     detection.discoverModels({ baseUrl: row.baseUrl, apiKey: null, headers: [], savedProviderId: row.id }),
   );
   const loaded = primary.seen.at(-1);
   assert.equal(loaded?.authorization, `Bearer ${KEY}`);
-  assert.equal(loaded?.team, HEADER.value);
+  assert.equal(loaded?.team, null, "A removed header row is not sent.");
 
   // 5. The stored key never goes to another origin.
   await Effect.runPromise(

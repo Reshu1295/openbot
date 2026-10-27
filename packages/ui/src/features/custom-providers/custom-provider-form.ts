@@ -259,22 +259,17 @@ export function customProviderValue(draft: CustomProviderDraft): SaveCustomProvi
 /**
  * An edit of a saved endpoint: a blank key keeps the stored one, and an empty header value keeps the
  * saved value of that name. The header list replaces the saved one, so a removed row removes its
- * header. With no rows and no saved names, the headers are not sent: main keeps what it holds, also
- * when it cannot read them. There is no way to clear the key here, which is the rule of
- * `customProviders.update`.
+ * header; main keeps the ciphertext when the list names every saved header unchanged. There is no
+ * way to clear the key here, which is the rule of `customProviders.update`.
  */
-export function customProviderUpdate(
-  value: SaveCustomProviderInput,
-  savedHeaderNames: readonly string[] = [],
-): UpdateCustomProviderInput {
-  const headers = value.headers.map((header) => ({ name: header.name, value: header.value || null }));
+export function customProviderUpdate(value: SaveCustomProviderInput): UpdateCustomProviderInput {
   return {
     id: value.id,
     name: value.name,
     baseUrl: value.baseUrl,
     models: value.models,
     ...(value.apiKey === null ? {} : { apiKey: value.apiKey }),
-    ...(headers.length === 0 && savedHeaderNames.length === 0 ? {} : { headers }),
+    headers: value.headers.map((header) => ({ name: header.name, value: header.value || null })),
   };
 }
 

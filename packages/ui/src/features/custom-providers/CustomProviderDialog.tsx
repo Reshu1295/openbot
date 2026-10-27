@@ -39,6 +39,7 @@ import {
   type DiscoveredModel,
   emptyCustomProviderDraft,
   hasCustomProviderError,
+  keepsHeaderValue,
   type ModelDiscovery,
   validateCustomProvider,
 } from "./custom-provider-form";
@@ -182,7 +183,7 @@ export function CustomProviderDialog(props: CustomProviderDialogProps) {
     {
       label: (number) => t("customProvider.header.value", { number }),
       placeholder: (row) =>
-        row.savedName !== undefined && row.name.trim() === row.savedName
+        keepsHeaderValue(row)
           ? t("customProvider.header.keptPlaceholder")
           : t("customProvider.header.valuePlaceholder"),
       maxlength: CUSTOM_PROVIDER_LIMITS.apiKey,

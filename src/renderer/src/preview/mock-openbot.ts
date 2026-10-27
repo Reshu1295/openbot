@@ -1321,7 +1321,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         const savedNames = stored.headerNames ?? [];
         const headerNames = input.headers?.map((header) => header.name) ?? savedNames;
         const missing = input.headers?.find((header) => header.value === null && !savedNames.includes(header.name));
-        if (missing) throw new Error(`Enter a value for ${missing.name}.`);
+        if (missing) throw new Error(sourceText("error.provider.headerValueMissing", { name: missing.name }));
         const keepsKey = input.apiKey === undefined && stored.hasApiKey;
         const keepsHeader = input.headers
           ? input.headers.some((header) => header.value === null)

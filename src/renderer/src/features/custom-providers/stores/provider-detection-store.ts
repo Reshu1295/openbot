@@ -291,10 +291,7 @@ export function createProviderDetectionStore(options: ProviderDetectionStoreOpti
     value: Parameters<DetectedProviderApi["save"]>[1],
   ): Promise<CustomProviderRestart> {
     if (value.kind === "agent") return options.agents.saveCustomAgent(customAgentInput(value.value));
-    if (provider.added) {
-      const saved = provider.kind === "models" ? provider.savedHeaderNames : undefined;
-      return options.endpoints.updateCustomProvider(customProviderUpdate(value.value, saved));
-    }
+    if (provider.added) return options.endpoints.updateCustomProvider(customProviderUpdate(value.value));
     return options.endpoints.saveCustomProvider(value.value);
   }
 
