@@ -66,23 +66,29 @@ function range(from: number, to: number): number[] {
 }
 
 describe("migration guards", () => {
-  // Migration 28 turns foreign keys off for its rebuild, and migrations 43 to 47 do not.
-  it.each([28, 43, 44, 45, 46, 47])("runs migration %i past broken foreign keys from before the upgrade", (version) => {
-    const db = databaseAt(version - 1);
-    seedOrphans(db);
-    const before = contents(db);
-    const violationsBefore = db.prepare("PRAGMA foreign_key_check").all();
-    expect(violationsBefore).toHaveLength(2);
+  // Migrations 13, 17, 19, 22 to 24, 26 and 28 turn foreign keys off for their rebuilds, and the others do not.
+  it.each([9, 13, 17, 19, 22, 23, 24, 26, 28, 39, 40, 43, 44, 45, 46, 47])(
+    "runs migration %i past broken foreign keys from before the upgrade",
+    (version) => {
+      const db = databaseAt(version - 1);
+      seedOrphans(db);
+      const before = contents(db);
+      const violationsBefore = db.prepare("PRAGMA foreign_key_check").all();
+      expect(violationsBefore).toHaveLength(2);
 
-    migrateOpenBotDatabase(db);
+      migrateOpenBotDatabase(db);
 
-    expect(versions(db)).toEqual(range(8, 47));
-    // Migration 40 adds order columns to the message; every column the row had keeps its value.
-    expect(contents(db)).toMatchObject(before);
-    expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual(violationsBefore);
-    expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
-    expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });
-  });
+      expect(versions(db)).toEqual(range(8, 47));
+      // Migration 40 adds order columns to the message; every column the row had keeps its value.
+      expect(contents(db)).toMatchObject(before);
+      // A rebuild moves its table in the schema, which changes only the order of the rows.
+      const violationsAfter = db.prepare("PRAGMA foreign_key_check").all();
+      expect(violationsAfter).toHaveLength(violationsBefore.length);
+      expect(violationsAfter).toEqual(expect.arrayContaining(violationsBefore));
+      expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
+      expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });
+    },
+  );
 
   it("rolls back a migration that breaks a foreign key, next to one from before the upgrade", () => {
     const db = databaseAt(27);

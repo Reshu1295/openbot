@@ -892,15 +892,12 @@ export function migrateOpenBotDatabase(db: DatabaseSync, options: OpenBotMigrati
   const pending = MIGRATIONS.filter((migration) => migration.version > currentVersion);
   // A database can hold broken references from before this upgrade. A migration that does not touch them must not
   // stop on them, and deleting them would lose rows, so each migration is checked only for the ones it adds.
-  let violations = pending.length > 0 ? readForeignKeyViolations(db) : new Map<string, number>();
-  if (violations.size > 0) {
-    logger.warn("The OpenBot database has foreign-key violations from before this upgrade. They stay as they are.", {
-      violations: Object.fromEntries(violations),
-    });
-  }
+  let violations: Map<string, number> | undefined;
 
   for (const migration of pending) {
     try {
+      // Read inside the try, so that a failed read names the migration that it stops, as a failed check did before.
+      violations ??= readOldForeignKeyViolations(db);
       violations = runMigration(db, migration, appliedAt, violations);
     } catch (error) {
       // The startup log keeps only the message, so the cause is logged here.
@@ -1085,11 +1082,21 @@ function assertForeignKeys(db: DatabaseSync, before: ReadonlyMap<string, number>
 function readForeignKeyViolations(db: DatabaseSync): Map<string, number> {
   const counts = new Map<string, number>();
   for (const row of db.prepare("PRAGMA foreign_key_check").all()) {
-    if (!isDynamicRecord(row) || !isString(row.table) || !isString(row.parent)) continue;
-    const reference = `${row.table} -> ${row.parent}`;
+    // Every row counts, also one of an unexpected shape, so that the check cannot miss a violation.
+    const reference = isDynamicRecord(row) ? `${String(row.table)} -> ${String(row.parent)}` : "unknown";
     counts.set(reference, (counts.get(reference) ?? 0) + 1);
   }
   return counts;
+}
+
+function readOldForeignKeyViolations(db: DatabaseSync): Map<string, number> {
+  const violations = readForeignKeyViolations(db);
+  if (violations.size > 0) {
+    logger.warn("The OpenBot database has foreign-key violations from before this upgrade. They stay as they are.", {
+      violations: Object.fromEntries(violations),
+    });
+  }
+  return violations;
 }
 
 function assertQuickCheck(db: DatabaseSync): void {
