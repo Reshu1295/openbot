@@ -496,24 +496,29 @@ export function MessageBody(props: {
                     </Match>
                     <Match when={codeContent(block())}>
                       {(code) => (
-                        <Show
-                          when={chatPreviewKind(code().language)}
-                          fallback={
-                            <CodeBlock
-                              block={code()}
-                              streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
-                            />
-                          }
+                        // The id lets the selection actions open for text selected in the code.
+                        <div
+                          data-selection-message-id={props.message.streaming !== true ? props.message.id : undefined}
                         >
-                          {(preview) => (
-                            <CodePreview
-                              block={code()}
-                              kind={preview()}
-                              streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
-                              onOpenLink={props.onOpenLink}
-                            />
-                          )}
-                        </Show>
+                          <Show
+                            when={chatPreviewKind(code().language)}
+                            fallback={
+                              <CodeBlock
+                                block={code()}
+                                streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
+                              />
+                            }
+                          >
+                            {(preview) => (
+                              <CodePreview
+                                block={code()}
+                                kind={preview()}
+                                streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
+                                onOpenLink={props.onOpenLink}
+                              />
+                            )}
+                          </Show>
+                        </div>
                       )}
                     </Match>
                     <Match when={textContent(block())}>

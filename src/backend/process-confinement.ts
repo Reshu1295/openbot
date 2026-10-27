@@ -39,6 +39,12 @@ export interface ProviderStatePaths {
    * send those processes' writes outside.
    */
   readonly writableContents?: readonly string[];
+  /**
+   * Lock folders outside `writable` that the provider makes beside a file each time it reads that
+   * file. The confined process can make, touch and remove each folder, but not write in it or put a
+   * file or a link in its place. The file beside it stays read-only.
+   */
+  readonly lockFolders?: readonly string[];
 }
 
 export interface SpawnTarget {
@@ -237,9 +243,18 @@ export function piAgentDirectory(env: NodeJS.ProcessEnv = process.env, home = ho
   return env.PI_CODING_AGENT_DIR?.trim() || join(home, ".pi", "agent");
 }
 
-/** Pi can write sessions, but cannot change the settings or extensions a later full-access run loads. */
+/**
+ * Pi can write sessions, but cannot change the sign-in, settings or extensions a later full-access
+ * run loads. Pi 1.4.0 takes a lock folder beside `auth.json`, `settings.json` and `trust.json` each
+ * time it reads one, and a read stops with EPERM when it cannot make that folder.
+ */
 export function piStatePaths(env: NodeJS.ProcessEnv = process.env, home = homedir()): ProviderStatePaths {
-  return { writable: [join(piAgentDirectory(env, home), "sessions")], protected: [] };
+  const agentDirectory = piAgentDirectory(env, home);
+  return {
+    writable: [join(agentDirectory, "sessions")],
+    protected: [],
+    lockFolders: ["auth.json", "settings.json", "trust.json"].map((name) => join(agentDirectory, `${name}.lock`)),
+  };
 }
 
 /** Only session data is writable. Muse settings, credentials, hooks, and plugins stay read-only. */
@@ -309,7 +324,13 @@ export function confineSpawnTarget(
       command: SANDBOX_EXEC,
       args: [
         "-p",
-        seatbeltProfile(writable, protectedPaths, state.protectedInProjects, state.writableContents ?? []),
+        seatbeltProfile(
+          writable,
+          protectedPaths,
+          state.protectedInProjects,
+          state.writableContents ?? [],
+          state.lockFolders ?? [],
+        ),
         target.command,
         ...target.args,
       ],
@@ -328,17 +349,22 @@ function unavailable(tool: string): string {
 /**
  * Writes are denied, then allowed in the writable folders, then denied again in the protected paths:
  * in a Seatbelt profile the last rule that matches wins. `file-write-data` allows writes in an
- * existing file, not its removal, a rename or a link in its place. Everything else stays open, as
- * the Access setting says: reads, the network and process starts.
+ * existing file, not its removal, a rename or a link in its place. A lock folder allows every write
+ * on the folder itself, but a create there only of a folder. Everything else stays open, as the
+ * Access setting says: reads, the network and process starts.
  */
 function seatbeltProfile(
   writable: readonly string[],
   protectedPaths: readonly string[],
   inProjects: ProviderStatePaths["protectedInProjects"],
   contents: readonly string[],
+  lockFolders: readonly string[],
 ): string {
   const allowed = unique(writable.flatMap(realPaths)).map((path) => `(subpath ${sbplString(path)})`);
   const files = unique(contents.flatMap(realPaths)).map((path) => `(literal ${sbplString(path)})`);
+  // `utimes`, which refreshes a lock, has no file-write operation of its own, so the folder gets
+  // `file-write*`.
+  const locks = unique(lockFolders.flatMap(realPaths)).map((path) => `(literal ${sbplString(path)})`);
   const names = inProjects?.names.map(regexText).join("|");
   const denied = [
     ...unique(protectedPaths.flatMap(realPaths)).map(
@@ -356,6 +382,12 @@ function seatbeltProfile(
     "(deny file-write*)",
     `(allow file-write* ${allowed.join(" ")})`,
     ...(files.length > 0 ? [`(allow file-write-data ${files.join(" ")})`] : []),
+    ...(locks.length > 0
+      ? [
+          `(allow file-write* ${locks.join(" ")})`,
+          `(deny file-write-create (require-all (require-any ${locks.join(" ")}) (require-not (vnode-type DIRECTORY))))`,
+        ]
+      : []),
     '(allow file-write* (literal "/dev/null") (literal "/dev/zero") (literal "/dev/tty") (literal "/dev/ptmx") (literal "/dev/dtracehelper") (regex #"^/dev/ttys[0-9]+$") (regex #"^/dev/fd/"))',
     ...(denied.length > 0 ? [`(deny file-write* ${denied.join(" ")})`] : []),
     "",

@@ -164,6 +164,8 @@ export interface TurnHooks {
   quietRoutineDelivery(deliveryId: string): boolean;
   /** The task whose thread this is, or null for any other thread. */
   taskForThread(threadId: string): string | null;
+  /** Whether this task's thread exists and is not archived. */
+  taskOpen(taskId: string): boolean;
   /** The error of a task turn. It shows in the task's panel, not in the agent's own chat. */
   taskFailed(taskId: string, message: string): void;
   /**
@@ -1359,12 +1361,16 @@ export class TurnLifecycle {
     )
       return;
 
+    // A result for a request from a side thread runs in that thread, as an answer with send_message does.
+    const answerTaskId = this.#mailbox.answerTaskId(agentId, messageId, [recipientAgentId]);
+    const taskId = answerTaskId && this.#hooks.taskOpen(answerTaskId) ? answerTaskId : undefined;
     const receipt = yield* this.#mailbox
       .enqueue({
         sender: { kind: "agent", agentId },
         recipientAgentIds: [recipientAgentId],
         text,
         replyToMessageId: messageId,
+        ...(taskId ? { taskId } : {}),
         // The requested result, not a new request. The chain-origin guard above already stops a
         // second relay; this is what tells the recipient it owes no acknowledgement for one.
         expectsReply: false,

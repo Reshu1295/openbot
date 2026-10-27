@@ -1322,6 +1322,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
             );
         },
         taskForThread: (threadId) => this.#tasks.taskForThread(threadId),
+        taskOpen: (taskId) => this.#tasks.threadId(taskId) !== null,
         taskFailed: (taskId, message) => this.#tasks.failed(taskId, this.#mcp.redact(message)),
       },
     });
@@ -4070,13 +4071,29 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     return this.#tasks.publicTask(task);
   }).bind(this);
 
-  /** Stops the task's running turn and cancels its queued messages. The task stays open. */
+  /** A teammate's answer that waits in a closing thread goes to the agent's own chat, so it is not cancelled. */
+  #returnTaskAnswers(task: { agentId: string; taskId: string }): Effect.Effect<void, AgentLifecycleFailed> {
+    return this.#mailbox.returnTaskAnswers(task.agentId, task.taskId).pipe(
+      Effect.mapError((failure) => new AgentLifecycleFailed({ operation: "return answers", cause: failure.cause })),
+      Effect.flatMap((moved) =>
+        moved === 0
+          ? Effect.void
+          : Effect.sync(() => {
+              this.#mailboxSync.emitQueue(task.agentId);
+              this.#drain.scheduleDrain(task.agentId);
+            }),
+      ),
+    );
+  }
+
+  /** Stops the task's running turn and cancels its queued messages, except teammates' answers. The task stays open. */
   readonly stopTask = Effect.fn("AgentService.stopTask")(function* (
     this: AgentService,
     input: AgentTaskInput,
   ): Effect.fn.Return<void, AgentLifecycleFailed> {
     const task = yield* lifecycleStep("find task", () => this.#tasks.require(input.agentId, input.taskId));
-    for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId))
+    // A teammate's answer stays in the open thread, so it runs with the other answers to the same request.
+    for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId, { teammateAnswers: false }))
       yield* this.cancelQueuedMessage(task.agentId, message.deliveryId);
     const turnId = this.#conversation.loadedExecutionSnapshot(task.threadId)?.activeTurnId;
     if (turnId) {
@@ -4098,8 +4115,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         ? this.#tasks.turnEnd(found.taskId)
         : null;
     });
+    // Answers move out before the Stop, so none starts in the thread, and again after the wait.
+    yield* this.#returnTaskAnswers(input);
     yield* this.stopTask(input);
     if (running) yield* running.pipe(Effect.timeoutOption(TASK_STOP_WAIT_MS));
+    yield* this.#returnTaskAnswers(input);
     const task = yield* lifecycleStep("find task", () => {
       const found = this.#tasks.require(input.agentId, input.taskId);
       // A turn that starts or ends after the Stop still counts toward the limits of its open task.
@@ -4140,6 +4160,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       if (wasOpen) this.#tasks.close(found);
       return { task: found, wasOpen };
     });
+    yield* this.#returnTaskAnswers(task);
     for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId))
       yield* this.cancelQueuedMessage(task.agentId, message.deliveryId);
     yield* lifecycleStep("check task", () => {
@@ -4149,8 +4170,8 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       throw new Error(sourceText("error.backend.threadStillRunning"));
     });
     yield* this.#forgetExecutionThread(task.threadId);
-    // The person's messages and their files go with the thread. A message that the agent sent from the
-    // thread to another agent has no task id: it stays in the recipient's history.
+    // The person's messages and their files go with the thread. A message between the agent and another
+    // agent stays in the other agent's history: a request from the thread and a teammate's answer to it.
     yield* this.#mailbox
       .deleteTaskMessages(task.agentId, task.taskId)
       .pipe(Effect.mapError(({ cause }) => new AgentLifecycleFailed({ operation: "delete task messages", cause })));

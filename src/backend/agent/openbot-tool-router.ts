@@ -1623,11 +1623,26 @@ export class OpenBotToolRouter {
         throw new Error("expectsReply must be a boolean.");
       }
 
+      const turnDeliveries = this.#mailbox.findDeliveriesByTurn(senderAgentId, params.turnId);
       // A request from a Slack turn: the teammate's answer goes back to that Slack thread.
-      const messagingReturn = this.#mailbox
-        .findDeliveriesByTurn(senderAgentId, params.turnId)
+      const messagingReturn = turnDeliveries
         .map(({ delivery }) => this.#mailbox.messagingOrigin(delivery.id))
         .find((origin) => origin !== null);
+      // A request from a side thread: the teammate's answer goes back to that thread.
+      const senderTaskId = turnDeliveries
+        .map(({ delivery }) => this.#mailbox.taskIdForDelivery(delivery.id))
+        .find((taskId) => taskId !== null);
+      // An agent can send "" for no reply. Every reader rejects an empty id. A model can also copy the
+      // quotes around the id in the delivery prompt; such an id refers to no message.
+      const replyTo =
+        replyToMessageId
+          ?.trim()
+          .replace(/^"(.*)"$/s, "$1")
+          .trim() || null;
+      // An answer to a request from a side thread runs in that thread. When the thread is archived, the
+      // answer goes to the recipient's own chat, so it is not lost.
+      const answerTaskId = replyTo ? this.#mailbox.answerTaskId(senderAgentId, replyTo, recipientValues) : null;
+      const taskId = answerTaskId && this.#tasks.threadId(answerTaskId) !== null ? answerTaskId : undefined;
       const text = params.arguments.text;
       const receipt = yield* this.#mailbox
         .enqueue({
@@ -1635,10 +1650,11 @@ export class OpenBotToolRouter {
           recipientAgentIds: recipientValues,
           text,
           sourcePaths: paths,
-          // An agent can send "" for no reply. Every reader rejects an empty id.
-          replyToMessageId: replyToMessageId?.trim() || null,
+          replyToMessageId: replyTo,
           ...(expectsReply === undefined ? {} : { expectsReply }),
           ...(messagingReturn ? { messagingReturn } : {}),
+          ...(senderTaskId ? { senderTaskId } : {}),
+          ...(taskId ? { taskId } : {}),
           idempotencyKey: toolCallIdempotencyKey(params),
         })
         .pipe(toToolOperationFailed);
