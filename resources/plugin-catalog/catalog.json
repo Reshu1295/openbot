@@ -117,6 +117,12 @@
       "detailSha256": "44cf37509ab2f1876483484322af0de3f2aa27b0caafb8df5e29cbd7332084db"
     },
     {
+      "slug": "render",
+      "version": "1.0.0",
+      "featured": false,
+      "detailSha256": "ba9256fc15bbeeffd35b3a9edf8d1efa399f057fc03547ca652a6c3cede7845f"
+    },
+    {
       "slug": "context7",
       "version": "1.0.0",
       "featured": false,

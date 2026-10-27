@@ -831,6 +831,64 @@ const RAILWAY: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/railway",
 };
 
+const RENDER: MarketplacePluginDetail = {
+  id: "plugin-render",
+  slug: "render",
+  name: "Render",
+  tagline: "Services, deploys and logs",
+  description:
+    "Render lets agents list workspaces and services, read logs, events and metrics, see the deploy history, trigger deploys, and run read-only SQL on Render Postgres. A Render API key goes into one Authorization header. The key reaches every workspace of the Render account. Agents can create web services, static sites, cron jobs, Postgres databases and Key Value instances, which can cost money, and they can replace the environment variables of a service. The server cannot delete a resource.",
+  category: "coding",
+  creatorName: "Render",
+  iconUrl: "https://dashboard.render.com/favicon-light.png",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-services", text: "Which services are in my Render workspace?" },
+    { id: "prompt-logs", text: "Which errors did my Render web service log in the last hour?" },
+    { id: "prompt-deploy", text: "Why did the last deploy of my Render service fail?" },
+  ],
+  apps: [
+    {
+      id: "app-render-mcp",
+      name: "Render",
+      description: "Services, deploys, logs, and metrics, over Render's MCP server with an API key.",
+      iconUrl: "https://dashboard.render.com/favicon-light.png",
+      server: {
+        name: "render",
+        transport: "http",
+        url: "https://mcp.render.com/mcp",
+        auth: [
+          {
+            id: "render-key",
+            kind: "key",
+            label: "API key",
+            fields: [
+              {
+                id: "token",
+                label: "Render API key",
+                header: "Authorization",
+                prefix: "Bearer ",
+                placeholder: "rnd_…",
+                hint: "Render Account settings → API keys",
+              },
+            ],
+            docsUrl: "https://dashboard.render.com/u/settings?add-api-key",
+            docsLabel: "Create a key",
+          },
+        ],
+      },
+    },
+  ],
+  websiteUrl: "https://render.com",
+  privacyPolicyUrl: "https://render.com/privacy",
+  termsUrl: "https://render.com/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/render",
+};
+
 const CONTEXT7: MarketplacePluginDetail = {
   id: "plugin-context7",
   slug: "context7",
@@ -1295,6 +1353,7 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   PRISMA,
   NETLIFY,
   RAILWAY,
+  RENDER,
   CONTEXT7,
   HUGGINGFACE,
   STRIPE,
