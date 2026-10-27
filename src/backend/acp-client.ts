@@ -2289,6 +2289,9 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     if (!hung || !this.running) return false;
     this.emit("diagnostic", `${this.#label} did not answer session/list in time.`);
     this.emit("exit", new Error(sourceText("error.provider.acpUnresponsive", { provider: this.#label })));
+    // A warm generation client has no runtime that stops it, and it is used again while it runs.
+    // The stop closes the scope of this fiber, so it runs detached.
+    yield* Effect.forkDetach(this.stop().pipe(Effect.ignore), { startImmediately: true });
     return true;
   });
 
