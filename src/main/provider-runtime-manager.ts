@@ -919,6 +919,9 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
         if (installed) yield* runtimeIO(() => rm(this.#installRoot(spec), { recursive: true, force: true }));
         return yield* result.failure;
       }
+      // This instance runs the version now. Its stamp is also what lets `removeDownload` remove an
+      // install it made itself: the install leaves the directory with a time no stamp recorded.
+      yield* this.#stampInUseEffect(spec.runtime, this.#installRoot(spec));
       this.#setStatus(spec.runtime, readyStatus(spec.version));
       this.emit("ready", spec.runtime);
     });
