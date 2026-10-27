@@ -329,7 +329,7 @@ export function createProviderRuntimeStore(
         // A closed notification stays closed, including across the server switch that rebuilds this
         // store: the record of it is kept by the notification module, which outlives the switch.
         if (providerUpdateOfferClosed(update.provider, update.availableVersion)) continue;
-        showProviderUpdateToast(update, () => void startProviderUpdate(update.provider));
+        queueMicrotask(() => showProviderUpdateToast(update, () => void startProviderUpdate(update.provider)));
       }
       announced = next;
     },
