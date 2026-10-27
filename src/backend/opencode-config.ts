@@ -114,10 +114,15 @@ function anthropicBaseUrl(baseUrl: string): string | null {
  * `/responses` at the same base URL and takes the key as a bearer token, so the OpenAI adapter works
  * unchanged. `@ai-sdk/azure` is no fix: it builds `/deployments/<model>/responses`, which a v1
  * resource answers with 404.
+ *
+ * Only with a key: without `apiKey`, the OpenAI adapter reads `OPENAI_API_KEY` from the environment
+ * that OpenCode inherits, and would send the user's OpenAI key to Azure. A keyless endpoint, such as
+ * one with an Entra ID `Authorization` header, keeps the OpenAI-compatible adapter.
  */
-function isAzureOpenAiV1(baseUrl: string): boolean {
-  const url = URL.parse(baseUrl);
+function isAzureOpenAiV1(provider: CustomProviderConfig): boolean {
+  const url = URL.parse(provider.baseUrl);
   return (
+    Boolean(provider.apiKey) &&
     url?.protocol === "https:" &&
     (url.hostname.endsWith(".openai.azure.com") || url.hostname.endsWith(".services.ai.azure.com")) &&
     (url.pathname === "/openai/v1" || url.pathname === "/openai/v1/")
@@ -127,11 +132,7 @@ function isAzureOpenAiV1(baseUrl: string): boolean {
 function providerEntry(provider: CustomProviderConfig): OpenCodeProviderEntry {
   const anthropic = anthropicBaseUrl(provider.baseUrl);
   return {
-    npm: anthropic
-      ? OPENCODE_ANTHROPIC_NPM
-      : isAzureOpenAiV1(provider.baseUrl)
-        ? OPENCODE_OPENAI_NPM
-        : OPENCODE_COMPATIBLE_NPM,
+    npm: anthropic ? OPENCODE_ANTHROPIC_NPM : isAzureOpenAiV1(provider) ? OPENCODE_OPENAI_NPM : OPENCODE_COMPATIBLE_NPM,
     name: provider.name,
     options: {
       baseURL: anthropic ?? provider.baseUrl,

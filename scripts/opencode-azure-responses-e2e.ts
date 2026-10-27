@@ -3,8 +3,9 @@
 // real OpenCode CLI with that layer against a fake Azure server on loopback (only the base URL
 // changes), and reads the requests that OpenCode sends. `--standalone` (OpenCode 2) keeps each run
 // off the shared background service. Cases: Azure OpenAI and Foundry hosts, which must use the OpenAI
-// adapter and reach `/openai/v1/responses`, and another host, which keeps the OpenAI-compatible
-// adapter and `/chat/completions`.
+// adapter and reach `/openai/v1/responses` with the endpoint key and `store: false`; an Azure host
+// with no key and another host, which keep the OpenAI-compatible adapter and `/chat/completions`.
+// No request may carry the `OPENAI_API_KEY` of the OpenCode environment.
 // `bun scripts/opencode-azure-responses-e2e.ts [<opencode binary>]`. Without an argument it uses
 // `OPENBOT_OPENCODE_PATH`. Writes .openbot-build/opencode-azure-responses-e2e/report.json.
 import assert from "node:assert/strict";
@@ -24,9 +25,15 @@ const binary: string = binaryArgument;
 const MODEL = "gpt-6-luna";
 const root = await mkdtemp(join(tmpdir(), "openbot-opencode-azure-"));
 
+/** In the OpenCode environment, as a user's shell can have it. No request may carry it. */
+const ENV_OPENAI_KEY = "openai-env-key";
+
 interface CapturedRequest {
   readonly path: string;
   readonly status: number;
+  readonly authorization: string | null;
+  /** The Responses `store` flag. `false` keeps the conversation off the provider's servers. */
+  readonly store: unknown;
 }
 const requests: CapturedRequest[] = [];
 
@@ -64,9 +71,11 @@ function responsesStream(response: ServerResponse): void {
   ]);
 }
 
-function answer(request: IncomingMessage, response: ServerResponse): void {
+function answer(request: IncomingMessage, response: ServerResponse, body: string): void {
   const path = request.url ?? "";
-  const record = (status: number) => requests.push({ path, status });
+  const store = body ? JSON.parse(body).store : undefined;
+  const authorization = request.headers.authorization ?? null;
+  const record = (status: number) => requests.push({ path, status, authorization, store });
   if (path.endsWith("/responses")) {
     record(200);
     responsesStream(response);
@@ -93,8 +102,11 @@ function answer(request: IncomingMessage, response: ServerResponse): void {
 }
 
 const server = createServer((request, response) => {
-  request.resume();
-  request.on("end", () => answer(request, response));
+  let body = "";
+  request.on("data", (chunk) => {
+    body += chunk;
+  });
+  request.on("end", () => answer(request, response, body));
 });
 await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
 const address = server.address();
@@ -102,7 +114,10 @@ assert.ok(address && typeof address === "object", "the fake server has no port")
 const local = `http://127.0.0.1:${address.port}/openai/v1`;
 
 /** The layer OpenBot sends for one endpoint, with only the base URL moved to the fake server. */
-function configFor(baseUrl: string): { readonly npm: string; readonly baseURL: string; readonly content: string } {
+function configFor(
+  baseUrl: string,
+  apiKey: string | null,
+): { readonly npm: string; readonly baseURL: string; readonly content: string } {
   const env = openCodeConfigEnv(
     {},
     () => [
@@ -110,7 +125,7 @@ function configFor(baseUrl: string): { readonly npm: string; readonly baseURL: s
         id: "azure-foundry",
         name: "Azure",
         baseUrl,
-        apiKey: "azure-test-key",
+        apiKey,
         models: [{ id: MODEL, name: "Luna" }],
         headers: [],
       },
@@ -143,6 +158,7 @@ async function runOpenCode(
       XDG_STATE_HOME: join(home, ".local/state"),
       OPENCODE_CONFIG_CONTENT: content,
       OPENCODE_DISABLE_AUTOUPDATE: "1",
+      OPENAI_API_KEY: ENV_OPENAI_KEY,
     },
     stdio: ["ignore", "ignore", "pipe"],
   });
@@ -173,24 +189,34 @@ try {
     {
       name: "azure-openai-v1",
       baseUrl: "https://example-resource.openai.azure.com/openai/v1",
+      apiKey: "azure-test-key",
       npm: "@ai-sdk/openai",
       path: "/openai/v1/responses",
     },
     {
       name: "azure-foundry-v1",
       baseUrl: "https://example-resource.services.ai.azure.com/openai/v1/",
+      apiKey: "azure-test-key",
       npm: "@ai-sdk/openai",
       path: "/openai/v1/responses",
     },
     {
+      name: "azure-no-key",
+      baseUrl: "https://example-resource.openai.azure.com/openai/v1",
+      apiKey: null,
+      npm: "@ai-sdk/openai-compatible",
+      path: "/openai/v1/chat/completions",
+    },
+    {
       name: "other-host",
       baseUrl: "https://llm.example.com/openai/v1",
+      apiKey: "other-test-key",
       npm: "@ai-sdk/openai-compatible",
       path: "/openai/v1/chat/completions",
     },
   ] as const;
   for (const item of checks) {
-    const config = configFor(item.baseUrl);
+    const config = configFor(item.baseUrl, item.apiKey);
     assert.equal(config.npm, item.npm, `${item.name}: adapter`);
     assert.equal(config.baseURL, item.baseUrl, `${item.name}: base URL`);
     const before = requests.length;
@@ -199,6 +225,11 @@ try {
     const turn = sent.filter((request) => request.path === item.path && request.status === 200);
     assert.ok(turn.length > 0, `${item.name}: no answered request to ${item.path} (exit ${run.code}): ${run.stderr}`);
     assert.equal(run.code, 0, `${item.name}: OpenCode exit ${run.code}: ${run.stderr}`);
+    for (const request of sent) {
+      assert.notEqual(request.authorization, `Bearer ${ENV_OPENAI_KEY}`, `${item.name}: sent OPENAI_API_KEY`);
+      if (item.apiKey) assert.equal(request.authorization, `Bearer ${item.apiKey}`, `${item.name}: key`);
+      if (item.path.endsWith("/responses")) assert.equal(request.store, false, `${item.name}: store`);
+    }
     cases.push({
       name: item.name,
       configuredBaseUrl: item.baseUrl,
