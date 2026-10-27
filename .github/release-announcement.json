@@ -1,9 +1,10 @@
 {
-  "version": "0.51.1",
+  "version": "0.52.0",
   "highlights": [
-    "DeepSeek, Inception and OpenRouter now download the Pi CLI when you save their API key.",
-    "Closing the Linux AppImage no longer shows a crash report.",
-    "Gemini works again on Docker servers with LXCFS, and Claude agents on a server now respect its CPU limit.",
-    "Agents on a shared server no longer tell you to open the chat on another device."
+    "Give an agent more than one conversation: click + in the chat header to start a new thread. Your tasks are now threads.",
+    "Attach MP4 videos in chat, and see image files that an agent names as previews under its answer.",
+    "Connect Obsidian, Trello, Render, Neon, Prisma, Netlify, Railway, Atlassian, Todoist and Hugging Face from the new Marketplace.",
+    "OpenBot is now available in Dutch.",
+    "Workspace only Pi, Cursor and DeepSeek agents on macOS work again, and a provider CLI update no longer stops OpenBot at start."
   ]
 }
