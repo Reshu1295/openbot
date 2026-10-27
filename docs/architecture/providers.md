@@ -973,7 +973,7 @@ local only: the Team API has no route, and a joined server's agent shows no ring
 `agent:tasks:compact-context` does the same for one open side thread. It refuses while the thread
 has an active turn or delivery, or while its session compacts or waits after a refused start.
 
-## Z.ai Coding Plan
+## Z.ai (GLM Coding Plan)
 
 Z.ai is a key-only provider on Pi's managed CLI (`cliProvider: "pi"`). The `zai` extension keeps
 Pi's built-in GLM catalog and thinking levels, pins the endpoint to
@@ -983,7 +983,7 @@ is removed before tools can spawn children. Pi's own credentials are unchanged.
 
 `zai-usage.ts` reads `https://api.z.ai/api/monitor/usage/quota/limit` with the saved key as the
 Authorization header, as Z.ai's official usage plugin does. The dock reads it without starting Pi.
-The model quota controls the ring; MCP quota is a separate detail group. An absent reset stays
+The five-hour and weekly model quota windows control the rings; MCP quota is a separate detail group. An absent reset stays
 unknown. Missing, malformed and rejected readings do not become zero usage. No standard API billing
 endpoint is used. Team API v8's open provider fields carry Z.ai; released provider lists are unchanged.
 

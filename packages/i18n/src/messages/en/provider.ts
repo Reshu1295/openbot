@@ -161,10 +161,10 @@ export const messages = defineMessages("provider", {
   "provider.inceptionKey.description":
     "Save an Inception API key on this computer to use the Mercury models. OpenBot runs them in the Pi CLI that it downloads.",
   "provider.inceptionKey.label": "Inception API key",
-  "provider.zaiKey.title": "Z.ai Coding Plan key",
+  "provider.zaiKey.title": "GLM Coding Plan key",
   "provider.zaiKey.description":
-    "Save a Z.ai Coding Plan key on this computer to use GLM models. OpenBot runs them in the Pi CLI that it downloads.",
-  "provider.zaiKey.label": "Z.ai Coding Plan key",
+    "Save a GLM Coding Plan key on this computer to use GLM models. OpenBot runs them in the Pi CLI that it downloads.",
+  "provider.zaiKey.label": "GLM Coding Plan key",
   "provider.deepseekKey.title": "DeepSeek API key",
   "provider.deepseekKey.description":
     "Save a DeepSeek API key on this computer to use the DeepSeek models. OpenBot runs them in the Pi CLI that it downloads.",

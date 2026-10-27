@@ -42,7 +42,7 @@ export const messages = defineMessages("onboarding", {
   "onboarding.provider.cursorPlan": "Cursor plan or API key",
   "onboarding.provider.clineAccount": "Free models with a Cline account",
   "onboarding.provider.inceptionKey": "Mercury models with an Inception API key",
-  "onboarding.provider.zaiKey": "GLM models with a Z.ai Coding Plan key",
+  "onboarding.provider.zaiKey": "GLM models with a GLM Coding Plan key",
   "onboarding.provider.deepseekKey": "DeepSeek models with a DeepSeek API key",
   "onboarding.provider.openrouterKey": "Many models with an OpenRouter API key",
   "onboarding.provider.tryFree": "Try it free",
