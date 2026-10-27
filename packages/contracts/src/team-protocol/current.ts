@@ -419,7 +419,8 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== PROMPT_CACHE_TTL_CAPABILITY &&
     capability !== CLAUDE_API_KEY_CAPABILITY &&
     capability !== WORKFLOWS_CAPABILITY &&
-    capability !== AGENT_THREADS_CAPABILITY,
+    capability !== AGENT_THREADS_CAPABILITY &&
+    capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY,
 );
 // A v7 host does not know the v8 markers, so a client sends them only after it negotiates protocol 8.
 const TEAM_PROTOCOL_V7_CURRENT_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
@@ -480,6 +481,7 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== PROMPT_CACHE_TTL_CAPABILITY &&
       capability !== CLAUDE_API_KEY_CAPABILITY &&
       capability !== WORKFLOWS_CAPABILITY &&
-      capability !== AGENT_THREADS_CAPABILITY,
+      capability !== AGENT_THREADS_CAPABILITY &&
+      capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY,
   );
 }

@@ -11,6 +11,12 @@ import {
   playableMediaKind,
   supportedAttachmentExtensions,
 } from "@openbot/contracts/attachment-files";
+import {
+  legacyTeamCapabilities,
+  TEAM_CURRENT_CAPABILITIES,
+  TEAM_MP4_ATTACHMENTS_CAPABILITY,
+  teamCapabilitiesForProtocol,
+} from "@openbot/contracts/team-protocol/current";
 import { Effect } from "effect";
 import { AttachmentFiles } from "../src/backend/attachment-files";
 
@@ -95,6 +101,11 @@ async function run() {
     assert.equal(supportedAttachmentExtensions(oldHost).includes("mov"), true);
     assert.equal(isSupportedAttachmentNameFor("clip.mp4", oldHost), false);
     assert.equal(isSupportedAttachmentNameFor("clip.mp4", { ...oldHost, mp4: true }), true);
+    // A protocol 6 peer reads at most 64 capabilities, so the capability is advertised from protocol 7.
+    const legacy = legacyTeamCapabilities(TEAM_CURRENT_CAPABILITIES);
+    assert.ok(legacy.length <= 64);
+    assert.equal(legacy.includes(TEAM_MP4_ATTACHMENTS_CAPABILITY), false);
+    assert.equal(teamCapabilitiesForProtocol(7).includes(TEAM_MP4_ATTACHMENTS_CAPABILITY), true);
 
     return {
       status: "pass",
