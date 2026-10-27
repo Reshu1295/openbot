@@ -2019,7 +2019,9 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
   }
 
   #appendThought(thread: AcpThread, turn: AcpTurn, text: string): void {
-    this.#completeMessage(thread, turn, "commentary");
+    /* A thought is not a step boundary: a model can stream its reasoning between the tokens of one
+       answer. Ending the answer here cut it mid-word into commentary items (#3351). A tool call or
+       the end of the turn still assigns the open text its phase. */
     /* A delta carries no phase, so the item has to be opened as `commentary` first — otherwise the
        thought lands in an ordinary agentMessage and renders as a chat bubble. */
     if (!turn.thoughtStarted) {
