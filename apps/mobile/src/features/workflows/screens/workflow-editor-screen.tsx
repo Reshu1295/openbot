@@ -24,6 +24,7 @@ import {
   draftChanged,
   draftFrom,
   draftGraph,
+  draftGraphChanged,
   useWorkflowDraft,
   type WorkflowDraft,
 } from "@/features/workflows/model/workflow-draft";
@@ -84,7 +85,9 @@ function EditorStepRow({
   const flowList: FlowList | null = list && list !== "loose" ? list : null;
   const actions: MenuAction[] = loose
     ? [
-        { id: "connect", title: t("mobile.workflow.editor.connect"), image: "plus" },
+        ...(node.kind === "condition"
+          ? []
+          : [{ id: "connect", title: t("mobile.workflow.editor.connect"), image: "plus" } satisfies MenuAction]),
         {
           id: "delete-group",
           title: "",
@@ -243,7 +246,7 @@ export function WorkflowEditorScreen() {
   const danger = String(useCSSVariable("--openbot-danger-text"));
   const detail = useWorkflowDetail(serverId, workflowId ?? "");
   const draft = useWorkflowDraft((state) => state.draft);
-  const { start, setTitle } = useWorkflowDraft.getState();
+  const { start, setTitle, graphSaved } = useWorkflowDraft.getState();
   const agents = useMobileWorkspaceSelector((current) => current.agents);
   const serverAgents = agents.filter((agent) => agent.serverId === serverId);
   const { createWorkflow, saveWorkflowGraph, renameWorkflow } = useMobileWorkspaceActions();
@@ -309,15 +312,18 @@ export function WorkflowEditorScreen() {
         finish(created.summary.id);
         return;
       }
-      const result = await saveWorkflowGraph(
-        { workflowId: draft.workflowId, baseRevision: base, graph: draftGraph(draft) },
-        serverId,
-      );
-      if (!result.ok) {
-        askAboutConflict(result.conflict);
-        return;
+      if (draftGraphChanged(draft)) {
+        const result = await saveWorkflowGraph(
+          { workflowId: draft.workflowId, baseRevision: base, graph: draftGraph(draft) },
+          serverId,
+        );
+        if (!result.ok) {
+          askAboutConflict(result.conflict);
+          return;
+        }
+        graphSaved(result.revision);
       }
-      if (title !== loaded?.summary.title) await renameWorkflow({ workflowId: draft.workflowId, title }, serverId);
+      if (title !== draft.savedTitle) await renameWorkflow({ workflowId: draft.workflowId, title }, serverId);
       finish(draft.workflowId);
     } catch (error) {
       void haptics.notification("error");

@@ -11,7 +11,7 @@ import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams } from "expo-router";
 import { Typography } from "heroui-native";
 import Check from "lucide-react-native/icons/check";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "react-native";
 import { useCSSVariable } from "uniwind";
 import { RoutineScheduleFields } from "@/features/agents/components/routine-schedule-fields";
@@ -57,6 +57,8 @@ export function WorkflowTriggerScreen() {
   const [schedule, setScheduleDraft] = useState<RoutineScheduleDraft>(() =>
     routineScheduleToDraft(node?.schedule ?? NEW_SCHEDULE),
   );
+  // The page starts from the last valid schedule, so a problem from an earlier visit is gone.
+  useEffect(() => setTriggerProblem(false), [setTriggerProblem]);
   if (!draft || !node)
     return (
       <SettingsContent>

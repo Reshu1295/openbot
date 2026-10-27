@@ -82,6 +82,7 @@ export const messages = {
   "mobile.workflow.webhook.secretFailed": "Impossible de créer un secret",
   "mobile.workflow.output.notify": "Notification",
   "mobile.workflow.output.channel": "Messagerie",
+  "mobile.workflow.output.file": "Fichier",
   "mobile.workflow.status.running": "En cours",
   "mobile.workflow.status.approval": "Vous attend",
   "mobile.workflow.status.stopping": "Arrêt",

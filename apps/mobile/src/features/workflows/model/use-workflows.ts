@@ -9,7 +9,7 @@ import {
 import { queryKeys } from "@/features/workspace/model/query-keys";
 
 /** The server is online and serves `workflows-v1`. */
-export function useWorkflowsAvailable(serverId: string) {
+function useWorkflowsAvailable(serverId: string) {
   const online = useMobileWorkspaceSelector((current) =>
     current.servers.some((server) => server.id === serverId && server.state === "online"),
   );

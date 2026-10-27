@@ -13,6 +13,7 @@ import {
   connectStep,
   type FlowList,
   graphWithOutline,
+  hasCondition,
   insertCondition,
   insertStep,
   moveStep,
@@ -36,7 +37,8 @@ export interface WorkflowDraft {
   outline: WorkflowOutline | null;
   mode: WorkflowEditMode;
   /** The title and graph as saved, to tell a change from the saved workflow. */
-  saved: string;
+  savedTitle: string;
+  savedGraph: string;
   /** The path of the condition that the outline shows. */
   branch: WorkflowBranch;
   /** The schedule on the trigger page cannot be saved, such as a custom schedule without an expression. */
@@ -54,14 +56,14 @@ const NEW_FIELDS: Record<AddableKind, Record<string, WorkflowFieldValue>> = {
 };
 
 /** A new manual workflow: one trigger, as the desktop starts one. */
-export const NEW_WORKFLOW_GRAPH: WorkflowGraph = {
+const NEW_WORKFLOW_GRAPH: WorkflowGraph = {
   nodes: [{ id: "trigger-start", kind: "trigger", at: { x: 0, y: 0 }, fields: { trigger: "manual" } }],
   edges: [],
   strokes: [],
 };
 
-function savedValue(title: string, graph: WorkflowGraph, outline: WorkflowOutline | null): string {
-  return JSON.stringify({ title: title.trim(), graph: outline ? graphWithOutline(graph, outline) : graph });
+function graphValue(graph: WorkflowGraph, outline: WorkflowOutline | null): string {
+  return JSON.stringify(outline ? graphWithOutline(graph, outline) : graph);
 }
 
 export function draftFrom(serverId: string, detail: WorkflowDetail | null, title = ""): WorkflowDraft {
@@ -76,7 +78,8 @@ export function draftFrom(serverId: string, detail: WorkflowDetail | null, title
     graph,
     outline,
     mode: detail?.needsNewerApp ? "read-only" : outline ? "outline" : "fields",
-    saved: savedValue(name, graph, outline),
+    savedTitle: name.trim(),
+    savedGraph: graphValue(graph, outline),
     branch: "yes",
     triggerProblem: false,
   };
@@ -87,8 +90,12 @@ export function draftGraph(draft: WorkflowDraft): WorkflowGraph {
   return draft.outline ? graphWithOutline(draft.graph, draft.outline) : draft.graph;
 }
 
+export function draftGraphChanged(draft: WorkflowDraft): boolean {
+  return graphValue(draft.graph, draft.outline) !== draft.savedGraph;
+}
+
 export function draftChanged(draft: WorkflowDraft): boolean {
-  return savedValue(draft.title, draft.graph, draft.outline) !== draft.saved;
+  return draft.title.trim() !== draft.savedTitle || draftGraphChanged(draft);
 }
 
 interface DraftStore {
@@ -96,6 +103,8 @@ interface DraftStore {
   start: (draft: WorkflowDraft) => void;
   clear: () => void;
   setTitle: (title: string) => void;
+  /** The graph is saved as `revision`: a later save starts from it. */
+  graphSaved: (revision: number) => void;
   setBranch: (branch: WorkflowBranch) => void;
   setTriggerProblem: (problem: boolean) => void;
   /** Sets fields of a node; `undefined` removes a field. */
@@ -140,6 +149,11 @@ export const useWorkflowDraft = create<DraftStore>((set, get) => {
       const draft = get().draft;
       if (draft) set({ draft: { ...draft, title } });
     },
+    graphSaved: (revision) => {
+      const draft = get().draft;
+      if (draft)
+        set({ draft: { ...draft, baseRevision: revision, savedGraph: graphValue(draft.graph, draft.outline) } });
+    },
     setBranch: (branch) => {
       const draft = get().draft;
       if (draft) set({ draft: { ...draft, branch } });
@@ -175,7 +189,7 @@ export const useWorkflowDraft = create<DraftStore>((set, get) => {
       const added = changeOutline((draft, outline) => {
         const next =
           kind === "condition"
-            ? outline.condition || list !== "main"
+            ? hasCondition(draft.graph) || list !== "main"
               ? null
               : insertCondition(draft.graph, outline, index, node)
             : insertStep(draft.graph, outline, list, index, node);

@@ -79,6 +79,7 @@ export const messages = {
   "mobile.workflow.webhook.secretFailed": "无法生成密钥",
   "mobile.workflow.output.notify": "通知",
   "mobile.workflow.output.channel": "消息渠道",
+  "mobile.workflow.output.file": "文件",
   "mobile.workflow.status.running": "运行中",
   "mobile.workflow.status.approval": "等你处理",
   "mobile.workflow.status.stopping": "正在停止",

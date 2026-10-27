@@ -81,6 +81,7 @@ export const messages = {
   "mobile.workflow.webhook.secretFailed": "Gizli anahtar oluşturulamadı",
   "mobile.workflow.output.notify": "Bildirim",
   "mobile.workflow.output.channel": "Mesajlaşma yeri",
+  "mobile.workflow.output.file": "Dosya",
   "mobile.workflow.status.running": "Çalışıyor",
   "mobile.workflow.status.approval": "Sizi bekliyor",
   "mobile.workflow.status.stopping": "Durduruluyor",

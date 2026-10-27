@@ -79,6 +79,7 @@ export const messages = defineMessages("mobile.workflow", {
   "mobile.workflow.webhook.secretFailed": "Could not make a secret",
   "mobile.workflow.output.notify": "Notification",
   "mobile.workflow.output.channel": "Messaging place",
+  "mobile.workflow.output.file": "File",
   "mobile.workflow.status.running": "Running",
   "mobile.workflow.status.approval": "Waiting for you",
   "mobile.workflow.status.stopping": "Stopping",

@@ -27,7 +27,7 @@ import { isOneOf } from "@openbot/contracts/runtime-values";
  */
 
 /** The step kinds that the phone shows, changes and moves. */
-export const OUTLINE_KINDS = [
+const OUTLINE_KINDS = [
   "trigger",
   "agent",
   "llm",
@@ -83,11 +83,11 @@ export type OutlineProblem =
   /** A prompt feeds the next step of its list, and there is none. */
   "prompt-target";
 
-export function isOutlineKind(kind: WorkflowNodeKind): kind is OutlineKind {
+function isOutlineKind(kind: WorkflowNodeKind): kind is OutlineKind {
   return isOneOf(OUTLINE_KINDS, kind);
 }
 
-export function stepNodes(graph: WorkflowGraph): WorkflowNode[] {
+function stepNodes(graph: WorkflowGraph): WorkflowNode[] {
   return graph.nodes.filter((node) => isWorkflowStepKind(node.kind));
 }
 
@@ -268,12 +268,12 @@ export function workflowOutline(graph: WorkflowGraph): WorkflowOutline | null {
 }
 
 /** The id that the desktop canvas gives an edge, so both apps write the same edge once. */
-export function workflowEdgeId(from: string, to: string, branch?: WorkflowBranch): string {
+function workflowEdgeId(from: string, to: string, branch?: WorkflowBranch): string {
   return `${from}${branch ? `.${branch}` : ""}>${to}:text`;
 }
 
 /** The edges of an outline: the flow, each output from the step before it, and each prompt to the next step. */
-export function outlineEdges(outline: WorkflowOutline, graph: WorkflowGraph): WorkflowEdge[] {
+function outlineEdges(outline: WorkflowOutline, graph: WorkflowGraph): WorkflowEdge[] {
   const kinds = new Map(graph.nodes.map((node) => [node.id, node.kind]));
   const edges: WorkflowEdge[] = [];
   const link = (from: string, to: string, branch?: WorkflowBranch) =>
@@ -337,7 +337,7 @@ export function outlineProblems(outline: WorkflowOutline, graph: WorkflowGraph):
 }
 
 /** The step ids in run order: the trigger, the steps, the condition, yes, no, then after the join. */
-export function outlineOrder(outline: WorkflowOutline): string[] {
+function outlineOrder(outline: WorkflowOutline): string[] {
   return [
     outline.trigger,
     ...outline.main,
@@ -381,7 +381,7 @@ const LANE_OFFSET = 200;
 const SNAP = 8;
 const snap = (value: number) => Math.round(value / SNAP) * SNAP;
 
-export function nodeWidth(node: WorkflowNode): number {
+function nodeWidth(node: WorkflowNode): number {
   return node.size?.width ?? KIND_WIDTH[node.kind] ?? DEFAULT_WIDTH;
 }
 
@@ -453,9 +453,15 @@ export function insertCondition(
   };
 }
 
+/** Whether the graph has a condition, in the flow or loose. A workflow has one condition on the phone. */
+export function hasCondition(graph: WorkflowGraph): boolean {
+  return graph.nodes.some((node) => node.kind === "condition");
+}
+
 /**
  * Connects a loose step: it goes to the end of the steps, after the join when there is a condition.
- * Its own edges go, as the outline writes its edges.
+ * Its own edges go, as the outline writes its edges. A loose condition does not connect: its paths
+ * have no steps on the phone.
  */
 export function connectStep(
   graph: WorkflowGraph,
@@ -463,7 +469,7 @@ export function connectStep(
   id: string,
 ): { graph: WorkflowGraph; outline: WorkflowOutline } | null {
   const node = graph.nodes.find((item) => item.id === id);
-  if (!node || !outline.loose.includes(id)) return null;
+  if (!node || node.kind === "condition" || !outline.loose.includes(id)) return null;
   const list: FlowList = outline.condition ? "after" : "main";
   const without: WorkflowGraph = {
     ...graph,
@@ -532,9 +538,4 @@ export function canMove(outline: WorkflowOutline, id: string, direction: -1 | 1)
   if (!list || list === "loose") return false;
   const index = outline[list].indexOf(id);
   return index + direction >= 0 && index + direction < outline[list].length;
-}
-
-/** Whether a node is a loose step of the outline. */
-export function isLoose(outline: WorkflowOutline | null, id: string): boolean {
-  return Boolean(outline?.loose.includes(id));
 }

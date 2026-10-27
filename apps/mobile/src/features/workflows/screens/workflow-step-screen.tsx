@@ -190,16 +190,18 @@ function OutputChoice({ node }: { node: WorkflowNode }) {
   const { t } = useText();
   const accent = String(useCSSVariable("--openbot-accent"));
   const setFields = useWorkflowDraft((state) => state.setFields);
-  const channel = text(node, "target") === "channel";
+  const target = text(node, "target");
+  const channel = target === "channel";
+  const file = target === "file";
   return (
     <SettingsSection
       title={t("mobile.workflow.step.sendTo")}
       footer={channel ? t("mobile.workflow.step.channelHint") : undefined}
     >
       <SettingsRow
-        checked={!channel}
+        checked={!channel && !file}
         disclosure={false}
-        trailing={!channel ? <Check size={18} color={accent} strokeWidth={2} /> : null}
+        trailing={!channel && !file ? <Check size={18} color={accent} strokeWidth={2} /> : null}
         onPress={() => setFields(node.id, { target: "notify", connectionId: undefined, placeId: undefined })}
       >
         <Typography.Paragraph>{t("mobile.workflow.output.notify")}</Typography.Paragraph>
@@ -207,6 +209,11 @@ function OutputChoice({ node }: { node: WorkflowNode }) {
       {channel ? (
         <SettingsRow checked disclosure={false} trailing={<Check size={18} color={accent} strokeWidth={2} />}>
           <Typography.Paragraph>{t("mobile.workflow.output.channel")}</Typography.Paragraph>
+        </SettingsRow>
+      ) : null}
+      {file ? (
+        <SettingsRow checked disclosure={false} trailing={<Check size={18} color={accent} strokeWidth={2} />}>
+          <Typography.Paragraph>{t("mobile.workflow.output.file")}</Typography.Paragraph>
         </SettingsRow>
       ) : null}
     </SettingsSection>
@@ -330,7 +337,7 @@ export function WorkflowStepScreen() {
               <Typography.Paragraph>{t("mobile.workflow.editor.moveDown")}</Typography.Paragraph>
             </SettingsRow>
           ) : null}
-          {loose ? (
+          {loose && node.kind !== "condition" ? (
             <SettingsRow
               disclosure={false}
               onPress={() => {

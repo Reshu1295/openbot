@@ -14,6 +14,7 @@ import {
   type AddableKind,
   FLOW_LISTS,
   type FlowList,
+  hasCondition,
 } from "@/features/workflows/model/workflow-outline";
 import { kindLabel } from "@/features/workflows/model/workflow-steps";
 import { haptics } from "@/shared/lib/haptics";
@@ -37,7 +38,7 @@ export function WorkflowAddStepScreen() {
   const list: FlowList = FLOW_LISTS.find((name) => name === params.list) ?? "main";
   const index = Number(params.index) || 0;
   // A workflow has one condition on the phone, and it starts from the steps before the paths.
-  const conditionAllowed = list === "main" && !draft?.outline?.condition;
+  const conditionAllowed = list === "main" && draft !== null && !hasCondition(draft.graph);
   const kinds = ADDABLE_KINDS.filter((kind) => kind !== "condition" || conditionAllowed);
   return (
     <SettingsContent>

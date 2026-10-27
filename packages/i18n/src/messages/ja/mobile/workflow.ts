@@ -83,6 +83,7 @@ export const messages = {
   "mobile.workflow.webhook.secretFailed": "シークレットを作成できませんでした",
   "mobile.workflow.output.notify": "通知",
   "mobile.workflow.output.channel": "メッセージの送信先",
+  "mobile.workflow.output.file": "ファイル",
   "mobile.workflow.status.running": "実行中",
   "mobile.workflow.status.approval": "対応待ち",
   "mobile.workflow.status.stopping": "停止中",

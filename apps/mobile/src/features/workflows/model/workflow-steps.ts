@@ -130,7 +130,9 @@ export function stepText(node: WorkflowNode, t: MobileTranslate): string {
     case "output":
       return text(node, "target") === "channel"
         ? t("mobile.workflow.output.channel")
-        : t("mobile.workflow.output.notify");
+        : text(node, "target") === "file"
+          ? t("mobile.workflow.output.file")
+          : t("mobile.workflow.output.notify");
     default:
       return t("mobile.workflow.step.computerOnly");
   }

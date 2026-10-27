@@ -10,7 +10,7 @@ import { useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 
 /** One step of a workflow, read-only: its kind and what it does. */
-export function WorkflowStepLine({
+function WorkflowStepLine({
   node,
   agents,
   inset = false,

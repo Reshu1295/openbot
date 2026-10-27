@@ -80,6 +80,7 @@ export const messages = {
   "mobile.workflow.webhook.secretFailed": "시크릿을 만들 수 없어요",
   "mobile.workflow.output.notify": "알림",
   "mobile.workflow.output.channel": "메시지 채널",
+  "mobile.workflow.output.file": "파일",
   "mobile.workflow.status.running": "실행 중",
   "mobile.workflow.status.approval": "확인 대기 중",
   "mobile.workflow.status.stopping": "중지하는 중",
