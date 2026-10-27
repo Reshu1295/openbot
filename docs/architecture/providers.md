@@ -561,7 +561,9 @@ the primary window. The reader also sends `GetPlanInfo`: on a merged plan (`isMe
 subscription, the included usage covers Grok and Composer only, so `totalPercentUsed` alone fills the
 primary window and the dock shows no other models window, as the Cursor app does. The Cursor app
 keeps the split for a merged Enterprise team plan; the reader cannot see the membership type, so it
-does not. A failed `GetPlanInfo` keeps the split. No token, a 401 or 403, or no percentage gives no reading. The dock poll calls
+does not. That merged total is the Grok plan quota, so the reading sets `sharedQuotaWith: "grok"`
+(not sent on the Team API): the page rail then shows the Grok ring alone when Grok has one, and its
+hover card lists the Cursor reading too. A failed `GetPlanInfo` keeps the split. No token, a 401 or 403, or no percentage gives no reading. The dock poll calls
 `readCursorUsage` directly, as it does for OpenCode, so it does not start the CLI for a reading.
 `scripts/cursor-usage-e2e.ts` covers it.
 

@@ -29,6 +29,23 @@ const usageRows = accountUsageProviderRows({
   ],
 });
 
+/** A merged Cursor plan counts the Grok plan quota: one Grok ring, and its card lists Cursor too. */
+const sharedQuotaRows = accountUsageProviderRows({
+  limits: [
+    {
+      id: "grok",
+      primary: null,
+      secondary: { usedPercent: 64, windowDurationMins: 10_080, resetsAt: nowSeconds + 3 * 86_400 },
+    },
+    {
+      id: "cursor",
+      primary: { usedPercent: 64, windowDurationMins: 43_200, resetsAt: nowSeconds + 18 * 86_400 },
+      secondary: null,
+      sharedQuotaWith: "grok",
+    },
+  ],
+});
+
 /** An example answer. Each agent writes its own text, which the card shows as it is. */
 const customAgentUsage: CustomAgentUsageRailRow[] = [
   { id: "devin", name: "Devin", text: "Plan: Team\nACUs used this cycle: 42 of 250\nThe cycle resets in 12 days." },
@@ -39,6 +56,7 @@ function RailPreview(props: {
   updateReady?: boolean;
   logo?: PageRailProps["logo"];
   customAgentUsage?: readonly CustomAgentUsageRailRow[];
+  usageRows?: PageRailProps["usageRows"];
 }) {
   const { t } = useText();
   const [current, setCurrent] = createSignal<PageRailPage | null>("agents");
@@ -54,7 +72,7 @@ function RailPreview(props: {
           onPinChange={(page, pin) =>
             setPinned((pages) => (pin ? [...pages, page] : pages.filter((other) => other !== page)))
           }
-          usageRows={usageRows}
+          usageRows={props.usageRows ?? usageRows}
           customAgentUsage={props.customAgentUsage}
           onAgents={() => setCurrent("agents")}
           onRoutines={() => setCurrent("routines")}
@@ -100,6 +118,11 @@ export const SettingsNotice: Story = {
 /** A custom agent with a usage command: its logo with no ring. Hover it to see the answer. */
 export const CustomAgentUsage: Story = {
   args: { customAgentUsage },
+};
+
+/** Grok and a merged Cursor plan share one quota, so the rail shows the Grok ring alone. */
+export const SharedQuota: Story = {
+  args: { usageRows: sharedQuotaRows },
 };
 
 /** The web client: no macOS window buttons, so the logo in the top row links to the OpenBot site. */

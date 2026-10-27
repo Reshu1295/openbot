@@ -5,7 +5,8 @@
 // the access token of the CLI's sign-in. The answer splits the plan into Cursor's own models
 // (`autoPercentUsed`) and every other model (`apiPercentUsed`) for one billing cycle. The included
 // usage of a merged plan (`GetPlanInfo` `isMerged`) covers Grok and Composer only, so its reading is
-// the total alone, as in the Cursor app.
+// the total alone, as in the Cursor app. That total is the quota of the Grok plan, so the reading
+// names Grok as sharing it, and the rail shows one ring for both.
 
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -165,5 +166,9 @@ function cursorRateLimits(value: unknown, merged: boolean): AccountRateLimitsRea
   const primary = window(split ? autoPercentUsed : totalPercentUsed);
   const secondary = split ? window(apiPercentUsed) : null;
   if (!primary && !secondary) return NO_USAGE;
-  return { rateLimits: { limitId: "cursor", primary, secondary }, rateLimitsByLimitId: null };
+  return {
+    rateLimits: { limitId: "cursor", primary, secondary },
+    rateLimitsByLimitId: null,
+    ...(merged ? { sharedQuotaWith: "grok" as const } : {}),
+  };
 }
