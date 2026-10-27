@@ -177,7 +177,10 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
   const [query, setQuery] = createSignal("");
   const valueId = `ui-search-select-value-${createUniqueId()}`;
   let input: HTMLInputElement | undefined;
-  const key = (option: Option) => props.optionValue?.(option) ?? String(option);
+  const press = createPressedPopupCue();
+  // Kobalte finds a row with an unescaped `[data-key="…"]` selector, to scroll it into view and to
+  // name the active row. A key with `"`, `\` or U+0000 matches no row, so the key is encoded.
+  const key = (option: Option) => encodeURIComponent(props.optionValue?.(option) ?? String(option));
   const isCurrent = (option: Option) => props.value !== null && key(option) === key(props.value);
   const matches = createMemo(() => {
     const text = searchText(query());
@@ -200,9 +203,14 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
           class={cx("ui-select-trigger", props.class)}
           data-size={props.size ?? "md"}
           data-slot="select-trigger"
+          data-cuelume-open={press.cue()}
+          data-cuelume-emphasis="subtle"
+          ref={press.ref}
           aria-label={props["aria-label"]}
           aria-labelledby={
-            props["aria-label"] ? undefined : [props["aria-labelledby"], valueId].filter(Boolean).join(" ")
+            props["aria-label"]
+              ? undefined
+              : [props["aria-labelledby"], props.children ? undefined : valueId].filter(Boolean).join(" ") || undefined
           }
           disabled={props.disabled}
           onKeyDown={(event: KeyboardEvent) => {
@@ -253,6 +261,7 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
                 item={item.item}
                 class="ui-select-item"
                 data-slot="select-item"
+                data-cuelume-select=""
                 data-checked={isCurrent(item.item.rawValue) ? "" : undefined}
                 // The combobox has no selection, so the search field starts empty. The row says it is the value.
                 aria-selected={isCurrent(item.item.rawValue) ? "true" : "false"}
