@@ -60,7 +60,12 @@ at or above its level alerts once, and again each day while it stays there; CPU 
 five readings. The alert ends when the use goes 5 points below the level. The host sends the
 `machine-alert` event only to the event sockets of that member, and again to each device of theirs
 that connects while the alert is in force; the desktop shows each alert id once, as a notification.
-When the host is a desktop app and its owner gets the alert, that app shows it directly.
+When the host is a desktop app and its owner gets the alert, that app shows it directly. For an
+owner or admin of the selected server, the sidebar machine card (`features/sidebar/machine-card.ts`)
+reads the use and the levels at start, every five minutes, and when Server settings closes. It shows
+the metric furthest above its level in place of the storage card, which then does not show; far
+above the level (95%, or 10 points above a higher level) it is red and cannot be closed. A closed card
+stays closed for that metric and level until the use goes below every level.
 
 ### Hosted sites per server
 
