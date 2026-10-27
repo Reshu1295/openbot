@@ -185,20 +185,19 @@ export async function routeProviders(
               : wireApiKeyInput,
           body,
         );
-        // A key-only provider runs on Pi. The download outlasts the request, so the route only starts it.
-        await runCauseEffect(runtimes.startKeyProviderCli(input.provider));
-        // The same step as the local handler: the key and the process that uses it change together.
-        await runCauseEffect(
-          service.changeProviderCredential(input.provider, () =>
-            credentials
-              .set(input.provider, input.key)
-              .pipe(
-                Effect.mapError(
-                  (error) => new AgentLifecycleFailed({ operation: "changeProviderCredential", cause: error.cause }),
-                ),
+        const save = () =>
+          credentials
+            .set(input.provider, input.key)
+            .pipe(
+              Effect.mapError(
+                (error) => new AgentLifecycleFailed({ operation: "changeProviderCredential", cause: error.cause }),
               ),
-          ),
-        );
+            );
+        // A key-only provider runs on Pi. The download outlasts the request, so the route only starts it.
+        // Until Pi is ready no process uses the key, so only the key changes; Pi then starts the provider.
+        const piPending = await runCauseEffect(runtimes.startKeyProviderCli(input.provider));
+        // Otherwise the same step as the local handler: the key and the process that uses it change together.
+        await runCauseEffect(piPending ? save() : service.changeProviderCredential(input.provider, save));
         return json(200, {});
       }
       case PROVIDERS_V8_ROUTES.apiKeyClear:

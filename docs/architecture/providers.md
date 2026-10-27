@@ -631,8 +631,9 @@ The host hides a provider from a peer below v8 when that protocol's frozen list 
 from old peers with no change there. Do not edit those lists. A key-only provider
 (`KEY_ONLY_PROVIDERS`, now Inception, DeepSeek and OpenRouter) is not in any frozen list, so a v8
 peer is the first to see it. The `providers-v8` key routes read, set and clear its key. A key set
-there starts the host's Pi download when Pi cannot start, and does not wait for it: the provider is
-checked again when Pi is ready. The `providers-v5` and `providers-v1` key routes refuse its key.
+there starts the host's Pi download when Pi cannot start, and does not wait for it. Until Pi is
+ready no process uses the key, so the route saves only the key; the provider is checked again when Pi
+is ready. The `providers-v5` and `providers-v1` key routes refuse its key.
 
 A v8 client keeps the agents of a provider that its build does not know (`ForeignProviderId`,
 `AgentProviderRef`). The agent stays in the list and chat works, because the host runs it. The

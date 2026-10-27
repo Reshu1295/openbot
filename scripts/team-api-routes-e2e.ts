@@ -649,7 +649,10 @@ try {
           startProviderCodeLogin: unused("providers.startProviderCodeLogin"),
           submitProviderCodeLogin: unused("providers.submitProviderCodeLogin"),
           cancelProviderCodeLogin: unused("providers.cancelProviderCodeLogin"),
-          changeProviderCredential: (_provider, change) => change().pipe(Effect.as(NO_STATUS)),
+          changeProviderCredential: (provider, change) => {
+            record("changeProviderCredential", provider);
+            return change().pipe(Effect.as(NO_STATUS));
+          },
           clearProviderCredential: (_provider, change) => change().pipe(Effect.as(NO_STATUS)),
         },
         credentials: {
@@ -670,7 +673,12 @@ try {
           download: unused("providers.runtimes.download"),
           cancel: unused("providers.runtimes.cancel"),
           checkForUpdates: unused("providers.runtimes.checkForUpdates"),
-          startKeyProviderCli: (provider) => Effect.sync(() => record("startKeyProviderCli", provider)),
+          // Pi is ready for DeepSeek. For Inception it is still to come.
+          startKeyProviderCli: (provider) =>
+            Effect.sync(() => {
+              record("startKeyProviderCli", provider);
+              return provider === "inception";
+            }),
         },
         customProviders: {
           list: unused("providers.customProviders.list"),
@@ -1770,6 +1778,7 @@ try {
         set.status === 200 &&
         isDeepStrictEqual(callsOf("setProviderKey"), [["deepseek", key]]) &&
         isDeepStrictEqual(callsOf("startKeyProviderCli"), [["deepseek"]]) &&
+        isDeepStrictEqual(callsOf("changeProviderCredential"), [["deepseek"]]) &&
         after.status === 200 &&
         field(after.body, "status") === "saved",
       [summary(before), summary(set), summary(after)],
@@ -1797,6 +1806,15 @@ try {
       "providers-v5 refuses a key-only provider's key, a member gets 403, and neither saves a key",
       v5.status === 400 && member.status === 403 && callsOf("setProviderKey").length === 1,
       [summary(v5), summary(member)],
+    );
+    // No Pi process runs while Pi downloads, so a restart of the provider would fail on the missing CLI.
+    const pending = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, { ...v8, json: { provider: "inception", key } });
+    check(
+      "while the host downloads Pi, a key-only provider's key is saved without a provider restart",
+      pending.status === 200 &&
+        isDeepStrictEqual(callsOf("setProviderKey").at(-1), ["inception", key]) &&
+        isDeepStrictEqual(callsOf("changeProviderCredential"), [["deepseek"]]),
+      summary(pending),
     );
   }
 
