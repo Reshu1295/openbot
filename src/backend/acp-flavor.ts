@@ -64,6 +64,8 @@ export interface AcpFlavor {
   mcpServersPerDirectory?: true;
   /** OpenBot compacts by replacing the session, for an agent that reports `usage_update` and has no compact request. */
   contextCompaction?: "handoff";
+  /** A whole answer chunk that is the agent's own transport error, not answer text. OpenBot drops it. */
+  noiseChunk?: RegExp;
 }
 
 /** The protocol's own behavior: Grok and Cline. */
@@ -76,6 +78,9 @@ export const DEFAULT_ACP_FLAVOR: AcpFlavor = {};
 export const CURSOR_ACP_FLAVOR: AcpFlavor = {
   sessionNotFound: (error, sessionId) =>
     error.code === -32602 ? isRecord(error.data) && error.data.message === `Session "${sessionId}" not found` : null,
+  // Cursor 2026.10.22-27dcf5f sends "\n\nError: RetriableError: WritableIterable is closed" as one
+  // chunk after a turn that succeeded, and then ends the turn (#3334). Only the full chunk matches.
+  noiseChunk: /^\s*Error: (?:[\w$]+: )?WritableIterable is closed\s*$/u,
 };
 
 /**

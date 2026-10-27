@@ -604,6 +604,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:opencode-service-failure
 
+      - name: Run the Cursor stream closed E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:cursor-stream-closed
+
       - name: Run the Cline free models E2E test
         if: ${{ !cancelled() }}
         run: bun run test:cline-free-models
@@ -633,6 +637,7 @@ jobs:
             .openbot-build/opencode-expired-key-e2e/
             .openbot-build/opencode-downgraded-session-e2e/
             .openbot-build/opencode-service-failure-e2e/
+            .openbot-build/cursor-stream-closed-e2e/
             .openbot-build/cline-free-models-e2e/
             .openbot-build/provider-transcript-replay-e2e/
           if-no-files-found: ignore
