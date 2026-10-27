@@ -100,12 +100,16 @@ export function MachineResources(props: MachineResourcesProps) {
     // settings while they name one. The owner gets it then, as the picker shows.
     const stored = saved.responsibleMemberId;
     const stale = stored !== null && props.members.length > 0 && !recipients().some((member) => member.id === stored);
-    try {
-      await props.onChangeAlerts({ ...saved, ...(stale ? { responsibleMemberId: null } : {}), ...change });
-    } finally {
-      setDraftLevels({});
-    }
+    // The caller shows the new settings at once, so a second change in a row builds on this one.
+    await props.onChangeAlerts({ ...saved, ...(stale ? { responsibleMemberId: null } : {}), ...change });
   }
+
+  /** The slider shows its saved level again; another slider that the user still drags keeps its value. */
+  const clearDraft = (metric: MachineMetric) =>
+    setDraftLevels((levels) => {
+      const { [metric]: _, ...rest } = levels;
+      return rest;
+    });
 
   return (
     <section class="storage-section machine-resources" aria-labelledby={headingId}>
@@ -249,7 +253,7 @@ export function MachineResources(props: MachineResourcesProps) {
                 onChangeEnd={(value) => {
                   if (props.alerts && value !== machineAlertLevel(props.alerts, metric))
                     void save({ [LEVEL_FIELDS[metric]]: value });
-                  else setDraftLevels({});
+                  clearDraft(metric);
                 }}
               />
             )}

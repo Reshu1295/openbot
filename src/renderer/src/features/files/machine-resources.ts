@@ -67,18 +67,39 @@ export function createMachineResources(target: () => { serverId: string; canMana
     };
   });
 
+  // The settings show at once, so a second change in a row builds on the first, and the requests go
+  // to the host one at a time, in order. Only the answer to the newest request replaces the settings.
+  let queue: Promise<unknown> = Promise.resolve();
+  let latest = 0;
   async function saveAlerts(settings: MachineAlertSettings): Promise<void> {
     const admin = calls().hostAdmin;
     if (!admin) return;
     const { serverId } = target();
+    const request = ++latest;
+    setState((draft) => {
+      draft.alerts = settings;
+    });
+    const save = queue.then(() => admin.setMachineAlerts(settings, serverId));
+    queue = save.catch(() => undefined);
     try {
-      const saved = await admin.setMachineAlerts(settings, serverId);
-      if (target().serverId === serverId)
+      const saved = await save;
+      if (request === latest && target().serverId === serverId)
         setState((draft) => {
           draft.alerts = saved;
         });
     } catch (error) {
       actionToast.error(errorMessage(error, t("files.machine.saveFailed")));
+      // The panel shows what the host keeps, not the change that failed.
+      if (request === latest && target().serverId === serverId)
+        admin
+          .getMachineAlerts(serverId)
+          .then((alerts) => {
+            if (request === latest && target().serverId === serverId)
+              setState((draft) => {
+                draft.alerts = alerts;
+              });
+          })
+          .catch(() => undefined);
     }
   }
 

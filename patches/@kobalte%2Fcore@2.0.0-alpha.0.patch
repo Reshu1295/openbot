@@ -1,9 +1,3 @@
-diff --git a/node_modules/@kobalte/core/.bun-tag-dad57a39d44c9718 b/.bun-tag-dad57a39d44c9718
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-diff --git a/node_modules/@kobalte/core/.bun-tag-fe4e01c2845b95f9 b/.bun-tag-fe4e01c2845b95f9
-new file mode 100644
-index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/dist/button/BF7G04C6.js b/dist/button/BF7G04C6.js
 index 0b6db4ca43a66b973904697dcfbcf35bcea0e37e..04e535550b74cebef929fc483377550f2fa46803 100644
 --- a/dist/button/BF7G04C6.js
