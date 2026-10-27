@@ -34,7 +34,8 @@ export function AwaitingRepliesSection({
   agents: readonly MobileAgent[];
   self: MobileAgent | undefined;
   onHide: () => void;
-  onOpenReply: (deliveryId: string) => void;
+  /** Opens the steer action of an answer. Absent while no turn runs. */
+  onOpenReply: ((deliveryId: string) => void) | undefined;
 }) {
   const { t } = useText();
   const [secondaryColor, primaryColor] = useCSSVariable(["--openbot-text-grouped-secondary", "--openbot-text-primary"]);
@@ -59,7 +60,7 @@ export function AwaitingRepliesSection({
           return (
             <SettingsRow
               key={row.id}
-              {...(deliveryId ? { onPress: () => onOpenReply(deliveryId) } : {})}
+              {...(deliveryId && onOpenReply ? { onPress: () => onOpenReply(deliveryId) } : {})}
               leading={
                 agent ? (
                   <BloubAvatarThumbnail

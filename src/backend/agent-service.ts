@@ -4402,7 +4402,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
             Effect.sync(() => this.#emitError("message_preview_failed", failure.cause, agent.id)),
           ),
         );
-    yield* this.#steerWhenBusy(agent, task, delivery.delivery.id);
+    yield* this.#steerWhenBusy(agent, task, snapshot, delivery.delivery.id, true);
     if (!task) {
       this.#emit({ type: "agents-changed", agents: this.listAgents() });
       this.#conversation.emitConversation(snapshot);
@@ -4415,15 +4415,16 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
   /**
    * Takes a message that arrives while the agent works into the running turn, when the agent's
    * busy-message mode is "steer". The message is from the user or from another agent. A provider
-   * that cannot steer, or a routine run, keeps the message queued and says why on its row.
+   * that cannot steer, or a routine run, keeps the message queued; `explain` says why on its row.
    */
   readonly #steerWhenBusy = Effect.fn("AgentService.steerWhenBusy")(function* (
     this: AgentService,
     agent: AgentSummary,
     task: Pick<AgentThreadRecord, "taskId" | "threadId"> | null,
+    snapshot: ConversationSnapshot,
     deliveryId: string,
+    explain: boolean,
   ) {
-    const snapshot = this.#conversation.ensureSnapshot(agent.id, task?.threadId ?? agent.threadId);
     // A turn the user stopped is ending, and a message steered into it would end with it.
     const stoppedTurnId = task ? this.#tasks.stoppedTurn(task.taskId) : this.#stoppedTurns.get(agent.id);
     const steerTurnId =
@@ -4433,11 +4434,13 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         ? snapshot.activeTurnId
         : null;
     if (!steerTurnId) return;
-    if (agentProviderDescriptor(providerForAgent(agent)).steer !== "native")
-      yield* this.#markSteerFallback(agent.id, deliveryId, "provider-unsupported");
+    if (agentProviderDescriptor(providerForAgent(agent)).steer !== "native") {
+      if (explain) yield* this.#markSteerFallback(agent.id, deliveryId, "provider-unsupported");
+    }
     // A routine run's own session ends with the run, so a chat message waits for the next turn.
-    else if (!task && this.#conversation.routineSession(agent.id) !== undefined)
-      yield* this.#markSteerFallback(agent.id, deliveryId, "steer-failed");
+    else if (!task && this.#conversation.routineSession(agent.id) !== undefined) {
+      if (explain) yield* this.#markSteerFallback(agent.id, deliveryId, "steer-failed");
+    }
     // Not awaited: the message is already queued, and the sender is answered without the wait for
     // the provider.
     else
@@ -4448,12 +4451,16 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
 
   /**
    * A message from another agent follows the recipient's busy-message mode, as a message from the
-   * user does. Only a message for the recipient's own chat can go into its running turn.
+   * user does. Only a message for the recipient's own chat can go into its running turn. The person
+   * did not send it, so a message that cannot steer waits with no reason on its row.
    */
   #steerAgentMessage(recipientAgentId: string, deliveryId: string): Effect.Effect<void> {
     const agent = this.#store.list().find((item) => item.id === recipientAgentId);
-    if (!agent || this.#store.isHidden(agent.id) || !this.#mailbox.steersChatTurn(deliveryId)) return Effect.void;
-    return this.#steerWhenBusy(agent, null, deliveryId);
+    // A recipient with no loaded chat runs no turn, so its page is not read for this.
+    const snapshot = this.#conversation.snapshotToUpdate(recipientAgentId);
+    if (!agent || !snapshot || this.#store.isHidden(agent.id) || !this.#mailbox.steersChatTurn(deliveryId))
+      return Effect.void;
+    return this.#steerWhenBusy(agent, null, snapshot, deliveryId, false);
   }
 
   /**

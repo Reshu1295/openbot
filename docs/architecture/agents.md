@@ -422,9 +422,12 @@ takes the answers that are already in. Each end of a copy schedules a drain for 
 A message from another agent follows the recipient's busy-message mode, as a message from the
 person does. When the mode is "steer", the provider steers natively and the recipient runs a chat
 turn, `send_message` and the result relay take the message into that turn
-(`AgentService.#steerAgentMessage`). Channel, messaging and task work and a waiting answer stay
-queued (`MailboxStore.steersChatTurn`). The person can steer a queued answer into the running turn
-from the waiting block on desktop, the web and mobile; it has no other queue action.
+(`AgentService.#steerAgentMessage`). Channel, messaging and task work, and each answer to a request
+that went to two or more teammates, stay queued (`MailboxStore.steersChatTurn`), so those answers
+still start together. A message from an agent that cannot steer gets no fallback reason on its row.
+The person can steer any queued answer into the running turn from the waiting block on desktop, the
+web and mobile; it has no other queue action. That is the person's choice, so it can take one answer
+of a group before the others.
 
 This policy lives in `src/backend/agent/developer-instructions.ts` and is supplied on both thread
 start and resume. Codex receives `developerInstructions`; Claude and Pi append them to the system
