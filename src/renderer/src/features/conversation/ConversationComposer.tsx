@@ -388,6 +388,8 @@ export function ConversationComposer() {
                   title={channel ? t("chat.awaiting.subtasks") : undefined}
                   onDismiss={dismissAwaitingReplies}
                   onOpenAgent={props.onSelectAgent}
+                  // A channel's rows are its sub-tasks, not queued replies.
+                  onSteer={props.activeTurnId && !channel ? props.onSteerQueuedMessage : undefined}
                 />
               </Show>
               <Show when={waitsVisible() && props.onCancelWait}>

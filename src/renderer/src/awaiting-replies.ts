@@ -36,7 +36,7 @@ export function agentAwaitingReplies(input: AgentAwaitingInput): AwaitingReplyIt
       agent,
       name: agent?.name ?? t("chat.activity.agentFallback"),
       state,
-      ...(reply ? { preview: previewText(replyResult(reply.text)), detail: readsNext } : {}),
+      ...(reply ? { preview: previewText(replyResult(reply.text)), detail: readsNext, deliveryId: reply.id } : {}),
     };
   };
   // A failed question stays until the person writes again: then they have seen it.

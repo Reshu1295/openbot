@@ -78,6 +78,7 @@ function modelsRow(server: DetectedModelServer, saved: CustomProviderSummary | u
     added: true,
     savedModels: saved.models.map((model) => ({ id: model.id, name: model.name })),
     keyStored: saved.hasApiKey,
+    savedHeaderNames: saved.headerNames ?? [],
   };
 }
 

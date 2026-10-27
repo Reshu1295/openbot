@@ -67,8 +67,7 @@ export const messages = {
   "customProvider.field.baseUrl": "URL de base",
   "customProvider.field.apiKey": "Clé API",
   "customProvider.field.apiKeyHint": "Facultatif. Laissez vide si vous gérez l’authentification avec des en-têtes.",
-  "customProvider.field.apiKeyKeptHint":
-    "Une clé est enregistrée. Laissez ce champ vide pour la conserver, ainsi que les en-têtes enregistrés.",
+  "customProvider.field.apiKeyKeptHint": "Une clé est enregistrée. Laissez ce champ vide pour la conserver.",
   "customProvider.models": "Modèles",
   "customProvider.model.id": "ID du modèle {number}",
   "customProvider.model.name": "Nom d’affichage du modèle {number}",
@@ -79,6 +78,7 @@ export const messages = {
   "customProvider.header.name": "Nom de l’en-tête {number}",
   "customProvider.header.value": "Valeur de l’en-tête {number}",
   "customProvider.header.valuePlaceholder": "valeur",
+  "customProvider.header.keptPlaceholder": "Enregistrée. Laissez vide pour la conserver.",
   "customProvider.header.remove": "Supprimer l’en-tête {number}",
   "customProvider.header.add": "Ajouter un en-tête",
   "customProvider.submit": "Envoyer",
