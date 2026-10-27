@@ -7,7 +7,8 @@
 // It starts a thread from "New thread", renames it, closes and opens its tab, archives it and restores
 // it from the Archived list, archives it on "another device" (the bridge) and back, refuses a delete
 // while a turn runs, keeps the tabs after a reload, and deletes the thread with Undo and then for good.
-// A second thread checks that a reload during the Undo time does not lose its delete.
+// Text typed in a new thread and not sent stays when a turn of the agent's own chat ends, and after a
+// reload. A second thread checks that a reload during the Undo time does not lose its delete.
 // Each turn is a real provider turn, so the prompts are short. A thread that it started and did not
 // delete is deleted at the end.
 // Writes .openbot-build/agent-threads-e2e/report.json and screenshots.
@@ -15,7 +16,7 @@ import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { agentProviderDescriptor, isAgentProvider } from "@openbot/contracts/agent-providers";
-import type { AgentTask, AgentTasksSnapshot } from "@openbot/contracts/ipc";
+import type { AgentTask, AgentTasksSnapshot, QueueSnapshot } from "@openbot/contracts/ipc";
 import { translateFor } from "@openbot/i18n";
 import type { Locator } from "playwright-core";
 import { argument, connectChannelE2e, LONG_PROMPT, SHORT_PROMPT, waitFor, writeReport } from "./channel-e2e-support";
@@ -42,6 +43,7 @@ interface Report {
   undo?: { toast: boolean; archivedDuringUndo: boolean; tabBack: boolean; state: string };
   deleted?: { gone: boolean };
   deleteAcrossReload?: { taskId: string; hiddenAfterReload: boolean; gone: boolean };
+  unsentDraft?: { typedDuringTurn: boolean; afterTurn: string; afterSwitch: string; afterReload: string };
   pageErrors: string[];
   screenshots: string[];
   passed: boolean;
@@ -64,6 +66,17 @@ const button = (name: string) => page.getByRole("button", { name, exact: true })
 
 function listTasks(): Promise<AgentTasksSnapshot> {
   return page.evaluate((id) => window.openbot.agent.listTasks(id), agentId);
+}
+
+function listQueue(): Promise<QueueSnapshot> {
+  return page.evaluate((id) => window.openbot.agent.listQueue(id), agentId);
+}
+
+/** Whether a message of the agent's own chat waits or runs. */
+function ownChatRuns(snapshot: QueueSnapshot): boolean {
+  return snapshot.deliveries.some(
+    (delivery) => delivery.status === "queued" || delivery.status === "starting" || delivery.status === "running",
+  );
 }
 
 async function readTask(): Promise<AgentTask | undefined> {
@@ -258,7 +271,41 @@ try {
   report.deleted = { gone: true };
   await shot("10-deleted");
 
-  // 11. A reload during the Undo time does not lose the delete: the next start finishes it.
+  // 11. Text typed in a new thread and not sent stays when a turn of the agent's own chat ends, after
+  // the agent's own chat opens and the thread opens again, and after a reload (#3448).
+  const unsent = `Unsent ${crypto.randomUUID().slice(0, 4)}`;
+  await page.evaluate((input) => window.openbot.agent.sendMessage({ ...input, clientMessageId: crypto.randomUUID() }), {
+    agentId,
+    text: LONG_PROMPT,
+  });
+  await button(english("conversation.threads.new")).first().click();
+  const unsentComposer = page.getByRole("textbox", {
+    name: english("conversation.threads.view.newPlaceholder", { name: agent.name }),
+  });
+  await unsentComposer.waitFor({ timeout: UI_WAIT_MS });
+  await unsentComposer.fill(unsent);
+  const typedDuringTurn = ownChatRuns(await listQueue());
+  assert.ok(typedDuringTurn, "The agent's own chat runs a turn while the text is typed.");
+  await waitFor(page, "the own chat's turn ends", listQueue, (snapshot) => !ownChatRuns(snapshot));
+  const afterTurn = (await unsentComposer.innerText()).trim();
+  await shot("11-unsent-after-turn");
+  await button(english("conversation.header.mainChat")).click();
+  await unsentComposer.waitFor({ state: "detached", timeout: UI_WAIT_MS });
+  await tab(english("conversation.threads.new")).click();
+  const afterSwitch = (await unsentComposer.innerText()).trim();
+  await page.reload();
+  // A new thread tab is not kept after a restart, but its text is.
+  await button(english("conversation.threads.new"))
+    .first()
+    .click({ timeout: UI_WAIT_MS * 2 });
+  const afterReload = (await unsentComposer.innerText()).trim();
+  report.unsentDraft = { typedDuringTurn, afterTurn, afterSwitch, afterReload };
+  assert.equal(afterTurn, unsent, "The text stays when the own chat's turn ends.");
+  assert.equal(afterSwitch, unsent, "The text stays after the agent's own chat opens.");
+  assert.equal(afterReload, unsent, "The text stays after a reload.");
+  await unsentComposer.fill("");
+
+  // 12. A reload during the Undo time does not lose the delete: the next start finishes it.
   const second = await page.evaluate(
     (input) => window.openbot.agent.startTask({ ...input, clientMessageId: crypto.randomUUID() }),
     { agentId, text: SHORT_PROMPT },
@@ -287,6 +334,11 @@ try {
   report.deleteAcrossReload = { taskId: second.id, hiddenAfterReload, gone: true };
   report.passed = true;
 } finally {
+  for (const delivery of (await listQueue().catch(() => null))?.deliveries ?? [])
+    if (delivery.turnId && (delivery.status === "starting" || delivery.status === "running"))
+      await page
+        .evaluate((input) => window.openbot.agent.interrupt(input), { agentId, turnId: delivery.turnId })
+        .catch(() => undefined);
   if (threadId && !deleted) {
     const id = threadId;
     await page
