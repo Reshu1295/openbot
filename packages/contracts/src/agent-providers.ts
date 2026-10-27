@@ -476,6 +476,11 @@ export function agentProviderDescriptor(provider: AgentProviderId): AgentProvide
   return AGENT_PROVIDER_DESCRIPTOR_TABLE[provider];
 }
 
+// A newer host's unknown provider keeps its actions until this build knows its capabilities.
+export function providerCannotSteer(provider: AgentProviderRef): boolean {
+  return isKnownAgentProvider(provider) && agentProviderDescriptor(provider).steer !== "native";
+}
+
 /** The provider name to put in front of a user. */
 export function agentProviderName(provider: AgentProviderId): string {
   return AGENT_PROVIDER_DESCRIPTOR_TABLE[provider].displayName;

@@ -147,6 +147,7 @@ export function BrowserDockSurface() {
             hold={dock().hold}
             editingDeliveryId={dock().editingDeliveryId}
             canSteer={dock().canSteer}
+            providerSteers={dock().providerSteers}
             island={dock().island}
             handoffPending={dock().handoffPending}
             onValueChange={(value) => {

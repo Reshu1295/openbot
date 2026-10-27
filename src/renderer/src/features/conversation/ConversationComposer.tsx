@@ -1,4 +1,4 @@
-import { isKnownAgentProvider } from "@openbot/contracts/agent-providers";
+import { isKnownAgentProvider, providerCannotSteer } from "@openbot/contracts/agent-providers";
 import { supportedAttachmentExtensions } from "@openbot/contracts/attachment-files";
 import {
   type AccountUsageLimit,
@@ -197,6 +197,11 @@ export function ConversationComposer() {
     const expired = localizeSourceText(sourceText("error.provider.opencodeKeyExpired"));
     return currentChatError() === expired ? props.onManageProviders : undefined;
   };
+  // Recheck capabilities when a provider switch or fallback updates the agent.
+  const providerSteers = createMemo(() => {
+    const provider = props.agent?.provider;
+    return provider === undefined || !providerCannotSteer(provider);
+  });
   /** Why the running turn has no reply: the computer is offline, or the provider sends nothing. */
   const providerWaitNotice = createMemo(() => {
     const provider = agentProviderName();
@@ -398,7 +403,7 @@ export function ConversationComposer() {
                   onDismiss={dismissAwaitingReplies}
                   onOpenAgent={props.onSelectAgent}
                   // A channel's rows are its sub-tasks, not queued replies.
-                  onSteer={props.activeTurnId && !channel ? props.onSteerQueuedMessage : undefined}
+                  onSteer={props.activeTurnId && !channel && providerSteers() ? props.onSteerQueuedMessage : undefined}
                 />
               </Show>
               <Show when={waitsVisible() && props.onCancelWait}>
@@ -429,6 +434,7 @@ export function ConversationComposer() {
                     skills={installedSkills()}
                     editingDeliveryId={editingDeliveryId()}
                     canSteer={Boolean(props.activeTurnId)}
+                    providerSteers={providerSteers()}
                     onSteer={props.onSteerQueuedMessage}
                     onRunAsTask={props.threads?.onRunQueuedMessage}
                     onCancel={props.onCancelQueuedMessage}

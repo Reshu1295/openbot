@@ -19,6 +19,12 @@ interface QueuePanelProps {
   skills?: ComposerSkill[] | undefined;
   editingDeliveryId?: string | null | undefined;
   canSteer: boolean;
+  /**
+   * Whether the agent's provider can take a message into the running turn. `false` hides each row's
+   * Steer action: the provider would only put the message back in the queue. Absent when the host
+   * has not said, so an unknown provider keeps its action.
+   */
+  providerSteers?: boolean | undefined;
   onSteer: (deliveryId: string) => void;
   /** Starts a separate task with a queued message. Absent where the host keeps no tasks. */
   onRunAsTask?: ((deliveryId: string) => void) | undefined;
@@ -500,22 +506,24 @@ export function QueuePanel(props: QueuePanelProps) {
                           </span>
                         )}
                       </Show>
-                      <LabelTooltip content={t("queue.item.steerTooltip")}>
-                        <LabelTooltipTrigger
-                          as={Button}
-                          variant="ghost"
-                          type="button"
-                          class="agent-queue-steer"
-                          disabled={!props.canSteer || !actionable}
-                          aria-label={t("queue.item.steerLabel", { position: delivery.position ?? "" })}
-                          onClick={() => props.onSteer(delivery.id)}
-                        >
-                          <SteerIcon />
-                          <span>
-                            {delivery.status === "starting" ? t("queue.item.steering") : t("queue.item.steer")}
-                          </span>
-                        </LabelTooltipTrigger>
-                      </LabelTooltip>
+                      <Show when={props.providerSteers !== false}>
+                        <LabelTooltip content={t("queue.item.steerTooltip")}>
+                          <LabelTooltipTrigger
+                            as={Button}
+                            variant="ghost"
+                            type="button"
+                            class="agent-queue-steer"
+                            disabled={!props.canSteer || !actionable}
+                            aria-label={t("queue.item.steerLabel", { position: delivery.position ?? "" })}
+                            onClick={() => props.onSteer(delivery.id)}
+                          >
+                            <SteerIcon />
+                            <span>
+                              {delivery.status === "starting" ? t("queue.item.steering") : t("queue.item.steer")}
+                            </span>
+                          </LabelTooltipTrigger>
+                        </LabelTooltip>
+                      </Show>
                       <Show when={props.onRunAsTask}>
                         {(runAsTask) => (
                           <LabelTooltip content={t("queue.item.runAsTask")}>

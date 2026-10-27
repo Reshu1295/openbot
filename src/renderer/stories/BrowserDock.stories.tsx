@@ -1,5 +1,6 @@
 import type { BrowserTakeoverRequest, QueueDelivery } from "@openbot/contracts/ipc";
 import { BrowserDock } from "@openbot/ui/features/browser/BrowserDock";
+import { Show } from "solid-js";
 import { fn } from "storybook/test";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { requireFixture, STORY_AGENTS } from "./fixtures";
@@ -35,6 +36,9 @@ const secretRequest: BrowserTakeoverRequest = {
 const meta = {
   title: "Conversation/BrowserDock",
   component: BrowserDock,
+  render: (args) => (
+    <Show when={args.deliveries}>{(deliveries) => <BrowserDock {...args} deliveries={deliveries()} />}</Show>
+  ),
   args: {
     agent: chief,
     agents: STORY_AGENTS,
@@ -42,6 +46,7 @@ const meta = {
     working: false,
     deliveries: [],
     canSteer: false,
+    providerSteers: true,
     island: null,
     onValueChange: fn(),
     onSend: fn(),
@@ -90,6 +95,16 @@ export const AgentActing: Story = {
 /** The user controls the page. The agent waits until the user gives it back. */
 export const UserControl: Story = {
   args: { working: true, island: { kind: "activity", control: "user" }, onHandoff: fn() },
+};
+
+/** A provider that cannot take a message into the running turn shows no Steer action on a queue row. */
+export const ProviderWithoutSteer: Story = {
+  args: {
+    working: true,
+    canSteer: true,
+    providerSteers: false,
+    deliveries: [delivery("one", "Then open the pricing page", 1)],
+  },
 };
 
 /** The agent asks for a code that only the user has. */

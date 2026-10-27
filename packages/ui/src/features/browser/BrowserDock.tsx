@@ -50,6 +50,8 @@ export interface BrowserDockProps {
   hold?: QueueHold | null | undefined;
   editingDeliveryId?: string | null | undefined;
   canSteer: boolean;
+  /** Whether the agent's provider can take a message into the running turn. `false` hides the queue's Steer action. */
+  providerSteers?: boolean | undefined;
   island: BrowserIslandContent | null;
   handoffPending?: boolean | undefined;
   onValueChange: (value: string) => void;
@@ -316,6 +318,7 @@ export function BrowserDock(props: BrowserDockProps) {
                 skills={props.skills}
                 editingDeliveryId={props.editingDeliveryId}
                 canSteer={props.canSteer}
+                providerSteers={props.providerSteers}
                 onSteer={steer}
                 onRunAsTask={props.onRunAsTask}
                 onCancel={props.onCancel}

@@ -1,3 +1,4 @@
+import { providerCannotSteer } from "@openbot/contracts/agent-providers";
 import {
   BROWSER_DOCK_LIMITS,
   type BrowserDockAction,
@@ -57,6 +58,10 @@ export function BrowserDockAdapter(adapterProps: { tab: BrowserTab | undefined; 
   const { t } = useText();
   const control = () => (adapterProps.tab ? browserControlForTab(adapterProps.tab) : undefined);
   const working = () => Boolean(props.activeTurnId) || control()?.phase === "acting";
+  const providerSteers = () => {
+    const provider = props.agent?.provider;
+    return provider === undefined || !providerCannotSteer(provider);
+  };
   const [handoffPending, setHandoffPending] = createSignal(false);
   const [dismissedReplies, setDismissedReplies] = createSignal<ReadonlySet<string>>(new Set());
   /**
@@ -286,6 +291,7 @@ export function BrowserDockAdapter(adapterProps: { tab: BrowserTab | undefined; 
       hold: hold(),
       editingDeliveryId: editingDeliveryId() ?? null,
       canSteer: Boolean(props.activeTurnId),
+      providerSteers: providerSteers(),
       canRunAsTask: Boolean(props.threads?.onRunQueuedMessage),
       island: dockIsland(island()),
       handoffPending: handoffPending(),
@@ -399,6 +405,7 @@ export function BrowserDockAdapter(adapterProps: { tab: BrowserTab | undefined; 
             hold={hold()}
             editingDeliveryId={editingDeliveryId()}
             canSteer={Boolean(props.activeTurnId)}
+            providerSteers={providerSteers()}
             island={island()}
             handoffPending={handoffPending()}
             onValueChange={(text) => updateCurrentDraft({ text })}

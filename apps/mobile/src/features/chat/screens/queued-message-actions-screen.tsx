@@ -84,14 +84,16 @@ export function QueuedMessageActionsScreen() {
             <Typography>{t("common.edit")}</Typography>
           </SettingsRow>
         )}
-        <SettingsRow
-          leading={<CornerDownRight color={foreground} size={22} />}
-          disclosure={false}
-          disabled={locked || editedElsewhere || !queue.activeTurnId}
-          onPress={() => finish(queue.steer(delivery))}
-        >
-          <Typography>{t("mobile.chat.queue.steer")}</Typography>
-        </SettingsRow>
+        {queue.providerSteers ? (
+          <SettingsRow
+            leading={<CornerDownRight color={foreground} size={22} />}
+            disclosure={false}
+            disabled={locked || editedElsewhere || !queue.activeTurnId}
+            onPress={() => finish(queue.steer(delivery))}
+          >
+            <Typography>{t("mobile.chat.queue.steer")}</Typography>
+          </SettingsRow>
+        ) : null}
         {reply ? null : (
           <SettingsRow
             leading={<ArrowUpToLine color={foreground} size={22} />}
@@ -123,7 +125,9 @@ export function QueuedMessageActionsScreen() {
       )}
 
       {editedElsewhere ? <SettingsNote>{t("mobile.chat.queue.editedElsewhere")}</SettingsNote> : null}
-      {queue.activeTurnId ? null : <SettingsNote>{t("mobile.chat.queue.steerNeedsTurn")}</SettingsNote>}
+      {queue.providerSteers && !queue.activeTurnId ? (
+        <SettingsNote>{t("mobile.chat.queue.steerNeedsTurn")}</SettingsNote>
+      ) : null}
       {queue.error ? (
         <Typography.Paragraph accessibilityRole="alert" className="px-4 text-danger-text">
           {queue.error}

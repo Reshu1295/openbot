@@ -32,6 +32,7 @@ const PRESENTATION: BrowserDockPresentation = {
   hold: null,
   editingDeliveryId: null,
   canSteer: true,
+  providerSteers: true,
   canRunAsTask: false,
   island: { kind: "activity", control: "agent", label: "Reading the page" },
   handoffPending: false,
@@ -63,6 +64,16 @@ describe("browser dock decoding", () => {
   it("accepts a presentation without MCP secrets, and null to hide the dock", () => {
     expect(decodeBrowserDockPresentation(PRESENTATION)).toEqual(PRESENTATION);
     expect(decodeBrowserDockPresentation(null)).toBeNull();
+  });
+
+  it("accepts false and rejects a non-boolean provider steering capability", () => {
+    const presentation = { ...PRESENTATION, providerSteers: false };
+    expect(decodeBrowserDockPresentation(presentation)).toEqual(presentation);
+    for (const providerSteers of [undefined, null, "false", 0]) {
+      expect(() => decodeBrowserDockPresentation({ ...PRESENTATION, providerSteers })).toThrow(
+        "Invalid browser dock presentation.",
+      );
+    }
   });
 
   it("accepts the question card and the approval card", () => {
