@@ -669,10 +669,7 @@ function MarkdownInline(props: {
               return <RichText body={item.semanticTag} content={props.content} streamingTailAfter={after()} />;
             }
             const url = safeBrowserUrl(token.href);
-            const fileUrl = fileUrlPath(token.href);
-            // The shared-file resolver does not decode, and the workspace resolver does.
-            const sharedPath = sharedFileTarget(fileUrl === null ? token.href : decodedFileUrlPath(fileUrl));
-            const workspacePath = workspaceFileTarget(fileUrl ?? token.href);
+            const { shared: sharedPath, workspace: workspacePath } = linkFileTargets(token.href);
             return url ? (
               <MessageLink
                 url={url}
@@ -1217,14 +1214,21 @@ export function messageImageFiles(blocks: readonly string[]): MessageImageFile[]
   return [...files.values()].slice(0, IMAGE_FILE_LIMIT);
 }
 
+/** The shared and workspace paths that a link target can open as a chip. */
+function linkFileTargets(href: string): { shared: string | null; workspace: string | null } {
+  const fileUrl = fileUrlPath(href);
+  // The shared-file resolver does not decode, and the workspace resolver does.
+  return {
+    shared: sharedFileTarget(fileUrl === null ? href : decodedFileUrlPath(fileUrl)),
+    workspace: workspaceFileTarget(fileUrl ?? href),
+  };
+}
+
 /** The file that a link opens as a chip, as the `link` token draws it. */
 function linkFileTarget(href: string): FileDirectoryContext | null {
   if (safeBrowserUrl(href)) return null;
-  const fileUrl = fileUrlPath(href);
-  // The shared-file resolver does not decode, and the workspace resolver does.
-  const shared = sharedFileTarget(fileUrl === null ? href : decodedFileUrlPath(fileUrl));
+  const { shared, workspace } = linkFileTargets(href);
   if (shared) return { path: shared, kind: "shared" };
-  const workspace = workspaceFileTarget(fileUrl ?? href);
   return workspace ? { path: workspace, kind: "workspace" } : null;
 }
 
