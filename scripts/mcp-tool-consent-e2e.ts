@@ -647,6 +647,14 @@ try {
       ran(o, "computer_use/echo_b");
     },
   );
+  record(
+    "Computer Use tool, auto approve on but Workspace only: card",
+    await rig.call("boxed", "computer_use/echo_a", allowOnce),
+    (o) => {
+      oneCard(o);
+      ran(o, "computer_use/echo_a");
+    },
+  );
   await rig.stop();
 
   await writeFile(

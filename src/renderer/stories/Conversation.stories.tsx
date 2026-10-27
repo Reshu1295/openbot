@@ -1344,25 +1344,6 @@ export const UsageLimitReached: Story = {
   },
 };
 
-/** The first account's plan is spent, but the agent runs on a second account with quota: no notice. */
-export const UsageLimitOnAnotherAccount: Story = {
-  name: "Usage limit on another account",
-  args: {
-    agent: { ...contextStoryAgent, providerAccountId: "a0123456789abcdef" },
-    accountUsage: {
-      limits: [
-        ...(UsageLimitReached.args?.accountUsage?.limits ?? []),
-        {
-          id: "codex",
-          accountId: "a0123456789abcdef",
-          primary: { usedPercent: 20, windowDurationMins: 300, resetsAt: Math.floor(Date.now() / 1_000) + 3_600 },
-          secondary: null,
-        },
-      ],
-    },
-  },
-};
-
 /**
  * The real composer after a provider reported an error. The report stands above the input, in the
  * same column as the usage-limit and sign-in notices, rather than as a bubble in the transcript:

@@ -250,7 +250,11 @@ export function ConversationComposer() {
     }
     return null;
   });
-  const usageNoticeAccount = () => JSON.stringify([props.agent?.provider, agentAccountId()]);
+  const usageNoticeAccount = () => {
+    const status = props.agentStatus.providers?.find((provider) => provider.id === props.agent?.provider);
+    const email = status?.accounts?.find((account) => account.id === agentAccountId())?.email ?? status?.email;
+    return JSON.stringify([props.agent?.provider, agentAccountId(), email]);
+  };
   const usageNotice = () => {
     const spent = usageExhausted();
     return spent &&
