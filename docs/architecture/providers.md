@@ -5,10 +5,11 @@ To add a provider, or to see how a provider signs in on a joined server, read
 
 ## Built-in tool discovery
 
-`agent/tool-catalog.ts` exposes ten direct tools and three discovery tools to every adapter.
+`agent/tool-catalog.ts` exposes eleven direct tools and three discovery tools to every adapter.
 Claude uses its native question tool instead of `ask_user`. The direct tools are `ask_user`,
 `attach_files_to_response`, `list_agents`, `send_message`, `search_memories`, `remember`,
-`forget_memory`, `react_to_user_message`, `routine_no_update`, and `routine_report_failure`. External plugin registration stays with each provider adapter.
+`forget_memory`, `react_to_user_message`, `request_api_key`, `routine_no_update`, and
+`routine_report_failure`. External plugin registration stays with each provider adapter.
 
 `tool_search` uses local keyword matching. Exact names come first, then word matches, with stable
 catalog order for ties. It returns five results by default and at most ten. It accepts `queries`, or
@@ -38,12 +39,11 @@ loads through `tool_search` or `tool_describe`. Essential secret handling and un
 permanent instructions. ACP and Muse still insert these shorter instructions on each normal turn.
 Retention after compaction is not assumed. Compaction thresholds are unchanged.
 
-The default synthetic fixture measures 11,541 instruction characters and 8,382 characters for the
-serialized visible tool definitions, including the 1,912-character catalog. This is 19,923
-characters, or about 4,981 tokens at four characters per token, compared with the earlier 101,602
-characters (about 25,401 tokens). It is an 80.4% reduction in default application text. Schemas and
-guidance loaded later add context and can add model steps. Provider prompts, external plugins,
-caching, billing, and native model serialization are outside this measurement.
+`bun run check:agent-context` measures the instruction text, the visible tool definitions, the
+catalog, and the guidance in bytes, and fails when one of them grows. See
+[Agent context budget](../development-checks.md#agent-context-budget). Schemas and guidance loaded
+later add context and can add model steps. Provider prompts, external plugins, caching, billing, and
+native model serialization are outside this measurement.
 
 ## History retrieval and replacement sessions
 
