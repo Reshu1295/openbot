@@ -1,10 +1,12 @@
 import type { BrowserControlSession, BrowserPreview, BrowserTab } from "@openbot/contracts/ipc";
 import { TEAM_BROWSER_NAVIGATION_CAPABILITY } from "@openbot/contracts/team-protocol/current";
+import { classifyFailure } from "@openbot/telemetry";
 import { toast } from "@openbot/ui";
 import type { AgentProfile } from "@openbot/ui/data";
 import { browserAddressUrl } from "@openbot/ui/features/browser/browser-suggestions";
 import { currentText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, untrack } from "solid-js";
+import { actionToast } from "../../../action-toast";
 import { desktopAnalytics } from "../../../analytics";
 import { serverSupportsCapability } from "../../servers/server-capabilities";
 import { conversationPort } from "../conversation-port";
@@ -228,7 +230,9 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
         ? {
             onError: (error) => {
               const { t, errorMessage } = currentText();
-              toast.error(errorMessage(error, t("app.errorStatus.browserTakeover")));
+              actionToast.error(errorMessage(error, t("app.errorStatus.browserTakeover")), {
+                report: { operation: "turn", source: "action", cause_code: classifyFailure(error) },
+              });
             },
           }
         : undefined,
