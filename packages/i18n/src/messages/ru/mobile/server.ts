@@ -777,6 +777,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Не удалось изменить ключ. Повторите попытку.",
   "mobile.server.providers.newKey": "Ключ",
   "mobile.server.providers.replaceKey": "Новый ключ",
+  "mobile.server.providers.keyPlaceholder": "Вставьте ключ",
   "mobile.server.providers.saveKey": "Сохранить ключ",
   "mobile.server.providers.removeKey": "Удалить ключ",
   "mobile.server.providers.removeKeyTitle": "Удалить ключ с сервера?",

@@ -699,6 +699,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Anahtar değiştirilemedi. Tekrar deneyin.",
   "mobile.server.providers.newKey": "Anahtar",
   "mobile.server.providers.replaceKey": "Yeni anahtar",
+  "mobile.server.providers.keyPlaceholder": "Anahtarınızı yapıştırın",
   "mobile.server.providers.saveKey": "Anahtarı kaydet",
   "mobile.server.providers.removeKey": "Anahtarı kaldır",
   "mobile.server.providers.removeKeyTitle": "Anahtar sunucudan kaldırılsın mı?",

@@ -645,6 +645,7 @@ function ProviderKeySection({
       </SettingsSection>
       <SheetFormField
         label={t(saved ? "mobile.server.providers.replaceKey" : "mobile.server.providers.newKey")}
+        placeholder={t("mobile.server.providers.keyPlaceholder")}
         autoCapitalize="none"
         autoCorrect={false}
         secureTextEntry

@@ -706,6 +706,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Não foi possível alterar a chave. Tente de novo.",
   "mobile.server.providers.newKey": "Chave",
   "mobile.server.providers.replaceKey": "Nova chave",
+  "mobile.server.providers.keyPlaceholder": "Cole sua chave",
   "mobile.server.providers.saveKey": "Salvar chave",
   "mobile.server.providers.removeKey": "Remover chave",
   "mobile.server.providers.removeKeyTitle": "Remover a chave do servidor?",

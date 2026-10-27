@@ -666,6 +666,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "キーを変更できませんでした。もう一度お試しください。",
   "mobile.server.providers.newKey": "キー",
   "mobile.server.providers.replaceKey": "新しいキー",
+  "mobile.server.providers.keyPlaceholder": "キーを貼り付け",
   "mobile.server.providers.saveKey": "キーを保存",
   "mobile.server.providers.removeKey": "キーを削除",
   "mobile.server.providers.removeKeyTitle": "サーバーからキーを削除しますか？",

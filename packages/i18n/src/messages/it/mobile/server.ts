@@ -700,6 +700,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Impossibile modificare la chiave. Riprova.",
   "mobile.server.providers.newKey": "Chiave",
   "mobile.server.providers.replaceKey": "Nuova chiave",
+  "mobile.server.providers.keyPlaceholder": "Incolla la tua chiave",
   "mobile.server.providers.saveKey": "Salva chiave",
   "mobile.server.providers.removeKey": "Rimuovi chiave",
   "mobile.server.providers.removeKeyTitle": "Rimuovere la chiave dal server?",

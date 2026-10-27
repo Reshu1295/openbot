@@ -723,6 +723,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Der Schlüssel konnte nicht geändert werden. Versuche es erneut.",
   "mobile.server.providers.newKey": "Schlüssel",
   "mobile.server.providers.replaceKey": "Neuer Schlüssel",
+  "mobile.server.providers.keyPlaceholder": "Füge deinen Schlüssel ein",
   "mobile.server.providers.saveKey": "Schlüssel speichern",
   "mobile.server.providers.removeKey": "Schlüssel entfernen",
   "mobile.server.providers.removeKeyTitle": "Schlüssel vom Server entfernen?",

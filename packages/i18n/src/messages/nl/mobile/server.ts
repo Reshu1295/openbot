@@ -675,6 +675,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Kan de sleutel niet wijzigen. Probeer het opnieuw.",
   "mobile.server.providers.newKey": "Sleutel",
   "mobile.server.providers.replaceKey": "Nieuwe sleutel",
+  "mobile.server.providers.keyPlaceholder": "Plak je sleutel",
   "mobile.server.providers.saveKey": "Sleutel opslaan",
   "mobile.server.providers.removeKey": "Sleutel verwijderen",
   "mobile.server.providers.removeKeyTitle": "De sleutel van de server verwijderen?",

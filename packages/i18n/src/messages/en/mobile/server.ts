@@ -803,6 +803,7 @@ export const messages = defineMessages("mobile.server", {
   "mobile.server.providers.keyFailed": "Could not change the key. Try again.",
   "mobile.server.providers.newKey": "Key",
   "mobile.server.providers.replaceKey": "New key",
+  "mobile.server.providers.keyPlaceholder": "Paste your key",
   "mobile.server.providers.saveKey": "Save key",
   "mobile.server.providers.removeKey": "Remove key",
   "mobile.server.providers.removeKeyTitle": "Remove the key from the server?",

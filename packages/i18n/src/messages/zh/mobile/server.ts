@@ -650,6 +650,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "无法更改密钥，请重试。",
   "mobile.server.providers.newKey": "密钥",
   "mobile.server.providers.replaceKey": "新密钥",
+  "mobile.server.providers.keyPlaceholder": "粘贴你的密钥",
   "mobile.server.providers.saveKey": "保存密钥",
   "mobile.server.providers.removeKey": "移除密钥",
   "mobile.server.providers.removeKeyTitle": "从服务器移除该密钥？",

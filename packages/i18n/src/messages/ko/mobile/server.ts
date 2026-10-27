@@ -668,6 +668,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "키를 변경하지 못했어요. 다시 시도해 주세요.",
   "mobile.server.providers.newKey": "키",
   "mobile.server.providers.replaceKey": "새 키",
+  "mobile.server.providers.keyPlaceholder": "키 붙여넣기",
   "mobile.server.providers.saveKey": "키 저장",
   "mobile.server.providers.removeKey": "키 삭제",
   "mobile.server.providers.removeKeyTitle": "서버에서 키를 삭제할까요?",
