@@ -890,11 +890,21 @@ export function migrateOpenBotDatabase(db: DatabaseSync, options: OpenBotMigrati
   validateAppliedVersions(appliedVersions);
   const currentVersion = latestAppliedVersion(appliedVersions);
   const pending = MIGRATIONS.filter((migration) => migration.version > currentVersion);
+  // A database can hold broken references from before this upgrade. A migration that does not touch them must not
+  // stop on them, and deleting them would lose rows, so each migration is checked only for the ones it adds.
+  let violations = pending.length > 0 ? readForeignKeyViolations(db) : new Map<string, number>();
+  if (violations.size > 0) {
+    logger.warn("The OpenBot database has foreign-key violations from before this upgrade. They stay as they are.", {
+      violations: Object.fromEntries(violations),
+    });
+  }
 
   for (const migration of pending) {
     try {
-      runMigration(db, migration, appliedAt);
+      violations = runMigration(db, migration, appliedAt, violations);
     } catch (error) {
+      // The startup log keeps only the message, so the cause is logged here.
+      logger.error(`OpenBot database migration to version ${migration.version} failed.`, toLogValue(error));
       throw new Error(`OpenBot database migration to version ${migration.version} failed.`, {
         cause: error,
       });
@@ -986,7 +996,7 @@ function createLatestDatabase(db: DatabaseSync, appliedAt: string): void {
     db.exec(LATEST_SCHEMA_SQL);
     const insertMigration = db.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)");
     for (const migration of MIGRATIONS) insertMigration.run(migration.version, appliedAt);
-    assertForeignKeys(db);
+    assertForeignKeys(db, new Map());
     db.exec("COMMIT");
   } catch (error) {
     if (db.isTransaction) db.exec("ROLLBACK");
@@ -1033,14 +1043,20 @@ function latestAppliedVersion(versions: number[]): number {
   return baselineAndLater.at(-1) ?? BASELINE_SCHEMA_VERSION - 1;
 }
 
-function runMigration(db: DatabaseSync, migration: OpenBotMigration, appliedAt: string): void {
+function runMigration(
+  db: DatabaseSync,
+  migration: OpenBotMigration,
+  appliedAt: string,
+  violationsBefore: ReadonlyMap<string, number>,
+): Map<string, number> {
   if (migration.disableForeignKeys) db.exec("PRAGMA foreign_keys = OFF");
   try {
     db.exec("BEGIN IMMEDIATE");
     migration.up(db, appliedAt);
     db.prepare("INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)").run(migration.version, appliedAt);
-    assertForeignKeys(db);
+    const violations = assertForeignKeys(db, violationsBefore);
     db.exec("COMMIT");
+    return violations;
   } catch (error) {
     if (db.isTransaction) db.exec("ROLLBACK");
     throw error;
@@ -1049,11 +1065,31 @@ function runMigration(db: DatabaseSync, migration: OpenBotMigration, appliedAt: 
   }
 }
 
-function assertForeignKeys(db: DatabaseSync): void {
-  const violations = db.prepare("PRAGMA foreign_key_check").all();
-  if (violations.length > 0) {
-    throw new Error(`OpenBot database migration produced ${violations.length} foreign-key violation(s).`);
+function assertForeignKeys(db: DatabaseSync, before: ReadonlyMap<string, number>): Map<string, number> {
+  const violations = readForeignKeyViolations(db);
+  const added = [...violations]
+    .map(([reference, count]) => [reference, count - (before.get(reference) ?? 0)] as const)
+    .filter(([, count]) => count > 0);
+  if (added.length > 0) {
+    const total = added.reduce((sum, [, count]) => sum + count, 0);
+    const references = added.map(([reference]) => reference).join(", ");
+    throw new Error(`OpenBot database migration produced ${total} foreign-key violation(s) in ${references}.`);
   }
+  return violations;
+}
+
+/**
+ * Counts the broken references per child and parent table. A rebuild gives the rows new rowids and the table new
+ * foreign-key ids, so only the table names identify a violation from one migration to the next.
+ */
+function readForeignKeyViolations(db: DatabaseSync): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const row of db.prepare("PRAGMA foreign_key_check").all()) {
+    if (!isDynamicRecord(row) || !isString(row.table) || !isString(row.parent)) continue;
+    const reference = `${row.table} -> ${row.parent}`;
+    counts.set(reference, (counts.get(reference) ?? 0) + 1);
+  }
+  return counts;
 }
 
 function assertQuickCheck(db: DatabaseSync): void {
