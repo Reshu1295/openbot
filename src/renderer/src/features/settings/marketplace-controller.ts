@@ -2,6 +2,7 @@ import type {
   AddedAgent,
   ClientAgentSummary,
   InstalledSkill,
+  MacAutomationResult,
   MacAutomationTarget,
   MarketplaceAgentDetail,
   MarketplaceAgentSummary,
@@ -720,20 +721,30 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
    */
   async function requestPluginAccess(plugin: MarketplacePluginDetail) {
     const request = requestMacAutomation();
-    const targets = [...new Set(plugin.apps.flatMap((app) => app.macAutomation ?? []))];
+    // Main asks each app once, so an app that two of the plugin's apps list is not asked twice.
+    const targets = plugin.apps.flatMap((app) => app.macAutomation ?? []);
     const key = `app:${plugin.slug}`;
     if (!request || targets.length === 0) return;
     mark(key, true);
     const results = await run(() => request(targets));
     mark(key, false);
     if (!results) return;
-    const refused = results.filter((result) => result.status !== "granted");
-    if (refused.length === 0) {
+    const named = (status: MacAutomationResult["status"]) =>
+      format.list(
+        results.filter((result) => result.status === status).map((result) => t(MAC_AUTOMATION_APP_NAME[result.target])),
+      );
+    const denied = named("denied");
+    const failed = named("failed");
+    if (!denied && !failed) {
       setNotice(t("marketplace.app.automation.allowed"));
       return;
     }
-    const apps = format.list(refused.map((result) => t(MAC_AUTOMATION_APP_NAME[result.target])));
-    setError(t("marketplace.app.automation.refused", { apps }));
+    // Only a refusal is changed in System Settings. An app that macOS was not asked about is asked again.
+    const sentences = [
+      denied ? t("marketplace.app.automation.refused", { apps: denied }) : "",
+      failed ? t("marketplace.app.automation.failed", { apps: failed }) : "",
+    ];
+    setError(sentences.filter(Boolean).join(" "));
   }
 
   const macAutomation: MarketplaceMacAutomation = {

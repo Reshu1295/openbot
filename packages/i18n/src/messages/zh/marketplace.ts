@@ -136,6 +136,7 @@ export const messages = {
   "marketplace.app.automation.allowed": "OpenBot 现在可以控制所有 Apple 应用。",
   "marketplace.app.automation.refused":
     "macOS 没有授予对 {apps} 的访问权限。在系统设置 › 隐私与安全性 › 自动化中允许 OpenBot。",
+  "marketplace.app.automation.failed": "OpenBot 无法就 {apps} 询问 macOS。请重试。",
   "marketplace.app.automation.app.calendar": "日历",
   "marketplace.app.automation.app.contacts": "通讯录",
   "marketplace.app.automation.app.mail": "邮件",

@@ -140,6 +140,7 @@ export const messages = defineMessages("marketplace", {
   "marketplace.app.automation.allowed": "OpenBot can now control all of the Apple apps.",
   "marketplace.app.automation.refused":
     "macOS did not give access to {apps}. Allow OpenBot in System Settings › Privacy & Security › Automation.",
+  "marketplace.app.automation.failed": "OpenBot could not ask macOS about {apps}. Try again.",
   "marketplace.app.automation.app.calendar": "Calendar",
   "marketplace.app.automation.app.contacts": "Contacts",
   "marketplace.app.automation.app.mail": "Mail",

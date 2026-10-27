@@ -122,6 +122,7 @@ export const messages = {
   "marketplace.app.automation.allowed": "이제 OpenBot이 모든 Apple 앱을 제어할 수 있어요.",
   "marketplace.app.automation.refused":
     "macOS가 {apps}에 대한 접근을 허용하지 않았어요. 시스템 설정 › 개인정보 보호 및 보안 › 자동화에서 OpenBot을 허용하세요.",
+  "marketplace.app.automation.failed": "OpenBot이 {apps}에 대해 macOS에 요청하지 못했어요. 다시 시도하세요.",
   "marketplace.app.automation.app.calendar": "캘린더",
   "marketplace.app.automation.app.contacts": "연락처",
   "marketplace.app.automation.app.mail": "Mail",

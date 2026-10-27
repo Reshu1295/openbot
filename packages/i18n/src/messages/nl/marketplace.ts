@@ -124,6 +124,7 @@ export const messages = {
   "marketplace.app.automation.allowed": "OpenBot kan nu alle Apple-apps besturen.",
   "marketplace.app.automation.refused":
     "macOS heeft geen toegang gegeven tot {apps}. Sta OpenBot toe in Systeeminstellingen › Privacy en beveiliging › Automatisering.",
+  "marketplace.app.automation.failed": "OpenBot kon macOS niet vragen naar {apps}. Probeer het opnieuw.",
   "marketplace.app.automation.app.calendar": "Agenda",
   "marketplace.app.automation.app.contacts": "Contacten",
   "marketplace.app.automation.app.mail": "Mail",
