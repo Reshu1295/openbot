@@ -151,12 +151,8 @@ import { hostMessagingApi } from "../connectors/host-messaging-port";
 import { Conversation, createConversationController } from "../conversation/Conversation";
 import { clearStoredQueueEdit } from "../conversation/composer-draft";
 import { ConversationControllerProvider } from "../conversation/conversation-controller-context";
-import { composerDraftKey, messagePromptRequestKey, promptRequestKey } from "../conversation/conversation-keys";
-import type {
-  AgentSettingsRequest,
-  ConversationThreads,
-  PromptAnswerOptions,
-} from "../conversation/conversation-types";
+import { composerDraftKey } from "../conversation/conversation-keys";
+import type { AgentSettingsRequest, ConversationThreads } from "../conversation/conversation-types";
 import { webEventRoutinesApi } from "../conversation/routine-webhooks-api";
 import type { FilesPort } from "../files/files-port";
 import { hostSetupProviderProps } from "../onboarding/host-setup-provider-props";
@@ -1342,11 +1338,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       Effect.runPromise(clearAgentContext(hostRequest(), agent.id).pipe(Effect.mapError((error) => error.cause)));
   });
   const offlineUpsell = createHostedUpsellOffline(() => workspace.state.hostOffline);
-  const view = createWebConversationView({
-    workspace,
-    remoteAgentAdmin,
-    hidden: () => creating() || channelOpen(),
-  });
   /** The side threads of the connected host. Each host has its own, with its own tabs. */
   const agentThreads = createMemo(() => {
     const hostId = workspace.state.host?.hostId;
@@ -1387,35 +1378,17 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     const threadId = open === undefined ? agent.threadId : open?.threadId;
     return workspace.state.takeovers.find((request) => request.agentId === agent.id && request.threadId === threadId);
   });
-  /** The question of the open side thread. `view` keeps the question of the agent's own chat. */
-  const threadPrompt = createMemo(() => {
-    const open = threads()?.open;
-    if (!open) return undefined;
-    const agentId = workspace.state.selectedId;
-    return workspace.state.prompts.find((item) => item.agentId === agentId && item.threadId === open.threadId);
+  const view = createWebConversationView({
+    workspace,
+    remoteAgentAdmin,
+    hidden: () => creating() || channelOpen(),
+    // A new thread draft, or a side thread that has not loaded, asks nothing.
+    thread: () => {
+      const current = threads();
+      if (current?.open === undefined) return undefined;
+      return current.open ? (current.conversation ?? null) : null;
+    },
   });
-  const shownPrompt = () => (threads()?.open === undefined ? view.prompt() : threadPrompt());
-  const shownPromptUiBlock = () => {
-    if (threads()?.open === undefined) return view.promptUiBlock();
-    const question = threadPrompt();
-    if (!question) return undefined;
-    const requestKey = promptRequestKey(question.turnId, question.requestId);
-    return threads()?.conversation?.messages.findLast((message) => messagePromptRequestKey(message) === requestKey)
-      ?.uiBlock;
-  };
-  async function answerShownPrompt(answers: Record<string, string[]>, options?: PromptAnswerOptions): Promise<boolean> {
-    if (threads()?.open === undefined) return view.answerPrompt(answers, options);
-    const question = threadPrompt();
-    if (!question) return false;
-    try {
-      await workspace.answer({ requestId: question.requestId, answers });
-    } catch (error) {
-      if (!options?.onError) throw error;
-      options.onError(error);
-      return false;
-    }
-    return true;
-  }
   // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.
   // The marker does not tell whether the routine is paused; an agent makes an active routine unless told otherwise.
   createEffect(
@@ -2474,8 +2447,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 remoteDesktopEnabled={false}
                 remoteDesktopSessionActive={false}
                 remoteDesktopVisible={false}
-                prompt={shownPrompt()}
-                promptUiBlock={shownPromptUiBlock()}
+                prompt={view.prompt()}
+                promptUiBlock={view.promptUiBlock()}
                 approval={view.approval()}
                 browserTakeover={browserTakeover()}
                 onSelectAgent={(id) => {
@@ -2511,7 +2484,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 }}
                 onOpenSearchMessage={workspace.openSearchMessage}
                 onTypingChange={setTyping}
-                onAnswerPrompt={answerShownPrompt}
+                onAnswerPrompt={view.answerPrompt}
                 onPromptResolutionPresented={(_agentId, turnId, requestId) =>
                   view.presentPromptResolution(turnId, requestId)
                 }
