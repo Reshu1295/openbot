@@ -240,6 +240,11 @@ export class AgentTasks implements TaskLanes {
     return this.#store.executionThreads();
   }
 
+  /** The agent id and thread id of every open task, the newest first. */
+  openExecutionThreads(): Array<{ id: string; threadId: string }> {
+    return this.#store.openExecutionThreads();
+  }
+
   /**
    * The thread of the task that a delivery runs in, also when the task is archived, or null for the
    * agent's own chat. Work of an archived task must never settle in the agent's own chat. The work of

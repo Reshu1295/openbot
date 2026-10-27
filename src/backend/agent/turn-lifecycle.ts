@@ -47,6 +47,7 @@ import {
   type ThreadItem,
 } from "../protocol";
 import type { AgentMemories } from "./agent-memories";
+import { answerFilePaths } from "./answer-file-paths";
 import type { AttentionBrowserHost, AttentionRegistry } from "./attention-registry";
 import type { BrowserUploadTarget } from "./browser-uploads";
 import { type ContextCompaction, compactsOnRequest } from "./context-compaction";
@@ -177,6 +178,13 @@ export interface TurnHooks {
   closeRoutineSession(externalThreadId: string): Effect.Effect<void>;
   /** Gives the answer of a routine run in its own session to the session of the agent's chat. */
   routineAnswered(agentId: string, deliveryId: string, answer: string): Effect.Effect<void>;
+  /** Attaches the files that a finished answer names by path to it. It never fails the turn. */
+  attachAnswerFiles(
+    agentId: string,
+    snapshot: ConversationSnapshot,
+    answer: ConversationSnapshot["messages"][number],
+    paths: string[],
+  ): Effect.Effect<void>;
 }
 
 export interface TurnLifecycleOptions {
@@ -1094,6 +1102,10 @@ export class TurnLifecycle {
           yield* this.#store.updatePreview(agentId, saved.previous).pipe(toTurnOperationFailed);
           this.#hooks.emit({ type: "agents-changed", agents: this.#hooks.listAgents() });
         }
+      }
+      if (outcome === "completed" && latestAssistant && !quiet && !markerAnswer) {
+        const paths = answerFilePaths(latestAssistant.text);
+        if (paths.length > 0) yield* this.#hooks.attachAnswerFiles(agentId, snapshot, latestAssistant, paths);
       }
       if (trace) this.#attachTrace(snapshot.messages, agentId, turnId, trace);
       addMemoryChangesMessage(snapshot, turnId, memoryChanges, (text) => this.#hooks.redactMcp(text));

@@ -1359,6 +1359,7 @@ export const IPC_ENDPOINTS = {
     interrupt: scopedRequest<InterruptTurnInput, void>()("agent:interrupt"),
     clearContext: scopedRequest<string, void>()("agent:clear-context"),
     compactContext: scopedRequest<string, void>()("agent:compact-context"),
+    compactTaskContext: scopedRequest<AgentTaskInput, void>()("agent:tasks:compact-context"),
     respondToPrompt: scopedRequest<RespondToPromptInput, void>()("agent:respond-to-prompt"),
     respondToApproval: scopedRequest<RespondToApprovalInput, void>()("agent:respond-to-approval"),
     respondToBrowserSecret: scopedRequest<LocalBrowserSecretResponse, void>()("agent:respond-to-browser-secret"),

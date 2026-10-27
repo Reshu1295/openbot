@@ -776,6 +776,12 @@ export function agentIpcHandlers({
           throw new Error(sourceText("error.team.contextCompactUnsupported"));
         },
       }),
+      compactTaskContext: scopedHandler(parseAgentTask, {
+        local: (parsed) => runCauseEffect(service.compactTaskContext(parsed)),
+        remote: () => {
+          throw new Error(sourceText("error.team.contextCompactUnsupported"));
+        },
+      }),
       respondToPrompt: scopedHandler(parsePromptResponse, {
         local: (parsed) => runCauseEffect(service.respondToPrompt(parsed)),
         remote: (parsed, serverId) =>

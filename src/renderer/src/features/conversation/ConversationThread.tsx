@@ -2,6 +2,7 @@ import { supportedAttachmentExtensions } from "@openbot/contracts/attachment-fil
 import { canPreviewAttachment } from "@openbot/contracts/ipc";
 import { Input } from "@openbot/ui";
 import type { AgentMessage } from "@openbot/ui/data";
+import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { createProjection, createSignal, Show } from "solid-js";
 import { toAgentMessages } from "../../app-message-projection";
@@ -94,6 +95,8 @@ export function ConversationThread() {
             onAttachmentAction={attachmentAction}
             approval={current().threads.approval}
             onRespondApproval={(decision) => current().threads.onRespondApproval(decision)}
+            context={contextUsageView(current().threads.contextState)}
+            onCompactContext={current().threads.onCompactContext}
             attention={
               props.browserTakeover || browserTakeoverResolution() ? <ConversationBrowserTakeover /> : undefined
             }

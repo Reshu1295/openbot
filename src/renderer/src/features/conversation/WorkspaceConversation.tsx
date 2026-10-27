@@ -126,6 +126,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
   } = useAgents();
   const {
     contextStates,
+    threadContextStates,
     activeQueue,
     activeWaits,
     activeRoutineIds,
@@ -237,6 +238,14 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
     const server = activeServer();
     if (!agent || server?.kind !== "local") return undefined;
     return () => turnsPort().agent.compactContext(agent.id, server.id);
+  });
+
+  /** As `compactActiveAgentContext`, for one side thread of the active agent. */
+  const compactTaskContext = createMemo(() => {
+    const agent = activeAgent();
+    const server = activeServer();
+    if (!agent || server?.kind !== "local") return undefined;
+    return (taskId: string) => turnsPort().agent.compactTaskContext({ agentId: agent.id, taskId }, server.id);
   });
 
   /** The Team API agent summary has no access, so a joined server's agent shows the host's answer. */
@@ -362,6 +371,8 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       newThreadTitle: t("conversation.threads.new"),
       onRespondApproval: (approval, decision) =>
         respondToApprovalRequest(approval.agentId, approval.requestId, decision),
+      contextStates: threadContextStates,
+      onCompactContext: compactTaskContext(),
     });
   });
   /** The thread that the conversation shows: the open side thread, or the agent's own chat. */

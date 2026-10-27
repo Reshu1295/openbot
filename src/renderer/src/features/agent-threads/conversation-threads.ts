@@ -1,4 +1,4 @@
-import type { AgentApproval } from "@openbot/contracts/ipc";
+import type { AgentApproval, AgentContextState } from "@openbot/contracts/ipc";
 import { isAgentTaskActive, taskApproval } from "@openbot/team-client/agent-tasks";
 import { activeThreadId, threadLists } from "@openbot/ui/features/conversation/threads/thread-items";
 import { DRAFT_THREAD_ID, MAIN_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
@@ -14,11 +14,18 @@ export interface ConversationThreadsInput {
   approvals: readonly AgentApproval[];
   newThreadTitle: string;
   onRespondApproval: (approval: AgentApproval, decision: "accept" | "decline") => Promise<boolean>;
+  /**
+   * The context of each side thread that reported it, by thread id. Only this computer reports it.
+   * Read only by `contextState`, so a new runtime snapshot does not build the threads again.
+   */
+  contextStates?: (() => Readonly<Record<string, AgentContextState>>) | undefined;
+  /** Missing when the host cannot compact a side thread. */
+  onCompactContext?: ((taskId: string) => Promise<void>) | undefined;
 }
 
 /** The threads of one agent, for the conversation. Read it in a memo: it reads the thread state. */
 export function conversationThreads(input: ConversationThreadsInput): ConversationThreads {
-  const { agent, tasks, tabs, approvals } = input;
+  const { agent, tasks, tabs, approvals, onCompactContext } = input;
   const agentId = agent.id;
   const snapshot = tasks.snapshot(agentId);
   const list = snapshot?.tasks ?? [];
@@ -68,6 +75,10 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
       if (open) tasks.stopTask(agentId, open.id);
     },
     onRespondApproval: (decision) => (approval ? input.onRespondApproval(approval, decision) : Promise.resolve(false)),
+    get contextState() {
+      return open ? input.contextStates?.()[open.threadId] : undefined;
+    },
+    onCompactContext: open && onCompactContext ? () => onCompactContext(open.id) : undefined,
     // Only this computer moves a queued message to a new thread.
     onRunQueuedMessage: tasks.local() ? (deliveryId) => void tabs.runQueuedMessage(agentId, deliveryId) : undefined,
   };
