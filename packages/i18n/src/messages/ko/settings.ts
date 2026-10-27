@@ -179,13 +179,12 @@ export const messages = {
   "settings.mobileConnect.app.copyLink": "링크 복사",
   "settings.mobileConnect.app.linkCopied": "링크를 복사했어요",
   "settings.mobileConnect.iosApp.title": "iPhone용 OpenBot",
-  "settings.mobileConnect.iosApp.badge": "베타",
-  "settings.mobileConnect.iosApp.description": "TestFlight 공개 베타예요. iOS 16.4 이상에서 사용할 수 있어요.",
-  "settings.mobileConnect.iosApp.qrLabel": "TestFlight 초대 QR 코드",
-  "settings.mobileConnect.iosApp.step.testFlight": "iPhone에서 App Store의 TestFlight를 설치해요.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "iPhone 카메라로 이 QR 코드를 스캔하거나, 초대 링크를 복사해서 iPhone에서 열어요.",
-  "settings.mobileConnect.iosApp.step.install": "TestFlight에서 수락을 누른 다음 설치를 눌러요.",
+  "settings.mobileConnect.iosApp.badge": "사용 가능",
+  "settings.mobileConnect.iosApp.description": "App Store에서 받을 수 있어요. iOS 16.4 이상에서 사용할 수 있어요.",
+  "settings.mobileConnect.iosApp.qrLabel": "App Store QR 코드",
+  "settings.mobileConnect.iosApp.step.scan":
+    "iPhone 카메라로 이 QR 코드를 스캔하거나, 링크를 복사해서 iPhone에서 열어요.",
+  "settings.mobileConnect.iosApp.step.install": "App Store에서 받기를 눌러요.",
   "settings.mobileConnect.androidApp.title": "Android용 OpenBot",
   "settings.mobileConnect.androidApp.badge": "사용 가능",
   "settings.mobileConnect.androidApp.description":

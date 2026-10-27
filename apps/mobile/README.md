@@ -502,7 +502,7 @@ store and the file is not ready, and the Changelog workflow stops such a pull re
 
 The message mentions the `Mobile Release Pings` role, then has the title
 `OpenBot vx.y.z is out on iOS and Android`, the highlights, and one line of links:
-`iOS (TestFlight) · Android · Full Changelog`. The last link opens the version on the Mobile tab of
+`iOS · Android · Full Changelog`. The last link opens the version on the Mobile tab of
 `/changelog`. It notifies only that role.
 
 One-time setup:
