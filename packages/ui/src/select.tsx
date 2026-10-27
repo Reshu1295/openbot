@@ -239,6 +239,8 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
                 class="ui-select-item"
                 data-slot="select-item"
                 data-checked={key(item.item.rawValue) === key(props.value) ? "" : undefined}
+                // The combobox has no selection, so the search field starts empty. The row says it is the value.
+                aria-selected={key(item.item.rawValue) === key(props.value) ? "true" : "false"}
               >
                 <Combobox.ItemLabel class="ui-select-item-label">{props.label(item.item.rawValue)}</Combobox.ItemLabel>
                 <Show when={key(item.item.rawValue) === key(props.value)}>
