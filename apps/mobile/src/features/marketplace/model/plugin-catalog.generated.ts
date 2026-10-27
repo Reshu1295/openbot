@@ -315,6 +315,38 @@ export const MOBILE_PLUGINS: readonly MobilePlugin[] = [
     ],
   },
   {
+    slug: "trello",
+    name: "Trello",
+    tagline: "Boards, lists and cards",
+    description:
+      "Trello lets agents search and read boards, lists, cards, checklists and comments, create boards and cards, move lists and cards, mark cards done, and add checklists, comments and labels. Each user signs in to their own Trello account through the browser and chooses the workspaces on a consent screen. Agents get the same permissions as the user in those workspaces. They can archive cards and lists, but the server cannot delete anything permanently.",
+    category: "productivity",
+    creatorName: "Atlassian",
+    version: "1.0.0",
+    prompts: [
+      { id: "prompt-my-cards", text: "Which Trello cards are assigned to me?" },
+      { id: "prompt-board", text: "Summarize what is in progress on my Trello board." },
+      { id: "prompt-new-cards", text: "Add these action items as cards to my Trello board." },
+    ],
+    websiteUrl: "https://trello.com",
+    privacyPolicyUrl: "https://www.atlassian.com/legal/privacy-policy",
+    termsUrl: "https://www.atlassian.com/legal/atlassian-customer-agreement",
+    featured: false,
+    apps: [
+      {
+        id: "app-trello-mcp",
+        name: "Trello",
+        description: "Boards, lists, and cards, over Trello's MCP server with browser sign-in.",
+        server: {
+          name: "trello",
+          transport: "http",
+          url: "https://mcp.trello.com/v1",
+          auth: [{ id: "trello-oauth", kind: "link", label: "Sign in" }],
+        },
+      },
+    ],
+  },
+  {
     slug: "cobrain",
     name: "Cobrain",
     tagline: "Shared memory for your AI agents",

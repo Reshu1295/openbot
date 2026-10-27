@@ -390,6 +390,14 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Quelles tâches Todoist sont à faire aujourd’hui ?",
   "marketplace.plugin.todoist.prompt.capture": "Ajoute ces actions à ma boîte de réception Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Reporte mes tâches Todoist en retard à demain.",
+  "marketplace.plugin.trello.tagline": "Tableaux, listes et cartes",
+  "marketplace.plugin.trello.description":
+    "Trello permet aux agents de rechercher et lire les tableaux, listes, cartes, checklists et commentaires, de créer des tableaux et des cartes, de déplacer les listes et les cartes, de marquer des cartes comme terminées, et d’ajouter des checklists, des commentaires et des étiquettes. Chaque utilisateur se connecte à son propre compte Trello dans le navigateur et choisit les espaces de travail sur un écran de consentement. Les agents ont les mêmes droits que l’utilisateur dans ces espaces de travail. Ils peuvent archiver des cartes et des listes, mais le serveur ne peut rien supprimer définitivement.",
+  "marketplace.plugin.trello.app":
+    "Tableaux, listes et cartes, via le serveur MCP de Trello avec connexion dans le navigateur.",
+  "marketplace.plugin.trello.prompt.myCards": "Quelles cartes Trello me sont attribuées ?",
+  "marketplace.plugin.trello.prompt.board": "Résume ce qui est en cours sur mon tableau Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Ajoute ces actions comme cartes à mon tableau Trello.",
   "marketplace.plugin.huggingface.tagline": "Modèles, jeux de données et articles sur le Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face permet aux agents de rechercher des modèles, des jeux de données, des Spaces, des collections et des articles sur le Hugging Face Hub, de lire les model cards et les fichiers des dépôts, de prévisualiser des jeux de données et de rechercher dans la documentation de Hugging Face. Il utilise les données publiques du Hub et ne demande ni compte ni clé. Les outils ne font que lire : les agents ne peuvent pas créer de dépôts ni lancer de jobs.",

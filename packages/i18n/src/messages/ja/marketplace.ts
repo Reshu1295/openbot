@@ -378,6 +378,14 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "今日が期限の Todoist タスクはどれですか？",
   "marketplace.plugin.todoist.prompt.capture": "これらのアクション項目を Todoist のインボックスに追加してください。",
   "marketplace.plugin.todoist.prompt.overdue": "期限切れの Todoist タスクを明日に移してください。",
+  "marketplace.plugin.trello.tagline": "ボード、リスト、カード",
+  "marketplace.plugin.trello.description":
+    "Trello を使うと、エージェントはボード、リスト、カード、チェックリスト、コメントを検索して読み、ボードとカードを作成し、リストとカードを移動し、カードを完了にし、チェックリスト、コメント、ラベルを追加できます。各ユーザーはブラウザーで自分の Trello アカウントにサインインし、同意画面でワークスペースを選びます。エージェントには、それらのワークスペースでユーザーと同じ権限があります。カードとリストをアーカイブできますが、サーバーは何も完全には削除できません。",
+  "marketplace.plugin.trello.app":
+    "ボード、リスト、カードを、ブラウザーでサインインする Trello の MCP サーバーで提供します。",
+  "marketplace.plugin.trello.prompt.myCards": "自分に割り当てられた Trello カードはどれですか？",
+  "marketplace.plugin.trello.prompt.board": "Trello ボードで進行中の作業をまとめてください。",
+  "marketplace.plugin.trello.prompt.newCards": "これらのアクション項目をカードとして Trello ボードに追加してください。",
   "marketplace.plugin.huggingface.tagline": "Hub のモデル、データセット、論文",
   "marketplace.plugin.huggingface.description":
     "Hugging Face を使うと、エージェントは Hugging Face Hub のモデル、データセット、Spaces、コレクション、論文を検索し、モデルカードやリポジトリのファイルを読み、データセットをプレビューし、Hugging Face のドキュメントを検索できます。公開されている Hub のデータを使うので、アカウントもキーも不要です。ツールは読み取り専用で、エージェントはリポジトリの作成やジョブの実行はできません。",

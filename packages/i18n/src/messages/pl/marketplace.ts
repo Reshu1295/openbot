@@ -383,6 +383,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Które zadania w Todoist mają termin na dziś?",
   "marketplace.plugin.todoist.prompt.capture": "Dodaj te punkty do działania do mojej skrzynki odbiorczej w Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Przenieś moje zaległe zadania w Todoist na jutro.",
+  "marketplace.plugin.trello.tagline": "Tablice, listy i karty",
+  "marketplace.plugin.trello.description":
+    "Trello pozwala agentom wyszukiwać i czytać tablice, listy, karty, listy kontrolne i komentarze, tworzyć tablice i karty, przenosić listy i karty, oznaczać karty jako ukończone oraz dodawać listy kontrolne, komentarze i etykiety. Każdy użytkownik loguje się na własne konto Trello przez przeglądarkę i wybiera obszary robocze na ekranie zgody. Agenci mają w tych obszarach roboczych te same uprawnienia co użytkownik. Mogą archiwizować karty i listy, ale serwer nie może niczego trwale usunąć.",
+  "marketplace.plugin.trello.app": "Tablice, listy i karty przez serwer MCP Trello z logowaniem w przeglądarce.",
+  "marketplace.plugin.trello.prompt.myCards": "Które karty w Trello są przypisane do mnie?",
+  "marketplace.plugin.trello.prompt.board": "Podsumuj, co jest w toku na mojej tablicy w Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Dodaj te punkty do działania jako karty na mojej tablicy w Trello.",
   "marketplace.plugin.huggingface.tagline": "Modele, zbiory danych i publikacje w Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face pozwala agentom wyszukiwać modele, zbiory danych, Spaces, kolekcje i publikacje w Hugging Face Hub, czytać karty modeli i pliki repozytoriów, podglądać zbiory danych oraz przeszukiwać dokumentację Hugging Face. Korzysta z publicznych danych Hub i nie wymaga konta ani klucza. Narzędzia tylko czytają: agenci nie mogą tworzyć repozytoriów ani uruchamiać zadań.",

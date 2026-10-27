@@ -393,6 +393,14 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Bugün hangi Todoist görevlerinin süresi doluyor?",
   "marketplace.plugin.todoist.prompt.capture": "Bu yapılacak maddeleri Todoist Gelen Kutuma ekle.",
   "marketplace.plugin.todoist.prompt.overdue": "Geciken Todoist görevlerimi yarına taşı.",
+  "marketplace.plugin.trello.tagline": "Panolar, listeler ve kartlar",
+  "marketplace.plugin.trello.description":
+    "Trello ile ajanlar panoları, listeleri, kartları, kontrol listelerini ve yorumları arayıp okur, pano ve kart oluşturur, listeleri ve kartları taşır, kartları tamamlandı olarak işaretler ve kontrol listesi, yorum ve etiket ekler. Her kullanıcı tarayıcıda kendi Trello hesabına giriş yapar ve bir onay ekranında çalışma alanlarını seçer. Ajanlar bu çalışma alanlarında kullanıcıyla aynı izinlere sahiptir. Kartları ve listeleri arşivleyebilirler, ancak sunucu hiçbir şeyi kalıcı olarak silemez.",
+  "marketplace.plugin.trello.app":
+    "Panolar, listeler ve kartlar, tarayıcıda giriş yapılan Trello MCP sunucusu üzerinden.",
+  "marketplace.plugin.trello.prompt.myCards": "Bana hangi Trello kartları atanmış?",
+  "marketplace.plugin.trello.prompt.board": "Trello panomda devam eden işleri özetle.",
+  "marketplace.plugin.trello.prompt.newCards": "Bu yapılacak maddeleri Trello panoma kart olarak ekle.",
   "marketplace.plugin.huggingface.tagline": "Hub'daki modeller, veri kümeleri ve makaleler",
   "marketplace.plugin.huggingface.description":
     "Hugging Face, ajanların Hugging Face Hub'da modelleri, veri kümelerini, Spaces'i, koleksiyonları ve makaleleri aramasına, model kartlarını ve depo dosyalarını okumasına, veri kümelerini önizlemesine ve Hugging Face belgelerinde arama yapmasına olanak tanır. Herkese açık Hub verilerini kullanır ve hesap ya da anahtar gerektirmez. Araçlar yalnızca okur: ajanlar depo oluşturamaz ve iş (job) çalıştıramaz.",

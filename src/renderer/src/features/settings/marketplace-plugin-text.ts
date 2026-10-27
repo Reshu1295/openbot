@@ -357,6 +357,18 @@ const PLUGIN_TEXT = {
       "prompt-overdue": "marketplace.plugin.todoist.prompt.overdue",
     },
   },
+  trello: {
+    tagline: "marketplace.plugin.trello.tagline",
+    description: "marketplace.plugin.trello.description",
+    apps: {
+      "app-trello-mcp": "marketplace.plugin.trello.app",
+    },
+    prompts: {
+      "prompt-my-cards": "marketplace.plugin.trello.prompt.myCards",
+      "prompt-board": "marketplace.plugin.trello.prompt.board",
+      "prompt-new-cards": "marketplace.plugin.trello.prompt.newCards",
+    },
+  },
   huggingface: {
     tagline: "marketplace.plugin.huggingface.tagline",
     description: "marketplace.plugin.huggingface.description",

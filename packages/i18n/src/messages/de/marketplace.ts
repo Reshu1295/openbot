@@ -390,6 +390,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Welche Todoist-Aufgaben sind heute fällig?",
   "marketplace.plugin.todoist.prompt.capture": "Füge diese To-dos meinem Todoist-Eingang hinzu.",
   "marketplace.plugin.todoist.prompt.overdue": "Verschiebe meine überfälligen Todoist-Aufgaben auf morgen.",
+  "marketplace.plugin.trello.tagline": "Boards, Listen und Karten",
+  "marketplace.plugin.trello.description":
+    "Mit Trello durchsuchen und lesen Agenten Boards, Listen, Karten, Checklisten und Kommentare, erstellen Boards und Karten, verschieben Listen und Karten, markieren Karten als erledigt und fügen Checklisten, Kommentare und Labels hinzu. Jeder Nutzer meldet sich im Browser bei seinem eigenen Trello-Konto an und wählt die Workspaces auf einer Zustimmungsseite. Agenten haben in diesen Workspaces dieselben Rechte wie der Nutzer. Sie können Karten und Listen archivieren, aber der Server kann nichts endgültig löschen.",
+  "marketplace.plugin.trello.app": "Boards, Listen und Karten über den MCP-Server von Trello mit Anmeldung im Browser.",
+  "marketplace.plugin.trello.prompt.myCards": "Welche Trello-Karten sind mir zugewiesen?",
+  "marketplace.plugin.trello.prompt.board": "Fasse zusammen, was auf meinem Trello-Board gerade in Arbeit ist.",
+  "marketplace.plugin.trello.prompt.newCards": "Füge diese To-dos als Karten zu meinem Trello-Board hinzu.",
   "marketplace.plugin.huggingface.tagline": "Modelle, Datensätze und Paper auf dem Hub",
   "marketplace.plugin.huggingface.description":
     "Mit Hugging Face durchsuchen Agenten Modelle, Datensätze, Spaces, Collections und Paper auf dem Hugging Face Hub, lesen Model Cards und Repository-Dateien, zeigen eine Vorschau von Datensätzen und durchsuchen die Hugging-Face-Dokumentation. Es verwendet öffentliche Hub-Daten und braucht kein Konto und keinen Schlüssel. Die Tools lesen nur: Agenten können keine Repositorys anlegen und keine Jobs ausführen.",

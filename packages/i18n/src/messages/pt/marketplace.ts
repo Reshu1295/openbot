@@ -364,6 +364,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Quais tarefas do Todoist vencem hoje?",
   "marketplace.plugin.todoist.prompt.capture": "Adicione estes itens de ação à minha Caixa de Entrada do Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Mova minhas tarefas atrasadas do Todoist para amanhã.",
+  "marketplace.plugin.trello.tagline": "Quadros, listas e cartões",
+  "marketplace.plugin.trello.description":
+    "O Trello permite que os agentes pesquisem e leiam quadros, listas, cartões, checklists e comentários, criem quadros e cartões, movam listas e cartões, marquem cartões como concluídos e adicionem checklists, comentários e etiquetas. Cada usuário entra na própria conta do Trello pelo navegador e escolhe as áreas de trabalho em uma tela de consentimento. Os agentes têm as mesmas permissões que o usuário nessas áreas de trabalho. Eles podem arquivar cartões e listas, mas o servidor não pode excluir nada de forma permanente.",
+  "marketplace.plugin.trello.app": "Quadros, listas e cartões, pelo servidor MCP do Trello com login no navegador.",
+  "marketplace.plugin.trello.prompt.myCards": "Quais cartões do Trello estão atribuídos a mim?",
+  "marketplace.plugin.trello.prompt.board": "Resuma o que está em andamento no meu quadro do Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Adicione estes itens de ação como cartões ao meu quadro do Trello.",
   "marketplace.plugin.huggingface.tagline": "Modelos, datasets e artigos no Hub",
   "marketplace.plugin.huggingface.description":
     "O Hugging Face permite que agentes pesquisem modelos, datasets, Spaces, coleções e artigos no Hugging Face Hub, leiam model cards e arquivos de repositórios, vejam uma prévia de datasets e pesquisem na documentação do Hugging Face. Ele usa dados públicos do Hub e não precisa de conta nem de chave. As ferramentas apenas leem: os agentes não podem criar repositórios nem executar jobs.",

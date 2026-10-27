@@ -379,6 +379,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Quali attività di Todoist scadono oggi?",
   "marketplace.plugin.todoist.prompt.capture": "Aggiungi queste azioni alla mia Posta in arrivo di Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Sposta a domani le mie attività scadute di Todoist.",
+  "marketplace.plugin.trello.tagline": "Bacheche, liste e schede",
+  "marketplace.plugin.trello.description":
+    "Trello permette agli agenti di cercare e leggere bacheche, liste, schede, checklist e commenti, creare bacheche e schede, spostare liste e schede, segnare le schede come completate e aggiungere checklist, commenti ed etichette. Ogni utente accede al proprio account Trello dal browser e sceglie gli spazi di lavoro in una schermata di consenso. Gli agenti hanno gli stessi permessi dell’utente in quegli spazi di lavoro. Possono archiviare schede e liste, ma il server non può eliminare nulla in modo definitivo.",
+  "marketplace.plugin.trello.app": "Bacheche, liste e schede, tramite il server MCP di Trello con accesso dal browser.",
+  "marketplace.plugin.trello.prompt.myCards": "Quali schede di Trello sono assegnate a me?",
+  "marketplace.plugin.trello.prompt.board": "Riassumi cosa è in corso sulla mia bacheca Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Aggiungi queste azioni come schede alla mia bacheca Trello.",
   "marketplace.plugin.huggingface.tagline": "Modelli, dataset e paper sull'Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face permette agli agenti di cercare modelli, dataset, Spaces, collezioni e paper sull'Hugging Face Hub, leggere model card e file dei repository, vedere un'anteprima dei dataset e cercare nella documentazione di Hugging Face. Usa dati pubblici dell'Hub e non richiede account né chiave. Gli strumenti leggono soltanto: gli agenti non possono creare repository né eseguire job.",

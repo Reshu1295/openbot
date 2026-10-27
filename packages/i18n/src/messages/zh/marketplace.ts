@@ -340,6 +340,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "今天到期的 Todoist 任务有哪些？",
   "marketplace.plugin.todoist.prompt.capture": "把这些待办事项添加到我的 Todoist 收件箱。",
   "marketplace.plugin.todoist.prompt.overdue": "把我逾期的 Todoist 任务改到明天。",
+  "marketplace.plugin.trello.tagline": "看板、列表和卡片",
+  "marketplace.plugin.trello.description":
+    "Trello 让助手搜索和读取看板、列表、卡片、清单和评论，创建看板和卡片，移动列表和卡片，将卡片标记为完成，并添加清单、评论和标签。每位用户通过浏览器登录自己的 Trello 账号，并在授权页面上选择工作区。助手在这些工作区中拥有与用户相同的权限。助手可以归档卡片和列表，但服务器无法永久删除任何内容。",
+  "marketplace.plugin.trello.app": "通过 Trello 的 MCP 服务器和浏览器登录，提供看板、列表和卡片。",
+  "marketplace.plugin.trello.prompt.myCards": "哪些 Trello 卡片分配给了我？",
+  "marketplace.plugin.trello.prompt.board": "总结我的 Trello 看板上正在进行的工作。",
+  "marketplace.plugin.trello.prompt.newCards": "把这些待办事项作为卡片添加到我的 Trello 看板。",
   "marketplace.plugin.huggingface.tagline": "Hub 上的模型、数据集和论文",
   "marketplace.plugin.huggingface.description":
     "Hugging Face 让助手在 Hugging Face Hub 上搜索模型、数据集、Spaces、合集和论文，读取模型卡片和仓库文件，预览数据集，并搜索 Hugging Face 文档。它使用 Hub 的公开数据，无需账号和密钥。这些工具只读取数据：助手不能创建仓库，也不能运行任务。",
