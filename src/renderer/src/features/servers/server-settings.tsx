@@ -298,8 +298,15 @@ const ServerSettings = createSimpleContext({
     }
 
     async function setServerPublished(published: boolean): Promise<void> {
-      const server = serverSettingsTarget();
-      if (server?.kind !== "local") throw new Error(currentText().t("server.settings.publicationLocalOnly"));
+      if (serverSettingsTarget()?.kind !== "local")
+        throw new Error(currentText().t("server.settings.publicationLocalOnly"));
+      await setLocalServerPublished(published);
+    }
+
+    /** Publishes or unpublishes this computer's server, whichever server the settings show. */
+    async function setLocalServerPublished(published: boolean): Promise<void> {
+      const server = servers().find((candidate) => candidate.kind === "local");
+      if (!server) throw new Error(currentText().t("server.settings.publicationLocalOnly"));
       const analytics = desktopAnalytics.scope();
       const action = published ? ("published" as const) : ("unpublished" as const);
       let operationSucceeded = false;
@@ -314,7 +321,7 @@ const ServerSettings = createSimpleContext({
         operationSucceeded = true;
         setHostStatus(status);
         setServers(await serversPort().servers.list());
-        await refreshServerSettings(server.id);
+        if (serverSettingsTargetId() === server.id) await refreshServerSettings(server.id);
       } catch (error) {
         if (!operationSucceeded) {
           analytics.track("team_action", {
@@ -729,6 +736,7 @@ const ServerSettings = createSimpleContext({
       recheckScreenRecording,
       rotateHostKey,
       setServerPublished,
+      publishLocalServer: () => setLocalServerPublished(true),
       createServerInvite,
       updateServerMember,
       removeServerMember,
