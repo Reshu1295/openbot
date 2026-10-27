@@ -173,9 +173,20 @@ export function createAgentTasks(options: AgentTasksOptions) {
     }
   }
 
-  async function startTask(agentId: string, text: string): Promise<AgentTask | null> {
+  /** Sends `attachmentDraftIds` only when there are files, so a server with text-only threads gets no new key. */
+  async function startTask(
+    agentId: string,
+    text: string,
+    attachmentDraftIds: string[] = [],
+  ): Promise<AgentTask | null> {
     const task = await runAction(
-      () => port().startTask({ agentId, text, clientMessageId: crypto.randomUUID() }),
+      () =>
+        port().startTask({
+          agentId,
+          text,
+          ...(attachmentDraftIds.length ? { attachmentDraftIds } : {}),
+          clientMessageId: crypto.randomUUID(),
+        }),
       "conversation.threads.error.start",
     );
     if (task && scopeIsCurrent()) rememberTask(task);
@@ -191,9 +202,21 @@ export function createAgentTasks(options: AgentTasksOptions) {
   }
 
   /** Steers the task's running turn, or queues the message in the task. */
-  async function sendToTask(agentId: string, taskId: string, text: string): Promise<boolean> {
+  async function sendToTask(
+    agentId: string,
+    taskId: string,
+    text: string,
+    attachmentDraftIds: string[] = [],
+  ): Promise<boolean> {
     const receipt = await runAction(
-      () => port().sendToTask({ agentId, taskId, text, clientMessageId: crypto.randomUUID() }),
+      () =>
+        port().sendToTask({
+          agentId,
+          taskId,
+          text,
+          ...(attachmentDraftIds.length ? { attachmentDraftIds } : {}),
+          clientMessageId: crypto.randomUUID(),
+        }),
       "conversation.threads.error.send",
     );
     return receipt !== null;

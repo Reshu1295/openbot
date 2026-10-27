@@ -25,6 +25,7 @@ import {
   untrack,
   useContext,
 } from "solid-js";
+import { actionToast } from "../../action-toast";
 import { createScopeGuard } from "../../scope-lifetime";
 import { createAttachmentImportSounds } from "./attachment-import-sounds";
 import { useConversationController } from "./conversation-controller-context";
@@ -60,6 +61,7 @@ import { createSearchStore } from "./stores/search-store";
 import { createSettingsStore, runtimeSettingsEqual } from "./stores/settings-store";
 import { createSideQuestionStore } from "./stores/side-question-store";
 import { createSkillsStore } from "./stores/skills-store";
+import { createThreadComposerActions } from "./stores/thread-composer-actions";
 import { createVoiceConversation } from "./stores/voice-conversation-store";
 import { createVoiceStore } from "./stores/voice-store";
 
@@ -612,6 +614,11 @@ export function createConversationViewScope(props: ConversationProps) {
       if (emptied) dismissVoiceLimitNotice();
     },
   );
+  const threadComposer = createThreadComposerActions({
+    props,
+    threadDrafts: controller.threadDrafts,
+    setThreadDrafts: controller.setThreadDrafts,
+  });
   const actions = createComposerActions({
     props,
     attachmentBusy,
@@ -827,8 +834,21 @@ export function createConversationViewScope(props: ConversationProps) {
 
   onSettled(() => {
     const importSounds = createAttachmentImportSounds();
+    /** The thread draft that each import from a drop or the file picker goes to, by request id. */
+    const threadImports = new Map<string, string>();
     const unsubscribeImport = conversationRuntime(props).agent.onAttachmentImport((event) => {
+      const threadKey = threadImports.get(event.requestId);
       if (event.type === "started") {
+        // A side thread covers the agent's own chat, so a file dropped or picked there goes to the thread.
+        const openThreadKey = threadComposer.openDraftKey();
+        if (openThreadKey !== undefined) {
+          if (!props.threads?.acceptsFiles) threadComposer.refuseFiles();
+          else if (currentTarget()?.serverId === event.serverId) {
+            threadImports.set(event.requestId, openThreadKey);
+            importSounds.started(event.requestId);
+          }
+          return;
+        }
         const target = currentTarget();
         if (target?.serverId === event.serverId) {
           resources.importTargetAgents.set(event.requestId, target);
@@ -837,6 +857,17 @@ export function createConversationViewScope(props: ConversationProps) {
         }
         setAttachmentBusy(true);
         setScopedComposerError(null);
+      } else if (threadKey !== undefined) {
+        threadImports.delete(event.requestId);
+        if (event.type === "error") {
+          importSounds.cancel(event.requestId);
+          actionToast.error(event.message);
+        } else {
+          // A cancelled import completes with no attachments.
+          if (event.attachments.length > 0) importSounds.finished(event.requestId, "success");
+          else importSounds.cancel(event.requestId);
+          threadComposer.addFiles(threadKey, event.serverId, event.attachments);
+        }
       } else if (event.type === "error") {
         const target = resources.importTargetAgents.get(event.requestId);
         resources.importTargetAgents.delete(event.requestId);
@@ -1633,6 +1664,7 @@ export function createConversationViewScope(props: ConversationProps) {
 
   return {
     sideThreadOpen,
+    threadComposer,
     replyJump,
     voiceConversationAvailable,
     startVoiceConversation,

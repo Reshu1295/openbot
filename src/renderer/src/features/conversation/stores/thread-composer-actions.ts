@@ -1,0 +1,153 @@
+import { attachmentReferenceIds, serializeAttachmentReference } from "@openbot/contracts/attachment-references";
+import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
+import type { DraftAttachment } from "@openbot/contracts/ipc";
+import type { ComposerPasteResult, ComposerSelection } from "@openbot/ui/features/conversation/ComposerEditor";
+import { DRAFT_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
+import { currentText } from "@openbot/ui/text";
+import { actionToast } from "../../../action-toast";
+import { EMPTY_DRAFT } from "../composer-draft";
+import { threadDraftKey } from "../conversation-keys";
+import { conversationRuntime } from "../conversation-runtime";
+import type { ComposerDraft, ConversationProps, ConversationThreads } from "../conversation-types";
+import { importPastedFiles } from "./composer-actions";
+import { currentConversationTarget } from "./composer-store";
+
+// Each member reads the interface language when it is called.
+const { t, errorMessage } = currentText();
+
+type Drafts = Record<string, ComposerDraft>;
+
+export interface ThreadComposerActionsDeps {
+  props: ConversationProps;
+  threadDrafts: () => Drafts;
+  setThreadDrafts: (update: (current: Drafts) => Drafts) => void;
+}
+
+/**
+ * The message box of the open side thread. Each file in it is a reference in the text, so the box
+ * shows no file row. A thread takes files only on this computer: `agent-tasks-v1` carries text only.
+ */
+export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
+  /** The draft of the open side thread, or of the new thread tab. Undefined while the agent's own chat is open. */
+  function openDraftKey(): string | undefined {
+    const target = currentConversationTarget(deps.props);
+    const open = deps.props.threads?.open;
+    return target && open !== undefined ? threadDraftKey(target, open?.id ?? DRAFT_THREAD_ID) : undefined;
+  }
+
+  function draft(key: string): ComposerDraft {
+    return deps.threadDrafts()[key] ?? EMPTY_DRAFT;
+  }
+
+  /** An empty draft leaves the list, so the stored drafts keep only the boxes with content. */
+  function updateDraft(key: string, update: (draft: ComposerDraft) => ComposerDraft): void {
+    deps.setThreadDrafts((current) => {
+      const next = update(current[key] ?? EMPTY_DRAFT);
+      if (next.text || next.attachments.length > 0) return { ...current, [key]: next };
+      if (!(key in current)) return current;
+      const { [key]: _removed, ...rest } = current;
+      return rest;
+    });
+  }
+
+  function discard(attachments: readonly DraftAttachment[], serverId: string): void {
+    for (const attachment of attachments)
+      void conversationRuntime(deps.props).agent.discardDraftAttachment(attachment.id, serverId);
+  }
+
+  function refuseFiles(): void {
+    actionToast.error(t("conversation.threads.error.files"));
+  }
+
+  /**
+   * Adds the files that fit the draft and puts their references at the selection, or at the end when
+   * the text changed since `before`. A message that would be too long keeps none of them.
+   */
+  function addFiles(
+    key: string,
+    serverId: string,
+    imported: readonly DraftAttachment[],
+    at?: { before: string; selection: ComposerSelection },
+  ): ComposerPasteResult | undefined {
+    const available = Math.max(0, INPUT_LIMITS.attachments - draft(key).attachments.length);
+    const accepted = imported.slice(0, available);
+    discard(imported.slice(available), serverId);
+    if (imported.length > accepted.length)
+      actionToast.error(t("composer.error.attachmentLimit", { limit: INPUT_LIMITS.attachments }));
+    if (!accepted.length) return;
+    const references = accepted
+      .map((attachment) => serializeAttachmentReference(attachment.name, attachment.id))
+      .join(" ");
+    const current = draft(key).text;
+    const atSelection = at && current === at.before ? at.selection : undefined;
+    const text = atSelection
+      ? `${current.slice(0, atSelection.start)}${references}${current.slice(atSelection.end)}`
+      : [current, references].filter(Boolean).join(" ");
+    if (text.length > INPUT_LIMITS.messageText) {
+      discard(accepted, serverId);
+      actionToast.error(t("error.agent.messageTooLong"));
+      return;
+    }
+    updateDraft(key, (current) => ({ ...current, text, attachments: [...current.attachments, ...accepted] }));
+    return { value: text, caret: atSelection ? atSelection.start + references.length : text.length };
+  }
+
+  async function pasteFiles(
+    files: ReadonlyArray<File | Promise<File>>,
+    selection: ComposerSelection,
+  ): Promise<ComposerPasteResult | undefined> {
+    const key = openDraftKey();
+    const target = currentConversationTarget(deps.props);
+    if (!key || !target) return;
+    if (!deps.props.threads?.acceptsFiles) {
+      refuseFiles();
+      return;
+    }
+    const before = draft(key).text;
+    try {
+      const imported = await importPastedFiles(
+        files,
+        () => draft(key).attachments.length,
+        (data) => conversationRuntime(deps.props).agent.importAttachmentData(data, target.serverId),
+      );
+      return addFiles(key, target.serverId, imported, { before, selection });
+    } catch (error) {
+      actionToast.error(errorMessage(error, t("composer.error.keepAttachments")));
+    }
+  }
+
+  function setText(key: string | undefined, text: string): void {
+    if (key) updateDraft(key, (current) => ({ ...current, text }));
+  }
+
+  /**
+   * Sends the text with the files that it still names. When the message went, the draft empties and
+   * each file whose reference the user deleted is discarded.
+   */
+  async function send(threads: ConversationThreads, text: string): Promise<boolean> {
+    // The first message of a new thread starts the thread and opens it, so the key is read before the send.
+    const key = openDraftKey();
+    const target = currentConversationTarget(deps.props);
+    const attachments = key ? draft(key).attachments : [];
+    const referenced = attachmentReferenceIds(text);
+    const sent = await threads.onSend(
+      text,
+      attachments.filter((attachment) => referenced.has(attachment.id)).map((attachment) => attachment.id),
+    );
+    if (!sent || !key) return sent;
+    const known = new Set(attachments.map((attachment) => attachment.id));
+    updateDraft(key, (current) => ({
+      ...current,
+      text: "",
+      attachments: current.attachments.filter((attachment) => !known.has(attachment.id)),
+    }));
+    if (target)
+      discard(
+        attachments.filter((attachment) => !referenced.has(attachment.id)),
+        target.serverId,
+      );
+    return sent;
+  }
+
+  return { openDraftKey, draft, addFiles, pasteFiles, refuseFiles, setText, send };
+}

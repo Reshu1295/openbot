@@ -61,7 +61,9 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     running: list.filter(isAgentTaskActive).length,
     conversation: open ? tasks.conversation(open.id) : undefined,
     approval,
-    onSend: (text) => (open ? tabs.send(agentId, open.id, text) : tabs.sendDraft(agentId, text)),
+    acceptsFiles: tasks.local(),
+    onSend: (text, attachmentDraftIds) =>
+      open ? tabs.send(agentId, open.id, text, attachmentDraftIds) : tabs.sendDraft(agentId, text, attachmentDraftIds),
     onStop: () => {
       if (open) tasks.stopTask(agentId, open.id);
     },
