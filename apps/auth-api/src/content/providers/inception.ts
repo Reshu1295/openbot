@@ -40,7 +40,6 @@ export const INCEPTION_PROVIDER: ProviderPage = {
     },
   ],
   comparisons: ["best-ai-agent-apps"],
-  localOnly: true,
   faq: [
     {
       question: "What is Mercury?",
@@ -60,7 +59,7 @@ export const INCEPTION_PROVIDER: ProviderPage = {
     {
       question: "Can I use Inception agents from my phone or share them with a team?",
       answer:
-        "No. Inception agents use the API key on your computer, so they stay on that computer. The phone apps and team members do not see them. Agents on other providers are available on your phone and to your team.",
+        "Yes. An Inception agent runs on the computer that has your Inception API key, and you use it from your phone or share it with your team like any other agent. On a server, an owner or admin saves the key in the server's provider settings.",
     },
   ],
   sources: [

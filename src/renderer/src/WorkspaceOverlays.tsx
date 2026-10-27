@@ -332,6 +332,8 @@ function ServerSettings() {
     cancelProviderSignIn,
     openProviderInstallGuide,
     setProviderOn,
+    measureProviderDownload,
+    removeProviderDownload,
     providerAccounts,
     restartProvider,
     cancelProviderRestart,
@@ -523,6 +525,8 @@ function ServerSettings() {
         return local && providerRuntimeDownloadsAvailable() ? openProviderInstallGuide : undefined;
       },
       onSetProviderOn: local ? setProviderOn : undefined,
+      onMeasureProviderDownload: local ? measureProviderDownload : undefined,
+      onRemoveProviderDownload: local ? removeProviderDownload : undefined,
       get providerUsers() {
         return Object.fromEntries(
           (agentStatus().providers ?? []).map((provider) => [

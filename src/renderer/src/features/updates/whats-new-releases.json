@@ -1,5 +1,45 @@
 [
   {
+    "version": "0.52.0",
+    "date": "2026-10-27",
+    "notices": [],
+    "groups": [
+      {
+        "type": "added",
+        "items": [
+          "Give an agent more than one conversation. Click + in the chat header to start a new thread. Each thread has its own tab and runs at the same time as the other threads.",
+          "Right-click an agent in the sidebar and choose \"New thread\" to open its chat with a new thread.",
+          "Attach MP4 videos in chat. The chat plays them, and the agent gets the original file.",
+          "An image file that an agent names in its answer now shows as a preview under the answer.",
+          "Choose Nederlands (Dutch) in Settings → General → Language.",
+          "Connect Obsidian, Trello, Render, Neon, Prisma, Netlify, Railway, Atlassian, Todoist and Hugging Face from the Apps catalog.",
+          "An owner or admin of a joined server can open that server's Vault in Server settings."
+        ]
+      },
+      {
+        "type": "changed",
+        "items": [
+          "Tasks are now threads. Your existing tasks show as threads, and closed tasks show as archived threads.",
+          "Connectors are now only in the Marketplace. To connect Slack, Discord, Telegram, GitHub, 1Password or Bitwarden, open Marketplace → Apps.",
+          "Messages that you send while an agent works now start one next turn together, in their order.",
+          "A message from another agent can now steer the running turn."
+        ]
+      },
+      {
+        "type": "fixed",
+        "items": [
+          "OpenBot starts again when an update for a provider CLI is available.",
+          "A chat with queued messages no longer slows down OpenBot.",
+          "Pi, DeepSeek, Inception, OpenRouter and Cursor agents with Workspace only access on macOS work again.",
+          "A Pi agent keeps its OpenBot tools after OpenBot restarts.",
+          "Muse agents on Windows can start a turn again.",
+          "An agent with Full access no longer asks before each Computer Use action.",
+          "Slack, Discord and Telegram connect on this computer without a manual server publish first."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.51.1",
     "date": "2026-10-26",
     "notices": [],

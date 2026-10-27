@@ -381,6 +381,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:provider-update-after-app-upgrade
 
+      - name: Run the provider CLI removal E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:provider-runtime-remove
+
       - name: Run the provider session after a process exit E2E test
         if: ${{ !cancelled() }}
         run: bun run test:provider-exit-session
@@ -515,6 +519,7 @@ jobs:
             .openbot-build/zero-filled-settings-e2e/
             .openbot-build/provider-update-busy-e2e/
             .openbot-build/provider-update-after-app-upgrade-e2e/
+            .openbot-build/provider-runtime-remove-e2e/
             .openbot-build/provider-exit-session-e2e/
             .openbot-build/codex-hung-app-server-e2e/
             .openbot-build/codex-missing-rollout-e2e/

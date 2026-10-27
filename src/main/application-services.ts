@@ -1636,7 +1636,7 @@ export async function createApplicationServices({
     providerAccounts,
     saveProviderUse: (provider, on) =>
       providerUse.set(provider, on).pipe(
-        Effect.tap(() => Effect.sync(() => providerRuntimes.providerUseChanged())),
+        Effect.tap(() => providerRuntimes.providerUseChanged()),
         Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
       ),
     preferredProvider: setupState.preferredProvider ?? "codex",

@@ -344,7 +344,8 @@ export class OpenBotToolRouter {
               const agentId = this.#conversation.agentForThread(params.threadId);
               if (!agentId) throw new Error("The calling OpenBot agent is unknown.");
               try {
-                const result = discoverTools(params, this.#requireAgent(agentId));
+                this.#requireAgent(agentId);
+                const result = discoverTools(params);
                 client.respond(request.id, openBotToolResult(result));
               } catch {
                 client.respond(request.id, openBotToolFailure(sourceText("error.agent.toolRequestInvalid")));

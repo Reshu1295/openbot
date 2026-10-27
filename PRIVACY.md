@@ -599,7 +599,9 @@ is not included in analytics; provider output uses the application's secret reda
   keyring, the Vault saves nothing. The file never leaves this computer. An owner or admin of a joined
   server can open that server's Vault in Server settings, from the desktop app or the web app: the
   list goes over the encrypted connection with no password, card number or security code, and one of
-  those goes to them only when they show or copy it. Other team members cannot read it. An agent gets the login sites and usernames, the card names with their last
+  those goes to them only when they show or copy it. The iPhone app shows the same list and never
+  asks for a password, a card number or a security code: a new one that the owner or admin types on
+  the phone goes once to the server, and the phone does not keep it. Other team members cannot read it. An agent gets the login sites and usernames, the card names with their last
   four digits and expiry, and the contact info; it never gets a password, a card number, a security
   code or login notes. An agent can add and change contact info, change the username of a login (not
   its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
@@ -614,7 +616,10 @@ is not included in analytics; provider output uses the application's secret reda
   what a person types. Until that page navigates, the agent cannot take a screenshot, evaluate
   script or record in that tab, and its snapshots hide the card fields. Passwords and card numbers
   are redacted from logs, exports and diagnostics, also in the desktop app of an admin who showed
-  or copied one. A CSV import is read on this computer only, so a joined server's Vault has no import.
+  or copied one. A CSV import is read on this computer, from its own file dialog or from the text of
+  a CSV export that an owner or admin picks in the iPhone app (`vault-import-v1`). That text goes once
+  over the encrypted connection; the answer carries only the counts, and the phone deletes its copy
+  of the file after it reads it.
 - `~/Library/Application Support/OpenBot/logs/trace.ndjson` is a local trace of IPC calls,
   provider turns, main-process failures, and the steps of each connection to a joined server. Each
   line holds a time, the IPC channel name, the turn origin, the failure origin (`uncaughtException`

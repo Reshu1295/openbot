@@ -152,10 +152,10 @@ try {
   const offOffer = noUpgrade.manager.getStatus().providers[OFF].availableVersion ?? null;
   // Main sends the offers again when the user turns a provider on or off, as `saveProviderUse` does.
   offTurnedOn = true;
-  noUpgrade.manager.providerUseChanged();
+  await runCauseEffect(noUpgrade.manager.providerUseChanged());
   const offerAfterOn = noUpgrade.snapshots.at(-1)?.providers[OFF].availableVersion ?? null;
   offTurnedOn = false;
-  noUpgrade.manager.providerUseChanged();
+  await runCauseEffect(noUpgrade.manager.providerUseChanged());
   const offerAfterOff = noUpgrade.snapshots.at(-1)?.providers[OFF].availableVersion ?? null;
   const notUpgraded = {
     phases: phases(noUpgrade.snapshots),

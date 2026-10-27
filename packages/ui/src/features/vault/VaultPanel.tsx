@@ -11,7 +11,13 @@ import type {
   VaultSecretRequest,
   VaultState,
 } from "@openbot/contracts/ipc";
-import { cardBrand, VAULT_NOTES_LIMIT, VAULT_PASSWORD_LIMIT, VAULT_TEXT_LIMIT } from "@openbot/contracts/ipc";
+import {
+  cardBrand,
+  VAULT_COUNTRY_CODES,
+  VAULT_NOTES_LIMIT,
+  VAULT_PASSWORD_LIMIT,
+  VAULT_TEXT_LIMIT,
+} from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import {
   Alert,
@@ -121,26 +127,6 @@ const SECRET_TEXT = {
   number: { show: "vault.showNumber", hide: "vault.hideNumber", copy: "vault.copyNumber" },
   securityCode: { show: "vault.showSecurityCode", hide: "vault.hideSecurityCode", copy: "vault.copySecurityCode" },
 } as const satisfies Record<VaultSecretField, { show: AppTextKey; hide: AppTextKey; copy: AppTextKey }>;
-
-const COUNTRY_CODES = [
-  "AT",
-  "AU",
-  "BE",
-  "CA",
-  "CH",
-  "DE",
-  "DK",
-  "ES",
-  "FR",
-  "GB",
-  "IE",
-  "IT",
-  "JP",
-  "NL",
-  "PL",
-  "SE",
-  "US",
-];
 
 const digitsOf = (value: string) => value.replace(/\D/gu, "");
 
@@ -298,7 +284,7 @@ export function VaultPanel(props: VaultPanelProps) {
   const regionNames = createMemo(() => new Intl.DisplayNames([locale()], { type: "region" }));
   const countryName = (code: string) => (code ? (regionNames().of(code) ?? code) : "");
   const countries = createMemo(() =>
-    COUNTRY_CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) => a.name.localeCompare(b.name)),
+    VAULT_COUNTRY_CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) => a.name.localeCompare(b.name)),
   );
   const contactLine = (contact: VaultContactFields) =>
     [contact.address, contact.city, contact.postalCode, countryName(contact.country)].filter(Boolean).join(", ");

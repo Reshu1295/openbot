@@ -463,6 +463,12 @@ restart. The host must reach the server address over HTTPS; the instance firewal
 [several instances on one host](../docker.md#several-instances-on-one-host) blocks private
 addresses. A host older than this capability hides Bitwarden.
 
+The phone uses the same routes in Server settings › Connectors › Bitwarden
+(`apps/mobile/src/features/servers/components/bitwarden-connector-page.tsx`). It reads `status`
+every 3 seconds while the page shows, as for the other connectors, and keeps no copy of the API key
+or the master password. For a host older than this capability, the phone shows Bitwarden as
+"Desktop app only", with no action.
+
 ## Add a Team API capability
 
 A new remote feature is a new optional capability. Do not change a shipped capability: released

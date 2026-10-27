@@ -3,8 +3,8 @@
 // mailbox and the browser are small in-memory stand-ins that record each call, so a check can show
 // that a refused request did not reach them. The checks cover the protocol and auth gates, sign-in
 // and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`, the
-// host's Vault (`vault-v1`) over the real service and store, a password that an admin saves from the
-// secure card (`browser-secret-vault-v1`),
+// host's Vault (`vault-v1`, and the CSV import of `vault-import-v1`) over the real service and store,
+// a password that an admin saves from the secure card (`browser-secret-vault-v1`),
 // direct-message isolation, agents hidden from an older
 // protocol, the queue routes, the attachment and file routes with their size limits, and the error
 // codes. Writes .openbot-build/team-api-routes-e2e/report.json.
@@ -19,6 +19,7 @@ import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits
 import {
   AGENT_PROVIDERS,
   type AgentProviderId,
+  type AgentStatus,
   type AgentSummary,
   type AttachmentDataInput,
   type BitwardenConnectorStatus,
@@ -55,6 +56,8 @@ import {
   PROVIDER_USAGE_RESET_CAPABILITY,
   PROVIDER_USAGE_RESET_ROUTES,
 } from "@openbot/contracts/team-protocol/provider-usage-reset-v1";
+import { PROVIDERS_V5_CAPABILITY, PROVIDERS_V5_ROUTES } from "@openbot/contracts/team-protocol/providers-v5";
+import { PROVIDERS_V8_CAPABILITY, PROVIDERS_V8_ROUTES } from "@openbot/contracts/team-protocol/providers-v8";
 import { QueueEditRejectedError, TEAM_QUEUE_EDIT_CAPABILITY } from "@openbot/contracts/team-protocol/queue-edit-v1";
 import {
   ROUTINE_RESULTS_CAPABILITY,
@@ -67,6 +70,7 @@ import {
   TEAM_CAPABILITIES_HEADER,
   TEAM_PROTOCOL_VERSION_HEADER,
 } from "@openbot/contracts/team-protocol/v1";
+import { VAULT_IMPORT_CAPABILITY, VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
@@ -252,6 +256,17 @@ function queueSnapshot(agentId: string): QueueSnapshot {
     ],
   };
 }
+
+// The provider keys that the fake host keeps.
+const providerKeys = new Set<string>();
+const NO_STATUS: AgentStatus = {
+  phase: "ready",
+  cliVersion: null,
+  auth: { kind: "unknown" },
+  capabilities: { chat: "ready", browser: "unavailable", computerUse: "unavailable" },
+  message: null,
+  fullAccess: true,
+};
 
 let hidden: HiddenAgentsSnapshot = { agents: [{ agentId: "agent-pi", hiddenAt: new Date(0).toISOString() }] };
 
@@ -633,6 +648,50 @@ try {
               : null;
             return Effect.succeed(routineDestination);
           }),
+      },
+      // A credential store in memory. The service runs the change as the host's does.
+      providers: {
+        service: {
+          startProviderCodeLogin: unused("providers.startProviderCodeLogin"),
+          submitProviderCodeLogin: unused("providers.submitProviderCodeLogin"),
+          cancelProviderCodeLogin: unused("providers.cancelProviderCodeLogin"),
+          changeProviderCredential: (provider, change) => {
+            record("changeProviderCredential", provider);
+            return change().pipe(Effect.as(NO_STATUS));
+          },
+          clearProviderCredential: (_provider, change) => change().pipe(Effect.as(NO_STATUS)),
+        },
+        credentials: {
+          status: (provider) => (providerKeys.has(provider) ? "saved" : "missing"),
+          set: (provider, key) =>
+            Effect.sync(() => {
+              record("setProviderKey", provider, key);
+              providerKeys.add(provider);
+            }),
+          clear: (provider) =>
+            Effect.sync(() => {
+              record("clearProviderKey", provider);
+              providerKeys.delete(provider);
+            }),
+        },
+        runtimes: {
+          getStatus: unused("providers.runtimes.getStatus"),
+          download: unused("providers.runtimes.download"),
+          cancel: unused("providers.runtimes.cancel"),
+          checkForUpdates: unused("providers.runtimes.checkForUpdates"),
+          // Pi is ready for DeepSeek. For Inception it is still to come.
+          startKeyProviderCli: (provider) =>
+            Effect.sync(() => {
+              record("startKeyProviderCli", provider);
+              return provider === "inception";
+            }),
+        },
+        customProviders: {
+          list: unused("providers.customProviders.list"),
+          save: unused("providers.customProviders.save"),
+          remove: unused("providers.customProviders.remove"),
+        },
+        pasteSignIn: false,
       },
     },
     bitwardenConnector,
@@ -1175,8 +1234,7 @@ try {
         isDeepStrictEqual(ids(v8), ["agent-ada", "agent-oc", "agent-pi"]),
       { v3: ids(v3), v6: ids(v6), v7: ids(v7), v8: ids(v8) },
     );
-    // Each frozen list is the released vocabulary of its protocol. Protocol 8 and later hide only the
-    // local-only providers, which every protocol hides.
+    // Each frozen list is the released vocabulary of its protocol. Protocol 8 and later hide none.
     const hiddenBy = (protocol: number) =>
       AGENT_PROVIDERS.filter((provider) => isPeerHiddenProvider(provider, protocol));
     const expectedHidden: Record<number, readonly string[]> = {
@@ -1186,8 +1244,8 @@ try {
       5: ["cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
       6: ["pi", "muse", "inception", "deepseek", "openrouter"],
       7: ["inception", "deepseek", "openrouter"],
-      8: ["inception", "deepseek", "openrouter"],
-      9: ["inception", "deepseek", "openrouter"],
+      8: [],
+      9: [],
     };
     const hiddenRows = Object.entries(expectedHidden).map(([protocol, expected]) => ({
       protocol: Number(protocol),
@@ -1195,7 +1253,7 @@ try {
       expected: AGENT_PROVIDERS.filter((provider) => expected.includes(provider)),
     }));
     check(
-      "the frozen provider lists hide each provider that a protocol below 8 does not know, and every protocol hides the local-only providers",
+      "the frozen provider lists hide each provider that a protocol below 8 does not know, and protocol 8 hides none",
       hiddenRows.every((row) => isDeepStrictEqual(row.hidden, row.expected)),
       hiddenRows,
     );
@@ -1712,6 +1770,60 @@ try {
     );
   }
 
+  // ---- Keys of the key-only providers (providers-v8) ----
+  {
+    const v8 = { token: adaToken, protocol: 8, capabilities: [PROVIDERS_V8_CAPABILITY] };
+    const key = ["sk", "e2e", "deepseek", "fake0000"].join("-");
+    const before = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    const set = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, { ...v8, json: { provider: "deepseek", key } });
+    const after = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    check(
+      "an admin on providers-v8 saves a DeepSeek key on the host, and the host starts the Pi CLI for it",
+      before.status === 200 &&
+        field(before.body, "status") === "missing" &&
+        set.status === 200 &&
+        isDeepStrictEqual(callsOf("setProviderKey"), [["deepseek", key]]) &&
+        isDeepStrictEqual(callsOf("startKeyProviderCli"), [["deepseek"]]) &&
+        isDeepStrictEqual(callsOf("changeProviderCredential"), [["deepseek"]]) &&
+        after.status === 200 &&
+        field(after.body, "status") === "saved",
+      [summary(before), summary(set), summary(after)],
+    );
+    const cleared = await call("POST", PROVIDERS_V8_ROUTES.apiKeyClear, { ...v8, json: { provider: "deepseek" } });
+    const afterClear = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    check(
+      "an admin on providers-v8 clears the DeepSeek key",
+      cleared.status === 200 &&
+        isDeepStrictEqual(callsOf("clearProviderKey"), [["deepseek"]]) &&
+        field(afterClear.body, "status") === "missing",
+      [summary(cleared), summary(afterClear)],
+    );
+    const v5 = await call("POST", PROVIDERS_V5_ROUTES.apiKeySet, {
+      token: adaToken,
+      capabilities: [PROVIDERS_V5_CAPABILITY],
+      json: { provider: "openrouter", key },
+    });
+    const member = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, {
+      ...v8,
+      token: bobToken,
+      json: { provider: "openrouter", key },
+    });
+    check(
+      "providers-v5 refuses a key-only provider's key, a member gets 403, and neither saves a key",
+      v5.status === 400 && member.status === 403 && callsOf("setProviderKey").length === 1,
+      [summary(v5), summary(member)],
+    );
+    // No Pi process runs while Pi downloads, so a restart of the provider would fail on the missing CLI.
+    const pending = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, { ...v8, json: { provider: "inception", key } });
+    check(
+      "while the host downloads Pi, a key-only provider's key is saved without a provider restart",
+      pending.status === 200 &&
+        isDeepStrictEqual(callsOf("setProviderKey").at(-1), ["inception", key]) &&
+        isDeepStrictEqual(callsOf("changeProviderCredential"), [["deepseek"]]),
+      summary(pending),
+    );
+  }
+
   // ---- Usage reset credits (provider-usage-reset-v1) ----
   {
     const resetCapabilities = [PROVIDER_USAGE_RESET_CAPABILITY];
@@ -2074,6 +2186,47 @@ try {
           { requestId: "auth-1", agentId: "agent-ada", decision: "submit", secret: VAULT_PASSWORD, saveToVault: true },
         ]),
       summary(saved),
+    );
+  }
+
+  // ---- A CSV import into the host's Vault (vault-import-v1) ----
+  {
+    const csvPassword = ["vault", "e2e", "csv", "password"].join("-");
+    const importCall = (token: string, json: unknown, capabilities = [VAULT_IMPORT_CAPABILITY]) =>
+      call("POST", VAULT_IMPORT_ROUTES.import, { token, json, capabilities });
+    const csv = [
+      "url,username,password",
+      `https://mail.example.com,ada,${csvPassword}`,
+      `http://old.example.com,ada,${csvPassword}`,
+    ].join("\n");
+    const unsupported = await importCall(adaToken, { csv }, [VAULT_CAPABILITY]);
+    const member = await importCall(bobToken, { csv });
+    check(
+      "a CSV import needs vault-import-v1 and an owner or admin",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(member, 403, sourceText("error.team.adminRequired")) &&
+        vault.state().items.length === 0,
+      [summary(unsupported), summary(member)],
+    );
+    const loggedBefore = logged.length;
+    const imported = await importCall(adaToken, { csv });
+    const logins = vault.state().items.filter((item) => item.kind === "login");
+    check(
+      "an admin imports a CSV export: the HTTPS login is added, the other row skipped, and only the counts answer",
+      imported.status === 200 &&
+        isDeepStrictEqual(imported.body, { imported: 1, skipped: 1 }) &&
+        logins.length === 1 &&
+        logins[0] !== undefined &&
+        vault.reveal({ id: logins[0].id, field: "password" }) === csvPassword &&
+        !imported.text.includes(csvPassword) &&
+        !logged.slice(loggedBefore).some((line) => line.includes(csvPassword)),
+      summary(imported),
+    );
+    const notCsv = await importCall(adaToken, { csv: "name\nnothing" });
+    check(
+      "a file that is not a password export gets the Vault's own sentence",
+      errorIs(notCsv, 400, sourceText("error.vault.csvInvalid")),
+      summary(notCsv),
     );
   }
 

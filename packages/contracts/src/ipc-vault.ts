@@ -134,6 +134,35 @@ export const VAULT_FILL_SITE_LIMIT = 100;
 export const VAULT_NOTES_LIMIT = 4096;
 export const VAULT_PASSWORD_LIMIT = 1024;
 
+/** The countries that the Vault's contact form offers, as ISO 3166-1 alpha-2 codes. */
+export const VAULT_COUNTRY_CODES = [
+  "AT",
+  "AU",
+  "BE",
+  "CA",
+  "CH",
+  "DE",
+  "DK",
+  "ES",
+  "FR",
+  "GB",
+  "IE",
+  "IT",
+  "JP",
+  "NL",
+  "PL",
+  "SE",
+  "US",
+] as const;
+
+export type VaultCountryCode = (typeof VAULT_COUNTRY_CODES)[number];
+
+/** The counts of a CSV import on a joined server (`vault-import-v1`), which opens no file dialog. */
+export interface VaultHostImportResult {
+  imported: number;
+  skipped: number;
+}
+
 const VAULT_STATUSES: readonly VaultStatus[] = ["ready", "unavailable", "unreadable"];
 const VAULT_CARD_BRANDS: readonly VaultCardBrand[] = ["visa", "mastercard", "amex", "discover"];
 const VAULT_SECRET_KEYS = ["password", "number", "securityCode"] as const;
@@ -204,6 +233,12 @@ export function decodeHostVaultState(value: unknown): VaultState {
   const state = decodeRecord(value, "Vault response");
   if (!isOneOf(VAULT_STATUSES, state.status)) throw new Error("Invalid Vault response.");
   return { status: state.status, items: decodeList(state.items, "Vault item", hostVaultItem) };
+}
+
+/** The counts that a joined server answers to a CSV import (`vault-import-v1`). */
+export function decodeHostVaultImport(value: unknown): VaultHostImportResult {
+  const answer = decodeRecord(value, "Vault import response");
+  return { imported: requiredNumber(answer, "imported"), skipped: requiredNumber(answer, "skipped") };
 }
 
 /** The secret that a joined server answers to `reveal` (`vault-v1`). */

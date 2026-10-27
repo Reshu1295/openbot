@@ -457,6 +457,32 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Wypełnia loginy w przeglądarce z Bitwarden. Skonfiguruj go w aplikacji na komputer.",
+  "mobile.server.connectors.bitwarden.hostSummary": "Wypełnia loginy w przeglądarce z Bitwarden lub Vaultwarden",
+  "mobile.server.connectors.bitwarden.description":
+    "Wypełniaj loginy w przeglądarce na {host} z Bitwarden lub Vaultwarden.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} loguje się własnym Bitwarden CLI. W sejfie utwórz folder o nazwie Shared with OpenBot i umieść w nim tylko loginy, których agenci mogą używać. W sejfie internetowym otwórz Ustawienia › Zabezpieczenia › Klucze i wyświetl klucz API.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Adres serwera",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden albo adres Twojego serwera Vaultwarden. {host} musi łączyć się z nim przez HTTPS.",
+  "mobile.server.connectors.bitwarden.clientId": "client_id klucza API",
+  "mobile.server.connectors.bitwarden.clientSecret": "client_secret klucza API",
+  "mobile.server.connectors.bitwarden.masterPassword": "Hasło główne",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} przechowuje klucz API i hasło główne w postaci zaszyfrowanej, aby po ponownym uruchomieniu znowu odblokować sejf. Ten telefon ich nie przechowuje.",
+  "mobile.server.connectors.bitwarden.connect": "Połącz Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "Łączenie…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} loguje się do Bitwarden. Pierwsze logowanie może potrwać kilka minut.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Udostępniony folder",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Folder w Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Przenieś login do tego folderu w Bitwarden, aby agenci mogli się nim logować. Usuń go z folderu, aby cofnąć dostęp.",
+  "mobile.server.connectors.bitwarden.disconnect": "Odłącz Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Odłączyć Bitwarden?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} usuwa klucz API i hasło główne. Agenci na {host} nie mogą już wypełniać danych logowania z Bitwarden.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Repozytoria, zgłoszenia i pull requesty dla każdego agenta",
   "mobile.server.connectors.github.description":

@@ -26,6 +26,12 @@ import {
 
 const PROVIDERS = MANAGED_RUNTIME_PROVIDERS;
 
+/**
+ * The runtime calls a joined server's host serves too. Removing a download is this computer's only,
+ * so the store does not need it.
+ */
+export type ProviderRuntimeSource = Omit<ProviderRuntimesDesktopApi, "measureDownload" | "removeDownload">;
+
 /** The analytics code of each catalog reason that the runtime manager shows for a failed download. */
 const DOWNLOAD_FAILURE_CODES: Readonly<Record<string, string>> = {
   "error.provider.diskSpace": "disk_space",
@@ -81,7 +87,7 @@ export interface ProviderCliOwners {
  * snapshot, so nothing from the previous computer is shown for the next one.
  */
 export function createProviderRuntimeStore(
-  api: () => ProviderRuntimesDesktopApi | undefined,
+  api: () => ProviderRuntimeSource | undefined,
   owners: ProviderCliOwners = {},
 ) {
   const [providerRuntimeSnapshot, setProviderRuntimeSnapshot] =
@@ -241,7 +247,7 @@ export function createProviderRuntimeStore(
   }
 
   /** Drops an answer that arrives after `api` moved to another computer. */
-  function applyFrom(source: ProviderRuntimesDesktopApi, snapshot: ProviderRuntimeSnapshot): void {
+  function applyFrom(source: ProviderRuntimeSource, snapshot: ProviderRuntimeSnapshot): void {
     if (source === api()) applyProviderRuntimeSnapshot(snapshot);
   }
 

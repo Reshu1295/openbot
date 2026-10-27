@@ -36,7 +36,9 @@ receive them through the local MCP bridge.
 `agent/developer-instructions.ts` puts stable rules first, profile and workspace settings next,
 and memories last. Detailed browser, administration, routine, hosting, data, and visual guidance
 loads through `tool_search` or `tool_describe`. Essential secret handling and untrusted-content rules stay in the
-permanent instructions. ACP and Muse still insert these shorter instructions on each normal turn.
+permanent instructions. Each rule has one place: the Vault, wait, and memory-selection details are in
+their tool guidance or descriptions, and the teammate reply format and the rule against
+acknowledgement loops come with each teammate message (`agent/delivery-content.ts`). ACP and Muse still insert these shorter instructions on each normal turn.
 Retention after compaction is not assumed. Compaction thresholds are unchanged.
 
 `bun run check:agent-context` measures the instruction text, the visible tool definitions, the
@@ -221,6 +223,22 @@ days. When the computer has been awake for one check interval (one hour), the up
 only what was stamped within three hours. So a version another instance or another
 worktree's pin still runs is not removed; a collection that fails, as it does on Windows for an open
 binary, never stops startup.
+
+A provider that is off in this profile runs no CLI, so the manager does not stamp its versions. Pi
+counts as in use while a key-only provider that runs on it is on. Its
+provider page in Settings offers Remove download (#3321), which removes every version of that CLI and
+this profile's partial downloads of it, and leaves accounts and sign-ins alone. It is refused while
+the provider is on, while its download runs, and for a provider with an explicit CLI path. The same
+age rule keeps a version another instance stamped, with one change: the manager remembers its own
+last stamp of each directory, and a directory whose mtime is not later than that stamp counts as
+unstamped. Otherwise the stamps this instance wrote before the user turned the provider off would
+keep it for hours. A sibling stamp older than this instance's last one is hidden by it until the
+sibling's next check stamps again. Each version is moved aside before it is deleted, so a version a
+program holds open stays whole, and the removal then reports that it did not finish. The manager
+stamps the version it activates, so an install it made in the same session is its own. Because a
+provider that is off is not stamped, a sibling can collect its version; turning the provider on
+reads the store again when that version is gone. Turning the provider on later downloads the CLI as
+on first use.
 
 ### Managed provider updates
 
@@ -629,8 +647,11 @@ provider added after v8 needs no new protocol version. The `providers-v8` routes
 The host hides a provider from a peer below v8 when that protocol's frozen list does not have it
 (`FROZEN_PROVIDERS` in `src/main/team-api/provider-visibility.ts`). So a new provider is hidden
 from old peers with no change there. Do not edit those lists. A key-only provider
-(`KEY_ONLY_PROVIDERS`, now Inception, DeepSeek and OpenRouter) is hidden from peers on every protocol, v8 too,
-and the peer key routes refuse its key.
+(`KEY_ONLY_PROVIDERS`, now Inception, DeepSeek and OpenRouter) is not in any frozen list, so a v8
+peer is the first to see it. The `providers-v8` key routes read, set and clear its key. A key set
+there starts the host's Pi download when Pi cannot start, and does not wait for it. Until Pi is
+ready no process uses the key, so the route saves only the key; the provider is checked again when Pi
+is ready. The `providers-v5` and `providers-v1` key routes refuse its key.
 
 A v8 client keeps the agents of a provider that its build does not know (`ForeignProviderId`,
 `AgentProviderRef`). The agent stays in the list and chat works, because the host runs it. The
@@ -802,8 +823,8 @@ only sign-in. The key is stored as the `inception` API key. `pi-key-providers.ts
 calls `pi.registerProvider("inception", …)` with the Mercury models; the key is in the process
 environment and a `globalThis` slot, because Pi runs extensions again on `switch_session`. The
 Inception client lists only the `inception` models, with bare ids such as `mercury-3`. The Pi client
-does not load this extension, so it keeps only the user's own `inception` models. Without a key the provider has no models and asks for a key. Inception is local-only:
-no Team API protocol carries it, v8 included (`KEY_ONLY_PROVIDERS`).
+does not load this extension, so it keeps only the user's own `inception` models. Without a key the provider has no models and asks for a key. Team API v8 carries Inception; peers
+below v8 do not see it.
 
 ## DeepSeek
 
@@ -818,7 +839,7 @@ which replaces either key. A 401 or a 402 from a key provider shows a text about
 the account balance (`#failureText` in `pi-client.ts`). The DeepSeek client lists only the `deepseek`
 models, with bare ids such as `deepseek-v4-pro`. The Pi client loads no key extension, so it keeps
 the user's own `deepseek` models, for example from `DEEPSEEK_API_KEY` in Pi's environment.
-DeepSeek is local-only, as Inception is.
+Peers see DeepSeek from v8, as Inception.
 
 ## OpenRouter
 
@@ -836,7 +857,7 @@ Pi unchanged. The catalog drops the aliases that start with `~`, such as
 `~anthropic/claude-sonnet-latest`, because `isAgentModel` refuses that character, and the default is
 `anthropic/claude-sonnet-5.5`. The model picker groups the models by lab (`openRouterLab` in
 `provider-model-options.ts`) and marks the `:free` models as free. A 402 means the account has no
-credits. OpenRouter is local-only, as Inception is.
+credits. Peers see OpenRouter from v8, as Inception.
 
 ## Muse
 

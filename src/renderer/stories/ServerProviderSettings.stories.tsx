@@ -1,12 +1,13 @@
-import type {
-  AgentProviderId,
-  AgentStatus,
-  AppSetupState,
-  CustomProviderRestart,
-  CustomProviderSummary,
-  ProviderRuntimeSnapshot,
-  ServerSummary,
-  UpdateCustomProviderInput,
+import {
+  type AgentProviderId,
+  type AgentStatus,
+  type AppSetupState,
+  type CustomProviderRestart,
+  type CustomProviderSummary,
+  isManagedRuntimeProvider,
+  type ProviderRuntimeSnapshot,
+  type ServerSummary,
+  type UpdateCustomProviderInput,
 } from "@openbot/contracts/ipc";
 import { Toaster, toast } from "@openbot/ui";
 import type { ProviderAccountActions } from "@openbot/ui/components/provider-accounts";
@@ -353,6 +354,22 @@ function ServerProvidersStory(props: {
                           );
                         }
                       : undefined,
+                    onMeasureProviderDownload:
+                      props.offProviders && props.providerUpdate
+                        ? async (provider: AgentProviderId) =>
+                            isManagedRuntimeProvider(provider)
+                              ? await mock.api.providerRuntimes.measureDownload(provider)
+                              : { bytes: 0, versions: 0 }
+                        : undefined,
+                    onRemoveProviderDownload:
+                      props.offProviders && props.providerUpdate
+                        ? async (provider: AgentProviderId) => {
+                            if (!isManagedRuntimeProvider(provider)) return;
+                            runtimes.applyProviderRuntimeSnapshot(
+                              await mock.api.providerRuntimes.removeDownload(provider),
+                            );
+                          }
+                        : undefined,
                   }
             }
           />
@@ -483,7 +500,8 @@ export const ProviderUpdateRetry: Story = {
 
 /**
  * Cursor, Antigravity and Cline are installed for other work, so the user turned them off. Agents use
- * Codex and Claude, so those switches stay on.
+ * Codex and Claude, so those switches stay on. Open Cursor: its Download section offers Remove download,
+ * and after it the list reads "Off · Not downloaded".
  */
 export const ProvidersOff: Story = {
   render: () => (

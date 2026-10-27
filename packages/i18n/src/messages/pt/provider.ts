@@ -199,4 +199,17 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 hora",
   "provider.settings.promptCacheDefault": "Padrão do Claude Code",
   "provider.settings.promptCacheLoadFailed": "Não foi possível carregar a duração do cache de prompts deste servidor.",
+  "provider.settings.download": "Download",
+  "provider.settings.downloadedCli": "CLI do {name}",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 versão · {size}",
+    other: "{version} · {count} versões · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 versão · {size}", other: "{count} versões · {size}" },
+  "provider.settings.downloadAgain": "Quando você ativar {name}, o OpenBot baixa a CLI de novo.",
+  "provider.settings.removeDownloadConfirm": "Remover {size}?",
+  "provider.settings.removeDownloadKeeps": "Contas, logins e agentes continuam.",
+  "provider.settings.removeDownload": "Remover download",
+  "provider.settings.removingDownload": "Removendo…",
+  "provider.settings.removeDownloadFailed": "Não foi possível remover o download.",
 } as const satisfies PartialTranslation<typeof source>;

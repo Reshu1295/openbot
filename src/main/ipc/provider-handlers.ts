@@ -141,6 +141,12 @@ export function providerIpcHandlers({
       getStatus: handler(() => providerRuntimes.getStatus()),
       download: payloadHandler(parseManagedProviderId, (parsed) => runCauseEffect(providerRuntimes.download(parsed))),
       cancel: payloadHandler(parseManagedProviderId, (parsed) => runCauseEffect(providerRuntimes.cancel(parsed))),
+      measureDownload: payloadHandler(parseManagedProviderId, (parsed) =>
+        runCauseEffect(providerRuntimes.measureDownload(parsed)),
+      ),
+      removeDownload: payloadHandler(parseManagedProviderId, (parsed) =>
+        runCauseEffect(providerRuntimes.removeDownload(parsed)),
+      ),
       checkForUpdates: handler(() => runCauseEffect(providerRuntimes.checkForUpdates())),
     },
   };
