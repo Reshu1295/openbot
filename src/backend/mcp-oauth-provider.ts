@@ -909,7 +909,7 @@ class McpOAuthClientProvider implements OAuthClientProvider {
     if (!client) {
       // The token endpoint refused the client, and the SDK dropped it before it tried again. The
       // grant belongs to that client, so a new registration cannot spend it. Without this the SDK
-      // says only that it has no client, and the server's refusal is lost.
+      // says only that it has no client, and the user cannot see that the server refused it.
       if (this.#exchangingCode) throw new Error(sourceText("error.backend.mcpSignInClientRefused"));
       return this.#register();
     }

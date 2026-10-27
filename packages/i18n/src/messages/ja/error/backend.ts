@@ -199,6 +199,8 @@ export const messages = {
   "error.backend.mcpServerNameTaken": "{name} という名前の MCP サーバーはすでに存在します。",
   "error.backend.mcpServerNoAnswer": "サーバーは {seconds} 秒以内に応答しませんでした。",
   "error.backend.mcpSignInNotAccepted": "サーバーはそのサインインを受け付けませんでした。",
+  "error.backend.mcpSignInClientRefused":
+    "サインインの完了時に、サインインサーバーが OpenBot を受け付けませんでした。もう一度サインインしてください。OpenBot はサーバーに再登録します。",
   "error.backend.mcpCommandNotFound": "コマンドが見つかりません: {command}",
   "error.backend.mcpRegistrationRefused":
     "サインインサーバーはまだ OpenBot をアプリとして受け付けていません。原因はお使いのアカウントではありません。ローカル MCP サーバーなど、別の方法で接続してください。",
@@ -319,8 +321,6 @@ export const messages = {
   "error.backend.mcpSignInAppClientId": "サインインアプリのクライアント ID を入力してください。",
   "error.backend.mcpSignInAppIssuerChanged":
     "この MCP サーバーのサインインサーバーが変わったため、OpenBot はサインインアプリを送信しませんでした。この変更が正しい場合は、サインインアプリを削除してからもう一度追加してください。",
-  "error.backend.mcpSignInClientRefused":
-    "サインインの完了時に、サインインサーバーが OpenBot を受け付けませんでした。もう一度サインインしてください。OpenBot はサーバーに再登録します。",
   "error.backend.mcpSignInAppNoServer":
     "サインインアプリを追加する前に、この MCP サーバーを URL サーバーとして保存してください。",
   "error.backend.mcpSignInAppUnavailable": "このコンピューターではサインインアプリを保存できません。",

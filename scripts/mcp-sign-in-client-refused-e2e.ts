@@ -166,10 +166,21 @@ function httpConfig(url: string): McpServerConfig {
   };
 }
 
-/** Signs in `attempts` times in a row against one server and one store. */
-async function runCase(name: string, authMethods: string[], attempts: number): Promise<Case> {
+/**
+ * Signs in `attempts` times in a row against one server and one store. With `storedDiscovery`, the
+ * store starts with only the discovery state, as an earlier sign-in that ended before the token
+ * leaves it: the SDK reads that state and no server metadata.
+ */
+async function runCase(name: string, authMethods: string[], attempts: number, storedDiscovery = false): Promise<Case> {
   const server = await fakeServer(authMethods);
   const records = new Map<string, McpOAuthRecord>();
+  if (storedDiscovery)
+    records.set(server.url, {
+      discovery: {
+        authorizationServerUrl: new URL(server.url).origin,
+        resourceMetadataUrl: `${new URL(server.url).origin}/.well-known/oauth-protected-resource/mcp`,
+      },
+    });
   const oauth: McpOAuth = new McpOAuth({
     storage: {
       read: (resource) => records.get(resource) ?? null,
@@ -225,6 +236,14 @@ async function main(): Promise<void> {
     check(listed, listed.tokenRequestsWithSecret.join() === "false", "a token request carried a client secret");
     check(listed, listed.signedIn, "no token is stored after the sign-in");
     report.cases.push(listed);
+
+    // The same server, with a discovery state already on file: the registration is still public.
+    const cached = await runCase("public-client-with-stored-discovery", ["client_secret_basic", "none"], 1, true);
+    check(cached, cached.attempts[0]?.error === null, `the sign-in failed: ${cached.attempts[0]?.error}`);
+    check(cached, cached.registrations.join() === "none", `the registration asked for ${cached.registrations.join()}`);
+    check(cached, cached.tokenRequestsWithSecret.join() === "false", "a token request carried a client secret");
+    check(cached, cached.signedIn, "no token is stored after the sign-in");
+    report.cases.push(cached);
 
     // A server that does not list `none` chooses the method. Its refusal of the secret is reported
     // as a refusal, and the next sign-in registers again instead of reusing the refused client.

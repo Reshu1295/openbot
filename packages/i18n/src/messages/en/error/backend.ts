@@ -188,6 +188,8 @@ export const messages = defineMessages("error.backend", {
   "error.backend.mcpServerNameTaken": "An MCP server named {name} already exists.",
   "error.backend.mcpServerNoAnswer": "The server did not answer in {seconds} seconds.",
   "error.backend.mcpSignInNotAccepted": "The server did not accept that sign-in.",
+  "error.backend.mcpSignInClientRefused":
+    "The sign-in server did not accept OpenBot when it completed the sign-in. Sign in again: OpenBot registers with the server again.",
   "error.backend.mcpCommandNotFound": "Command not found: {command}",
   "error.backend.mcpRegistrationRefused":
     "The sign-in server does not accept OpenBot as an app yet. Your account is not the cause. Use another way to connect, such as a local MCP server.",
@@ -306,8 +308,6 @@ export const messages = defineMessages("error.backend", {
   "error.backend.mcpSignInAppClientId": "Enter the client ID of the sign-in app.",
   "error.backend.mcpSignInAppIssuerChanged":
     "The sign-in server of this MCP server changed, so OpenBot did not send it the sign-in app. If the change is correct, remove the sign-in app and add it again.",
-  "error.backend.mcpSignInClientRefused":
-    "The sign-in server did not accept OpenBot when it completed the sign-in. Sign in again: OpenBot registers with the server again.",
   "error.backend.mcpSignInAppNoServer": "Save this MCP server as a URL server before you add a sign-in app.",
   "error.backend.mcpSignInAppUnavailable": "This computer cannot keep a sign-in app.",
   // Tasks: conversations of one agent that run beside its own chat.
