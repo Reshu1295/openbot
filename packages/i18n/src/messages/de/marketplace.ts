@@ -363,6 +363,15 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Welche Projekte und Dienste sind in meinem Railway-Workspace?",
   "marketplace.plugin.railway.prompt.crash": "Warum stürzt mein Backend-Dienst auf Railway beim Deployment ab?",
   "marketplace.plugin.railway.prompt.redeploy": "Deploye den API-Dienst in meinem Railway-Projekt erneut.",
+  "marketplace.plugin.render.tagline": "Dienste, Deployments und Logs",
+  "marketplace.plugin.render.description":
+    "Mit Render listen Agenten Workspaces und Dienste auf, lesen Logs, Ereignisse und Metriken, sehen den Deployment-Verlauf, starten Deployments und führen schreibgeschütztes SQL auf Render Postgres aus. Ein Render-API-Schlüssel kommt in einen Authorization-Header. Der Schlüssel erreicht jeden Workspace des Render-Kontos. Agenten können Webdienste, statische Websites, Cronjobs, Postgres-Datenbanken und Key-Value-Instanzen erstellen, was Kosten verursachen kann, und sie können die Umgebungsvariablen eines Dienstes ersetzen. Der Server kann keine Ressource löschen.",
+  "marketplace.plugin.render.app":
+    "Dienste, Deployments, Logs und Metriken über den MCP-Server von Render mit einem API-Schlüssel.",
+  "marketplace.plugin.render.prompt.services": "Welche Dienste sind in meinem Render-Workspace?",
+  "marketplace.plugin.render.prompt.logs":
+    "Welche Fehler hat mein Render-Webdienst in der letzten Stunde protokolliert?",
+  "marketplace.plugin.render.prompt.deploy": "Warum ist das letzte Deployment meines Render-Dienstes fehlgeschlagen?",
   "marketplace.plugin.atlassian.tagline": "Jira-Arbeitselemente und Confluence-Seiten",
   "marketplace.plugin.atlassian.description":
     "Mit Atlassian durchsuchen und lesen Agenten Jira-Arbeitselemente, Confluence-Seiten und Bitbucket-Pull-Requests und erstellen oder aktualisieren Arbeitselemente, Seiten und Kommentare. Jeder Nutzer meldet sich im Browser bei seinem eigenen Atlassian-Konto an und bestätigt den Zugriff auf einer Zustimmungsseite. Agenten haben dieselben Rechte wie der Nutzer: Sie können Arbeitselemente und Seiten ändern, Seitenberechtigungen ändern und Pull-Requests mergen. Tools, die Jira-Daten löschen, bleiben aus, bis ein Organisationsadmin sie einschaltet. Jeder Tool-Aufruf verbraucht Rovo-Credits.",
@@ -381,6 +390,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Welche Todoist-Aufgaben sind heute fällig?",
   "marketplace.plugin.todoist.prompt.capture": "Füge diese To-dos meinem Todoist-Eingang hinzu.",
   "marketplace.plugin.todoist.prompt.overdue": "Verschiebe meine überfälligen Todoist-Aufgaben auf morgen.",
+  "marketplace.plugin.trello.tagline": "Boards, Listen und Karten",
+  "marketplace.plugin.trello.description":
+    "Mit Trello durchsuchen und lesen Agenten Boards, Listen, Karten, Checklisten und Kommentare, erstellen Boards und Karten, verschieben Listen und Karten, markieren Karten als erledigt und fügen Checklisten, Kommentare und Labels hinzu. Agenten können auch Karten im Trello-Eingang des Nutzers lesen und hinzufügen und Planner-Termine lesen, die aus einem verbundenen Google- oder Outlook-Kalender kommen können. Jeder Nutzer meldet sich im Browser bei seinem eigenen Trello-Konto an und wählt die Workspaces auf einer Zustimmungsseite. Agenten haben in diesen Workspaces dieselben Rechte wie der Nutzer. Sie können Karten und Listen archivieren, aber der Server kann nichts endgültig löschen.",
+  "marketplace.plugin.trello.app": "Boards, Listen und Karten über den MCP-Server von Trello mit Anmeldung im Browser.",
+  "marketplace.plugin.trello.prompt.myCards": "Welche Trello-Karten sind mir zugewiesen?",
+  "marketplace.plugin.trello.prompt.board": "Fasse zusammen, was auf meinem Trello-Board gerade in Arbeit ist.",
+  "marketplace.plugin.trello.prompt.newCards": "Füge diese To-dos als Karten zu meinem Trello-Board hinzu.",
   "marketplace.plugin.huggingface.tagline": "Modelle, Datensätze und Paper auf dem Hub",
   "marketplace.plugin.huggingface.description":
     "Mit Hugging Face durchsuchen Agenten Modelle, Datensätze, Spaces, Collections und Paper auf dem Hugging Face Hub, lesen Model Cards und Repository-Dateien, zeigen eine Vorschau von Datensätzen und durchsuchen die Hugging-Face-Dokumentation. Es verwendet öffentliche Hub-Daten und braucht kein Konto und keinen Schlüssel. Die Tools lesen nur: Agenten können keine Repositorys anlegen und keine Jobs ausführen.",

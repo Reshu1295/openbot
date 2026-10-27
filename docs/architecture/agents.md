@@ -401,6 +401,7 @@ and the one action that unblocks it; for a service with a plugin, that action is
 enable the plugin. It can offer to create a specialist teammate, but it creates one only after the user agrees.
 
 An agent that delegates work can follow and stop it. `openbot.list_agents` reports each agent's
+description to 300 characters (`read_agent` returns all of it), its
 `status` (a starting delivery and a context compaction count as `working`), `queuedMessages`
 (channel work excluded), `turnStartedAt`, and `lastActivityAt`. The last two come from the provider
 notifications that `TurnLifecycle` sees; they are in memory only, so after a restart
@@ -471,7 +472,12 @@ it into managed avatar storage. Generated avatar settings remove the custom imag
 the existing agent service and validate arguments before changing state.
 `openbot.create_agent` also accepts an optional `provider`, `model` and `reasoningEffort`. The
 read-only `openbot.list_models` returns the models of each provider that the model picker shows, with
-their reasoning efforts and the default model for a request that names only a provider. A provider
+their reasoning efforts and the default model for a request that names only a provider. With no
+`query`, a provider lists its default model, the models that local agents use as their model or as a
+backup model, then its first catalog models up to 8 models in total; `omittedModels` counts the
+others. A `query` searches all models by the words of their id or name and returns 20 at
+most. `create_agent` and `update_profile` still accept each catalog model, and an unknown model
+error names the same short list. A provider
 that can hold more than one account also lists its accounts, with the provider's own sign-in
 (`default`) first: the id, the name the user gave it (or null), and the state. It never lists the
 account email, credentials or account folders. `update_profile` takes the

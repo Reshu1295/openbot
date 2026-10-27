@@ -52,6 +52,8 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
   const runtimeReady = () => (runtimeStatus()?.phase ?? "ready") === "ready";
   /** Connect opens this computer's browser, and the row follows that sign-in. */
   const browserConnect = () => connectKind() === "browser";
+  /** A key-only provider's Connect opens the key dialog, on this computer and on a server. */
+  const keyConnect = () => isKeyOnlyProvider(option().id) && Boolean(host.onSignInProvider);
   /**
    * Connect opens a dialog that the user finishes there, or on another device.
    *
@@ -224,6 +226,7 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
     connectKind,
     runtimeReady,
     browserConnect,
+    keyConnect,
     dialogConnect,
     alternative,
     connectOptional,

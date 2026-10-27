@@ -108,7 +108,13 @@ export function syncEventQueries(
       predicate: (query) => query.queryKey.at(-1) === "session-settings",
     });
   }
+  if (event.type === "workflows-changed") {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.workflowList(scope, serverId) });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.workflow(scope, serverId, event.workflowId) });
+  }
   if (event.type === "agents-changed") {
+    // The access of this member to the agents of a workflow can change, so it can see other workflows.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.serverWorkflows(scope, serverId) });
     // The host also sends this event when the roles change, and this client does not get `agent-access-changed`.
     void queryClient.invalidateQueries({ queryKey: queryKeys.serverRoles(scope, serverId) });
     // The admin and host settings and the provider account of an agent are not in the agent summary.

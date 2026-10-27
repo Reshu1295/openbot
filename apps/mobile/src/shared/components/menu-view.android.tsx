@@ -1,6 +1,8 @@
 import type { MenuAction, MenuComponentProps, MenuComponentRef } from "@expo/ui/community/menu";
 import { Menu, type MenuTriggerRef, Separator, SubMenu, Typography } from "heroui-native";
 import type { LucideIcon } from "lucide-react-native";
+import ArrowDown from "lucide-react-native/icons/arrow-down";
+import ArrowUp from "lucide-react-native/icons/arrow-up";
 import ArrowUpDown from "lucide-react-native/icons/arrow-up-down";
 import Calendar from "lucide-react-native/icons/calendar";
 import ChartColumn from "lucide-react-native/icons/chart-column";
@@ -26,8 +28,10 @@ import MailBadge from "lucide-react-native/icons/mail-badge";
 import MailOpen from "lucide-react-native/icons/mail-open";
 import MessagesSquare from "lucide-react-native/icons/messages-square";
 import MousePointerClick from "lucide-react-native/icons/mouse-pointer-click";
+import Pencil from "lucide-react-native/icons/pencil";
 import Pin from "lucide-react-native/icons/pin";
 import PinOff from "lucide-react-native/icons/pin-off";
+import Play from "lucide-react-native/icons/play";
 import Plus from "lucide-react-native/icons/plus";
 import RotateCw from "lucide-react-native/icons/rotate-cw";
 import Settings from "lucide-react-native/icons/settings";
@@ -58,6 +62,8 @@ export type { MenuAction, MenuComponentRef } from "@expo/ui/community/menu";
 /** The Lucide icon for each SF Symbol that a menu action names. */
 const ICONS: Partial<Record<string, LucideIcon>> = {
   "arrow.clockwise": RotateCw,
+  "arrow.down": ArrowDown,
+  "arrow.up": ArrowUp,
   "arrow.up.arrow.down": ArrowUpDown,
   "bubble.left.and.bubble.right": MessagesSquare,
   calendar: Calendar,
@@ -82,6 +88,8 @@ const ICONS: Partial<Record<string, LucideIcon>> = {
   "person.2": Users,
   pin: Pin,
   "pin.slash": PinOff,
+  pencil: Pencil,
+  play: Play,
   plus: Plus,
   "plus.square.on.square": CopyPlus,
   "rectangle.portrait.and.arrow.right": LogOut,

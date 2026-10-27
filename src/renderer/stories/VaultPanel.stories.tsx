@@ -92,3 +92,6 @@ export const Unavailable: Story = { args: { state: { status: "unavailable", item
 
 /** The file is there but cannot be decrypted. The user can reset it. */
 export const Unreadable: Story = { args: { state: { status: "unreadable", items: [] } } };
+
+/** A joined server, for its owner or admin: the New item menu has no CSV import. */
+export const JoinedServer: Story = { args: { onImportCsv: undefined } };

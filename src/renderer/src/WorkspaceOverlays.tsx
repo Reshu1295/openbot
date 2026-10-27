@@ -1,5 +1,6 @@
 import type { CentralAuthUser, RoutineFields, ServerSummary } from "@openbot/contracts/ipc";
 import { BROWSER_PROFILES_CAPABILITY } from "@openbot/contracts/team-protocol/browser-profiles-v1";
+import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
 import { classifyFailure } from "@openbot/telemetry";
 import { isAgentAccount } from "@openbot/ui/components/provider-accounts";
 import type { AcpRegistrySettingsApi } from "@openbot/ui/features/custom-providers/AcpRegistrySettings";
@@ -45,7 +46,7 @@ import { useUpdates } from "./features/updates/updates-context";
 import { useWhatsNew } from "./features/updates/whats-new-context";
 import { usePlanLimitRows } from "./features/usage/plan-limit-rows";
 import { createVaultStore } from "./features/vault/stores/vault-store";
-import { desktopVaultCalls } from "./features/vault/vault-port";
+import { desktopVaultCalls, hostVaultCalls } from "./features/vault/vault-port";
 import { useWindowPage } from "./features/window/window-page-context";
 import { useGlobalSearchSources } from "./global-search-sources";
 import { RemoteDesktopWorkspace, SettingsModal } from "./lazy-views";
@@ -425,8 +426,20 @@ function ServerSettings() {
     const calls = desktopBrowserProfileCalls(browserProfileServerId());
     return createBrowserProfilesStore(() => calls);
   });
-  /** The Vault of this computer. A joined server keeps its Vault on its host. */
-  const vault = createVaultStore(desktopVaultCalls());
+  /**
+   * The Vault of the selected server: this computer, or a joined server whose host serves `vault-v1`
+   * to this owner or admin. One store per server, so the items of the last server never show for the next.
+   */
+  const vaultServerId = createMemo(() => {
+    const target = serverSettingsTarget();
+    return serverCanAdminister(target, VAULT_CAPABILITY) ? target.id : undefined;
+  });
+  const vault = createMemo(() => {
+    const serverId = vaultServerId();
+    if (serverId === undefined) return undefined;
+    const local = untrack(serverSettingsTarget)?.kind === "local";
+    return { store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)) };
+  });
   // The workspace belongs to the selected server. For another server, the switch comes first and
   // the agent is published for the scope it lands in; a message there opens as its agent's chat.
   const openOnServer = (server: ServerSummary, agentId: string, open: () => void) => {
@@ -736,7 +749,7 @@ function ServerSettings() {
               ? { store: browserProfiles(), listAgents: () => appPort().agent.listAgents(server().id) }
               : undefined
           }
-          vault={server().kind === "local" ? { store: vault } : undefined}
+          vault={vault()}
         />
       )}
     </Show>

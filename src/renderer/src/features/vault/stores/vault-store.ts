@@ -3,8 +3,8 @@ import { createStore } from "solid-js";
 import type { VaultCalls } from "../vault-port";
 
 /**
- * The Vault of this computer, for the server settings. Each change answers with the new list, and
- * main sends the list again when an agent or another window changes it.
+ * The Vault of one server, for the server settings. Each change answers with the new list, and the
+ * list comes again when an agent or another window changes it.
  */
 export function createVaultStore(calls: VaultCalls) {
   /** `vault` is undefined until the first list arrives. */
@@ -37,11 +37,14 @@ export function createVaultStore(calls: VaultCalls) {
     remove: async (id: string) => show(await calls.remove(id)),
     reveal: (request: VaultSecretRequest) => calls.reveal(request),
     copy: (request: VaultSecretRequest) => calls.copy(request),
-    importCsv: async () => {
-      const result = await calls.importCsv();
-      if (result) show(result.state);
-      return result;
-    },
+    /** Absent for a joined server. */
+    importCsv: calls.importCsv
+      ? async () => {
+          const result = await calls.importCsv?.();
+          if (result) show(result.state);
+          return result ?? null;
+        }
+      : undefined,
     reset: async () => show(await calls.reset()),
   };
 }

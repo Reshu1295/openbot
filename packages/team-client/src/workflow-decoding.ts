@@ -1,7 +1,8 @@
-// Workflow payloads from a joined server. `workflows-v1` carries kinds and statuses as open names, so
-// a newer host can add one. The decoders below map a name that this app does not know to a known one
-// before the closed IPC guards run: a status or a source to the nearest neutral value, and a node kind
-// or a port type to a locked note that the app shows but does not save.
+// Workflow payloads from a joined server, for the desktop app and the mobile app. `workflows-v1`
+// carries kinds and statuses as open names, so a newer host can add one. The decoders below map a
+// name that this app does not know to a known one before the closed IPC guards run: a status or a
+// source to the nearest neutral value, and a node kind or a port type to a locked note that the app
+// shows but does not save.
 
 import {
   isWorkflowDetail,

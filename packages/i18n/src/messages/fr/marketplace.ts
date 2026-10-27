@@ -363,6 +363,15 @@ export const messages = {
     "Quels projets et services se trouvent dans mon espace de travail Railway ?",
   "marketplace.plugin.railway.prompt.crash": "Pourquoi mon service backend sur Railway plante-t-il au déploiement ?",
   "marketplace.plugin.railway.prompt.redeploy": "Redéploie le service API de mon projet Railway.",
+  "marketplace.plugin.render.tagline": "Services, déploiements et journaux",
+  "marketplace.plugin.render.description":
+    "Render permet aux agents de lister les espaces de travail et les services, de lire les journaux, les événements et les métriques, de consulter l'historique des déploiements, de lancer des déploiements et d'exécuter du SQL en lecture seule sur Render Postgres. Une clé d'API Render va dans un en-tête Authorization. La clé donne accès à tous les espaces de travail du compte Render. Les agents peuvent créer des services web, des sites statiques, des tâches cron, des bases de données Postgres et des instances Key Value, ce qui peut coûter de l'argent, et ils peuvent remplacer les variables d'environnement d'un service. Le serveur ne peut supprimer aucune ressource.",
+  "marketplace.plugin.render.app":
+    "Services, déploiements, journaux et métriques, via le serveur MCP de Render avec une clé d'API.",
+  "marketplace.plugin.render.prompt.services": "Quels services se trouvent dans mon espace de travail Render ?",
+  "marketplace.plugin.render.prompt.logs":
+    "Quelles erreurs mon service web Render a-t-il journalisées au cours de la dernière heure ?",
+  "marketplace.plugin.render.prompt.deploy": "Pourquoi le dernier déploiement de mon service Render a-t-il échoué ?",
   "marketplace.plugin.atlassian.tagline": "Éléments de travail Jira et pages Confluence",
   "marketplace.plugin.atlassian.description":
     "Atlassian permet aux agents de rechercher et de lire les éléments de travail Jira, les pages Confluence et les pull requests Bitbucket, et de créer ou de mettre à jour des éléments de travail, des pages et des commentaires. Chaque utilisateur se connecte à son propre compte Atlassian dans le navigateur et approuve l’accès sur un écran de consentement. Les agents ont les mêmes droits que l’utilisateur : ils peuvent modifier les éléments de travail et les pages, modifier les autorisations des pages et fusionner des pull requests. Les outils qui suppriment des données Jira restent désactivés jusqu’à ce qu’un administrateur de l’organisation les active. Chaque appel d’outil consomme des crédits Rovo.",
@@ -381,6 +390,14 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Quelles tâches Todoist sont à faire aujourd’hui ?",
   "marketplace.plugin.todoist.prompt.capture": "Ajoute ces actions à ma boîte de réception Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Reporte mes tâches Todoist en retard à demain.",
+  "marketplace.plugin.trello.tagline": "Tableaux, listes et cartes",
+  "marketplace.plugin.trello.description":
+    "Trello permet aux agents de rechercher et lire les tableaux, listes, cartes, checklists et commentaires, de créer des tableaux et des cartes, de déplacer les listes et les cartes, de marquer des cartes comme terminées, et d’ajouter des checklists, des commentaires et des étiquettes. Les agents peuvent aussi lire et ajouter des cartes dans la boîte de réception Trello de l’utilisateur, et lire les événements du Planner, qui peuvent venir d’un agenda Google ou Outlook connecté. Chaque utilisateur se connecte à son propre compte Trello dans le navigateur et choisit les espaces de travail sur un écran de consentement. Les agents ont les mêmes droits que l’utilisateur dans ces espaces de travail. Ils peuvent archiver des cartes et des listes, mais le serveur ne peut rien supprimer définitivement.",
+  "marketplace.plugin.trello.app":
+    "Tableaux, listes et cartes, via le serveur MCP de Trello avec connexion dans le navigateur.",
+  "marketplace.plugin.trello.prompt.myCards": "Quelles cartes Trello me sont attribuées ?",
+  "marketplace.plugin.trello.prompt.board": "Résume ce qui est en cours sur mon tableau Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Ajoute ces actions comme cartes à mon tableau Trello.",
   "marketplace.plugin.huggingface.tagline": "Modèles, jeux de données et articles sur le Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face permet aux agents de rechercher des modèles, des jeux de données, des Spaces, des collections et des articles sur le Hugging Face Hub, de lire les model cards et les fichiers des dépôts, de prévisualiser des jeux de données et de rechercher dans la documentation de Hugging Face. Il utilise les données publiques du Hub et ne demande ni compte ni clé. Les outils ne font que lire : les agents ne peuvent pas créer de dépôts ni lancer de jobs.",

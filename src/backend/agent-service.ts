@@ -2028,6 +2028,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     this.#emit({ type: "workflows-changed", workflowId });
   }
 
+  /** The Vault of this computer changed. A joined admin's Server settings read it again (`vault-v1`). */
+  notifyVaultChanged(): void {
+    this.#emit({ type: "vault-changed" });
+  }
+
   notifyWorkflowRunEnded(end: WorkflowRunEnd): void {
     this.emit("workflowRun", end);
   }

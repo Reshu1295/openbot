@@ -262,7 +262,7 @@ Each protocol has a frozen codec and adapter in `packages/contracts/src/team-pro
 From protocol 8, provider ids and auth kinds are open values. A new provider is a new value, not a
 new protocol. A client keeps an agent of a provider that it does not know, and shows it disabled
 with an update prompt. See [Providers](providers.md) for the frozen lists that hide new providers
-from peers below 8, and for the local-only providers that no protocol shows.
+from peers below 8.
 
 Capabilities describe additive behavior. The client sends its capability list when it sets the event scope. The host sends optional events only when the client declared the related capability. A missing capability disables only that feature. An unknown optional event is ignored. A malformed known event closes the connection as `protocol_error` because the client cannot safely apply it.
 

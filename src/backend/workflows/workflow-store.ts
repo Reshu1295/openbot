@@ -19,12 +19,14 @@ import {
   type WorkflowDetail,
   type WorkflowEdge,
   type WorkflowGraph,
+  type WorkflowGraphProblem,
   type WorkflowNode,
   type WorkflowSaveResult,
   type WorkflowSummary,
   type WorkflowTriggerState,
   type WorkflowVersion,
   type WorkflowVersionKind,
+  workflowGraphProblem,
 } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isOneOf } from "@openbot/contracts/runtime-values";
 import { sourceText } from "@openbot/i18n/source";
@@ -38,7 +40,7 @@ import {
   requiredStringColumn,
 } from "../database/database-rows";
 import type { OpenBotDatabase } from "../openbot-database";
-import { nodeTimezone, type WorkflowGraphProblem, workflowGraphProblem } from "./workflow-graph";
+import { nodeTimezone } from "./workflow-graph";
 import { workflowTransaction } from "./workflow-transaction";
 
 /**

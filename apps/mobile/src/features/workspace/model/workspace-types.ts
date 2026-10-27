@@ -28,6 +28,8 @@ import type {
   ConversationSnapshot,
   CreateAgentInput,
   CreateRoutineInput,
+  CreateWorkflowInput,
+  DecideWorkflowStepInput,
   DraftAttachment,
   ForeignProviderId,
   GitHubConnectorRepositories,
@@ -57,6 +59,7 @@ import type {
   OnePasswordConnectorStatus,
   QueuedMessageReceipt,
   QueueSnapshot,
+  RenameWorkflowInput,
   ResetAgentSessionSettingInput,
   RespondToApprovalInput,
   RespondToBrowserSecretInput,
@@ -68,6 +71,7 @@ import type {
   RoutineResultConnectionOption,
   RoutineResultDestination,
   RoutineResultRoutineInput,
+  SaveWorkflowGraphInput,
   SetAgentMemoryInclusionInput,
   SetAgentProviderAccountInput,
   SetAgentSessionSettingInput,
@@ -84,6 +88,14 @@ import type {
   UpdateAgentInput,
   UpdateRestartMode,
   UpdateRoutineInput,
+  WorkflowDetail,
+  WorkflowRunDetail,
+  WorkflowRunPage,
+  WorkflowSaveResult,
+  WorkflowStep,
+  WorkflowSummary,
+  WorkflowTriggerInput,
+  WorkflowWebhookSecret,
 } from "@openbot/contracts/ipc";
 import type {
   EventActivity,
@@ -258,6 +270,11 @@ export interface MobileWorkspaceContextValue {
   hideChannel: (channelId: string, serverId: string) => boolean;
   unhideChannel: (channelId: string, serverId: string) => boolean;
   toggleChannelPin: (channelId: string, serverId: string) => ToggleAgentPinResult;
+  /** The pinned workflows of each server, in the order the drawer shows them. Saved on this device. */
+  pinnedWorkflowIds: Readonly<Record<string, readonly string[]>>;
+  toggleWorkflowPin: (workflowId: string, serverId: string) => ToggleAgentPinResult;
+  /** Drops the pins of workflows that the host no longer lists. Call only with a complete list. */
+  reconcileWorkflowPins: (serverId: string, workflowIds: readonly string[]) => void;
   conversationStore: MobileConversationStore;
   /** Activity, unread agents, and browser requests. Read them with a selector hook, not from the context. */
   liveState: LiveWorkspaceStore;
@@ -545,6 +562,24 @@ export interface MobileWorkspaceContextValue {
   searchFiles: (query: string, serverId: string, cursor?: string) => Promise<ConversationFileSearchPage>;
   /** True when the host advertises `agent-tasks-v1`. A member who can message an agent can use its tasks. */
   canUseTasks: (serverId: string) => boolean;
+  /** True when the host advertises `workflows-v1`. The host shows each member the workflows of their agents. */
+  canUseWorkflows: (serverId: string) => boolean;
+  listWorkflows: (serverId: string) => Promise<WorkflowSummary[]>;
+  loadWorkflow: (workflowId: string, serverId: string) => Promise<WorkflowDetail>;
+  createWorkflow: (input: CreateWorkflowInput, serverId: string) => Promise<WorkflowDetail>;
+  renameWorkflow: (input: RenameWorkflowInput, serverId: string) => Promise<WorkflowSummary>;
+  deleteWorkflow: (workflowId: string, serverId: string) => Promise<void>;
+  /** Answers a conflict with the saved workflow when another device saved it first. */
+  saveWorkflowGraph: (input: SaveWorkflowGraphInput, serverId: string) => Promise<WorkflowSaveResult>;
+  /** The newest runs of a workflow, or the runs older than `before`. */
+  loadWorkflowRuns: (workflowId: string, serverId: string, before?: string) => Promise<WorkflowRunPage>;
+  loadWorkflowRun: (runId: string, serverId: string) => Promise<WorkflowRunDetail>;
+  startWorkflowRun: (workflowId: string, serverId: string) => Promise<WorkflowRunDetail>;
+  stopWorkflowRun: (runId: string, serverId: string) => Promise<void>;
+  retryWorkflowStep: (stepId: string, serverId: string) => Promise<WorkflowStep>;
+  decideWorkflowStep: (input: DecideWorkflowStepInput, serverId: string) => Promise<void>;
+  /** A new webhook secret, which the host shows once. Only an owner or admin can make one. */
+  rotateWorkflowWebhookSecret: (input: WorkflowTriggerInput, serverId: string) => Promise<WorkflowWebhookSecret>;
   /** The tasks of one agent. The host answers 404 for an agent that this member cannot see. */
   loadAgentTasks: (agentId: string, serverId: string) => Promise<AgentTasksSnapshot>;
   loadAgentTaskConversation: (input: AgentTaskInput, serverId: string) => Promise<ConversationSnapshot>;
@@ -635,6 +670,7 @@ export type MobileWorkspaceCapabilityCheck =
   | "canInstallAgentTemplate"
   | "canSearchFiles"
   | "canUseTasks"
+  | "canUseWorkflows"
   | "canReadServerStorage";
 
 type MobileWorkspaceStateKey =
@@ -650,6 +686,7 @@ type MobileWorkspaceStateKey =
   | "hiddenAgents"
   | "pinnedAgentIds"
   | "pinnedChannelIds"
+  | "pinnedWorkflowIds"
   | "hiddenChannelIds"
   | "hidesAgentsOnServer"
   | "canUnhideAgent"

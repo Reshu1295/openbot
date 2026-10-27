@@ -364,6 +364,13 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Какие проекты и сервисы есть в моём рабочем пространстве Railway?",
   "marketplace.plugin.railway.prompt.crash": "Почему мой бэкенд-сервис на Railway падает при деплое?",
   "marketplace.plugin.railway.prompt.redeploy": "Заново задеплой сервис API в моём проекте Railway.",
+  "marketplace.plugin.render.tagline": "Сервисы, деплои и логи",
+  "marketplace.plugin.render.description":
+    "Render позволяет агентам просматривать рабочие пространства и сервисы, читать логи, события и метрики, смотреть историю деплоев, запускать деплои и выполнять SQL только для чтения в Render Postgres. API-ключ Render передаётся в одном заголовке Authorization. Ключ даёт доступ ко всем рабочим пространствам аккаунта Render. Агенты могут создавать веб-сервисы, статические сайты, cron-задачи, базы данных Postgres и экземпляры Key Value, что может стоить денег, а также заменять переменные окружения сервиса. Сервер не может удалить ни один ресурс.",
+  "marketplace.plugin.render.app": "Сервисы, деплои, логи и метрики через сервер MCP Render с API-ключом.",
+  "marketplace.plugin.render.prompt.services": "Какие сервисы есть в моём рабочем пространстве Render?",
+  "marketplace.plugin.render.prompt.logs": "Какие ошибки записал мой веб-сервис на Render за последний час?",
+  "marketplace.plugin.render.prompt.deploy": "Почему последний деплой моего сервиса на Render не удался?",
   "marketplace.plugin.atlassian.tagline": "Рабочие элементы Jira и страницы Confluence",
   "marketplace.plugin.atlassian.description":
     "Atlassian позволяет агентам искать и читать рабочие элементы Jira, страницы Confluence и пул-реквесты Bitbucket, а также создавать и обновлять рабочие элементы, страницы и комментарии. Каждый пользователь входит в свой аккаунт Atlassian через браузер и подтверждает доступ на экране согласия. У агентов те же права, что и у пользователя: они могут изменять рабочие элементы и страницы, менять права доступа к страницам и сливать пул-реквесты. Инструменты, которые удаляют данные Jira, остаются выключенными, пока администратор организации их не включит. Каждый вызов инструмента расходует кредиты Rovo.",
@@ -381,6 +388,13 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Какие задачи в Todoist нужно сделать сегодня?",
   "marketplace.plugin.todoist.prompt.capture": "Добавь эти пункты в мои «Входящие» в Todoist.",
   "marketplace.plugin.todoist.prompt.overdue": "Перенеси мои просроченные задачи в Todoist на завтра.",
+  "marketplace.plugin.trello.tagline": "Доски, списки и карточки",
+  "marketplace.plugin.trello.description":
+    "С Trello агенты ищут и читают доски, списки, карточки, чек-листы и комментарии, создают доски и карточки, перемещают списки и карточки, отмечают карточки выполненными и добавляют чек-листы, комментарии и метки. Агенты также могут читать и добавлять карточки во «Входящих» Trello пользователя и читать события Planner, которые могут приходить из подключённого календаря Google или Outlook. Каждый пользователь входит в свой аккаунт Trello через браузер и выбирает рабочие пространства на экране согласия. В этих рабочих пространствах у агентов те же права, что и у пользователя. Они могут архивировать карточки и списки, но сервер не может ничего удалить навсегда.",
+  "marketplace.plugin.trello.app": "Доски, списки и карточки через сервер MCP Trello со входом через браузер.",
+  "marketplace.plugin.trello.prompt.myCards": "Какие карточки в Trello назначены мне?",
+  "marketplace.plugin.trello.prompt.board": "Кратко опиши, что сейчас в работе на моей доске Trello.",
+  "marketplace.plugin.trello.prompt.newCards": "Добавь эти пункты как карточки на мою доску Trello.",
   "marketplace.plugin.huggingface.tagline": "Модели, датасеты и статьи на Hub",
   "marketplace.plugin.huggingface.description":
     "Hugging Face позволяет агентам искать модели, датасеты, Spaces, коллекции и статьи на Hugging Face Hub, читать карточки моделей и файлы репозиториев, просматривать датасеты и искать по документации Hugging Face. Он использует публичные данные Hub и не требует аккаунта и ключа. Инструменты только читают данные: агенты не могут создавать репозитории или запускать задачи.",

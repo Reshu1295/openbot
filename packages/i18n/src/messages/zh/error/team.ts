@@ -122,6 +122,8 @@ export const messages = {
   "error.team.requestTooLarge": "请求体过大。",
   "error.team.signInRelayUnsupported": "该服务器无法中继登录，请更新主机上的 OpenBot。",
   "error.team.connectorsUnsupported": "该服务器无法从这里管理其连接，请更新主机上的 OpenBot。",
+  "error.team.vaultUnsupported": "无法从这里打开该服务器的保险库，请更新主机上的 OpenBot。",
+  "error.team.vaultResetReadable": "该服务器上的保险库可以读取，因此未重置。",
   "error.team.discordAccessUnsupported": "该服务器无法设置 Discord 角色。请更新其上的 OpenBot。",
   "error.team.connectorPageRefused": "服务器发送了 OpenBot 不会打开的页面。",
   "error.team.signInRelayUnknown": "该登录已结束或不存在。",

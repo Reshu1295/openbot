@@ -166,16 +166,15 @@ in the Routines view; the web client shows the view switch only when the host se
 
 ### Workflows
 
-`workflows-v1` serves the workflow canvas (see [Workflows](agents.md#workflows)) to a joined desktop
-and to the web client. Its routes are `POST /v1/workflows/<name>` with the input in the body:
+`workflows-v1` serves the workflow canvas (see [Workflows](agents.md#workflows)) to a joined desktop,
+to the web client and to the mobile app. Its routes are `POST /v1/workflows/<name>` with the input in the body:
 `list`, `get`, `create`, `rename`, `delete`, `save-graph`, `versions`, `version-graph`,
 `restore-version`, `start-run`, `run-step`, `stop-step`, `stop-run`, `retry-step`, `decide`, `runs`,
 `run` and `rotate-webhook-secret`. `version-graph` gives the graph of one version for the preview,
 with the same filter as `get`. The contract header in `team-protocol/workflows-v1.ts` records the grant:
 
 - A member sees a workflow only when every agent of its agent steps is visible and no model step
-  names a provider that the member's protocol hides (a local-only provider hides it from every
-  peer, the owner on a remote client too). An owner or admin also sees a workflow that names a
+  names a provider that the member's protocol hides (also for the owner on a remote client). An owner or admin also sees a workflow that names a
   deleted agent, so they can fix or delete it. The host answers any other workflow, and its runs,
   steps and versions, with 404.
 - A run, a single step, a stop, a retry or a decision needs the chat level for each named agent. A
@@ -202,6 +201,21 @@ not know as read-only (`needsNewerApp`), and keeps the node when it saves.
 
 The optional event `workflows-changed { workflowId }` names the workflow that changed, so the
 client reads it again. A client without the capability shows `serverTooOld` on the Workflows page.
+
+The desktop app and the mobile app decode the answers with the same module,
+`packages/team-client/src/workflow-decoding.ts`. The host sends `workflows-changed` for each run
+and step change, so the mobile list, run and drawer read again on the event and do not poll.
+
+The mobile app edits a workflow as a list of steps, not as a canvas
+(`apps/mobile/src/features/workflows/model/workflow-outline.ts`). A graph with one trigger, at most
+one condition, and one path in and out of each step, except the step where the two condition paths
+join, becomes an outline. A change to the outline writes the edges of its steps again, with the
+edge ids of the desktop canvas. A new step goes to the right of the step before it, and the steps
+after it move right by its width. Other nodes, the notes, the shapes and the drawings keep their
+places. Any other graph keeps its edges: the phone changes only the settings of its steps. A save
+that a newer revision refused shows the conflict, and the person keeps the draft or loads the saved
+workflow. The pins of the mobile drawer stay on the phone, in the workspace preferences of the
+account and server (`pinnedWorkflows`); the host does not know them.
 
 ### History extent
 
@@ -385,9 +399,11 @@ host advertises a capability only when its `TeamApiAdmin` member exists.
 | `routine-recovery-v1` | Read and set a routine's missed-run policy; read its runs with the missed occurrences | `events` |
 | `routine-results-v1` | List the messaging connections and their places; read and set where an agent routine sends its answers. Deliveries stay on the host | none: only the mobile app sends it |
 | `webhook-tests-v1` | Send one signed test event to a webhook routine | `events` |
+| `vault-v1` | The host's Vault: list, add, change and delete logins, cards and contact info; show one saved password, card number or security code; reset a Vault that the host cannot read. No CSV import. A change sends `vault-changed` with no data, so a client reads the list again | `vault` |
 
 These IPC groups take a required server id and route with `scopedHandler`. A key travels only towards
-the host; no response carries one. `providers-v1` has no progress event, so the renderer reads runtime
+the host; no response carries one, except the `vault-v1` reveal: it answers the one secret that the
+admin asked to show or copy. `providers-v1` has no progress event, so the renderer reads runtime
 status again every second while a host download runs. Publishing, macOS permissions, the browser
 sign-in and folder import stay on the host.
 

@@ -67,6 +67,7 @@ import type { PushNotificationService } from "../push-notifications";
 import type { RemoteScreenGateway } from "../remote-screen-gateway";
 import type { SignInRelayHost } from "../sign-in-relay-host";
 import type { TeamStore } from "../team-store";
+import type { VaultService } from "../vault-service";
 
 type TeamApiAgentMethods = Pick<
   AgentService,
@@ -370,7 +371,10 @@ interface TeamApiProviders {
     | "clearProviderCredential"
   >;
   credentials: Pick<ProviderCredentialStore, "status" | "set" | "clear">;
-  runtimes: Pick<ProviderRuntimeManager, "getStatus" | "download" | "cancel" | "checkForUpdates">;
+  runtimes: Pick<
+    ProviderRuntimeManager,
+    "getStatus" | "download" | "cancel" | "checkForUpdates" | "startKeyProviderCli"
+  >;
   customProviders: PeerCustomProviderChanges;
   /**
    * Whether this host can run the Claude pasted-code sign-in. `providers-v3` promises it, so a host
@@ -444,6 +448,9 @@ export type TeamApiOnePasswordConnector = Pick<
 /** `bitwarden-connector-v1`: the Bitwarden connection of this host, by an API key and the master password. */
 export type TeamApiBitwardenConnector = Pick<BitwardenConnectorService, "status" | "connectWithApiKey" | "disconnect">;
 
+/** `vault-v1`: the Vault of this host, for an owner or admin. The route uses no CSV import. */
+export type TeamApiVault = VaultService;
+
 export type TeamApiAgentAccess = Pick<AgentAccessStore, "copyAgent" | "get" | "levels" | "set" | "subscribe">;
 
 export interface TeamApiOptions {
@@ -456,6 +463,7 @@ export interface TeamApiOptions {
   connectors?: TeamApiConnectors | undefined;
   onePasswordConnector?: TeamApiOnePasswordConnector | undefined;
   bitwardenConnector?: TeamApiBitwardenConnector | undefined;
+  vault?: TeamApiVault | undefined;
   providerHostSignIns?: TeamApiProviderHostSignIns | undefined;
   providerAccounts?: TeamApiProviderAccounts | undefined;
   providerUsageResets?: TeamApiProviderUsageResets | undefined;

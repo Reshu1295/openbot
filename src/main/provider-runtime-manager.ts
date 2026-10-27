@@ -738,6 +738,22 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
       Effect.catch(() => this.downloadAndWait("pi")),
     );
   }
+  /**
+   * `ensureKeyProviderCli` without the wait, for a joined server's request, which ends before a
+   * download does. True while that Pi download runs: the provider is checked again when Pi is ready.
+   * False when Pi starts, or when no download runs for a Pi that cannot start.
+   */
+  startKeyProviderCli(provider: AgentProviderRef): Effect.Effect<boolean, ProviderRuntimeFailure> {
+    if (!isKeyOnlyProvider(provider)) return Effect.succeed(false);
+    return resolvePiCli({ bundledExecutable: this.executablePath("pi") }).pipe(
+      Effect.as(false),
+      Effect.catch(() =>
+        this.download("pi").pipe(
+          Effect.map((snapshot) => ["downloading", "finishing"].includes(snapshot.providers.pi.phase)),
+        ),
+      ),
+    );
+  }
   cancel(runtime: ManagedRuntimeId): Effect.Effect<ProviderRuntimeSnapshot, ProviderRuntimeFailure> {
     return Effect.gen({ self: this }, function* (): Effect.fn.Return<ProviderRuntimeSnapshot, ProviderRuntimeFailure> {
       if (this.#statuses[runtime].phase !== "downloading") return this.getStatus();

@@ -105,7 +105,7 @@ SolidJS, provider, Cloudflare, and application code; and the account server to d
   (`AttentionRegistry.answerGrantedRequests`). The registry also accepts, once, Codex's consent to run
   an MCP tool (`_meta.codex_approval_kind` `mcp_tool_call`, a tool set to ask every time included), and
   saves nothing: "Always allow" stays the user's choice, which Codex keeps per server and tool. A
-  Workspace only agent and a Computer Use tool keep their card. OpenBot keeps Codex's `approvalPolicy`
+  Workspace only agent keeps its card; a Computer Use tool does not. OpenBot keeps Codex's `approvalPolicy`
   at `on-request`, because `never` denies MCP tool calls and rejects elicitations. Other questions, MCP
   forms and sign-in requests, and browser takeovers remain interactive.
 - `browser-tabs.json` is the embedded browser's own durable state, outside `openbot.db` and outside the

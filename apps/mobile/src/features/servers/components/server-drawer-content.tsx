@@ -12,6 +12,7 @@ import Settings2 from "lucide-react-native/icons/settings-2";
 import ShoppingBag from "lucide-react-native/icons/shopping-bag";
 import SquareCheck from "lucide-react-native/icons/square-check";
 import UsersRound from "lucide-react-native/icons/users-round";
+import WorkflowIcon from "lucide-react-native/icons/workflow";
 import { memo, type PropsWithChildren, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, View, type ViewStyle } from "react-native";
 import Animated, {
@@ -33,6 +34,7 @@ import {
   refreshHostedServerAvailability,
   useHostedServerAvailability,
 } from "@/features/servers/model/hosted-server-availability";
+import { DrawerPinnedWorkflows, useDrawerWorkflows } from "@/features/workflows/components/drawer-workflows";
 import type { MobileServer } from "@/features/workspace/context/mobile-workspace-context";
 import { moveServerId } from "@/features/workspace/model/server-order";
 import { serverStatusLabel, showsOnline } from "@/features/workspace/model/server-status";
@@ -472,7 +474,7 @@ export const ServerDrawerContent = memo(function ServerDrawerContent({
   );
 });
 
-type DrawerRoute = "tasks" | "routines" | "marketplace" | "usage" | "members" | "settings";
+type DrawerRoute = "tasks" | "routines" | "workflows" | "marketplace" | "usage" | "members" | "settings";
 
 /**
  * The tools of the open server with their values. Each answer from the host renders only this part
@@ -490,10 +492,12 @@ function DrawerServerTools({
   const { t } = useText();
   const values = useDrawerServerValues(server, open);
   const serverId = server.id;
+  const workflows = useDrawerWorkflows(serverId, open);
   const routes = useMemo(
     (): Record<DrawerRoute, Href> => ({
       tasks: { pathname: "/server-tasks", params: { serverId } },
       routines: { pathname: "/server-routines", params: { serverId } },
+      workflows: { pathname: "/server-workflows", params: { serverId } },
       marketplace: { pathname: "/server-marketplace", params: { serverId } },
       usage: { pathname: "/server-usage", params: { serverId } },
       members: { pathname: "/server-settings/members", params: { serverId } },
@@ -520,6 +524,19 @@ function DrawerServerTools({
         href={routes.routines}
         onNavigate={onNavigate}
       />
+      {workflows.supported ? (
+        <>
+          <DrawerRow
+            icon={WorkflowIcon}
+            label={t("mobile.app.route.workflows")}
+            value={workflows.value}
+            accentValue={workflows.needsYou}
+            href={routes.workflows}
+            onNavigate={onNavigate}
+          />
+          <DrawerPinnedWorkflows serverId={serverId} pinned={workflows.pinned} onNavigate={onNavigate} />
+        </>
+      ) : null}
       <DrawerRow
         icon={ShoppingBag}
         label={t("mobile.app.route.marketplace")}

@@ -1040,7 +1040,7 @@ function SignInSection(props: SectionProps & { keyShown: boolean }) {
                 {t("provider.action.install")}
               </Button>
             </Show>
-            <Show when={!row().runtimeStatus() && row().browserConnect()}>
+            <Show when={!row().runtimeStatus() && (row().browserConnect() || row().keyConnect())}>
               <Button
                 type="button"
                 variant={browserAction() === "connect" ? "default" : "outline"}
