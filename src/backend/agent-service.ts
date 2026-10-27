@@ -4465,7 +4465,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     // Not awaited: the message is already queued, and the sender is answered without the wait for
     // the provider.
     else
-      yield* this.#steerSentMessage(agent, snapshot.threadId ?? agent.threadId, deliveryId, steerTurnId).pipe(
+      yield* this.#steerSentMessage(agent, snapshot.threadId ?? agent.threadId, deliveryId, steerTurnId, explain).pipe(
         Effect.forkIn(this.#scope),
       );
   });
@@ -4486,9 +4486,9 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
 
   /**
    * Takes a message sent while the agent works into the running turn. The message is
-   * queued before this runs, so a refusal leaves it there: it says why on its row and starts when
-   * the turn ends. Only a provider that reads a message at its next step is asked; the ACP ones can
-   * hold a second prompt until the turn ends, which is a queue the user cannot see.
+   * queued before this runs, so a refusal leaves it there and starts when the turn ends; `explain`
+   * says why on its row. Only a provider that reads a message at its next step is asked; the ACP
+   * ones can hold a second prompt until the turn ends, which is a queue the user cannot see.
    */
   readonly #steerSentMessage = Effect.fn("AgentService.steerSentMessage")(function* (
     this: AgentService,
@@ -4496,6 +4496,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     threadId: string | null,
     deliveryId: string,
     turnId: string,
+    explain: boolean,
   ) {
     yield* this.#queue.steer({ agentId: agent.id, deliveryId, expectedTurnId: turnId }).pipe(
       Effect.catch((failure) =>
@@ -4506,7 +4507,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
           });
           // When the turn ended in between, the message starts as the next turn or waits behind it
           // like any other, which is no fallback worth naming.
-          if (this.#conversation.ensureSnapshot(agent.id, threadId).activeTurnId !== turnId) return;
+          if (!explain || this.#conversation.ensureSnapshot(agent.id, threadId).activeTurnId !== turnId) return;
           yield* this.#markSteerFallback(agent.id, deliveryId, "steer-failed");
           this.#mailboxSync.emitQueue(agent.id);
         }),
