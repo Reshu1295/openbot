@@ -1,6 +1,5 @@
 ### Changed
 
-- The instructions of agents tell them to ask with a question card, not in a plain message, also before a send. A question card moves the chat to "Needs you".
 - On a sidebar of 300 px or less, the wait chip of a "Needs you" row shows only its icon, so that a long agent name has more space.
 
 ### Fixed
