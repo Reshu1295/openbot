@@ -1,4 +1,5 @@
 import type { AgentMessage } from "@openbot/ui/data";
+import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { DRAFT_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
 import { createProjection, Show } from "solid-js";
@@ -72,6 +73,8 @@ export function ConversationThread() {
           onAttachmentAction={attachmentAction}
           approval={current().threads.approval}
           onRespondApproval={(decision) => current().threads.onRespondApproval(decision)}
+          context={contextUsageView(current().threads.contextState)}
+          onCompactContext={current().threads.onCompactContext}
           attention={props.browserTakeover || browserTakeoverResolution() ? <ConversationBrowserTakeover /> : undefined}
         />
       )}

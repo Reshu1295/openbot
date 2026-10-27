@@ -2681,6 +2681,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         });
       },
       compactContext: async () => undefined,
+      compactTaskContext: async () => undefined,
       respondToPrompt: async (input: RespondToPromptInput) => {
         emit(promptResponseListeners, input);
       },

@@ -407,6 +407,10 @@ export interface ConversationThreads {
   onSend: (text: string) => Promise<boolean>;
   onStop: () => void;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
+  /** The context of the open side thread, when its provider reported it. */
+  contextState: AgentContextState | undefined;
+  /** Missing when the host cannot compact a side thread. */
+  onCompactContext?: (() => Promise<void>) | undefined;
   /** Missing when the host cannot move a queued message to a new thread. */
   onRunQueuedMessage?: ((deliveryId: string) => void) | undefined;
 }

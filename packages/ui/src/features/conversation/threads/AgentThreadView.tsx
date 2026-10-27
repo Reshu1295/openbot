@@ -8,6 +8,7 @@ import { AgentActivityIndicator, nextAgentActivityLabel } from "@openbot/ui/feat
 import { type ChatMessageAuthor, ChatMessageRow } from "@openbot/ui/features/conversation/ChatMessageRow";
 import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor";
 import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice";
+import { ContextUsageMeter, type ContextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { type TextValue, useText } from "@openbot/ui/text";
 import type { JSX } from "@solidjs/web";
@@ -70,6 +71,10 @@ export interface AgentThreadViewProps {
   /** The approval that the thread's running turn waits for. */
   approval?: AgentApproval | undefined;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
+  /** How full the thread's context is, when its provider reported it. */
+  context?: ContextUsageView | undefined;
+  /** Compacts the thread's context now. Missing when the host cannot. */
+  onCompactContext?: (() => Promise<void>) | undefined;
   /** Another card that the thread waits for, such as a browser takeover. The app builds it. */
   attention?: JSX.Element | undefined;
 }
@@ -247,6 +252,9 @@ export function AgentThreadView(props: AgentThreadViewProps) {
           </div>
           <div class="composer-toolbar">
             <div class="composer-primary-actions">
+              <Show when={props.context}>
+                {(usage) => <ContextUsageMeter usage={usage()} compact={props.onCompactContext} />}
+              </Show>
               <Show when={active()}>
                 <Button
                   type="button"
