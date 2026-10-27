@@ -34,4 +34,6 @@ export const messages = {
   "status.agent.skillUsing": "{name} becerisini kullanıyor…",
   "status.agent.skillReading": "Bir beceri okuyor…",
   "status.agent.memoryChanges": "Bellek: {saved} kaydedildi, {updated} güncellendi, {forgotten} unutuldu.",
+  "status.agent.memoryChangesWithConflicts":
+    "Bellek: {saved} kaydedildi, {updated} güncellendi, {forgotten} unutuldu, {notChanged} değiştirilmedi çünkü önce başka bir mesaj dizisi değiştirdi.",
 } as const satisfies PartialTranslation<typeof source>;

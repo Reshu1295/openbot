@@ -7,6 +7,7 @@ export const messages = {
     "OpenBot 无法在 Codex 配置中注册 MCP 服务器。请确认 Codex 的 config.toml 有效且可写，然后重启 OpenBot。",
   "error.provider.computerUseConfig":
     "OpenBot 无法在 Codex 配置中注册 Computer Use。请确认 Codex 的 config.toml 有效且可写，然后重启 OpenBot。你可以在助手设置中关闭 Computer Use 以便继续。",
+  "error.provider.codexUnresponsive": "Codex 停止响应，OpenBot 已结束其进程。",
   "error.provider.endpointsReadOnly":
     "已保存的端点由更新版本的 OpenBot 写入，或文件无法读取。请更新 OpenBot 后再修改。",
   "error.provider.endpointNoSecureStorage":
@@ -53,6 +54,9 @@ export const messages = {
   "error.provider.releaseSourcesUnreachable": "OpenBot 无法连接服务商的发布源。请检查网络连接后重试。",
   "error.provider.runtimesUnsupported": "该平台不支持服务商运行时。",
   "error.provider.closing": "OpenBot 正在关闭。",
+  "error.provider.removeWhileOn": "请先关闭服务商，再移除其下载。",
+  "error.provider.removeWhileDownloading": "请等待下载完成，然后再移除。",
+  "error.provider.removeIncomplete": "有程序正在使用此 CLI 的文件。请关闭该程序，然后重试。",
   "error.provider.cliOverride": "请在 OpenBot 中更新之前，先移除显式指定的 CLI 路径。",
   "error.provider.runtimeUpdateIncomplete": "运行时更新未完成。",
   "error.provider.downloadHttp": "运行时下载失败，HTTP {status}。",
@@ -93,6 +97,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "某个请求头名称过长。",
   "error.provider.headerNameDuplicate": "有两个请求头的名称相同。",
   "error.provider.headerValueInvalid": "某个请求头的值为空或过长。",
+  "error.provider.headerValueMissing": "请填写请求头 {name} 的值。",
   "error.provider.apiKeyTooLong": "API 密钥过长。",
   "error.provider.localOnly": "只能在运行助手的电脑上更改服务商。",
   "error.provider.keyRequired": "需要服务商密钥。",
@@ -330,6 +335,7 @@ export const messages = {
   "error.provider.museSignIn": "请在主机电脑上登录 Muse 以继续。",
   "error.provider.inceptionSignIn": "请添加 Inception API 密钥以继续。",
   "error.provider.deepseekSignIn": "请添加 DeepSeek API 密钥以继续。",
+  "error.provider.openrouterSignIn": "请添加 OpenRouter API 密钥以继续。",
   "error.provider.terminalLoginFailed": "无法打开登录终端。请在这台主机上打开服务商 CLI 并在那里登录，然后刷新服务商。",
   "error.provider.nativeArchiveInvalid": "服务商下载内容中不包含有效的安装。",
   "error.provider.nativeChecksum": "服务商安装未通过完整性校验。",

@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
+import { join } from "node:path";
 import { expandAttachmentReferences } from "@openbot/contracts/attachment-references";
 import { expandChatTagReferences } from "@openbot/contracts/chat-tag-references";
 import type { AgentSummary, AgentWait, ConversationSnapshot, QueueDelivery, RoutineRun } from "@openbot/contracts/ipc";
+import { redactText } from "@openbot/logging";
 import { wokenWaitsPromptText } from "../agent-waits/agent-waits";
+import { homeSkillRoot, homeSkillTagSlug } from "../home-skills";
 import type { DeliveryContext } from "../mailbox-store";
 import { quietRoutineRun, ROUTINE_NO_UPDATE_TOOL, ROUTINE_REPORT_FAILURE_TOOL } from "./routine-quiet-runs";
 
@@ -249,6 +252,33 @@ export function deliveryPromptInput(context: DeliveryContext, sources: DeliveryP
   if (managedAttachments.length) {
     text += `${ATTACHED_FILES_HEADER}${managedAttachments.map((item) => `- ${item.name}: ${item.path}`).join("\n")}`;
   }
+  if (context.resumeAfterUsageLimit) {
+    const continuationState = context.resumeAfterUsageLimit;
+    const progress = redactText(
+      snapshot.messages
+        .filter(
+          (message) =>
+            message.turnId !== undefined &&
+            continuationState.previousTurnIds.includes(message.turnId) &&
+            message.author === "assistant" &&
+            message.itemType !== "commentary",
+        )
+        .map((message) => renderHandoffMessage(message, agentNames))
+        .join("\n\n"),
+    );
+    const continuation = [
+      HANDOFF_START,
+      "The previous provider reached its usage limit after starting this task.",
+      "Continue the unfinished task from the conversation and captured work steps. The request below is the original goal, not a new task. Do not repeat completed actions. Check the outcome of any interrupted action before you retry it. If the task is already complete, report the result.",
+      ...(progress ? ["--- interrupted task progress ---", progress.slice(-8000)] : []),
+      "--- captured work steps ---",
+      redactText(continuationState.workSteps) ||
+        "Captured work steps are unavailable. Inspect the saved work before you repeat an action.",
+      "These excerpts can be incomplete. Read more history or inspect the saved work when needed.",
+      HANDOFF_END,
+    ].join("\n\n");
+    text = `${continuation}${CURRENT_MESSAGE_SEPARATOR}${text}`;
+  }
   return [
     { type: "text", text },
     ...managedAttachments.map(
@@ -295,11 +325,25 @@ export function displayMessageReferences(
   return expandAttachmentReferences(
     expandChatTagReferences(
       text,
-      (reference) => (reference.kind === "agent" ? agentNames.get(reference.id) : undefined),
+      (reference) =>
+        reference.kind === "agent"
+          ? agentNames.get(reference.id)
+          : reference.kind === "skill" && options.fileHeadings
+            ? homeSkillTagName(reference.id, reference.name)
+            : undefined,
       options,
     ),
     (reference) => names.get(reference.attachmentId),
   );
+}
+
+/**
+ * A `$` tag of a skill in `~/.agents/skills` names its `SKILL.md` for the provider, because not every
+ * CLI loads that folder. A person reads the name alone.
+ */
+function homeSkillTagName(id: string, name: string): string | undefined {
+  const slug = homeSkillTagSlug(id);
+  return slug === null ? undefined : `${name} at ${join(homeSkillRoot(), slug, "SKILL.md")}`;
 }
 
 export function agentNamesById(agents: AgentSummary[]): ReadonlyMap<string, string> {

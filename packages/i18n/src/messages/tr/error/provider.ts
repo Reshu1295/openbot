@@ -7,6 +7,7 @@ export const messages = {
   "error.provider.computerUseConfig":
     "OpenBot, Bilgisayar Kullanımını Codex yapılandırmasına kaydedemedi. Codex config.toml dosyanızın geçerli ve yazılabilir olduğunu denetleyin, ardından OpenBot'u yeniden başlatın. Onsuz devam etmek için ekip arkadaşı ayarlarından Bilgisayar Kullanımını kapatabilirsiniz.",
   // Provider, provider runtime and custom endpoint errors.
+  "error.provider.codexUnresponsive": "Codex yanıt vermeyi bıraktı, bu yüzden OpenBot işlemini sonlandırdı.",
   "error.provider.endpointsReadOnly":
     "Kayıtlı uç noktalar OpenBot'un daha yeni bir sürümü tarafından yazılmış veya dosya okunamıyor. Bunları değiştirmek için OpenBot'u güncelleyin.",
   "error.provider.endpointNoSecureStorage":
@@ -57,6 +58,9 @@ export const messages = {
     "OpenBot sağlayıcı sürüm kaynaklarına ulaşamadı. Bağlantıyı kontrol edip tekrar deneyin.",
   "error.provider.runtimesUnsupported": "Sağlayıcı çalışma zamanları bu platformda kullanılamıyor.",
   "error.provider.closing": "OpenBot kapanıyor.",
+  "error.provider.removeWhileOn": "İndirmesini kaldırmadan önce sağlayıcıyı kapatın.",
+  "error.provider.removeWhileDownloading": "İndirmenin bitmesini bekleyin, sonra kaldırın.",
+  "error.provider.removeIncomplete": "Bir program bu CLI'nin dosyalarını kullanıyor. Kapatın ve yeniden deneyin.",
   "error.provider.cliOverride": "OpenBot'ta güncelleme yapmadan önce açık CLI yolu geçersiz kılmasını kaldırın.",
   "error.provider.runtimeUpdateIncomplete": "Çalışma zamanı güncellemesi tamamlanmadı.",
   "error.provider.downloadHttp": "Çalışma zamanı indirmesi HTTP {status} ile başarısız oldu.",
@@ -99,6 +103,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Bir üstbilgi adı çok uzun.",
   "error.provider.headerNameDuplicate": "İki üstbilgi aynı ada sahip.",
   "error.provider.headerValueInvalid": "Bir üstbilgi değeri eksik veya çok uzun.",
+  "error.provider.headerValueMissing": "{name} başlığı için bir değer girin.",
   "error.provider.apiKeyTooLong": "API anahtarı çok uzun.",
   "error.provider.localOnly": "Sağlayıcılar yalnızca ajanları çalıştıran bilgisayarda değiştirilebilir.",
   "error.provider.keyRequired": "Bir sağlayıcı anahtarı gereklidir.",
@@ -372,6 +377,7 @@ export const messages = {
   "error.provider.museSignIn": "Devam etmek için ana makinede Muse'da oturum açın.",
   "error.provider.inceptionSignIn": "Devam etmek için bir Inception API anahtarı ekleyin.",
   "error.provider.deepseekSignIn": "Devam etmek için bir DeepSeek API anahtarı ekleyin.",
+  "error.provider.openrouterSignIn": "Devam etmek için bir OpenRouter API anahtarı ekleyin.",
   "error.provider.terminalLoginFailed":
     "Oturum açma terminali açılamadı. Bu ana makinede sağlayıcı CLI'sini açıp orada oturum açın, ardından sağlayıcıları yenileyin.",
   "error.provider.nativeArchiveInvalid": "Sağlayıcı indirmesi geçerli bir kurulum içermiyor.",

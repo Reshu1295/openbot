@@ -6,7 +6,8 @@ import { migrateOpenBotDatabase } from "./openbot-database-schema";
 // Failure modes: the upgrade changes or loses a row of any table; a failed upgrade leaves a table or its
 // marker; a newer or incomplete history is accepted; a task can point to no thread, or two tasks to one
 // thread; a deleted thread leaves its task behind; a task takes an origin or an outcome that the runtime
-// does not know. These fixtures cover each.
+// does not know. These fixtures cover each. They stop at version 46: migration 47 moves tasks to side
+// threads, and `agent-thread-migration.test.ts` covers it.
 const databases: DatabaseSync[] = [];
 afterEach(() => {
   for (const db of databases.splice(0)) db.close();
@@ -94,7 +95,7 @@ describe("agent task migration", () => {
       // The earlier migrations run first; the rows after them are what v38 must keep.
       if (version < 37) migrateUpTo(db, 37);
       const before = contents(db);
-      migrateOpenBotDatabase(db);
+      migrateUpTo(db, 46);
       expect(contents(db)).toEqual({ ...before, ...TASK_TABLES });
       expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 46 });
       expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
@@ -114,16 +115,16 @@ describe("agent task migration", () => {
     expect(db.prepare("SELECT version FROM schema_migrations WHERE version=38").all()).toEqual([]);
     expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
     db.exec("DROP TRIGGER fail_marker");
-    migrateOpenBotDatabase(db);
+    migrateUpTo(db, 46);
     expect(contents(db)).toEqual({ ...before, ...TASK_TABLES });
   });
 
   it("rejects newer and incomplete migration histories before it creates the tables", () => {
     const db = databaseAtWithSeed(37);
     const before = contents(db);
-    db.exec("INSERT INTO schema_migrations VALUES(47,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(48,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
-    db.exec("DELETE FROM schema_migrations WHERE version=47; DELETE FROM schema_migrations WHERE version=20");
+    db.exec("DELETE FROM schema_migrations WHERE version=48; DELETE FROM schema_migrations WHERE version=20");
     expect(() => migrateOpenBotDatabase(db)).toThrow("missing version 20");
     expect(contents(db)).toEqual(before);
     expect(taskTables(db)).toEqual([]);
@@ -131,7 +132,7 @@ describe("agent task migration", () => {
 
   it("refuses a task of no thread, a second task of one thread, and an unknown value", () => {
     const db = databaseAtWithSeed(37);
-    migrateOpenBotDatabase(db);
+    migrateUpTo(db, 46);
     expect(() => insertTask(db, { threadId: "openbot-thread-unknown" })).toThrow("FOREIGN KEY constraint failed");
     expect(() => insertTask(db, { origin: "routine" })).toThrow("CHECK constraint failed");
     expect(() => insertTask(db, { outcome: "cancelled" })).toThrow("CHECK constraint failed");
@@ -144,7 +145,7 @@ describe("agent task migration", () => {
 
   it("deletes the task with the task's thread, and keeps the agent's own chat", () => {
     const db = databaseAtWithSeed(37);
-    migrateOpenBotDatabase(db);
+    migrateUpTo(db, 46);
     insertTask(db);
     db.prepare("DELETE FROM projection_threads WHERE thread_id='openbot-thread-task'").run();
     expect(db.prepare("SELECT task_id FROM projection_agent_tasks").all()).toEqual([]);

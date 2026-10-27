@@ -16,6 +16,7 @@ import { type MenuAction, MenuView } from "@/shared/components/menu-view";
 import { haptics } from "@/shared/lib/haptics";
 import { useReducedMotion } from "@/shared/lib/motion";
 import { isAndroid } from "@/shared/lib/platform";
+import { selectionColorProps } from "@/shared/lib/selection-color";
 import { useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 import { useLiquidGlass } from "@/shared/lib/use-liquid-glass";
@@ -184,7 +185,7 @@ export function MarketplaceSearchBar({
               autoCorrect={false}
               returnKeyType="search"
               submitBehavior="blurAndSubmit"
-              selectionColor={String(foreground)}
+              {...selectionColorProps(String(foreground))}
               className="h-10 min-w-0 flex-1 font-sans text-foreground"
               style={{ fontSize: 16, lineHeight: 20, paddingBottom: 0, paddingTop: 0, textAlignVertical: "center" }}
             />

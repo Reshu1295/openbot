@@ -161,6 +161,10 @@ export const messages = {
   "provider.deepseekKey.description":
     "在这台电脑上保存 DeepSeek API 密钥，即可使用 DeepSeek 模型。OpenBot 会在它下载的 Pi CLI 中运行这些模型。",
   "provider.deepseekKey.label": "DeepSeek API 密钥",
+  "provider.openrouterKey.title": "OpenRouter API 密钥",
+  "provider.openrouterKey.description":
+    "在这台电脑上保存 OpenRouter API 密钥，即可使用 OpenRouter 提供的模型。OpenBot 会在它下载的 Pi CLI 中运行这些模型。",
+  "provider.openrouterKey.label": "OpenRouter API 密钥",
 
   // The optional OpenCode Go key dialog.
   "provider.openCodeKey.title": "登录 OpenCode Go",
@@ -264,6 +268,19 @@ export const messages = {
   "provider.settings.modelsNone": "没有模型。",
   "provider.settings.modelsNoMatch": "没有匹配“{query}”的模型。",
   "provider.settings.modelShow": "在模型选择器中显示 {name}",
+  "provider.settings.download": "下载",
+  "provider.settings.downloadedCli": "{name} CLI",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 个版本 · {size}",
+    other: "{version} · {count} 个版本 · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 个版本 · {size}", other: "{count} 个版本 · {size}" },
+  "provider.settings.downloadAgain": "开启 {name} 时，OpenBot 会重新下载其 CLI。",
+  "provider.settings.removeDownloadConfirm": "要移除 {size} 吗？",
+  "provider.settings.removeDownloadKeeps": "账户、登录和智能体会保留。",
+  "provider.settings.removeDownload": "移除下载",
+  "provider.settings.removingDownload": "正在移除…",
+  "provider.settings.removeDownloadFailed": "无法移除下载。",
   "provider.settings.endpoints": "端点",
   "provider.settings.noEndpoints": "没有端点。",
   "provider.settings.endpointModels": { other: "{url} · {count} 个模型" },

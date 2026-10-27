@@ -18,9 +18,13 @@ export interface ConversationHeaderProps {
   pendingModel?: ConversationHeaderPendingModel | undefined;
   onSettingsIntent: () => void;
   onOpenSettings: () => void;
+  /** Set while a side thread is open: the agent's name then opens the agent's own chat, not its settings. */
+  onOpenChat?: (() => void) | undefined;
   remoteControl?: ConversationHeaderRemoteControl | undefined;
   /** Missing when the chat has no side panel, such as a deleted channel. */
   sidePanel?: SidePanelToggleProps | undefined;
+  /** The thread tabs of the agent, after its name. */
+  threads?: JSX.Element | undefined;
 }
 
 export interface ConversationHeaderPendingModel {
@@ -49,10 +53,10 @@ export function ConversationHeader(props: ConversationHeaderProps) {
               size="sm"
               type="button"
               class="conversation-title no-drag"
-              aria-label={t("conversation.header.settings")}
-              onPointerEnter={props.onSettingsIntent}
-              onFocus={props.onSettingsIntent}
-              onClick={props.onOpenSettings}
+              aria-label={props.onOpenChat ? t("conversation.header.mainChat") : t("conversation.header.settings")}
+              onPointerEnter={() => props.onOpenChat || props.onSettingsIntent()}
+              onFocus={() => props.onOpenChat || props.onSettingsIntent()}
+              onClick={() => (props.onOpenChat ?? props.onOpenSettings)()}
             >
               <AgentAvatar agent={agent()} />
               <h1>{agent().name}</h1>
@@ -66,6 +70,7 @@ export function ConversationHeader(props: ConversationHeaderProps) {
             </span>
           )}
         </Show>
+        {props.threads}
       </div>
       <div class="conversation-header-actions no-drag">
         <Show when={props.agent && props.pendingModel}>

@@ -6,6 +6,7 @@ export const messages = {
     "O OpenBot não conseguiu registrar os servidores MCP na configuração do Codex. Verifique se seu config.toml do Codex é válido e gravável, depois reinicie o OpenBot.",
   "error.provider.computerUseConfig":
     "O OpenBot não conseguiu registrar o Uso do computador na configuração do Codex. Verifique se seu config.toml do Codex é válido e gravável, depois reinicie o OpenBot. Você pode desativar o Uso do computador nas configurações do agente para continuar sem ele.",
+  "error.provider.codexUnresponsive": "O Codex parou de responder, então o OpenBot encerrou o processo dele.",
   "error.provider.endpointsReadOnly":
     "Os endpoints salvos foram gravados por uma versão mais recente do OpenBot, ou o arquivo não pode ser lido. Atualize o OpenBot para alterá-los.",
   "error.provider.endpointNoSecureStorage":
@@ -59,6 +60,9 @@ export const messages = {
   "error.provider.runtimesUnsupported":
     "Os ambientes de execução dos provedores não estão disponíveis nesta plataforma.",
   "error.provider.closing": "O OpenBot está fechando.",
+  "error.provider.removeWhileOn": "Desative o provedor antes de remover o download dele.",
+  "error.provider.removeWhileDownloading": "Aguarde o fim do download e depois remova.",
+  "error.provider.removeIncomplete": "Um programa usa arquivos desta CLI. Feche-o e tente de novo.",
   "error.provider.cliOverride": "Remova a substituição explícita do caminho da CLI antes de atualizar pelo OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "A atualização do ambiente de execução não foi concluída.",
   "error.provider.downloadHttp": "O download do ambiente de execução falhou com HTTP {status}.",
@@ -102,6 +106,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "O nome de um cabeçalho é muito longo.",
   "error.provider.headerNameDuplicate": "Dois cabeçalhos têm o mesmo nome.",
   "error.provider.headerValueInvalid": "O valor de um cabeçalho está ausente ou é muito longo.",
+  "error.provider.headerValueMissing": "Digite um valor para o cabeçalho {name}.",
   "error.provider.apiKeyTooLong": "A chave de API é muito longa.",
   "error.provider.localOnly": "Os provedores só podem ser alterados no computador que executa os agentes.",
   "error.provider.keyRequired": "É necessário informar uma chave de provedor.",
@@ -377,6 +382,7 @@ export const messages = {
   "error.provider.museSignIn": "Entre no Muse no computador anfitrião para continuar.",
   "error.provider.inceptionSignIn": "Adicione uma chave de API da Inception para continuar.",
   "error.provider.deepseekSignIn": "Adicione uma chave de API da DeepSeek para continuar.",
+  "error.provider.openrouterSignIn": "Adicione uma chave de API do OpenRouter para continuar.",
   "error.provider.terminalLoginFailed":
     "O terminal de login não pôde abrir. Abra a CLI do provedor neste computador anfitrião e entre por lá, depois atualize os provedores.",
   "error.provider.nativeArchiveInvalid": "O download do provedor não contém uma instalação válida.",

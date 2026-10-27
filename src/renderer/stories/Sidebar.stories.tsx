@@ -661,6 +661,19 @@ export const Channels: Story = {
   decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
 };
 
+/** Two channels whose work waits for the user: one in "Needs you" with an agent, one pinned. */
+export const ChannelsWaiting: Story = {
+  args: {
+    ...Channels.args,
+    agentStates: { ...agentStates, research: { kind: "waiting", reason: "question", detail: "Which quarter?" } },
+    channelWaits: {
+      "channel-2": { kind: "waiting", reason: "takeover", detail: null },
+      "channel-4": { kind: "waiting", reason: "approval", detail: "git push origin main" },
+    },
+  },
+  decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
+};
+
 export const ChannelsCompact: Story = {
   args: { ...Channels.args, compact: true },
 };

@@ -36,4 +36,6 @@ export const messages = {
   "status.agent.skillUsing": "Używanie umiejętności {name}…",
   "status.agent.skillReading": "Czytanie umiejętności…",
   "status.agent.memoryChanges": "Wspomnienia: zapisane {saved}, zaktualizowane {updated}, zapomniane {forgotten}.",
+  "status.agent.memoryChangesWithConflicts":
+    "Wspomnienia: zapisane {saved}, zaktualizowane {updated}, zapomniane {forgotten}, niezmienione {notChanged}, bo inny wątek zmienił je wcześniej.",
 } as const satisfies PartialTranslation<typeof source>;

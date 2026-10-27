@@ -1,5 +1,6 @@
 import type { CentralAuthUser, RoutineFields, ServerSummary } from "@openbot/contracts/ipc";
 import { BROWSER_PROFILES_CAPABILITY } from "@openbot/contracts/team-protocol/browser-profiles-v1";
+import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
 import { classifyFailure } from "@openbot/telemetry";
 import { isAgentAccount } from "@openbot/ui/components/provider-accounts";
 import type { AcpRegistrySettingsApi } from "@openbot/ui/features/custom-providers/AcpRegistrySettings";
@@ -17,7 +18,6 @@ import { useAuth } from "./features/account/account-context";
 import { useAgents } from "./features/agents/agents-context";
 import { desktopBrowserProfileCalls } from "./features/browser/browser-profiles-port";
 import { createBrowserProfilesStore } from "./features/browser/stores/browser-profiles-store";
-import type { ConnectorRegistry } from "./features/connectors/connector-registry";
 import { useConnectors } from "./features/connectors/connectors-context";
 import { conversationPort } from "./features/conversation/conversation-port";
 import { useCustomAgents } from "./features/custom-agents/custom-agents-context";
@@ -46,7 +46,7 @@ import { useUpdates } from "./features/updates/updates-context";
 import { useWhatsNew } from "./features/updates/whats-new-context";
 import { usePlanLimitRows } from "./features/usage/plan-limit-rows";
 import { createVaultStore } from "./features/vault/stores/vault-store";
-import { desktopVaultCalls } from "./features/vault/vault-port";
+import { desktopVaultCalls, hostVaultCalls } from "./features/vault/vault-port";
 import { useWindowPage } from "./features/window/window-page-context";
 import { useGlobalSearchSources } from "./global-search-sources";
 import { RemoteDesktopWorkspace, SettingsModal } from "./lazy-views";
@@ -86,18 +86,13 @@ interface AccountProps {
  */
 export function WorkspaceOverlays(props: AccountProps) {
   const { skillsMarketplaceOpen } = useSettings();
-  const { serverSettingsOpen } = useServerSettings();
   const connectors = useConnectors();
   /* The overlays mount with the app. A first read that failed then must not hide a connector for
-     good, and a sign-in can change outside this window, so each window reads them again when it opens. */
-  createEffect(
-    () => skillsMarketplaceOpen() || serverSettingsOpen(),
-    (open) => {
-      if (!open) return;
-      connectors.active.reload();
-      connectors.settings.reload();
-    },
-  );
+     good, and a sign-in can change outside this window, so the Marketplace reads them again when it opens. */
+  createEffect(skillsMarketplaceOpen, (open) => {
+    if (!open) return;
+    connectors.active.reload();
+  });
   return (
     <>
       <SharedAgentInstall />
@@ -106,7 +101,7 @@ export function WorkspaceOverlays(props: AccountProps) {
       <HostedUpsell account={props.account} />
       <LeaveServer />
       <RestartServer />
-      <ServerSettings connectors={connectors.settings} />
+      <ServerSettings />
       <AppSettings account={props.account} />
       <GlobalMessageSearch />
       <RemoteDesktop />
@@ -137,6 +132,7 @@ export function SkillsMarketplace() {
   const { selectAgent } = useNavigation();
   const { activeServer } = useServers();
   const { openInstalledMarketplaceAgent } = useServerSelection();
+  const { openMcpAdd } = useServerSettings();
   const connectors = useConnectors();
   const { remoteDesktopWorkspaceVisible, hideRemoteDesktopWorkspace } = useRemoteDesktop();
   // The remote desktop covers the window card, so a link or a search that opens the page hides it.
@@ -162,7 +158,10 @@ export function SkillsMarketplace() {
         setPendingPluginConnect(false);
       }}
       connectors={connectors.active}
-      variant="page"
+      onAddServer={(serverId) => {
+        setSkillsMarketplaceOpen(false);
+        openMcpAdd(serverId, null);
+      }}
     />
   );
 }
@@ -312,7 +311,7 @@ function RestartServer() {
  * Settings for one server, which is any server on the rail rather than the
  * active one - hence the target held by the domain instead of `activeServer()`.
  */
-function ServerSettings(props: { connectors: ConnectorRegistry }) {
+function ServerSettings() {
   const windowPage = useWindowPage();
   const usageRows = usePlanLimitRows();
   const platform = usePlatform();
@@ -335,6 +334,8 @@ function ServerSettings(props: { connectors: ConnectorRegistry }) {
     cancelProviderSignIn,
     openProviderInstallGuide,
     setProviderOn,
+    measureProviderDownload,
+    removeProviderDownload,
     providerAccounts,
     restartProvider,
     cancelProviderRestart,
@@ -399,6 +400,8 @@ function ServerSettings(props: { connectors: ConnectorRegistry }) {
     serverSettingsMcpSignIns,
     serverSettingsMcpSignInRequest,
     clearMcpSignInRequest,
+    serverSettingsMcpAddRequest,
+    clearMcpAddRequest,
     serverSettingsMcpSignInPages,
     serverSettingsMcpSignInRelays,
     openMcpSignInRelay,
@@ -425,8 +428,20 @@ function ServerSettings(props: { connectors: ConnectorRegistry }) {
     const calls = desktopBrowserProfileCalls(browserProfileServerId());
     return createBrowserProfilesStore(() => calls);
   });
-  /** The Vault of this computer. A joined server keeps its Vault on its host. */
-  const vault = createVaultStore(desktopVaultCalls());
+  /**
+   * The Vault of the selected server: this computer, or a joined server whose host serves `vault-v1`
+   * to this owner or admin. One store per server, so the items of the last server never show for the next.
+   */
+  const vaultServerId = createMemo(() => {
+    const target = serverSettingsTarget();
+    return serverCanAdminister(target, VAULT_CAPABILITY) ? target.id : undefined;
+  });
+  const vault = createMemo(() => {
+    const serverId = vaultServerId();
+    if (serverId === undefined) return undefined;
+    const local = untrack(serverSettingsTarget)?.kind === "local";
+    return { store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)) };
+  });
   // The workspace belongs to the selected server. For another server, the switch comes first and
   // the agent is published for the scope it lands in; a message there opens as its agent's chat.
   const openOnServer = (server: ServerSummary, agentId: string, open: () => void) => {
@@ -512,6 +527,8 @@ function ServerSettings(props: { connectors: ConnectorRegistry }) {
         return local && providerRuntimeDownloadsAvailable() ? openProviderInstallGuide : undefined;
       },
       onSetProviderOn: local ? setProviderOn : undefined,
+      onMeasureProviderDownload: local ? measureProviderDownload : undefined,
+      onRemoveProviderDownload: local ? removeProviderDownload : undefined,
       get providerUsers() {
         return Object.fromEntries(
           (agentStatus().providers ?? []).map((provider) => [
@@ -657,6 +674,8 @@ function ServerSettings(props: { connectors: ConnectorRegistry }) {
           onRemoveMcpServer={removeMcpServer}
           onSetMcpServerEnabled={setMcpServerEnabled}
           onTestMcpServer={testMcpServer}
+          mcpAddRequest={serverSettingsMcpAddRequest()}
+          onMcpAddRequestHandled={clearMcpAddRequest}
           // A remote host with `sign-in-relay-v1` opens the page in this computer's browser. An older
           // host's page shows here through the live view, which streams the active server only.
           mcpSignInRequest={serverSettingsMcpSignInRequest()}
@@ -731,7 +750,6 @@ function ServerSettings(props: { connectors: ConnectorRegistry }) {
                 ? {}
                 : undefined
           }
-          connectors={props.connectors}
           // The feed listens on this computer, so a calendar app on another one cannot read it.
           routineFeed={
             server().kind === "local"
@@ -743,7 +761,7 @@ function ServerSettings(props: { connectors: ConnectorRegistry }) {
               ? { store: browserProfiles(), listAgents: () => appPort().agent.listAgents(server().id) }
               : undefined
           }
-          vault={server().kind === "local" ? { store: vault } : undefined}
+          vault={vault()}
         />
       )}
     </Show>

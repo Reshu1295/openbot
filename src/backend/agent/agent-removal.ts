@@ -23,6 +23,8 @@ export interface AgentRemovalHooks {
   listAgents(): AgentSummary[];
   /** Removes the agent's tasks, with their threads and provider session files. */
   deleteTasks(agentId: string): Effect.Effect<void, AgentRemovalFailed>;
+  /** Stops the agent's own provider process, which runs in its workspace. */
+  stopAgentProcess(agentId: string): Effect.Effect<void, AgentRemovalFailed>;
 }
 
 export interface AgentRemovalOptions {
@@ -183,6 +185,11 @@ export class AgentRemoval {
         .pipe(toAgentRemovalFailed);
       stage = "api-keys";
       if (this.#apiKeys) yield* this.#apiKeys.removeAgent(agent.id).pipe(toAgentRemovalFailed);
+      // Just before the files go, so that no later stage can start the process again. A failed stop is
+      // logged: the removal reports whether the files could go.
+      const stopped = yield* Effect.result(this.#hooks.stopAgentProcess(agent.id));
+      if (Result.isFailure(stopped))
+        this.#logger.warn("Could not stop a deleted agent's provider process.", removalErrorCode(stopped.failure));
       stage = "agent-files-and-record";
       yield* this.#store.deleteAgent(agent.id).pipe(toAgentRemovalFailed);
     }).pipe(

@@ -1,6 +1,17 @@
-// The Vault of this computer: logins, payment cards and contact info that every agent can fill into
-// a page. A list answer never carries a password, a card number or a security code: the renderer gets
-// one of them only from `vault:reveal`, when the user asks for it.
+// The Vault of a server: logins, payment cards and contact info that every agent can fill into a
+// page. A list answer never carries a password, a card number or a security code: the renderer gets
+// one of them only from `vault:reveal`, when the user asks for it. A joined server answers through
+// `vault-v1`, to an owner or admin only.
+
+import {
+  decodeList,
+  decodeRecord,
+  nullableString,
+  requiredBoolean,
+  requiredNumber,
+  requiredString,
+} from "./ipc-decoding";
+import { type DynamicRecord, isOneOf, isString } from "./runtime-values";
 
 export type VaultItemKind = "login" | "card" | "contact";
 
@@ -122,3 +133,116 @@ export const VAULT_TEXT_LIMIT = 512;
 export const VAULT_FILL_SITE_LIMIT = 100;
 export const VAULT_NOTES_LIMIT = 4096;
 export const VAULT_PASSWORD_LIMIT = 1024;
+
+/** The countries that the Vault's contact form offers, as ISO 3166-1 alpha-2 codes. */
+export const VAULT_COUNTRY_CODES = [
+  "AT",
+  "AU",
+  "BE",
+  "CA",
+  "CH",
+  "DE",
+  "DK",
+  "ES",
+  "FR",
+  "GB",
+  "IE",
+  "IT",
+  "JP",
+  "NL",
+  "PL",
+  "SE",
+  "US",
+] as const;
+
+export type VaultCountryCode = (typeof VAULT_COUNTRY_CODES)[number];
+
+/** The counts of a CSV import on a joined server (`vault-import-v1`), which opens no file dialog. */
+export interface VaultHostImportResult {
+  imported: number;
+  skipped: number;
+}
+
+const VAULT_STATUSES: readonly VaultStatus[] = ["ready", "unavailable", "unreadable"];
+const VAULT_CARD_BRANDS: readonly VaultCardBrand[] = ["visa", "mastercard", "amex", "discover"];
+const VAULT_SECRET_KEYS = ["password", "number", "securityCode"] as const;
+
+function hostAddedBy(item: DynamicRecord): VaultItemOrigin {
+  if (item.addedBy === undefined) return {};
+  if (!isString(item.addedBy)) throw new Error("Invalid Vault response.");
+  return { addedBy: item.addedBy };
+}
+
+function hostVaultItem(item: DynamicRecord): VaultItemSummary {
+  if (VAULT_SECRET_KEYS.some((key) => key in item)) throw new Error("Invalid Vault response.");
+  const id = requiredString(item, "id");
+  switch (item.kind) {
+    case "login":
+      return {
+        id,
+        ...hostAddedBy(item),
+        kind: "login",
+        website: requiredString(item, "website"),
+        username: requiredString(item, "username"),
+        notes: requiredString(item, "notes"),
+        hasPassword: requiredBoolean(item, "hasPassword"),
+      };
+    case "card": {
+      const { brand, fillSites } = item;
+      if (brand !== null && !isOneOf(VAULT_CARD_BRANDS, brand)) throw new Error("Invalid Vault response.");
+      const last4 = requiredString(item, "last4");
+      if (!/^\d{4}$/u.test(last4)) throw new Error("Invalid Vault response.");
+      if (!Array.isArray(fillSites) || !fillSites.every(isString)) throw new Error("Invalid Vault response.");
+      return {
+        id,
+        ...hostAddedBy(item),
+        kind: "card",
+        label: requiredString(item, "label"),
+        nameOnCard: requiredString(item, "nameOnCard"),
+        brand,
+        last4,
+        expMonth: requiredNumber(item, "expMonth"),
+        expYear: requiredNumber(item, "expYear"),
+        billingContactId: nullableString(item, "billingContactId"),
+        fillSites: [...fillSites],
+      };
+    }
+    case "contact":
+      return {
+        id,
+        ...hostAddedBy(item),
+        kind: "contact",
+        label: requiredString(item, "label"),
+        fullName: requiredString(item, "fullName"),
+        address: requiredString(item, "address"),
+        address2: requiredString(item, "address2"),
+        city: requiredString(item, "city"),
+        region: requiredString(item, "region"),
+        postalCode: requiredString(item, "postalCode"),
+        country: requiredString(item, "country"),
+        phone: requiredString(item, "phone"),
+        email: requiredString(item, "email"),
+      };
+    default:
+      throw new Error("Invalid Vault response.");
+  }
+}
+
+/** The Vault of a joined server (`vault-v1`). Throws for an item that carries a secret. */
+export function decodeHostVaultState(value: unknown): VaultState {
+  const state = decodeRecord(value, "Vault response");
+  if (!isOneOf(VAULT_STATUSES, state.status)) throw new Error("Invalid Vault response.");
+  return { status: state.status, items: decodeList(state.items, "Vault item", hostVaultItem) };
+}
+
+/** The counts that a joined server answers to a CSV import (`vault-import-v1`). */
+export function decodeHostVaultImport(value: unknown): VaultHostImportResult {
+  const answer = decodeRecord(value, "Vault import response");
+  return { imported: requiredNumber(answer, "imported"), skipped: requiredNumber(answer, "skipped") };
+}
+
+/** The secret that a joined server answers to `reveal` (`vault-v1`). */
+export function decodeHostVaultSecret(value: unknown): string {
+  const answer = decodeRecord(value, "Vault response");
+  return requiredString(answer, "value");
+}

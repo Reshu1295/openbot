@@ -240,6 +240,7 @@ import { OnePasswordConnectorService } from "./onepassword-connector-service";
 import { OnePasswordConnectorStore } from "./onepassword-connector-store";
 import { PromptCacheTtlPreferenceStore } from "./prompt-cache-ttl-preference-store";
 import { ProviderAccountsHost } from "./provider-accounts-host";
+import { createProviderCliAppVersionStore } from "./provider-cli-app-version-store";
 import { ProviderCredentialStore } from "./provider-credential-store";
 import { createProviderDetection, type ProviderDetection } from "./provider-detection";
 import { PROVIDER_DETECTION_SETTINGS_FILE, ProviderDetectionSettingsStore } from "./provider-detection-settings-store";
@@ -273,7 +274,7 @@ import { StatementTimings } from "./resource-summary";
 import { RoutineFeedServer } from "./routine-feed-server";
 import { clearRoutineHold, ROUTINE_HOLD_FILE, takeRoutineHold, writeRoutineHold } from "./routine-hold-file";
 import { ScreenCapturer } from "./screen-capture";
-import { ServerMemory } from "./server-memory";
+import { agentProcessEnvironment, ServerMemory } from "./server-memory";
 import { ServerMode, type ServerModeEnvironment } from "./server-mode";
 import { ServerTimezonePreferenceStore } from "./server-timezone-preference-store";
 import {
@@ -338,6 +339,7 @@ const UPDATE_PREFERENCE_FILE = "openbot-update-preference-v1.json";
 const NOTIFICATION_PREFERENCE_FILE = "openbot-notification-preference-v1.json";
 const PUSH_NOTIFICATION_FILE = "openbot-push-notifications-v1.json";
 const BUSY_MESSAGE_MODE_PREFERENCE_FILE = "openbot-busy-message-mode-v1.json";
+const PROVIDER_CLI_APP_VERSION_FILE = "openbot-provider-cli-app-version-v1.json";
 const AGENT_DEFAULTS_PREFERENCE_FILE = "openbot-agent-defaults-v1.json";
 const AGENT_MEMORY_LIMIT_PREFERENCE_FILE = "openbot-agent-memory-limit-v1.json";
 const SERVER_TIMEZONE_PREFERENCE_FILE = "openbot-server-timezone-v1.json";
@@ -983,8 +985,9 @@ export async function createApplicationServices({
   performance.mark("openbot:services.pre-store");
   await runCauseEffect(store.initialize());
   performance.mark("openbot:services.store");
-  // Closing copies the write-ahead log into the database file and removes it.
-  teardown.push(TEARDOWN_ORDER.database, "the database", () => store.database.close());
+  // Closing copies the write-ahead log into the database file and removes it. A step that passed its
+  // limit, such as a slow agent stop, still writes, so the close waits a short time for it.
+  teardown.push(TEARDOWN_ORDER.database, "the database", () => store.database.close(), { afterAbandonedSteps: true });
   const managedSkills = new ManagedSkillService(
     app.isPackaged
       ? join(process.resourcesPath, "managed-skills", "openbot-site-hosting", "SKILL.md")
@@ -1049,8 +1052,18 @@ export async function createApplicationServices({
       ? new ServerMemory({
           hostedPlan: hostedServer !== null,
           onError: (message, error) => logger.warn(message, toLogValue(error)),
+          onAgentProcessStopped: (stopped) =>
+            logger.warn("Stopped a leftover agent process to free memory.", { ...stopped }),
         })
       : null;
+  // Every provider process on a server gets the marker of leftover agent processes and the CPU limit
+  // module for Node. The module must exist: Node does not start when a `--require` file is missing.
+  const cpuLimitModule = app.isPackaged
+    ? join(process.resourcesPath, "agent-runtime", "cpu-limit.cjs")
+    : resolve(__dirname, "../../resources/agent-runtime/cpu-limit.cjs");
+  const serverEnvironment = hostMemory
+    ? agentProcessEnvironment(existsSync(cpuLimitModule) ? cpuLimitModule : null)
+    : null;
   if (hostMemory) {
     hostMemory.start();
     teardown.push(TEARDOWN_ORDER.serverMemory, "the server memory reading", () => Effect.runPromise(hostMemory.stop()));
@@ -1210,6 +1223,10 @@ export async function createApplicationServices({
     join(app.getPath("userData"), "provider-accounts"),
   );
   await runCauseEffect(providerAccounts.load());
+  const providerCliAppVersion = createProviderCliAppVersionStore(
+    join(app.getPath("userData"), PROVIDER_CLI_APP_VERSION_FILE),
+  );
+  await runCauseEffect(providerCliAppVersion.load());
   const providerRuntimes = new ProviderRuntimeManager({
     isProviderOn: (provider) => !providerUse.off().includes(provider),
     root: providerRuntimeRoot({
@@ -1618,11 +1635,10 @@ export async function createApplicationServices({
     offProviders: providerUse.off(),
     providerAccounts,
     saveProviderUse: (provider, on) =>
-      providerUse
-        .set(provider, on)
-        .pipe(
-          Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
-        ),
+      providerUse.set(provider, on).pipe(
+        Effect.tap(() => providerRuntimes.providerUseChanged()),
+        Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
+      ),
     preferredProvider: setupState.preferredProvider ?? "codex",
     bundledExecutables: providerRuntimes.bundledExecutables(),
     prepareAgentWorkspace: (agent) =>
@@ -1664,6 +1680,7 @@ export async function createApplicationServices({
       mcpOAuthProxySettings,
       providerStateDirectory: join(app.getPath("userData"), "provider-state"),
       ...(process.platform === "win32" ? { providerTempDirectory } : {}),
+      ...(serverEnvironment ? { serverEnvironment } : {}),
       // The GitHub entries are paths only: `gh` and `git` read the token from the files the connection
       // keeps current. On a server with an agent display, `DISPLAY` names it, so a program an agent
       // starts opens where the driver sees it.
@@ -1809,6 +1826,8 @@ export async function createApplicationServices({
     changed: (workflowId) => service.notifyWorkflowsChanged(workflowId),
   });
   service.armRoutines();
+  // An agent event too, so joined admins and the web app read the Vault again. It carries no item.
+  vault.onChanged(() => service.notifyVaultChanged());
   teardown.push(TEARDOWN_ORDER.workflows, "the workflows", () => Effect.runPromise(workflowRuntime.close()));
   // An agent routine's answer sent on to a messaging place; see `routine-results.ts`.
   const routineResultRuntime = await Effect.runPromise(
@@ -1944,7 +1963,12 @@ export async function createApplicationServices({
   });
   providerRuntimes.on("status", forwardProviderRuntimeStatus);
   // After the status forward, so the offer a check finds reaches the renderer.
-  providerRuntimes.startUpdateChecks();
+  const appUpgraded = providerCliAppVersion.get().appVersion !== app.getVersion();
+  providerRuntimes.startUpdateChecks({ updateInstalled: appUpgraded });
+  if (appUpgraded)
+    void runCauseEffect(providerCliAppVersion.set({ appVersion: app.getVersion() })).catch((error) =>
+      logger.warn("The provider CLI app version did not save.", toLogValue(error)),
+    );
   // A tool runtime that becomes ready changes what the MCP servers resolve to, for every
   // provider: sessions that dropped their stdio servers before it finished downloading are
   // marked for refresh, and the deferred mechanism spends the mark before each agent's next
@@ -2242,6 +2266,8 @@ export async function createApplicationServices({
     // Present, so the host advertises `bitwarden-connector-v1`. An owner or admin connects it with an
     // API key and the master password: a session key from their computer cannot open this vault.
     bitwardenConnector,
+    // Present, so the host advertises `vault-v1`. The routes are admin-only.
+    vault,
     // Present on Linux, so the host advertises `provider-host-sign-in-v1`. The routes are admin-only.
     providerHostSignIns,
     // Present, so the host advertises `provider-accounts-v1`. The routes are admin-only.

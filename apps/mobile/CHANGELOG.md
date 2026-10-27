@@ -7,6 +7,67 @@ the [root changelog](../../CHANGELOG.md).
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-10-27
+
+### Added
+
+- Show the Cursor plan usage of a server in Plan limits, with one window for Cursor's own models and one for all other models.
+- The server drawer has a Marketplace. It shows a featured agent, popular agents, apps and popular skills. Owners and admins can add an agent, add a skill to the agents they choose, and connect an app with a key or a browser sign-in. The search field at the bottom has a filter menu for the type, the category and what the server already has. Tap the arrow on a skill or a connected app to try it: the example request opens in the chat of an agent that can use it. Skills that a message names now show as their name, not as a code.
+- In a chat, type `@` to pick a skill of the agent or a connected app as well as a teammate, or tap + and then Use skill or app. The message names the skill or app, so the agent uses it.
+- The mobile app now previews the files that desktop and web preview: text and code files, JSON, emails, HTML pages, PDFs and Excel spreadsheets. Before, these files opened only in the share sheet.
+- A visual reply from an agent now shows its page in the chat, as on desktop.
+- When the owner of a server changes the server key, the app follows the change that the old and the new key both signed. Before, the app showed "Server identity changed" and asked for a new scan.
+- Korean interface. Choose 한국어 in Settings > App language, or keep System default on an
+  iPhone that uses Korean.
+- Simplified Chinese for the phone app. Select 简体中文 in Settings, or use a Chinese phone language.
+- A server's Anthropic API key shows as the "API key" account in an agent's account choice. Select
+  it to bill that agent to the key.
+- Show a dot on the tab button of the browser when a page opens a new tab behind the tab on screen. The tab list marks each new tab with the same dot. The dot goes away when you show the new tab.
+
+### Changed
+
+- When you type `@` and part of a name, the agents whose name matches show first, then the agents
+  whose title matches, then the agents whose description matches. The match ignores accents, so
+  `e` finds `é`. Before, eight agents that matched only in their description could hide the agent
+  that you named.
+- The hosted server plans show that the Starter plan is sold out.
+- The mobile app uses Expo SDK 58 and React Native 0.88.
+- Agent photos stay on the phone. A photo that the phone has shows at once, also before the app connects, and the app does not download it again. Each photo downloads one time, not again for the Live Activity. The phone keeps up to 20 MB of photos. The photos of a server go when you remove the server, and all photos go when you sign out.
+- The agent settings no longer say that Grok cannot steer a running turn. A desktop app or a server
+  with this release steers the message into the running Grok turn.
+- In the browser, the tabs button opens a sheet. The address field shows the site of the page. Tap it to type an address or a search. It has buttons to go back and forward, copy the link and reload the page. The sheet also has New tab, Share and Close tab, and the list of the agent's tabs. You can close each tab in the list.
+- An HTML file and a visual reply open as a live page, as on desktop. The page runs its scripts, follows the light or dark theme of the app, and fills the space under the header. A tapped web link opens in the browser.
+- A visual reply shows in the chat as the page itself, with no card. Tap it to open it.
+
+### Fixed
+
+- On Android, a swipe left or right in the image viewer of a chat now shows the next or previous image. Before, the swipe only moved the image and it went back to its place.
+- The plan limit rings in the header now show the last reading at once when the app opens or you change the server. Before, they went away until the server sent new limits.
+- With the app lock and Face ID on, the app no longer asks for Face ID while the phone is locked. It now asks only when you open the app.
+- A chat that you opened before now shows its messages at once when you open it again. Before, a chat with more than 50 messages lost its messages when you left it and waited for the server.
+- An open chat no longer reads its messages from the server again when the phone already has them. This applies when you open a chat, mark a chat read and when a reply ends.
+- The app asks the server for unread counts once, not once for each message, while replies arrive.
+- An hourly routine can now run between two times that cross midnight, for example from 8:00 PM to 10:00 AM. Before, the routine editor showed "The end time must be after the start time." and did not save the routine. A run after midnight uses the days of its own date: with Monday to Friday, a run at 2:00 AM on Saturday does not occur.
+- On Android 12 and 13, the app no longer closes unexpectedly while the splash screen goes away. Before, version 1.4.1 did not include the fix.
+- When you open the app again after a short time away, it connects to a server again in seconds. Before, on a server that uses a relay, the app could show the server as connected and load no chats for up to a minute.
+- The chat on screen loads before task lists, routines, usage and agent photos. Before, these reads for every agent went first after you opened the app again, and the chat waited behind them.
+- Live Activities cut a long code span with emoji at the correct length. Before, the cut could split
+  an emoji into half a character, and the text stopped too early.
+- Live Activities show a reply that starts with inline code in three backticks, such as
+  ```` ```npm install``` first ````. Before, that line disappeared and the next lines showed as code.
+- On Android, selected text in the message box and other text fields stays visible in light and dark mode.
+- Show long model names in full in the model menu on Android. A long name goes onto more than one line.
+- Open chats faster on Android. The latest messages show while the chat slides in.
+- Open the sidebar more smoothly on Android, also the first time.
+- Make the app respond faster while a server sends or receives many requests.
+- Keep the app connected while a server sends many events. Before, it disconnected and connected again every few seconds during a turn.
+- In a chat, a scroll that starts on a link does not open the link. Only a tap opens it.
+- In a chat, a link shows the icon of its website, as on desktop and web.
+- When you open the app, it connects to the server at once. It no longer waits for the rest of a retry countdown, such as the two-minute wait after five failed attempts.
+- A connection attempt that Signal closes, such as when the server is offline, fails at once and is tried again. Before, it waited 30 seconds.
+- A reconnect loads the agents, the read state and the sidebar sections one round trip sooner.
+- When you open the app again, it reconnects in the background and does not show "Reconnecting" for a few seconds. The first connection attempt no longer fails because the app still seemed to be in the background.
+
 ## [1.4.1] - 2026-10-23
 
 ### Added

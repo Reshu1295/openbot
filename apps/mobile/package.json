@@ -1,7 +1,7 @@
 {
   "name": "@openbot/mobile",
   "main": "expo-router/entry",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "expo": {
     "install": {
       "exclude": [
@@ -16,12 +16,17 @@
       }
     }
   },
+  "reanimated": {
+    "staticFeatureFlags": {
+      "ANDROID_SYNCHRONOUSLY_UPDATE_UI_PROPS": true
+    }
+  },
   "engines": {
     "node": ">=24.0.0"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~58.0.14",
-    "@expo/ui": "~58.0.21",
+    "@expo/metro-runtime": "~58.0.15",
+    "@expo/ui": "~58.0.22",
     "@legendapp/list": "3.6.0",
     "@noble/hashes": "catalog:",
     "@norbert_bodziony/bloub": "catalog:",
@@ -32,19 +37,19 @@
     "@openbot/team-client": "workspace:*",
     "@openbot/telemetry": "workspace:*",
     "@openbot/user-errors": "workspace:*",
-    "@openpanel/react-native": "1.4.1",
+    "@openpanel/react-native": "1.4.2",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@shopify/react-native-skia": "2.14.0",
     "@speed-highlight/core": "catalog:",
     "@tanstack/react-query": "^5.104.5",
     "effect": "catalog:",
-    "expo": "~58.0.16",
+    "expo": "~58.0.17",
     "expo-application": "~58.1.2",
     "expo-blur": "~58.0.5",
     "expo-build-properties": "~58.0.11",
-    "expo-camera": "~58.0.11",
-    "expo-clipboard": "~58.0.3",
-    "expo-constants": "~58.0.12",
+    "expo-camera": "~58.0.12",
+    "expo-clipboard": "~58.0.4",
+    "expo-constants": "~58.0.13",
     "expo-crypto": "~58.0.7",
     "expo-dev-client": "~58.0.14",
     "expo-device": "~58.0.5",
@@ -57,26 +62,26 @@
     "expo-image-manipulator": "~58.0.15",
     "expo-image-picker": "~58.0.10",
     "expo-keep-awake": "~58.0.3",
-    "expo-linking": "~58.0.13",
+    "expo-linking": "~58.0.14",
     "expo-local-authentication": "~58.0.2",
     "expo-localization": "~58.0.5",
     "expo-media-library": "~58.0.11",
-    "expo-notifications": "~58.1.5",
-    "expo-router": "~58.0.24",
+    "expo-notifications": "~58.1.6",
+    "expo-router": "~58.0.25",
     "expo-secure-store": "~58.0.2",
-    "expo-sharing": "~58.0.19",
+    "expo-sharing": "~58.0.20",
     "expo-speech-recognition": "58.0.0",
-    "expo-splash-screen": "~58.0.10",
-    "expo-status-bar": "~58.0.3",
+    "expo-splash-screen": "~58.0.11",
+    "expo-status-bar": "~58.0.4",
     "expo-symbols": "~58.0.4",
     "expo-system-ui": "~58.0.6",
-    "expo-updates": "~58.0.17",
+    "expo-updates": "~58.0.18",
     "expo-video": "~58.0.12",
     "expo-web-browser": "~58.0.6",
-    "expo-widgets": "~58.0.21",
+    "expo-widgets": "~58.0.22",
     "heroui-native": "^1.0.11",
     "katex": "catalog:",
-    "lucide-react-native": "^1.60.0",
+    "lucide-react-native": "^1.61.0",
     "marked": "catalog:",
     "mermaid": "catalog:",
     "pdfjs-dist": "catalog:",
@@ -98,7 +103,7 @@
     "tailwindcss": "catalog:",
     "uniwind": "^1.13.0",
     "zod": "catalog:",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
@@ -109,7 +114,7 @@
     "start": "expo start",
     "start:go": "bunx expo start --go --clear",
     "start:go:tunnel": "bunx expo start --go --clear --tunnel",
-    "android": "expo run:android",
+    "android": "bun ../../scripts/mobile-android.ts",
     "ios": "bun ../../scripts/mobile-ios.ts",
     "ios:rocketsim": "bun ../../scripts/mobile-ios.ts --rocketsim",
     "ios:build:local": "bunx eas-cli@latest build --platform ios --profile production --local --output /private/tmp/openbot-testflight.ipa",

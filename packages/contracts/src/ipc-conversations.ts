@@ -116,11 +116,18 @@ export interface SearchConversationMessagesInput {
   agentId?: string;
   cursor?: string;
   limit?: number;
+  /**
+   * Also search the open side threads. Only this computer's server reads it: the Team API search
+   * returns the agents' own chats.
+   */
+  includeSideThreads?: boolean;
 }
 
 export interface ConversationSearchResult {
   agentId: string;
   message: ConversationMessage;
+  /** The side thread that has the message. A message of the agent's own chat has none. */
+  taskId?: string;
 }
 
 export interface ConversationSearchPage {

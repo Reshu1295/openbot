@@ -47,12 +47,10 @@ export const messages = {
 
   // Kaydetme veya kaldırma işleminden sonraki not. OpenCode'un yeni listeyi ne zaman okuduğunu belirtir.
   "customProvider.saved.restarted": "Kaydedildi. OpenBot modelleri yüklüyor.",
-  "customProvider.saved.skippedBusy":
-    "Kaydedildi. OpenCode listeyi geçerli görev durduktan sonra okur. Ardından Bağlan'a basın.",
+  "customProvider.saved.skippedBusy": "Kaydedildi. OpenCode listeyi geçerli görev durduktan sonra okur.",
   "customProvider.saved.notRunning": "Kaydedildi. OpenCode bir sonraki başlatılışında listeyi okur.",
   "customProvider.removed.restarted": "Kaldırıldı. OpenBot modelleri yüklüyor.",
-  "customProvider.removed.skippedBusy":
-    "Kaldırıldı. OpenCode listeyi geçerli görev durduktan sonra okur. Ardından Bağlan'a basın.",
+  "customProvider.removed.skippedBusy": "Kaldırıldı. OpenCode listeyi geçerli görev durduktan sonra okur.",
   "customProvider.removed.notRunning": "Kaldırıldı. OpenCode bir sonraki başlatılışında listeyi okur.",
   "customProvider.saveFailed": "OpenBot bu uç noktayı kaydedemedi.",
   "customProvider.removeFailed": "OpenBot {name} öğesini kaldıramadı.",
@@ -72,8 +70,7 @@ export const messages = {
   "customProvider.field.baseUrl": "Temel URL",
   "customProvider.field.apiKey": "API anahtarı",
   "customProvider.field.apiKeyHint": "İsteğe bağlı. Kimlik doğrulamasını başlıklarla yönetiyorsanız boş bırakın.",
-  "customProvider.field.apiKeyKeptHint":
-    "Bir anahtar kayıtlı. Bunu ve kayıtlı başlıkları korumak için burayı boş bırakın.",
+  "customProvider.field.apiKeyKeptHint": "Bir anahtar kayıtlı. Korumak için burayı boş bırakın.",
   "customProvider.models": "Modeller",
   "customProvider.model.id": "{number}. model kimliği",
   "customProvider.model.name": "{number}. model görünen adı",
@@ -84,6 +81,7 @@ export const messages = {
   "customProvider.header.name": "{number}. başlık adı",
   "customProvider.header.value": "{number}. başlık değeri",
   "customProvider.header.valuePlaceholder": "değer",
+  "customProvider.header.keptPlaceholder": "Kaydedildi. Korumak için boş bırakın.",
   "customProvider.header.remove": "{number}. başlığı kaldır",
   "customProvider.header.add": "Başlık ekle",
   "customProvider.submit": "Gönder",

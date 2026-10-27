@@ -457,6 +457,32 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Подставляет логины в браузере из Bitwarden. Настройте его в приложении для компьютера.",
+  "mobile.server.connectors.bitwarden.hostSummary": "Подставляет логины в браузере из Bitwarden или Vaultwarden",
+  "mobile.server.connectors.bitwarden.description":
+    "Заполнять логины в браузере на {host} из Bitwarden или Vaultwarden.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} входит через свой Bitwarden CLI. В хранилище создайте папку с именем Shared with OpenBot и положите в неё только логины, которые могут использовать агенты. В веб-хранилище откройте Настройки › Безопасность › Ключи и посмотрите ключ API.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Адрес сервера",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden или адрес вашего сервера Vaultwarden. {host} должен подключаться к нему по HTTPS.",
+  "mobile.server.connectors.bitwarden.clientId": "client_id ключа API",
+  "mobile.server.connectors.bitwarden.clientSecret": "client_secret ключа API",
+  "mobile.server.connectors.bitwarden.masterPassword": "Мастер-пароль",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} хранит ключ API и мастер-пароль в зашифрованном виде, чтобы снова разблокировать хранилище после перезапуска. Этот телефон их не хранит.",
+  "mobile.server.connectors.bitwarden.connect": "Подключить Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "Подключение…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} входит в Bitwarden. Первый вход может занять несколько минут.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Общая папка",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Папка в Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Переместите логин в эту папку в Bitwarden, чтобы агенты могли входить с его помощью. Уберите его оттуда, чтобы прекратить доступ.",
+  "mobile.server.connectors.bitwarden.disconnect": "Отключить Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Отключить Bitwarden?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} удалит ключ API и мастер-пароль. Агенты на {host} больше не смогут подставлять логины из Bitwarden.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Репозитории, задачи и пул-реквесты для каждого агента",
   "mobile.server.connectors.github.description":

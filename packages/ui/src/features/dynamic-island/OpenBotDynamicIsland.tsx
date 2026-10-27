@@ -516,9 +516,12 @@ export function OpenBotDynamicIsland(props: OpenBotDynamicIslandProps): JSX.Elem
     },
   );
 
+  // Only a new presentation from the props starts a change. This effect is the one writer of
+  // `visiblePresentation`, so it reads it untracked and does not run again on its own write.
   createEffect(
-    () => ({ nextPresentation: props.presentation, currentPresentation: visiblePresentation() }),
-    ({ nextPresentation, currentPresentation }) => {
+    () => props.presentation,
+    (nextPresentation) => {
+      const currentPresentation = untrack(visiblePresentation);
       if (nextPresentation.mode === currentPresentation.mode) {
         setVisiblePresentation(nextPresentation);
         if (untrack(() => props.state) === "compact") setCompactLayoutPresentation(nextPresentation);

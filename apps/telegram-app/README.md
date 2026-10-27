@@ -43,7 +43,7 @@ Make the bot with `/newbot` in [@BotFather](https://t.me/BotFather), and copy th
 
   Your AI teammates run in your own OpenBot workspace, with distinct roles, instructions, and context. Use them for research, writing, planning, summaries, and daily work. When an action needs approval, OpenBot asks first.
 
-  To start, connect Telegram in the OpenBot app: Server settings → Connectors → Telegram.
+  To start, connect Telegram in the OpenBot app: Marketplace → Apps → Telegram.
   ```
 
 Do not set a webhook by hand. Signal sets it when it starts.

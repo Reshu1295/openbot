@@ -154,6 +154,8 @@ interface AcpTurn {
   waitingOnUser: number;
   /** OpenBot ended the turn because the agent did not. Its open tool calls get no more updates. */
   abandoned: boolean;
+  /** The session's total cost in USD at this turn's last `usage_update`, when the agent sends one. */
+  reportedCost: number | null;
 }
 
 interface AcpThread {
@@ -289,6 +291,8 @@ export interface AcpProviderOptions {
   additionalModels?: () => Effect.Effect<AcpModel[]>;
   /** The name to show for a listed model, from its id and the name that the agent sent. */
   modelName?: (id: string, name: string) => string;
+  /** The name to show for the provider of a model, when it is not this agent's own (a custom endpoint). */
+  providerName?: (modelId: string | null) => string | null;
   /**
    * Values to mask in every diagnostic and error this client emits, read at each use: the custom
    * agent's environment values, which have no secret name that `redactText` could know them by.
@@ -685,6 +689,18 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     this.emit("notification", {
       method: "openbot/sessionSettings/updated",
       params: { threadId: thread.id, ...sessionSettingsSnapshot(thread.configOptions) },
+    });
+  }
+
+  /**
+   * The agent compacted the session by itself. The summary replaced the prompt that carried the
+   * instructions, and the channel messages that the session read, so the next turn sends both again.
+   */
+  #compacted(thread: AcpThread): void {
+    thread.instructionsSent = null;
+    this.emit("notification", {
+      method: "openbot/context-compaction",
+      params: { threadId: thread.id, status: "completed" },
     });
   }
 
@@ -1708,7 +1724,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       if (available && option?.currentValue !== value) yield* this.#configuration.set(thread, configId, value);
     }
     this.#publishSessionSettings(thread);
-    const turnId = getString(params, "clientUserMessageId") ?? randomUUID();
+    const turnId = getString(params, "clientTurnId") ?? getString(params, "clientUserMessageId") ?? randomUUID();
     const blocks = yield* promptBlocksEffect(params);
     yield* providerSync(() => this.#requireServedModel(thread));
     // The session keeps the instructions in its context, so a prompt carries them only when the
@@ -1755,6 +1771,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       lastActivityAt: Date.now(),
       waitingOnUser: 0,
       abandoned: false,
+      reportedCost: null,
     };
     thread.activeTurn = turn;
     this.#threads.holdForTurn(thread);
@@ -1793,7 +1810,13 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       if (response.usage)
         this.emit("notification", {
           method: "openbot/usage",
-          params: { threadId: thread.id, turnId: turn.id, promptId: randomUUID(), usage: response.usage },
+          params: {
+            threadId: thread.id,
+            turnId: turn.id,
+            promptId: randomUUID(),
+            usage: response.usage,
+            ...(turn.reportedCost === null ? {} : { cost: turn.reportedCost }),
+          },
         });
       // A flavor can fail a turn that ended with no answer (OpenCode). A turn told not to answer ends
       // empty on purpose, and an error there costs no answer the user waits for.
@@ -1855,12 +1878,15 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     }
     // A compaction replaces the prompt that carried the instructions with a summary. The context
     // shrinks, so a large drop counts as one when the agent sends no compaction update.
-    // The update is also the context fill, not billing. Antigravity sends the last one after a turn
-    // that OpenBot already ended.
+    // The update is also the context fill. Its cost is the session's total, which OpenCode sends
+    // before the prompt result. Antigravity sends the last one after a turn that OpenBot already ended.
     if (update.sessionUpdate === "usage_update") {
       if (thread.contextUsed !== null && update.used < thread.contextUsed * ACP_COMPACTION_CONTEXT_RATIO)
-        thread.instructionsSent = null;
+        this.#compacted(thread);
       thread.contextUsed = update.used;
+      const cost = update.cost;
+      if (thread.activeTurn && cost?.currency === "USD" && Number.isFinite(cost.amount) && cost.amount >= 0)
+        thread.activeTurn.reportedCost = cost.amount;
       if (Number.isFinite(update.used) && update.used >= 0 && Number.isFinite(update.size) && update.size > 0)
         this.emit("notification", {
           method: "thread/tokenUsage/updated",
@@ -1872,12 +1898,14 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       return;
     }
     if (update.sessionUpdate === "compaction_update") {
-      if (update.status === "completed") thread.instructionsSent = null;
+      if (update.status === "completed") this.#compacted(thread);
       return;
     }
     const turn = thread.activeTurn;
     if (!turn || turn.completing) return;
     if (update.sessionUpdate === "agent_message_chunk" && update.content.type === "text") {
+      // The agent's own transport error sent as answer text (Cursor, #3334).
+      if (this.#flavor.noiseChunk?.test(update.content.text)) return;
       // An exhausted quota sent as answer text, and a turn then ended as a success (Antigravity).
       const quota = this.#flavor.sdkHarness?.quota(update.content.text) ?? null;
       if (quota !== null) {
@@ -1893,6 +1921,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         turn.receivedOutput = true;
         turn.interruptedAnswer = [turn.text.trim() || turn.interruptedAnswer, error].filter(Boolean).join("\n\n");
         this.#completeThought(thread, turn);
+        this.#completeMessage(thread, turn, "commentary");
         this.#appendThought(thread, turn, error);
         this.#completeThought(thread, turn);
         return;
@@ -1991,7 +2020,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
   }
 
   #appendThought(thread: AcpThread, turn: AcpTurn, text: string): void {
-    this.#completeMessage(thread, turn, "commentary");
+    if (!this.#flavor.thoughtsInsideAnswer) this.#completeMessage(thread, turn, "commentary");
     /* A delta carries no phase, so the item has to be opened as `commentary` first — otherwise the
        thought lands in an ordinary agentMessage and renders as a chat bubble. */
     if (!turn.thoughtStarted) {
@@ -2066,7 +2095,9 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         thread,
         turn,
         "failed",
-        sourceText("error.agent.turnStalled", { provider: this.#label }),
+        sourceText("error.agent.turnStalled", {
+          provider: this.options.providerName?.(thread.currentModelId) ?? this.#label,
+        }),
       );
     }
   });

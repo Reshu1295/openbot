@@ -6,6 +6,7 @@ export const messages = {
     "OpenBot は Codex の設定に MCP サーバーを登録できませんでした。Codex の config.toml が有効で書き込み可能であることを確認してから、OpenBot を再起動してください。",
   "error.provider.computerUseConfig":
     "OpenBot は Codex の設定に Computer Use を登録できませんでした。Codex の config.toml が有効で書き込み可能であることを確認してから、OpenBot を再起動してください。Computer Use なしで続行するには、エージェントの設定で Computer Use をオフにできます。",
+  "error.provider.codexUnresponsive": "Codex が応答しなくなったため、OpenBot がそのプロセスを終了しました。",
   "error.provider.endpointsReadOnly":
     "保存されたエンドポイントは新しいバージョンの OpenBot で書き込まれたか、ファイルを読み取れません。変更するには OpenBot を更新してください。",
   "error.provider.endpointNoSecureStorage":
@@ -57,6 +58,10 @@ export const messages = {
     "OpenBot はプロバイダーのリリース元に接続できませんでした。接続を確認して、もう一度お試しください。",
   "error.provider.runtimesUnsupported": "このプラットフォームではプロバイダーのランタイムを使用できません。",
   "error.provider.closing": "OpenBot を終了しています。",
+  "error.provider.removeWhileOn": "ダウンロードを削除する前に、プロバイダーをオフにしてください。",
+  "error.provider.removeWhileDownloading": "ダウンロードが終わってから削除してください。",
+  "error.provider.removeIncomplete":
+    "この CLI のファイルを別のプログラムが使用しています。閉じてから、もう一度お試しください。",
   "error.provider.cliOverride": "OpenBot で更新する前に、明示的な CLI パスの指定を削除してください。",
   "error.provider.runtimeUpdateIncomplete": "ランタイムの更新が完了しませんでした。",
   "error.provider.downloadHttp": "ランタイムのダウンロードが HTTP {status} で失敗しました。",
@@ -100,6 +105,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "ヘッダー名が長すぎます。",
   "error.provider.headerNameDuplicate": "2 つのヘッダーの名前が同じです。",
   "error.provider.headerValueInvalid": "ヘッダーの値がないか、長すぎます。",
+  "error.provider.headerValueMissing": "ヘッダー {name} の値を入力してください。",
   "error.provider.apiKeyTooLong": "API キーが長すぎます。",
   "error.provider.localOnly": "プロバイダーは、エージェントを実行しているコンピューターでのみ変更できます。",
   "error.provider.keyRequired": "プロバイダーキーが必要です。",
@@ -386,6 +392,7 @@ export const messages = {
   "error.provider.museSignIn": "続行するには、ホストコンピューターで Muse にサインインしてください。",
   "error.provider.inceptionSignIn": "続行するには、Inception API キーを追加してください。",
   "error.provider.deepseekSignIn": "続けるには DeepSeek API キーを追加してください。",
+  "error.provider.openrouterSignIn": "続けるには OpenRouter API キーを追加してください。",
   "error.provider.terminalLoginFailed":
     "サインイン用のターミナルを開けませんでした。このホストでプロバイダーの CLI を開いてサインインしてから、プロバイダーを更新してください。",
   "error.provider.nativeArchiveInvalid": "プロバイダーのダウンロードに有効なインストールが含まれていません。",

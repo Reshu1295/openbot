@@ -27,8 +27,8 @@ function app(slug: string): MarketplacePluginApp {
   return found;
 }
 
-/** Figma asks for a token; Linear signs in and also issues keys; Aave asks for nothing. */
-export const FIGMA = app("figma");
+/** Resend asks for a key; Linear signs in and also issues keys; Aave asks for nothing. */
+export const RESEND = app("resend");
 export const LINEAR = app("linear");
 export const AAVE = app("aave");
 

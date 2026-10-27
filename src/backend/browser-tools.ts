@@ -1,6 +1,7 @@
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import { BROWSER_TAKEOVER_REASONS, VAULT_TEXT_LIMIT, type VaultContactFields } from "@openbot/contracts/ipc";
 import { z } from "zod";
+import { advertisedJsonSchema } from "./agent/advertised-json-schema";
 import {
   BROWSER_FILL_FIELDS_MAX_FIELDS,
   BROWSER_FILL_FIELDS_MAX_TEXT_BYTES,
@@ -436,7 +437,7 @@ export const BROWSER_DYNAMIC_TOOLS = [
       type: "function" as const,
       name: definition.name,
       description: definition.description,
-      inputSchema: z.toJSONSchema(definition.schema, { target: "draft-7", unrepresentable: "any" }),
+      inputSchema: advertisedJsonSchema(definition.schema),
     })),
   },
 ];

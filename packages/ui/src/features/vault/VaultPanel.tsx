@@ -11,7 +11,13 @@ import type {
   VaultSecretRequest,
   VaultState,
 } from "@openbot/contracts/ipc";
-import { cardBrand, VAULT_NOTES_LIMIT, VAULT_PASSWORD_LIMIT, VAULT_TEXT_LIMIT } from "@openbot/contracts/ipc";
+import {
+  cardBrand,
+  VAULT_COUNTRY_CODES,
+  VAULT_NOTES_LIMIT,
+  VAULT_PASSWORD_LIMIT,
+  VAULT_TEXT_LIMIT,
+} from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import {
   Alert,
@@ -70,12 +76,12 @@ export interface VaultPanelProps {
   onDelete: (id: string) => Promise<void>;
   /** The saved password, card number or security code, for the edit dialog. */
   onReveal: (request: VaultSecretRequest) => Promise<string>;
-  /** Puts the saved value on the clipboard. The value does not come to this window. */
+  /** Puts the saved value on the clipboard. On desktop the value does not come to this window. */
   onCopy: (request: VaultSecretRequest) => Promise<void>;
   /** Puts a username or an address on the clipboard. */
   onCopyText: (value: string) => Promise<void>;
-  /** Opens the file dialog. Null when the user closes it. */
-  onImportCsv: () => Promise<VaultImportResult>;
+  /** Opens the file dialog. Null when the user closes it. Absent for a joined server: no import. */
+  onImportCsv?: (() => Promise<VaultImportResult>) | undefined;
   /** Deletes the Vault file that cannot be read, and starts again with no items. */
   onReset: () => Promise<void>;
   /** Where the menus open, so they stay inside the settings page. */
@@ -121,26 +127,6 @@ const SECRET_TEXT = {
   number: { show: "vault.showNumber", hide: "vault.hideNumber", copy: "vault.copyNumber" },
   securityCode: { show: "vault.showSecurityCode", hide: "vault.hideSecurityCode", copy: "vault.copySecurityCode" },
 } as const satisfies Record<VaultSecretField, { show: AppTextKey; hide: AppTextKey; copy: AppTextKey }>;
-
-const COUNTRY_CODES = [
-  "AT",
-  "AU",
-  "BE",
-  "CA",
-  "CH",
-  "DE",
-  "DK",
-  "ES",
-  "FR",
-  "GB",
-  "IE",
-  "IT",
-  "JP",
-  "NL",
-  "PL",
-  "SE",
-  "US",
-];
 
 const digitsOf = (value: string) => value.replace(/\D/gu, "");
 
@@ -298,7 +284,7 @@ export function VaultPanel(props: VaultPanelProps) {
   const regionNames = createMemo(() => new Intl.DisplayNames([locale()], { type: "region" }));
   const countryName = (code: string) => (code ? (regionNames().of(code) ?? code) : "");
   const countries = createMemo(() =>
-    COUNTRY_CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) => a.name.localeCompare(b.name)),
+    VAULT_COUNTRY_CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) => a.name.localeCompare(b.name)),
   );
   const contactLine = (contact: VaultContactFields) =>
     [contact.address, contact.city, contact.postalCode, countryName(contact.country)].filter(Boolean).join(", ");
@@ -356,7 +342,7 @@ export function VaultPanel(props: VaultPanelProps) {
   async function importCsv(): Promise<void> {
     let result: VaultImportResult = null;
     const done = await run(async () => {
-      result = await props.onImportCsv();
+      result = (await props.onImportCsv?.()) ?? null;
     });
     const imported: VaultImportResult = result;
     if (!done || imported === null) return;
@@ -427,12 +413,15 @@ export function VaultPanel(props: VaultPanelProps) {
               <NewItemMenu
                 mount={props.menuMount}
                 onNew={(kind) => openEdit(kind, null)}
-                onImport={() =>
-                  setUi((draft) => {
-                    draft.failure = null;
-                    draft.notice = null;
-                    draft.importing = true;
-                  })
+                onImport={
+                  props.onImportCsv
+                    ? () =>
+                        setUi((draft) => {
+                          draft.failure = null;
+                          draft.notice = null;
+                          draft.importing = true;
+                        })
+                    : undefined
                 }
               />
             }
@@ -810,11 +799,11 @@ function ItemMenu(props: {
   );
 }
 
-/** "New item" with the three kinds and the import. */
+/** "New item" with the three kinds, and the import when the server has one. */
 function NewItemMenu(props: {
   mount: HTMLElement | undefined;
   onNew: (kind: VaultItemKind) => void;
-  onImport: () => void;
+  onImport: (() => void) | undefined;
 }) {
   const { t } = useText();
   return (
@@ -833,11 +822,17 @@ function NewItemMenu(props: {
               </DropdownMenu.Item>
             )}
           </For>
-          <DropdownMenu.Separator />
-          <DropdownMenu.Item onSelect={() => props.onImport()}>
-            <Upload aria-hidden="true" />
-            {t("vault.importMenu")}
-          </DropdownMenu.Item>
+          <Show when={props.onImport}>
+            {(onImport) => (
+              <>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item onSelect={() => onImport()()}>
+                  <Upload aria-hidden="true" />
+                  {t("vault.importMenu")}
+                </DropdownMenu.Item>
+              </>
+            )}
+          </Show>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

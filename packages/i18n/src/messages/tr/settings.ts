@@ -133,7 +133,7 @@ export const messages = {
     "Mesaj kutusunda dikte. Yerel modeller bu bilgisayarda, ElevenLabs ise bulutta çalışır.",
   "settings.tab.computerUse.title": "Bilgisayar Kullanımı",
   "settings.tab.computerUse.description":
-    "OpenBot'un bu bilgisayardaki uygulamaları görmesine ve bunlarla etkileşime girmesine izin verin.",
+    "Bu bilgisayardaki OpenBot ajanlarının buradaki uygulamaları görmesine ve kullanmasına izin verin. Başka bir sunucudaki ajanlar o sunucunun bilgisayarını kullanır.",
   "settings.tab.profile.title": "Profil",
   "settings.tab.profile.description": "OpenBot'ta nasıl göründüğünüzü yönetin.",
   "settings.tab.mobileConnect.title": "Mobil Bağlantı",
@@ -162,13 +162,12 @@ export const messages = {
   "settings.mobileConnect.app.copyLink": "Bağlantıyı kopyala",
   "settings.mobileConnect.app.linkCopied": "Bağlantı kopyalandı",
   "settings.mobileConnect.iosApp.title": "iPhone için OpenBot",
-  "settings.mobileConnect.iosApp.badge": "Beta",
-  "settings.mobileConnect.iosApp.description": "TestFlight'ta herkese açık beta. iOS 16.4 veya üstü için.",
-  "settings.mobileConnect.iosApp.qrLabel": "TestFlight davet QR kodu",
-  "settings.mobileConnect.iosApp.step.testFlight": "iPhone'unuzda App Store'dan TestFlight'ı yükleyin.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "Bu QR kodunu iPhone kamerasıyla tarayın veya davet bağlantısını kopyalayıp iPhone'unuzda açın.",
-  "settings.mobileConnect.iosApp.step.install": "TestFlight'ta Kabul Et'e, ardından Yükle'ye dokunun.",
+  "settings.mobileConnect.iosApp.badge": "Yayında",
+  "settings.mobileConnect.iosApp.description": "App Store'da. iOS 16.4 veya üstü için.",
+  "settings.mobileConnect.iosApp.qrLabel": "App Store QR kodu",
+  "settings.mobileConnect.iosApp.step.scan":
+    "Bu QR kodunu iPhone kamerasıyla tarayın veya bağlantıyı kopyalayıp iPhone'unuzda açın.",
+  "settings.mobileConnect.iosApp.step.install": "App Store'da Al'a dokunun.",
   "settings.mobileConnect.androidApp.title": "Android için OpenBot",
   "settings.mobileConnect.androidApp.badge": "Yayında",
   "settings.mobileConnect.androidApp.description": "Google Play'de. Android 7.0 veya üstü için.",
@@ -279,7 +278,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "OpenBot ile son altı ayım",
-  "settings.profile.activity.title": "Etkinlik",
+  "settings.profile.activity.title": "Bu bilgisayardaki etkinlik",
   "settings.profile.activity.activeDays": {
     one: "Son bir yılda {count} etkin gün",
     other: "Son bir yılda {count} etkin gün",

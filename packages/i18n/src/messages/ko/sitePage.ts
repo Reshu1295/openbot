@@ -43,7 +43,7 @@ export const messages = {
     "{name} 연결을 시작한 OpenBot 탭이 응답하지 않았어요. 브라우저에서 OpenBot을 열고 {name}을(를) 다시 연결해 주세요.",
   "sitePage.connect.failure.failed": "{name} 연결을 완료하지 못했어요. 다시 시도해 주세요.",
   "sitePage.connect.restartHint":
-    "OpenBot에서 {serverSettings}, {connectors}, {name}을(를) 차례로 열고 {connect}을(를) 선택해 주세요.",
+    "OpenBot에서 {marketplace}, {apps}, {name}을(를) 차례로 열고 {connect}을(를) 선택해 주세요.",
   "sitePage.connect.notOpened":
     "OpenBot을 실행한 다음 다시 시도해 주세요. 이 컴퓨터에 OpenBot이 없다면 다운로드해서 앱에서 {name}을(를) 연결해 주세요.",
   "sitePage.openApp.title": "아무것도 열리지 않았나요?",

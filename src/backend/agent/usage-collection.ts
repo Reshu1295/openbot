@@ -117,7 +117,8 @@ export function collectProviderUsage(
   if (session.provider === "opencode") {
     // OpenCode 1.19 and 2.x send the tokens of this prompt only (`state.usage.turn` starts again for
     // each prompt). `inputTokens` is the uncached input, and each cache and thinking field is left
-    // out when it is 0, so a missing one is 0. Reasoning is billed as output.
+    // out when it is 0, so a missing one is 0. Reasoning is billed as output. The cost is the
+    // session's total, so its own counter keeps the last one.
     const output = count(value.outputTokens);
     usage.record({
       agentId: agent.id,
@@ -126,6 +127,8 @@ export function collectProviderUsage(
       provider: session.provider,
       model,
       counterId: `${session.id}:opencode:${getString(params, "promptId") ?? turnId}`,
+      costCounterId: `${session.id}:opencode:cost`,
+      reportedCost: isDynamicRecord(params) ? cost(params.cost) : null,
       baseline: false,
       tokens: {
         uncachedInput: count(value.inputTokens),

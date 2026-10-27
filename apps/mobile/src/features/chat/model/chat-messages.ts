@@ -66,8 +66,8 @@ export type ChatMessage =
       status?: ConversationMessage["status"];
       replyToMessageId?: string | null;
       attachments?: AttachmentSummary[];
-      /** A visual reply: its one attachment is an HTML page that the chat shows. */
-      visual?: boolean;
+      /** A visual reply: its one attachment is an HTML page that the chat shows, at this height. */
+      visual?: { height?: number };
       /** An image the agent is generating or generated. Its first attachment is the image. */
       imageGeneration?: ImageGenerationInfo;
       /** Why the turn of a failed user message stopped, as the host reported it. */
@@ -393,7 +393,7 @@ export function projectChatMessages(
           streaming: message.status === "streaming",
           status: message.status,
           attachments: message.attachments,
-          ...(chatVisualReply(message) ? { visual: true } : {}),
+          ...visualReply(message),
           imageGeneration: message.imageGeneration,
           replyToMessageId: message.replyToMessageId,
           createdAt: message.createdAt,
@@ -487,6 +487,12 @@ export function withFailureReasons(messages: ChatMessage[], deliveries: readonly
   });
 }
 
+function visualReply(message: Parameters<typeof chatVisualReply>[0]): { visual?: { height?: number } } {
+  const visual = chatVisualReply(message);
+  if (!visual) return {};
+  return { visual: visual.height === undefined ? {} : { height: visual.height } };
+}
+
 /** Like the host read state, a plan or a visual page is not a readable message. */
 export function latestReadableMessage(messages: ConversationMessage[]) {
   return messages.findLast(
@@ -574,7 +580,7 @@ function projectChannelMessage(
     status: entry.message.status,
     replyToMessageId: entry.message.replyToMessageId,
     attachments: entry.message.attachments,
-    ...(chatVisualReply(entry.message) ? { visual: true } : {}),
+    ...visualReply(entry.message),
     imageGeneration: entry.message.imageGeneration,
     createdAt: entry.message.createdAt,
   };

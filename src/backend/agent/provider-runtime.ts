@@ -33,7 +33,13 @@ import { Deferred, Effect, Exit, Result, Schema, Scope, Semaphore } from "effect
 import { startAcpAuthentication } from "./../acp-sign-in";
 import { type AgentClient, AgentProcessExitError, type AgentProvider } from "./../agent-client";
 import { CodexAppServerClient } from "./../app-server-client";
-import { type AgentCliInfo, type BundledProviderExecutables, CodexCliError, cliPathEnvironment } from "./../cli";
+import {
+  type AgentCliInfo,
+  type BundledProviderExecutables,
+  CodexCliError,
+  cliPathEnvironment,
+  cliSpawnTarget,
+} from "./../cli";
 import { readCursorUsage } from "./../cursor-usage";
 import { causeHelpers } from "../effect-boundary";
 import { McpHandoffLog } from "./../mcp-handoff-log";
@@ -406,7 +412,10 @@ export class ProviderRuntime implements ProviderPort {
   readonly #updatesWhenIdle = new Set<AgentProvider>();
   /** A custom agent change that a turn delayed. The idle check applies it when the turn stops. */
   #customAgentsReloadPending = false;
-  /** Providers that a turn kept on the old agent environment. The idle check restarts each after its turn. */
+  /**
+   * Providers that a turn kept on the old agent environment or OpenCode config. The idle check
+   * restarts each after its turn.
+   */
   readonly #environmentReloadPending = new Set<AgentProvider>();
   readonly #lastUsed = new Map<AgentProvider, number>();
   /**
@@ -1378,15 +1387,17 @@ export class ProviderRuntime implements ProviderPort {
           .start(provider, (cli) =>
             Effect.gen(function* () {
               const browser = onHost ? yield* captureBrowser(openExternal) : {};
+              const target = cliSpawnTarget(cli.executable, signIn.command.argv);
               const child = yield* Effect.acquireRelease(
                 Effect.try({
                   try: () =>
-                    spawn(cli.executable, [...signIn.command.argv], {
+                    spawn(target.command, target.args, {
                       cwd: process.cwd(),
                       env: { ...process.env, ...signIn.command.env(cli), ...browser },
                       stdio: "ignore",
                       shell: false,
                       windowsHide: process.platform === "win32",
+                      windowsVerbatimArguments: target.windowsVerbatimArguments,
                     }),
                   catch: (cause) => new CliLoginFailed({ cause }),
                 }),
@@ -1713,7 +1724,7 @@ export class ProviderRuntime implements ProviderPort {
    *
    * One `opencode acp` process serves every OpenCode agent, so a respawn is felt account-wide. That
    * is why a turn in progress wins: the config is only read at spawn, so skipping costs nothing
-   * durable, and the next connect or app start picks the endpoint up.
+   * durable, and the idle check applies the respawn after the turn stops.
    *
    * It reports how the respawn went and never throws, because the caller has already written the
    * endpoint to disk: a throw here would read to the user as a save that failed. A respawn that
@@ -1724,12 +1735,19 @@ export class ProviderRuntime implements ProviderPort {
   readonly reloadOpenCodeConfig = Effect.fn("ProviderRuntime.reloadOpenCodeConfig")(function* (
     this: ProviderRuntime,
   ): Effect.fn.Return<CustomProviderRestart> {
+    this.#environmentReloadPending.delete("opencode");
     if (!this.#clients.has("opencode")) return "not-running";
-    if (this.#hooks.isProviderBusy("opencode")) return "skipped-busy";
+    if (this.#hooks.isProviderBusy("opencode")) {
+      this.#environmentReloadPending.add("opencode");
+      return "skipped-busy";
+    }
     const result = yield* Effect.result(
       this.#runProviderConnectionCommand("opencode", () => this.#reprobeProvider("opencode")),
     );
-    if (Result.isFailure(result) && this.#hooks.isProviderBusy("opencode")) return "skipped-busy";
+    if (Result.isFailure(result) && this.#hooks.isProviderBusy("opencode")) {
+      this.#environmentReloadPending.add("opencode");
+      return "skipped-busy";
+    }
     return "restarted";
   }, Effect.uninterruptible).bind(this);
 
@@ -2029,8 +2047,8 @@ export class ProviderRuntime implements ProviderPort {
           this.#hooks.onProviderResumed(provider);
         }),
     );
-    // A provider that runs this CLI, such as Inception or DeepSeek on Pi, moves to the new binary when its own
-    // turns end. One with no process, such as one that found no CLI, is checked again now.
+    // A provider that runs this CLI, such as Inception, DeepSeek or OpenRouter on Pi, moves to the new binary
+    // when its own turns end. One with no process, such as one that found no CLI, is checked again now.
     for (const driver of BUILT_IN_PROVIDER_DRIVERS) {
       if (driver.cliProvider !== provider || this.#off.has(driver.id)) continue;
       yield* (
@@ -2073,6 +2091,30 @@ export class ProviderRuntime implements ProviderPort {
   }
 
   /**
+   * Stops the agent's own process, after a start that is still running. The process runs in the
+   * agent's workspace, and Windows refuses to remove a folder that a live process uses (`EBUSY`).
+   */
+  readonly stopAgentProcess = Effect.fn("ProviderRuntime.stopAgentProcess")(function* (
+    this: ProviderRuntime,
+    agentId: string,
+  ) {
+    yield* this.#awaitConfinedStart(agentId);
+    const confined = this.#confined.get(agentId);
+    if (confined) yield* this.#stopConfined(agentId, confined);
+  }, Effect.uninterruptible).bind(this);
+
+  /** Waits until no start of the agent's own process is running. */
+  readonly #awaitConfinedStart = Effect.fn("ProviderRuntime.awaitConfinedStart")(function* (
+    this: ProviderRuntime,
+    agentId: string,
+  ) {
+    for (let pending = this.#confinedStarts.get(agentId); pending; pending = this.#confinedStarts.get(agentId)) {
+      const currentStart = pending;
+      yield* Deferred.await(currentStart).pipe(Effect.ignore);
+    }
+  });
+
+  /**
    * Like `requireReadyClient`, for the process that runs this agent's turns. An agent's own process
    * does not need the shared one, so its turn can still be interrupted while the shared one restarts.
    */
@@ -2108,10 +2150,7 @@ export class ProviderRuntime implements ProviderPort {
   ) {
     const provider = providerForAgent(agent);
     yield* this.ensureProvider(provider);
-    for (let pending = this.#confinedStarts.get(agent.id); pending; pending = this.#confinedStarts.get(agent.id)) {
-      const currentStart = pending;
-      yield* Deferred.await(currentStart).pipe(Effect.ignore);
-    }
+    yield* this.#awaitConfinedStart(agent.id);
     if (provider === "acp" && this.#removingCustomRuntime)
       return yield* new ProviderOperationFailed({ cause: new Error(sourceText("error.provider.registryRemoveBusy")) });
     const own = this.#ownProcessFor(agent);
@@ -2815,7 +2854,9 @@ export class ProviderRuntime implements ProviderPort {
             ? sourceText("error.provider.inceptionSignIn")
             : provider === "deepseek"
               ? sourceText("error.provider.deepseekSignIn")
-              : agentProviderDescriptor(provider).signInMessage)
+              : provider === "openrouter"
+                ? sourceText("error.provider.openrouterSignIn")
+                : agentProviderDescriptor(provider).signInMessage)
     );
   }
 

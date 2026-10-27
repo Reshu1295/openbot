@@ -6,6 +6,7 @@ export const messages = {
     "OpenBot non è riuscito a registrare i server MCP nella configurazione di Codex. Controlla che il config.toml di Codex sia valido e scrivibile, poi riavvia OpenBot.",
   "error.provider.computerUseConfig":
     "OpenBot non è riuscito a registrare il Controllo del computer nella configurazione di Codex. Controlla che il config.toml di Codex sia valido e scrivibile, poi riavvia OpenBot. Puoi disattivare il Controllo del computer nelle impostazioni dell'agente per continuare senza.",
+  "error.provider.codexUnresponsive": "Codex ha smesso di rispondere, quindi OpenBot ha terminato il suo processo.",
   "error.provider.endpointsReadOnly":
     "Gli endpoint salvati sono stati scritti da una versione più recente di OpenBot, oppure il file non è leggibile. Aggiorna OpenBot per modificarli.",
   "error.provider.endpointNoSecureStorage":
@@ -56,6 +57,9 @@ export const messages = {
     "OpenBot non è riuscito a raggiungere le fonti delle release dei provider. Controlla la connessione e riprova.",
   "error.provider.runtimesUnsupported": "I runtime dei provider non sono disponibili su questa piattaforma.",
   "error.provider.closing": "OpenBot si sta chiudendo.",
+  "error.provider.removeWhileOn": "Disattiva il provider prima di rimuoverne il download.",
+  "error.provider.removeWhileDownloading": "Attendi la fine del download, poi rimuovilo.",
+  "error.provider.removeIncomplete": "Un programma usa alcuni file di questa CLI. Chiudilo e riprova.",
   "error.provider.cliOverride": "Rimuovi l'override esplicito del percorso della CLI prima di aggiornare da OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "L'aggiornamento del runtime non è stato completato.",
   "error.provider.downloadHttp": "Download del runtime non riuscito con HTTP {status}.",
@@ -98,6 +102,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Il nome di un header è troppo lungo.",
   "error.provider.headerNameDuplicate": "Due header hanno lo stesso nome.",
   "error.provider.headerValueInvalid": "Il valore di un header manca o è troppo lungo.",
+  "error.provider.headerValueMissing": "Inserisci un valore per l'header {name}.",
   "error.provider.apiKeyTooLong": "La chiave API è troppo lunga.",
   "error.provider.localOnly": "I provider si possono modificare solo sul computer che esegue gli agenti.",
   "error.provider.keyRequired": "Serve una chiave del provider.",
@@ -379,6 +384,7 @@ export const messages = {
   "error.provider.museSignIn": "Per continuare, accedi a Muse sul computer host.",
   "error.provider.inceptionSignIn": "Per continuare, aggiungi una chiave API di Inception.",
   "error.provider.deepseekSignIn": "Aggiungi una chiave API di DeepSeek per continuare.",
+  "error.provider.openrouterSignIn": "Aggiungi una chiave API di OpenRouter per continuare.",
   "error.provider.terminalLoginFailed":
     "Impossibile aprire il terminale di accesso. Apri la CLI del provider su questo host e accedi da lì, poi aggiorna i provider.",
   "error.provider.nativeArchiveInvalid": "Il download del provider non contiene un'installazione valida.",

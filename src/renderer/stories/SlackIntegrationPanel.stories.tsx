@@ -7,11 +7,13 @@ import {
 import { fn } from "storybook/test";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
 import { STORY_AGENT_SUMMARIES } from "./fixtures";
+import { SettledArgs } from "./settled-args";
 
 const meta = {
   title: "Settings/SlackIntegrationPanel",
   component: SlackIntegrationPanel,
   parameters: { layout: "padded", a11y: { test: "error" } },
+  render: (args) => <SettledArgs>{() => <SlackIntegrationPanel {...args} />}</SettledArgs>,
 } satisfies Meta<typeof SlackIntegrationPanel>;
 
 export default meta;
@@ -70,6 +72,7 @@ const args = (connections: MessagingConnection[], busy = false) => ({
   busy,
   onConnectWorkspace: fn(),
   onDisconnectWorkspace: fn(),
+  onDisconnectAll: fn(),
   onReconnect: fn(),
   onSetEnabled: fn(),
   onAddOrchestrator: fn(),
@@ -92,7 +95,7 @@ export const MissingPermissions: Story = {
   args: args([workspace({ state: "missing_scope", missingScopes: ["files:read"] })]),
 };
 
-/** Two workspaces. One orchestrator answers both, and Add connects another. */
+/** Two workspaces. One orchestrator answers both, and Add workspace connects another. */
 export const TwoServers: Story = { args: args([workspace(), workspace(SECOND_WORKSPACE)]) };
 
 /** An earlier build gave each workspace its own orchestrator. The page shows both, and keeps them. */

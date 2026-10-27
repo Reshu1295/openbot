@@ -305,6 +305,14 @@ export const messages = {
   "error.backend.taskNotFound": "이 작업을 사용할 수 없어요.",
   "error.backend.taskClosed": "이 작업은 닫혀 있어요. 메시지를 보내려면 다시 여세요.",
   "error.backend.taskStillRunning": "이 작업이 아직 실행 중이에요. 중지될 때까지 기다린 후 닫으세요.",
+  "error.backend.threadNotFound": "이 스레드를 사용할 수 없어요.",
+  "error.backend.threadStillRunning": "이 스레드가 아직 실행 중이에요. 중지한 다음 다시 시도하세요.",
+  "error.backend.threadArchived": "이 스레드는 보관되어 있어요. 메시지를 보내려면 복원하세요.",
+  "error.backend.threadTitleRequired": "스레드에 짧은 제목을 지정하세요.",
+  "error.backend.threadOpenLimitReached":
+    "이 에이전트에는 열린 스레드가 {count}개 있어요. 스레드 하나를 보관한 후 다른 스레드를 시작하거나 복원하세요.",
+  "error.backend.threadRemoteUnsupported": "스레드는 이 컴퓨터의 에이전트에서만 사용할 수 있어요.",
+  "error.backend.threadMoveRefused": "이 에이전트에게만 보낸 메시지만 새 스레드에서 실행할 수 있어요.",
   "error.backend.taskTitleRequired": "작업에 짧은 제목을 지정하세요.",
   "error.backend.taskToolInvalid": "작업에 120자 이하의 제목과 할 일을 설명하는 지시문을 지정하세요.",
   "error.backend.taskOwnChatOnly":

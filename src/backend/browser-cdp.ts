@@ -2836,7 +2836,15 @@ const waitForDomQuietAcrossTargets = Effect.fn("Browser.waitForDomQuietAcrossTar
           },
           capture.sessionId,
         );
-      }),
+      }).pipe(
+        // A frame whose timers do not run, such as a 1x1 cross-origin ad frame, never reaches the
+        // deadline timer above, and a frame that answers nothing never returns. Either one would hold
+        // every caller until the caller's own deadline.
+        Effect.timeoutOrElse({
+          duration: deadlineMs,
+          orElse: () => Effect.succeed({ result: { type: "boolean", value: false } }),
+        }),
+      ),
     ),
     { concurrency: "unbounded" },
   );

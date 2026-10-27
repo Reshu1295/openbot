@@ -11,6 +11,7 @@ import { CLAUDE_API_KEY_ACCOUNT_ID } from "@openbot/contracts/team-protocol/clau
 import type { MobileTextKey } from "@openbot/i18n/mobile";
 import { useQuery } from "@tanstack/react-query";
 import { Button, Typography } from "heroui-native";
+import { Platform } from "react-native";
 import { useUniwind } from "uniwind";
 import { useQueryScope } from "@/features/auth/context/mobile-session-context";
 import { SettingsRow, SettingsSection } from "@/features/settings/components/settings-content";
@@ -36,9 +37,12 @@ const EFFORT_LABELS = {
  * one line. A model name has no length the host promises to respect -- OpenCode states the vendor,
  * the model and the price tier in one string -- so an untruncated name pushed "Model" until it
  * wrapped mid-word. The cap is on the visible label only; the id that gets saved is untouched.
+ * Android keeps the full name: its picker cuts the row label to one line, and its menu wraps long
+ * names, so a cap only removes the part of a name that tells two models apart.
  */
 const MAX_PICKER_LABEL = 28;
 function pickerLabel(text: string): string {
+  if (Platform.OS === "android") return text;
   const characters = Array.from(text);
   return characters.length > MAX_PICKER_LABEL ? `${characters.slice(0, MAX_PICKER_LABEL).join("").trimEnd()}…` : text;
 }

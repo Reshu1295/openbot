@@ -16,6 +16,7 @@ import {
 } from "@/features/onboarding/components/onboarding-motion";
 import { STEP_TOP_GAP } from "@/features/onboarding/components/onboarding-parts";
 import { haptics } from "@/shared/lib/haptics";
+import { selectionColorProps } from "@/shared/lib/selection-color";
 import { useText } from "@/shared/lib/text";
 
 const NAME_IDEAS = [
@@ -95,8 +96,7 @@ export function NameStep({
           autoCorrect={false}
           returnKeyType="next"
           submitBehavior="submit"
-          cursorColor={color}
-          selectionColor={color}
+          {...selectionColorProps(color)}
           textAlign="center"
           className="w-full font-sans font-semibold text-[30px]"
           style={{ color: String(foreground), paddingVertical: 8 }}

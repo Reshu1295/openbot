@@ -6,7 +6,12 @@ import {
   MANAGED_TOOL_RUNTIMES,
   type ManagedProviderId,
 } from "@openbot/contracts/agent-providers";
-import type { ProviderRuntimeSnapshot, ProviderRuntimeStatus } from "@openbot/contracts/ipc";
+import type {
+  CustomProviderResult,
+  CustomProviderSummary,
+  ProviderRuntimeSnapshot,
+  ProviderRuntimeStatus,
+} from "@openbot/contracts/ipc";
 import { type DynamicRecord, isOneOf } from "@openbot/contracts/runtime-values";
 import { PROVIDERS_ADMIN_CAPABILITY, PROVIDERS_ADMIN_ROUTES } from "@openbot/contracts/team-protocol/providers-v1";
 import {
@@ -164,11 +169,7 @@ export async function routeProviders(
         return json(200, {
           status: credentials.status(
             parsed(
-              V8_ROUTES.has(url.pathname)
-                ? managedProviderV8
-                : V5_ROUTES.has(url.pathname)
-                  ? managedProviderV5
-                  : provider,
+              V8_ROUTES.has(url.pathname) ? keyProviderV8 : V5_ROUTES.has(url.pathname) ? managedProviderV5 : provider,
               body,
             ),
           ),
@@ -177,28 +178,33 @@ export async function routeProviders(
       case PROVIDERS_V5_ROUTES.apiKeySet:
       case PROVIDERS_ADMIN_ROUTES.apiKeySet: {
         const input = parsed(
-          V8_ROUTES.has(url.pathname) || V5_ROUTES.has(url.pathname) ? peerApiKeyInput : wireApiKeyInput,
+          V8_ROUTES.has(url.pathname)
+            ? parseProviderApiKeyInput
+            : V5_ROUTES.has(url.pathname)
+              ? peerApiKeyInput
+              : wireApiKeyInput,
           body,
         );
-        // The same step as the local handler: the key and the process that uses it change together.
-        await runCauseEffect(
-          service.changeProviderCredential(input.provider, () =>
-            credentials
-              .set(input.provider, input.key)
-              .pipe(
-                Effect.mapError(
-                  (error) => new AgentLifecycleFailed({ operation: "changeProviderCredential", cause: error.cause }),
-                ),
+        const save = () =>
+          credentials
+            .set(input.provider, input.key)
+            .pipe(
+              Effect.mapError(
+                (error) => new AgentLifecycleFailed({ operation: "changeProviderCredential", cause: error.cause }),
               ),
-          ),
-        );
+            );
+        // A key-only provider runs on Pi. The download outlasts the request, so the route only starts it.
+        // Until Pi is ready no process uses the key, so only the key changes; Pi then starts the provider.
+        const piPending = await runCauseEffect(runtimes.startKeyProviderCli(input.provider));
+        // Otherwise the same step as the local handler: the key and the process that uses it change together.
+        await runCauseEffect(piPending ? save() : service.changeProviderCredential(input.provider, save));
         return json(200, {});
       }
       case PROVIDERS_V8_ROUTES.apiKeyClear:
       case PROVIDERS_V5_ROUTES.apiKeyClear:
       case PROVIDERS_ADMIN_ROUTES.apiKeyClear: {
         const id = parsed(
-          V8_ROUTES.has(url.pathname) ? managedProviderV8 : V5_ROUTES.has(url.pathname) ? managedProviderV5 : provider,
+          V8_ROUTES.has(url.pathname) ? keyProviderV8 : V5_ROUTES.has(url.pathname) ? managedProviderV5 : provider,
           body,
         );
         await runCauseEffect(
@@ -231,11 +237,19 @@ export async function routeProviders(
       case PROVIDERS_RUNTIMES_V2_ROUTES.runtimesCheck:
         return json(200, wireSnapshotV2(await runCauseEffect(runtimes.checkForUpdates())));
       case PROVIDERS_ADMIN_ROUTES.customList:
-        return json(200, customProviders.list());
+        return json(200, customProviders.list().map(wireCustomProvider));
       case PROVIDERS_ADMIN_ROUTES.customSave:
-        return json(200, await runCauseEffect(customProviders.save(parsed(parseSaveCustomProvider, body))));
+        return json(
+          200,
+          wireCustomProviderResult(await runCauseEffect(customProviders.save(parsed(parseSaveCustomProvider, body)))),
+        );
       default:
-        return json(200, await runCauseEffect(customProviders.remove(parsed(parseDeleteCustomProvider, body).id)));
+        return json(
+          200,
+          wireCustomProviderResult(
+            await runCauseEffect(customProviders.remove(parsed(parseDeleteCustomProvider, body).id)),
+          ),
+        );
     }
   } catch (error) {
     if (error instanceof HttpError) throw error;
@@ -262,6 +276,15 @@ const ROUTES = new Set<string>([
 
 function isProvidersRoute(pathname: string): boolean {
   return ROUTES.has(pathname);
+}
+
+/** The `providers-v1` endpoint summary: the header names stay on this computer, as they did. */
+function wireCustomProvider({ headerNames: _headerNames, ...provider }: CustomProviderSummary): CustomProviderSummary {
+  return provider;
+}
+
+function wireCustomProviderResult(result: CustomProviderResult): CustomProviderResult {
+  return { ...result, providers: result.providers.map(wireCustomProvider) };
 }
 
 /**
@@ -317,7 +340,7 @@ function codeSubmitInputV4(body: DynamicRecord): { provider: SignInProviderIdV4;
   return { provider: signInProviderV4(body), code: pastedCode(body) };
 }
 
-// Inception and DeepSeek run only on this computer, so a peer does not set their keys.
+// `providers-v5` does not name Inception, DeepSeek or OpenRouter; `providers-v8` sets their keys.
 function peerApiKeyInput(body: DynamicRecord) {
   const input = parseProviderApiKeyInput(body);
   if (isKeyOnlyProvider(input.provider)) throw new Error("Unknown provider.");
@@ -439,6 +462,12 @@ function managedProviderV8(body: DynamicRecord): ManagedProviderId {
   const id = hostProvider(body);
   if (!isManagedRuntimeProvider(id)) throw new Error(sourceText("error.team.providerNotManaged"));
   return id;
+}
+
+/** A `providers-v8` provider whose key this host keeps: a managed runtime, or a key-only provider on Pi. */
+function keyProviderV8(body: DynamicRecord) {
+  const id = hostProvider(body);
+  return isKeyOnlyProvider(id) ? id : managedProviderV8(body);
 }
 
 /** The `providers-v8` runtime snapshot: one row for each managed runtime, keyed by `id`. */

@@ -246,8 +246,6 @@ export const messages = defineMessages("server", {
   "server.settings.importDescription": "Move your agents from Grok Bot or Hermes Agent to this server.",
   "server.settings.transferTitle": "Transfer",
   "server.settings.transferDescription": "Move this server's agents and server settings to or from a file.",
-  "server.settings.connectorsTitle": "Connectors",
-  "server.settings.connectorsDescription": "Connect accounts that every agent on this server can use.",
   "server.settings.routinesTitle": "Routines",
   "server.settings.routinesDescription": "Show the routine schedule of this computer in a calendar app.",
   "server.routineFeed.title": "Calendar feed",

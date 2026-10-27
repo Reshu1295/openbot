@@ -9,6 +9,8 @@ import {
 } from "@openbot/contracts/first-touch";
 import { isBoolean, isOneOf } from "@openbot/contracts/runtime-values";
 import { OpenPanel, OpenPanelBase, type OpenPanelOptions, type TrackProperties } from "@openpanel/web";
+import { BRAND_ROUTE } from "./brand-page";
+import { COMMERCIAL_LICENSE_ROUTE } from "./commercial-license";
 import { CONTACT_TOPICS } from "./contact";
 import { CONTENT_COLLECTIONS } from "./content";
 import { type CollectionId, type ContentCollection, findArticle } from "./content-collection";
@@ -126,8 +128,10 @@ export type LandingScreenPath =
   | "/contact"
   | "/billing/return"
   | typeof TEAMS_ROUTE
+  | typeof BRAND_ROUTE
   | typeof PRIVACY_POLICY_ROUTE
   | typeof TERMS_ROUTE
+  | typeof COMMERCIAL_LICENSE_ROUTE
   | DownloadPagePath
   | CollectionIndexRoute
   | `${CollectionIndexRoute}/${string}`;
@@ -137,8 +141,10 @@ const FIXED_SCREEN_PATHS = [
   "/join",
   "/contact",
   TEAMS_ROUTE,
+  BRAND_ROUTE,
   PRIVACY_POLICY_ROUTE,
   TERMS_ROUTE,
+  COMMERCIAL_LICENSE_ROUTE,
   ...Object.values(OPENBOT_DOWNLOAD_PAGE_LINKS),
   "/news",
   "/guides",

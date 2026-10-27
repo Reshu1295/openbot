@@ -38,18 +38,12 @@ export interface ProviderPage {
   comparisons: readonly string[];
   faq: readonly ComparisonQuestion[];
   sources: readonly ComparisonSource[];
-  /**
-   * The provider's agents stay on the computer that runs OpenBot: the phone apps and team
-   * members do not see them (`LOCAL_ONLY_PROVIDERS` in `src/main/team-api/provider-visibility.ts`).
-   * The page then does not show `OPENBOT_PHONE_ADD`.
-   */
-  localOnly?: true;
   /** `YYYY-MM-DD`: the day every claim about the provider was last checked against its sources. */
   checkedAt: string;
 }
 
-/** The phone apps. Not on the page of a `localOnly` provider. */
-export const OPENBOT_PHONE_ADD: ProviderAdd = {
+/** The phone apps. */
+const OPENBOT_PHONE_ADD: ProviderAdd = {
   icon: "phone",
   title: "Your agents on your phone",
   text: "The OpenBot apps for iPhone and Android connect to the computer that runs your agents, over an encrypted connection, with no VPN. Remote access needs an OpenBot account.",

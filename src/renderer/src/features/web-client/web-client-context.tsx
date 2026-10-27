@@ -603,7 +603,69 @@ export function createWebWorkspace(
   );
   const [serverOrder, setServerOrder] = createSignal(readWebServerOrder(props.accountId));
   const orderedHosts = createMemo(() => orderWebHosts(state.hosts, serverOrder()));
-  const profiles = createMemo(() => state.agents.map(toAgentProfile));
+  // The host sends an `openbot-avatar:` URL, which only the desktop app can open. The image comes
+  // through the host connection; until then, the agent keeps the host URL and its generated avatar.
+  const [avatars, setAvatars] = createSignal<ReadonlyMap<string, { source: string; url: string }>>(new Map());
+  const avatarLoads = new Set<string>();
+  // The images share the host connection and its file slots with the user's downloads, so only a few
+  // load at the same time.
+  const avatarQueue: { hostId: string; id: string; source: string }[] = [];
+  let avatarReads = 0;
+  let avatarHost: string | null = null;
+  function loadAvatars() {
+    while (avatarReads < 2) {
+      const next = avatarQueue.shift();
+      if (!next) return;
+      const { hostId, id, source } = next;
+      avatarReads += 1;
+      void runtime
+        .agentAvatar(id, source)
+        .then(
+          (url) => {
+            if (avatarHost === hostId) setAvatars((current) => new Map(current).set(id, { source, url }));
+          },
+          // A failed image keeps the generated avatar, and the next agent list tries it again.
+          () => {
+            if (avatarHost === hostId) avatarLoads.delete(`${id} ${source}`);
+          },
+        )
+        .finally(() => {
+          avatarReads -= 1;
+          loadAvatars();
+        });
+    }
+  }
+  createEffect(
+    () => ({
+      hostId: state.host?.hostId ?? null,
+      sources: state.agents.flatMap((agent) =>
+        agent.avatarUrl?.startsWith("openbot-avatar:") ? [{ id: agent.id, source: agent.avatarUrl }] : [],
+      ),
+    }),
+    ({ hostId, sources }) => {
+      if (hostId !== avatarHost) {
+        avatarHost = hostId;
+        avatarLoads.clear();
+        avatarQueue.length = 0;
+        setAvatars(new Map());
+      }
+      if (!hostId) return;
+      for (const { id, source } of sources) {
+        const key = `${id} ${source}`;
+        if (avatarLoads.has(key)) continue;
+        avatarLoads.add(key);
+        avatarQueue.push({ hostId, id, source });
+      }
+      loadAvatars();
+    },
+  );
+  const shownAgents = createMemo(() =>
+    state.agents.map((agent) => {
+      const avatar = avatars().get(agent.id);
+      return avatar && avatar.source === agent.avatarUrl ? { ...agent, avatarUrl: avatar.url } : agent;
+    }),
+  );
+  const profiles = createMemo(() => shownAgents().map(toAgentProfile));
   const selected = createMemo(() => profiles().find((agent) => agent.id === state.selectedId));
   const conversation = createMemo(() => (state.selectedId ? state.conversations[state.selectedId] : undefined));
 
@@ -1464,6 +1526,7 @@ export function createWebWorkspace(
     state,
     stepLines,
     hostViews,
+    shownAgents,
     profiles,
     retryPanels: loadPanels,
     selected,

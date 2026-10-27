@@ -44,12 +44,10 @@ export const messages = {
   "customProvider.error.baseUrlCredential": "Передавайте учётные данные в заголовке, а не в URL.",
 
   "customProvider.saved.restarted": "Сохранено. OpenBot загружает модели.",
-  "customProvider.saved.skippedBusy":
-    "Сохранено. OpenCode прочитает список, когда завершится текущая задача. Затем нажмите «Подключить».",
+  "customProvider.saved.skippedBusy": "Сохранено. OpenCode прочитает список, когда завершится текущая задача.",
   "customProvider.saved.notRunning": "Сохранено. OpenCode прочитает список при следующем запуске.",
   "customProvider.removed.restarted": "Удалено. OpenBot загружает модели.",
-  "customProvider.removed.skippedBusy":
-    "Удалено. OpenCode прочитает список, когда завершится текущая задача. Затем нажмите «Подключить».",
+  "customProvider.removed.skippedBusy": "Удалено. OpenCode прочитает список, когда завершится текущая задача.",
   "customProvider.removed.notRunning": "Удалено. OpenCode прочитает список при следующем запуске.",
   "customProvider.saveFailed": "OpenBot не удалось сохранить этот эндпоинт.",
   "customProvider.removeFailed": "OpenBot не удалось удалить «{name}».",
@@ -68,7 +66,7 @@ export const messages = {
   "customProvider.field.baseUrl": "Базовый URL",
   "customProvider.field.apiKey": "API-ключ",
   "customProvider.field.apiKeyHint": "Необязательно. Оставьте пустым, если авторизация идёт через заголовки.",
-  "customProvider.field.apiKeyKeptHint": "Ключ сохранён. Оставьте поле пустым, чтобы сохранить его и заголовки.",
+  "customProvider.field.apiKeyKeptHint": "Ключ сохранён. Оставьте поле пустым, чтобы сохранить его.",
   "customProvider.models": "Модели",
   "customProvider.model.id": "ID модели {number}",
   "customProvider.model.name": "Отображаемое имя модели {number}",
@@ -79,6 +77,7 @@ export const messages = {
   "customProvider.header.name": "Имя заголовка {number}",
   "customProvider.header.value": "Значение заголовка {number}",
   "customProvider.header.valuePlaceholder": "значение",
+  "customProvider.header.keptPlaceholder": "Сохранено. Оставьте пустым, чтобы не менять.",
   "customProvider.header.remove": "Удалить заголовок {number}",
   "customProvider.header.add": "Добавить заголовок",
   "customProvider.submit": "Отправить",

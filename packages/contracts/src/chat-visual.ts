@@ -422,6 +422,13 @@ export interface ChatVisualDocumentOptions {
   theme?: ChatVisualTheme;
   /** The colour scheme of the frame element. A different one makes the browser fill the canvas. */
   appearance?: ChatVisualAppearance;
+  /**
+   * False for a host with no frame parent, such as a native web view. The page then gets no
+   * bootstrap script: its links load as links, and `window.openbotPage` does not exist.
+   */
+  bootstrap?: boolean;
+  /** More elements for the start of `<head>`, after the base style and before the page's own. */
+  head?: string;
 }
 
 /** The theme as CSS. A value that could end the rule or the style element is left out. */
@@ -438,7 +445,8 @@ function preamble(options: ChatVisualDocumentOptions): string {
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     `<style id="openbot-visual-base">${BASE_STYLE}${themeStyle(options)}</style>`,
-    `<script id="openbot-visual-bootstrap">${BOOTSTRAP}</script>`,
+    options.head ?? "",
+    options.bootstrap === false ? "" : `<script id="openbot-visual-bootstrap">${BOOTSTRAP}</script>`,
   ].join("");
 }
 

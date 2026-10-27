@@ -124,6 +124,18 @@ const ACKNOWLEDGE_START_MS = 10_000;
 /** The tools that `#apiKeyTool` answers. */
 const API_KEY_TOOLS: ReadonlySet<string> = new Set(["request_api_key", "list_api_keys", "remove_api_key"]);
 
+/** The characters of an agent description that `list_agents` returns. `read_agent` returns all of it. */
+const LISTED_DESCRIPTION_LENGTH = 300;
+
+function listedDescription(description: string): string {
+  const characters = Array.from(description);
+  if (characters.length <= LISTED_DESCRIPTION_LENGTH) return description;
+  return `${characters
+    .slice(0, LISTED_DESCRIPTION_LENGTH - 1)
+    .join("")
+    .trimEnd()}…`;
+}
+
 /** The Marketplace apps that the chat draws a card for: the bundled catalog plugins and the connectors. */
 const MARKETPLACE_APP_IDS: readonly string[] = [
   ...pluginCatalog.plugins.map((plugin) => plugin.slug),
@@ -165,6 +177,11 @@ export interface OpenBotToolRouterHooks {
   reportRoutineFailure(agentId: string, turnId: string, reason: string): boolean;
   /** Starts a new chat with the agent when its turn ends and its queue is empty. */
   requestNewChat(agentId: string): void;
+  /**
+   * Takes a message from another agent into the recipient's running chat turn when the recipient's
+   * busy-message mode is "steer". Otherwise the message waits in the queue.
+   */
+  steerAgentMessage(recipientAgentId: string, deliveryId: string): Effect.Effect<void>;
 }
 
 export interface OpenBotToolRouterOptions {
@@ -857,7 +874,7 @@ export class OpenBotToolRouter {
             id: agent.id,
             name: agent.name,
             title: agent.title,
-            description: agent.description,
+            description: listedDescription(agent.description),
             status: working ? "working" : queuedMessages > 0 ? "queued" : "ready",
             queuedMessages,
             ...(working && startedAt !== null ? { turnStartedAt: new Date(startedAt).toISOString() } : {}),
@@ -874,7 +891,16 @@ export class OpenBotToolRouter {
         this.#hooks.listModels(),
         this.#hooks.preferredProvider(),
         this.#hooks.providerAccounts,
-        args.provider,
+        {
+          provider: args.provider,
+          query: args.query,
+          inUse: this.#hooks
+            .listAgents()
+            .flatMap((agent) => [
+              { provider: agent.provider, model: agent.model },
+              ...(agent.backupModels?.order ?? []),
+            ]),
+        },
       );
       return { success: true, contentItems: [{ type: "inputText", text: redactText(JSON.stringify(payload)) }] };
     }
@@ -1558,9 +1584,10 @@ export class OpenBotToolRouter {
       if (!isRecord(args) || !isMessageReaction(args.emoji)) {
         throw new Error("emoji must be exactly one complete Unicode emoji.");
       }
+      // The newest one when the turn started with several of the person's messages.
       const delivery = this.#mailbox
         .findDeliveriesByTurn(senderAgentId, params.turnId)
-        .find((candidate) => candidate.delivery.sender.kind === "user");
+        .findLast((candidate) => candidate.delivery.sender.kind === "user");
       if (!delivery) throw new Error("Only the current user message can receive an agent reaction.");
       const emoji = args.emoji;
       yield* this.#mailbox
@@ -1618,11 +1645,26 @@ export class OpenBotToolRouter {
         throw new Error("expectsReply must be a boolean.");
       }
 
+      const turnDeliveries = this.#mailbox.findDeliveriesByTurn(senderAgentId, params.turnId);
       // A request from a Slack turn: the teammate's answer goes back to that Slack thread.
-      const messagingReturn = this.#mailbox
-        .findDeliveriesByTurn(senderAgentId, params.turnId)
+      const messagingReturn = turnDeliveries
         .map(({ delivery }) => this.#mailbox.messagingOrigin(delivery.id))
         .find((origin) => origin !== null);
+      // A request from a side thread: the teammate's answer goes back to that thread.
+      const senderTaskId = turnDeliveries
+        .map(({ delivery }) => this.#mailbox.taskIdForDelivery(delivery.id))
+        .find((taskId) => taskId !== null);
+      // An agent can send "" for no reply. Every reader rejects an empty id. A model can also copy the
+      // quotes around the id in the delivery prompt; such an id refers to no message.
+      const replyTo =
+        replyToMessageId
+          ?.trim()
+          .replace(/^"(.*)"$/s, "$1")
+          .trim() || null;
+      // An answer to a request from a side thread runs in that thread. When the thread is archived, the
+      // answer goes to the recipient's own chat, so it is not lost.
+      const answerTaskId = replyTo ? this.#mailbox.answerTaskId(senderAgentId, replyTo, recipientValues) : null;
+      const taskId = answerTaskId && this.#tasks.threadId(answerTaskId) !== null ? answerTaskId : undefined;
       const text = params.arguments.text;
       const receipt = yield* this.#mailbox
         .enqueue({
@@ -1630,16 +1672,18 @@ export class OpenBotToolRouter {
           recipientAgentIds: recipientValues,
           text,
           sourcePaths: paths,
-          // An agent can send "" for no reply. Every reader rejects an empty id.
-          replyToMessageId: replyToMessageId?.trim() || null,
+          replyToMessageId: replyTo,
           ...(expectsReply === undefined ? {} : { expectsReply }),
           ...(messagingReturn ? { messagingReturn } : {}),
+          ...(senderTaskId ? { senderTaskId } : {}),
+          ...(taskId ? { taskId } : {}),
           idempotencyKey: toolCallIdempotencyKey(params),
         })
         .pipe(toToolOperationFailed);
-      for (const recipient of recipientValues) {
-        this.#mailboxSync.emitQueue(recipient);
-        this.#drain.scheduleDrain(recipient);
+      for (const delivery of receipt.deliveries) {
+        yield* this.#hooks.steerAgentMessage(delivery.recipientAgentId, delivery.id);
+        this.#mailboxSync.emitQueue(delivery.recipientAgentId);
+        this.#drain.scheduleDrain(delivery.recipientAgentId);
       }
       const snapshot = this.#conversation.ensureSnapshot(senderAgentId, params.threadId);
       this.#mailboxSync.syncMailboxMessages(snapshot);

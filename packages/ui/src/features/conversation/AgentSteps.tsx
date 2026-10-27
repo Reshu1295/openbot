@@ -28,6 +28,7 @@ const MEMORY_ACTION_LABEL = {
   saved: "chat.steps.saved",
   updated: "chat.steps.updated",
   forgotten: "chat.steps.forgotten",
+  notChanged: "chat.steps.notChanged",
 } as const;
 
 /**
@@ -135,6 +136,7 @@ function stepsSummary(steps: readonly AgentStep[], text: TextValue): string {
       counts.saved ? text.t("chat.steps.memorySaved", { count: counts.saved }) : null,
       counts.updated ? text.t("chat.steps.memoryUpdated", { count: counts.updated }) : null,
       counts.forgotten ? text.t("chat.steps.memoryForgotten", { count: counts.forgotten }) : null,
+      counts.notChanged ? text.t("chat.steps.memoryNotChanged", { count: counts.notChanged }) : null,
     ].filter((part): part is string => part !== null),
   );
   const fallback = steps.find((step) => step.kind === "memory-summary");

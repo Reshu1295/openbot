@@ -29,7 +29,7 @@ export async function routeAgentTasks(
   const { method, url, capabilities, request, json, member } = context;
   if (method !== "POST" || !Object.values(AGENT_TASKS_ROUTES).some((path) => path === url.pathname)) return "unmatched";
   if (!tasks || !capabilities.has(AGENT_TASKS_CAPABILITY))
-    throw new HttpError(400, sourceText("error.backend.taskRemoteUnsupported"));
+    throw new HttpError(400, sourceText("error.backend.threadRemoteUnsupported"));
   const body = await readJson(request);
   const agentId = stringField(body, "agentId");
   if (hiddenAgentIds.has(agentId)) throw new HttpError(404, sourceText("error.team.agentNotFound"));

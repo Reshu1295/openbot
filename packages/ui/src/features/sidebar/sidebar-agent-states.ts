@@ -1,5 +1,5 @@
-import type { QueueSnapshot } from "@openbot/contracts/ipc";
-import type { SidebarAgentState, SidebarRoutinePhase } from "./sidebar-types";
+import type { ChannelSummary, QueueSnapshot } from "@openbot/contracts/ipc";
+import type { SidebarAgentState, SidebarChannelWait, SidebarRoutinePhase } from "./sidebar-types";
 
 /** A question or a browser takeover that an agent is blocked on. */
 export type SidebarAttention =
@@ -139,12 +139,62 @@ function waitingState(
   prompt: SidebarAttention | undefined,
   approval: SidebarApproval | undefined,
 ): SidebarAgentWait | undefined {
-  if (prompt?.type === "prompt") {
-    return { kind: "waiting", reason: "question", detail: prompt.questions?.[0]?.question.trim() || null };
-  }
-  if (prompt?.type === "browser-takeover-requested") return { kind: "waiting", reason: "takeover", detail: null };
-  if (approval) {
-    return { kind: "waiting", reason: "approval", detail: approval.command?.trim() || approval.reason?.trim() || null };
-  }
+  if (prompt?.type === "prompt") return questionWait(prompt.questions);
+  if (prompt?.type === "browser-takeover-requested") return TAKEOVER_WAIT;
+  if (approval) return approvalWait(approval);
   return undefined;
+}
+
+const TAKEOVER_WAIT: SidebarChannelWait = { kind: "waiting", reason: "takeover", detail: null };
+
+function questionWait(questions: readonly { question: string }[] | undefined): SidebarChannelWait {
+  return { kind: "waiting", reason: "question", detail: questions?.[0]?.question.trim() || null };
+}
+
+function approvalWait(approval: Pick<SidebarApproval, "command" | "reason">): SidebarChannelWait {
+  return { kind: "waiting", reason: "approval", detail: approval.command?.trim() || approval.reason?.trim() || null };
+}
+
+/** A request of a member agent, with the thread that it came from. */
+interface SidebarThreadRequest {
+  agentId: string;
+  threadId?: string | undefined;
+}
+
+interface SidebarChannelWaitsInput {
+  channels: readonly Pick<ChannelSummary, "id" | "archived" | "threads">[];
+  prompts: readonly (SidebarThreadRequest & { questions?: readonly { question: string }[] })[];
+  takeovers: readonly SidebarThreadRequest[];
+  approvals: readonly (SidebarThreadRequest & Pick<SidebarApproval, "command" | "reason">)[];
+}
+
+/**
+ * The wait of each channel whose work waits for the user. A request belongs to a channel when it comes
+ * from the thread of a member agent there. Selecting the channel opens the view that answers it, so
+ * the channel goes to "Needs you" like an agent.
+ *
+ * A host without channel-attention-v1 does not name the threads, so its channels have no wait here.
+ * The order is the one of an agent: a question, then a browser takeover, then an approval.
+ */
+export function sidebarChannelWaits(input: SidebarChannelWaitsInput): Record<string, SidebarChannelWait> {
+  const channelByThread = new Map<string, string>();
+  for (const channel of input.channels) {
+    if (channel.archived) continue;
+    for (const thread of channel.threads ?? [])
+      channelByThread.set(threadKey(thread.agentId, thread.threadId), channel.id);
+  }
+  const waits: Record<string, SidebarChannelWait> = {};
+  const mark = (request: SidebarThreadRequest, wait: () => SidebarChannelWait) => {
+    if (request.threadId === undefined) return;
+    const channelId = channelByThread.get(threadKey(request.agentId, request.threadId));
+    if (channelId && !waits[channelId]) waits[channelId] = wait();
+  };
+  for (const prompt of input.prompts) mark(prompt, () => questionWait(prompt.questions));
+  for (const takeover of input.takeovers) mark(takeover, () => TAKEOVER_WAIT);
+  for (const approval of input.approvals) mark(approval, () => approvalWait(approval));
+  return waits;
+}
+
+function threadKey(agentId: string, threadId: string): string {
+  return `${agentId}\n${threadId}`;
 }

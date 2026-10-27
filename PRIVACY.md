@@ -435,8 +435,10 @@ does not record message text, files, request bodies or headers, and it masks tok
 addresses. The app never sends the log. **Settings → Support** shows it and lets you save the file or
 clear it.
 
-Mobile chat uses a local symbol beside links. It does not fetch website icons or Markdown images
-when displaying a conversation. Link destinations are contacted only when you choose to open them.
+Mobile chat, like desktop and web chat, shows the icon of the linked site beside a web link. To get
+it, the phone requests `/favicon.ico` from the site of the link when it shows the message. The request
+contains no conversation text. When the site has no icon, a local symbol shows. Mobile chat does not
+fetch Markdown images when displaying a conversation.
 
 Mobile chat can send selected files to the conversation's desktop host through the existing encrypted
 team connection. Text pasted into the input is processed only after the user pastes it. A text paste
@@ -551,7 +553,7 @@ is not included in analytics; provider output uses the application's secret reda
   choosing Sign out on it, deletes its record. These values are redacted from logs, exports and diagnostics.
   The port and secret of the local MCP sign-in server are kept in
   `~/Library/Application Support/OpenBot/openbot-mcp-oauth-proxy-v1.json`, encrypted in the same way.
-- The GitHub connection (Server settings > Connectors) is kept in
+- The GitHub connection (Marketplace › Apps › GitHub) is kept in
   `~/Library/Application Support/OpenBot/openbot-github-connector-v1.json`, encrypted by the operating
   system's secret storage. It holds the GitHub access and refresh tokens, the account name, ID and
   avatar address, and the port and secret of the local GitHub MCP server.
@@ -571,8 +573,8 @@ is not included in analytics; provider output uses the application's secret reda
   codes go through the main process to the browser page. This folder is an OpenBot access rule;
   the CLI session key can decrypt the wider vault. Use a separate Bitwarden account if you need
   the password manager itself to enforce that separation.
-  An owner or admin of a joined server can connect that server's Bitwarden or Vaultwarden in Server
-  settings › Connectors with the server address, the personal API key and the master password. They
+  An owner or admin of a joined server can connect that server's Bitwarden or Vaultwarden in
+  Marketplace › Apps › Bitwarden with the server address, the personal API key and the master password. They
   go once, over the encrypted connection, to the server, which keeps them in
   `openbot-bitwarden-connector-v1.json` in its application data folder, encrypted by its operating
   system's secret storage, so it can unlock again after a restart. Its CLI keeps its own encrypted
@@ -587,15 +589,19 @@ is not included in analytics; provider output uses the application's secret reda
   or a one-time code is read from 1Password when the browser fills it, goes only to that page, and
   is never sent to an agent, a provider, a log or a team member. The token and each filled value
   are redacted from logs, exports and diagnostics. An owner or admin of a joined server can paste a
-  service account token for that server in Server settings › Connectors. The token goes once, over the
+  service account token for that server in Marketplace › Apps › 1Password. The token goes once, over the
   encrypted connection, to the server, which keeps it in the same file on its own disk. The
   computer that sent it does not keep it, and no answer from the server carries it.
 - The Vault (Server settings › Vault) is kept in
   `~/Library/Application Support/OpenBot/openbot-vault-v1.json`, encrypted by the operating system's
   secret storage. It holds the logins, payment cards (number, expiry, security code, name) and
   contact info that the user saves. On a computer with no secret storage, such as Linux with no
-  keyring, the Vault saves nothing. The file never leaves this computer, and joined servers and team
-  members cannot read it. An agent gets the login sites and usernames, the card names with their last
+  keyring, the Vault saves nothing. The file never leaves this computer. An owner or admin of a joined
+  server can open that server's Vault in Server settings, from the desktop app or the web app: the
+  list goes over the encrypted connection with no password, card number or security code, and one of
+  those goes to them only when they show or copy it. The iPhone app shows the same list and never
+  asks for a password, a card number or a security code: a new one that the owner or admin types on
+  the phone goes once to the server, and the phone does not keep it. Other team members cannot read it. An agent gets the login sites and usernames, the card names with their last
   four digits and expiry, and the contact info; it never gets a password, a card number, a security
   code or login notes. An agent can add and change contact info, change the username of a login (not
   its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
@@ -607,7 +613,11 @@ is not included in analytics; provider output uses the application's secret reda
   browser types those values into the page, where the page's own scripts can read them, as they read
   what a person types. Until that page navigates, the agent cannot take a screenshot, evaluate
   script or record in that tab, and its snapshots hide the card fields. Passwords and card numbers
-  are redacted from logs, exports and diagnostics. A CSV import is read on this computer only.
+  are redacted from logs, exports and diagnostics, also in the desktop app of an admin who showed
+  or copied one. A CSV import is read on this computer, from its own file dialog or from the text of
+  a CSV export that an owner or admin picks in the iPhone app (`vault-import-v1`). That text goes once
+  over the encrypted connection; the answer carries only the counts, and the phone deletes its copy
+  of the file after it reads it.
 - `~/Library/Application Support/OpenBot/logs/trace.ndjson` is a local trace of IPC calls,
   provider turns, main-process failures, and the steps of each connection to a joined server. Each
   line holds a time, the IPC channel name, the turn origin, the failure origin (`uncaughtException`
@@ -774,8 +784,10 @@ Network traffic can also occur when:
   files. `html_preview` draws the page in a hidden window that has its own
   session in memory. The web client gets the page through the host connection and runs it in a
   sandboxed `srcdoc` frame with an opaque origin, so the page cannot read the web client's storage
-  or its host keys; the browser sends no referrer for its requests. The mobile app does not run the
-  page: it shows the page as its file;
+  or its host keys; the browser sends no referrer for its requests. The mobile app runs the
+  page in a web view, so the server gets the network address of the phone. On iPhone and iPad the
+  web view keeps cookies and storage in memory only; on Android it has no page storage and no
+  cookies for the files that the page loads. The page cannot call the app or read its files;
 - a user opens an explicitly labeled external support or setup link;
 - a Slack workspace is connected. See [Slack connections](#slack-connections);
 - a Discord server is connected. See [Discord connections](#discord-connections);
@@ -1162,6 +1174,19 @@ session files in its own folder, as for Pi agents. OpenBot does not copy or uplo
 DeepSeek's terms apply:
 <https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html>.
 DeepSeek agents stay on this computer: OpenBot does not show them to team members.
+
+### OpenRouter
+
+OpenRouter agents run in the Pi CLI that OpenBot downloads for Pi. On this computer, Connect on the
+OpenRouter row saves an OpenRouter API key. OpenBot encrypts it in its existing provider credential
+store, gives it to the local Pi process in its environment, and redacts it from logs. Pi does not
+write the key to a file. Prompts, attachments, and tool results go to that process, and Pi sends
+them with this key to `openrouter.ai`, also when Pi has its own OpenRouter key. OpenRouter sends the
+request to the company that serves the selected model, and that company's terms also apply. When
+OpenBot reads the OpenRouter model list, Pi reads its built-in list and does not contact OpenRouter.
+Pi keeps its session files in its own folder, as for Pi agents. OpenBot does not copy or upload these
+files. OpenRouter's terms apply: <https://openrouter.ai/terms>. OpenRouter agents stay on this
+computer: OpenBot does not show them to team members.
 
 ### Local model servers
 

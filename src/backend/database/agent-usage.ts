@@ -40,6 +40,11 @@ export interface UsageSample {
    * first update records only the new requests.
    */
   previousTokens?: UsageTokens | null;
+  /**
+   * The counter whose checkpoint keeps `reportedCost`, when the provider reports tokens per prompt but
+   * cost for the whole session. Without one, the cost is kept with the tokens.
+   */
+  costCounterId?: string;
 }
 const TOKEN_KEYS = ["uncachedInput", "cachedInput", "cacheCreation", "output"] as const;
 
@@ -94,8 +99,23 @@ export class AgentUsage {
             .prepare("SELECT tokens_json FROM agent_usage_checkpoints WHERE agent_id = ? AND counter_id = ?")
             .get(sample.agentId, sample.counterId),
         );
-        const previousValue = previous ? databaseRow(JSON.parse(requiredStringColumn(previous, "tokens_json"))) : null;
+        const costCheckpoint = sample.costCounterId
+          ? databaseRow(
+              db
+                .prepare("SELECT tokens_json FROM agent_usage_checkpoints WHERE agent_id = ? AND counter_id = ?")
+                .get(sample.agentId, sample.costCounterId),
+            )
+          : previous;
+        const previousValue = costCheckpoint
+          ? databaseRow(JSON.parse(requiredStringColumn(costCheckpoint, "tokens_json")))
+          : null;
         const previousCost = previousValue?.reportedCost;
+        const reportedCost =
+          sample.reportedCost == null
+            ? typeof previousCost === "number"
+              ? previousCost
+              : null
+            : Math.max(sample.reportedCost, typeof previousCost === "number" ? previousCost : 0);
         const before = previous
           ? decodeUsageTokens(JSON.parse(requiredStringColumn(previous, "tokens_json")))
           : sample.baseline
@@ -119,28 +139,37 @@ export class AgentUsage {
         ).run(
           sample.agentId,
           sample.counterId,
-          JSON.stringify({
-            ...tokens,
-            reportedCost:
-              sample.reportedCost == null
-                ? typeof previousCost === "number"
-                  ? previousCost
-                  : null
-                : Math.max(sample.reportedCost, typeof previousCost === "number" ? previousCost : 0),
-          }),
+          JSON.stringify(sample.costCounterId ? tokens : { ...tokens, reportedCost }),
         );
+        // A session that has records but no cost checkpoint ran before its costs were kept. Its
+        // first cost report also counts that earlier use, so the report is only the start.
+        const costStartUnknown =
+          sample.costCounterId && sample.reportedCost != null && typeof previousCost !== "number"
+            ? databaseRow(
+                db
+                  .prepare("SELECT 1 FROM agent_usage_records WHERE agent_id = ? AND session_id = ? LIMIT 1")
+                  .get(sample.agentId, sample.sessionId),
+              ) !== null
+            : false;
+        if (sample.costCounterId && sample.reportedCost != null)
+          db.prepare(
+            "INSERT INTO agent_usage_checkpoints VALUES (?, ?, ?) ON CONFLICT(agent_id, counter_id) DO UPDATE SET tokens_json = excluded.tokens_json",
+          ).run(sample.agentId, sample.costCounterId, JSON.stringify({ reportedCost }));
         if ((!before && sample.baseline) || sample.turnId === "baseline") return null;
         // A resumed Claude process reports its cost from 0, so the cost of its first turn is unknown.
         // That turn, and a Claude report with no cost, are priced from list rates instead.
         const reported =
           sample.reportedCost === undefined ||
           sample.reportedCost === null ||
-          (before && typeof previousCost !== "number")
+          costStartUnknown ||
+          (!sample.costCounterId && before && typeof previousCost !== "number")
             ? null
             : {
                 cost: Math.max(0, sample.reportedCost - (typeof previousCost === "number" ? previousCost : 0)),
                 basis:
-                  "Claude SDK list-price estimate; https://platform.claude.com/docs/en/about-claude/pricing; verified 2026-09-07",
+                  sample.provider === "opencode"
+                    ? "OpenCode session cost report; API-equivalent rates, not subscription charges"
+                    : "Claude SDK list-price estimate; https://platform.claude.com/docs/en/about-claude/pricing; verified 2026-09-07",
               };
         const estimate =
           reported ??

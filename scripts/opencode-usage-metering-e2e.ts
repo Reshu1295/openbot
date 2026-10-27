@@ -6,6 +6,9 @@
 // turn. Cases: a first turn with no cache, a smaller second turn with cache reads (the session counter
 // before this change booked 0 for it and had no uncached input), a larger third turn with a cache
 // write and thinking, and a turn after the provider process starts again and resumes the session.
+// A message can also carry `cost=<total>`: the fake then sends a `usage_update` with that session
+// cost before the result, as OpenCode 2.1 does. Each turn books the difference from the last total,
+// also after a restart. A session from before costs were kept books its first total as the start.
 // `bun scripts/opencode-usage-metering-e2e.ts`. Writes
 // .openbot-build/opencode-usage-metering-e2e/report.json.
 import assert from "node:assert/strict";
@@ -63,6 +66,9 @@ function handle(message) {
     write({ method: "session/update", params: { sessionId: params.sessionId, update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "Done." } } } });
     if (!match) return write({ id: message.id, result: { stopReason: "end_turn" } });
     const [input, cached, written, output, thought] = match.slice(1).map(Number);
+    const cost = /cost=([\\d.]+)/.exec(text);
+    if (cost)
+      write({ method: "session/update", params: { sessionId: params.sessionId, update: { sessionUpdate: "usage_update", used: input + cached + written + output + thought, size: 200000, cost: { amount: Number(cost[1]), currency: "USD" } } } });
     return write({ id: message.id, result: { stopReason: "end_turn", usage: {
       inputTokens: input, outputTokens: output, totalTokens: input + output + thought + cached + written,
       ...(thought > 0 ? { thoughtTokens: thought } : {}),
@@ -92,6 +98,8 @@ interface Turn {
   written: number;
   output: number;
   thought: number;
+  /** The session's total cost that OpenCode reports after this turn. */
+  sessionCost?: number;
 }
 
 interface CaseReport {
@@ -99,6 +107,8 @@ interface CaseReport {
   turnId: string;
   sent: Turn;
   recorded: UsageTokens[];
+  expectedCost: number | null;
+  recordedCost: number | null;
   passed: boolean;
 }
 
@@ -185,6 +195,14 @@ function records(turnId: string): UsageTokens[] {
     .map((row) => decodeUsageTokens(JSON.parse(String(row.tokens_json))));
 }
 
+/** The cost booked for one provider turn. */
+function costOf(turnId: string): number | null {
+  const value = sqlite()
+    .prepare("SELECT estimated_cost_usd FROM agent_usage_records WHERE turn_id = ?")
+    .get(turnId)?.estimated_cost_usd;
+  return typeof value === "number" ? value : null;
+}
+
 /** The provider turns that ran in one public thread, oldest first. */
 function turnsOf(threadId: string): string[] {
   return sqlite()
@@ -196,16 +214,25 @@ function turnsOf(threadId: string): string[] {
     .map((row) => String(row.turn_id));
 }
 
-const message = (turn: Turn) => `tokens=${turn.input},${turn.cached},${turn.written},${turn.output},${turn.thought}`;
+const message = (turn: Turn) =>
+  `tokens=${turn.input},${turn.cached},${turn.written},${turn.output},${turn.thought}` +
+  (turn.sessionCost === undefined ? "" : ` cost=${turn.sessionCost}`);
 
-/** Checks that the turn at `index` of the thread has one record with the tokens of `sent`. */
-async function check(name: string, threadId: string, index: number, sent: Turn): Promise<void> {
+/** Checks that the turn at `index` of the thread has one record with the tokens of `sent` and `expectedCost`. */
+async function check(
+  name: string,
+  threadId: string,
+  index: number,
+  sent: Turn,
+  expectedCost: number | null,
+): Promise<void> {
   const turnId = await waitFor(`${name}: usage`, () => {
     const id = turnsOf(threadId)[index];
     return id && records(id).length > 0 && id;
   });
   const recorded = records(turnId);
-  const result: CaseReport = { name, turnId, sent, recorded, passed: false };
+  const recordedCost = costOf(turnId);
+  const result: CaseReport = { name, turnId, sent, recorded, expectedCost, recordedCost, passed: false };
   report.cases.push(result);
   assert.equal(recorded.length, 1, `${name}: one record for the turn`);
   assert.deepEqual(
@@ -218,6 +245,12 @@ async function check(name: string, threadId: string, index: number, sent: Turn):
     },
     `${name}: the turn's own tokens, with thinking as output`,
   );
+  if (expectedCost === null) assert.equal(recordedCost, null, `${name}: no cost`);
+  else
+    assert.ok(
+      recordedCost !== null && Math.abs(recordedCost - expectedCost) < 1e-9,
+      `${name}: cost ${recordedCost}, expected ${expectedCost}`,
+    );
   result.passed = true;
 }
 
@@ -239,7 +272,7 @@ const idle = (agentId: string) =>
 
 try {
   await runCauseEffect(agents.initialize());
-  const first: Turn = { input: 12_000, cached: 0, written: 0, output: 800, thought: 0 };
+  const first: Turn = { input: 12_000, cached: 0, written: 0, output: 800, thought: 0, sessionCost: 0.05 };
   const agent = await runCauseEffect(
     agents.createAgent({
       name: "OpenCode metering",
@@ -251,16 +284,17 @@ try {
   );
   report.model = agent.model;
   const threadId = await waitFor("the agent's own thread", () => store.list().find((a) => a.id === agent.id)?.threadId);
-  await check("first turn", threadId, 0, first);
+  await check("first turn", threadId, 0, first, 0.05);
   await waitFor("the first turn to end", () => idle(agent.id));
 
   const second: Turn = { input: 1_000, cached: 9_000, written: 0, output: 200, thought: 0 };
   await send(agent.id, second, "smaller second turn");
-  await check("smaller second turn", threadId, 1, second);
+  // No `usage_update`: the turn has no cost, and the next total includes it.
+  await check("smaller second turn", threadId, 1, second, null);
 
-  const third: Turn = { input: 15_000, cached: 6_000, written: 2_000, output: 900, thought: 400 };
+  const third: Turn = { input: 15_000, cached: 6_000, written: 2_000, output: 900, thought: 400, sessionCost: 0.2 };
   await send(agent.id, third, "larger third turn");
-  await check("larger third turn", threadId, 2, third);
+  await check("larger third turn", threadId, 2, third, 0.15);
 
   // The provider process stops between turns. The runtime starts it again and resumes the session,
   // and OpenCode measures the next turn on its own.
@@ -271,14 +305,28 @@ try {
   process.kill(killedPid, "SIGTERM");
   await waitFor("OpenCode to start again", () => protocol().find((entry) => entry.start && entry.pid !== killedPid));
   await waitFor("the provider to be ready again", () => agents.getStatus().phase === "ready");
-  const fourth: Turn = { input: 500, cached: 6_500, written: 0, output: 100, thought: 50 };
+  const fourth: Turn = { input: 500, cached: 6_500, written: 0, output: 100, thought: 50, sessionCost: 0.26 };
   await send(agent.id, fourth, "turn after a restart");
-  await check("turn after a restart", threadId, 3, fourth);
+  await check("turn after a restart", threadId, 3, fourth, 0.06);
   assert.equal(
     store.activeProviderSession(agent.id)?.externalSessionId,
     session,
     "the turn after a restart resumes the session",
   );
+
+  // A session from before costs were kept: it has records but no cost checkpoint. Its first total
+  // also counts the earlier turns, so that turn has no cost and the next one books the difference.
+  const sessionId = store.activeProviderSession(agent.id)?.id;
+  assert.ok(sessionId, "the agent has an active provider session");
+  sqlite()
+    .prepare("DELETE FROM agent_usage_checkpoints WHERE agent_id = ? AND counter_id = ?")
+    .run(agent.id, `${sessionId}:opencode:cost`);
+  const fifth: Turn = { input: 700, cached: 7_000, written: 0, output: 120, thought: 0, sessionCost: 0.3 };
+  await send(agent.id, fifth, "first cost of an older session");
+  await check("first cost of an older session", threadId, 4, fifth, null);
+  const sixth: Turn = { input: 300, cached: 7_500, written: 0, output: 80, thought: 0, sessionCost: 0.31 };
+  await send(agent.id, sixth, "next cost of an older session");
+  await check("next cost of an older session", threadId, 5, sixth, 0.01);
 
   const today = new Date().toISOString().slice(0, 10);
   const analytics = agents.getAnalytics({ agentId: agent.id, startDate: today, endDate: today, timeZone: "UTC" });
@@ -291,7 +339,7 @@ try {
     (sum, { sent: turn }) => sum + turn.input + turn.cached + turn.written + turn.output + turn.thought,
     0,
   );
-  assert.equal(analytics.totals.turns, 4, "Analytics count every turn.");
+  assert.equal(analytics.totals.turns, 6, "Analytics count every turn.");
   assert.equal(analytics.totals.missingUsageTurns, 0, "Every turn has usage.");
   assert.equal(analytics.totals.processedTokens, sent, "Analytics count every turn's tokens once.");
   report.passed = true;

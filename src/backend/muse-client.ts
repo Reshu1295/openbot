@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
+import { toNamespacedPath } from "node:path";
 import {
   type Connection,
   type SendUserTurnOptions,
@@ -624,6 +625,7 @@ export class MuseAgentClient extends EventEmitter<ClientEvents> implements Agent
       input.unshift({ type: "text", text: thread.instructions });
       thread.instructionsSent = thread.instructions;
     }
+    const workspaceRoots = compact ? [] : yield* museWorkspaceRoots([thread.cwd, ...thread.roots]);
     const id = host.connection.mintCommandId();
     thread.turn = { id, compact, items: new Map(), deltaPending: new Map() };
     this.#emit("turn/started", { threadId: thread.id, turn: { id, status: "inProgress" } });
@@ -636,7 +638,7 @@ export class MuseAgentClient extends EventEmitter<ClientEvents> implements Agent
           ? {}
           : {
               input,
-              workspaceRoots: [...new Set([thread.cwd, ...thread.roots])],
+              workspaceRoots,
               ifBusy: "queue",
               ...(effort ? { reasoningEffort: effort } : {}),
             }),
@@ -1073,6 +1075,14 @@ const musePrompt = Effect.fn("MuseAgentClient.prompt")(function* (params: unknow
   }
   if (!input.length) return yield* providerFailure(new Error(sourceText("error.provider.museEmptyInput")));
   return input;
+});
+/**
+ * Muse accepts only canonical roots: the real path, in the verbatim `\\?\` form on Windows (#3356).
+ * A root that does not resolve is sent as written, and Muse rejects it as before.
+ */
+const museWorkspaceRoots = Effect.fn("MuseAgentClient.workspaceRoots")(function* (paths: string[]) {
+  const roots = yield* Effect.forEach(paths, (path) => Effect.promise(() => realpath(path).catch(() => path)));
+  return [...new Set(roots.map((root) => toNamespacedPath(root)))];
 });
 function isNamespace(value: unknown): value is DynamicToolNamespace {
   return (

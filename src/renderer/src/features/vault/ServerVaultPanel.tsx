@@ -5,7 +5,7 @@ import { actionToast } from "../../action-toast";
 import type { VaultStore } from "./stores/vault-store";
 
 export interface ServerVaultOptions {
-  /** The Vault of this computer. A joined server has none here. */
+  /** The Vault of this computer, or of a joined server for its owner or admin. */
   store: VaultStore;
 }
 

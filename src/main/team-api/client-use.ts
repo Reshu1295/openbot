@@ -30,6 +30,7 @@ import { SHARED_TABLES_ROUTES } from "@openbot/contracts/team-protocol/shared-ta
 import { SKILLS_ADMIN_ROUTES } from "@openbot/contracts/team-protocol/skills-admin-v1";
 import { STORAGE_DISK_ROUTES } from "@openbot/contracts/team-protocol/storage-disk-v1";
 import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
+import { VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 
 /**
  * POST routes that a client sends with no user action: polls, previews, mark-read, and reads that use
@@ -68,6 +69,7 @@ const PASSIVE_ROUTES: ReadonlySet<string> = new Set([
   BROWSER_PROFILES_ROUTES.list,
   BROWSER_PROFILES_ROUTES.agent,
   BROWSER_PROFILES_ROUTES.tabs,
+  VAULT_ROUTES.list,
   AGENT_MEMORIES_PAGE_ROUTE,
   AGENT_MEMORY_SELECTION_PAGE_ROUTE,
   SKILLS_ADMIN_ROUTES.list,

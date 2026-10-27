@@ -133,7 +133,8 @@ export const messages = {
   "settings.tab.voice.description":
     "Диктовка в поле сообщения. Локальные модели работают на этом компьютере, ElevenLabs — в облаке.",
   "settings.tab.computerUse.title": "Управление ПК",
-  "settings.tab.computerUse.description": "Разрешите OpenBot видеть приложения на этом компьютере и работать с ними.",
+  "settings.tab.computerUse.description":
+    "Разрешите агентам OpenBot на этом компьютере видеть его приложения и работать с ними. Агенты на другом сервере используют компьютер этого сервера.",
   "settings.tab.profile.title": "Профиль",
   "settings.tab.profile.description": "Как вы выглядите в OpenBot.",
   "settings.tab.mobileConnect.title": "Mobile Connect",
@@ -162,13 +163,12 @@ export const messages = {
   "settings.mobileConnect.app.copyLink": "Копировать ссылку",
   "settings.mobileConnect.app.linkCopied": "Ссылка скопирована",
   "settings.mobileConnect.iosApp.title": "OpenBot для iPhone",
-  "settings.mobileConnect.iosApp.badge": "Бета",
-  "settings.mobileConnect.iosApp.description": "Открытая бета в TestFlight. Для iOS 16.4 и новее.",
-  "settings.mobileConnect.iosApp.qrLabel": "QR-код приглашения в TestFlight",
-  "settings.mobileConnect.iosApp.step.testFlight": "Установите на iPhone TestFlight из App Store.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "Отсканируйте этот QR-код камерой iPhone или скопируйте ссылку-приглашение и откройте её на iPhone.",
-  "settings.mobileConnect.iosApp.step.install": "В TestFlight нажмите «Принять», затем «Установить».",
+  "settings.mobileConnect.iosApp.badge": "Доступно",
+  "settings.mobileConnect.iosApp.description": "В App Store. Для iOS 16.4 и новее.",
+  "settings.mobileConnect.iosApp.qrLabel": "QR-код App Store",
+  "settings.mobileConnect.iosApp.step.scan":
+    "Отсканируйте этот QR-код камерой iPhone или скопируйте ссылку и откройте её на iPhone.",
+  "settings.mobileConnect.iosApp.step.install": "В App Store нажмите «Загрузить».",
   "settings.mobileConnect.androidApp.title": "OpenBot для Android",
   "settings.mobileConnect.androidApp.badge": "Доступно",
   "settings.mobileConnect.androidApp.description": "В Google Play. Для Android 7.0 и новее.",
@@ -280,7 +280,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "Мои последние полгода с OpenBot",
-  "settings.profile.activity.title": "Активность",
+  "settings.profile.activity.title": "Активность на этом компьютере",
   "settings.profile.activity.activeDays": {
     one: "{count} активный день за последний год",
     few: "{count} активных дня за последний год",

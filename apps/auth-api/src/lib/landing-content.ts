@@ -281,13 +281,36 @@ function isRivalMarkName(slug: string): slug is RivalMarkName {
 }
 
 /**
+ * The landing cards, best-known product first. A comparison that is not in this
+ * list comes after these, newest first.
+ */
+const LANDING_COMPARISON_ORDER: readonly RivalMarkName[] = [
+  "grok-bot",
+  "hermes-agent",
+  "muse",
+  "openclaw",
+  "claude-cowork",
+  "chatgpt-dots",
+  "manus",
+  "devin",
+  "paperclip",
+  "viktor",
+  "instinct",
+];
+
+function landingRank(slug: RivalMarkName): number {
+  const rank = LANDING_COMPARISON_ORDER.indexOf(slug);
+  return rank === -1 ? LANDING_COMPARISON_ORDER.length : rank;
+}
+
+/**
  * Every OpenBot comparison, labelled "OpenBot vs …": each title starts with
  * that, and the part after the colon is too long for a card. The slug of each is
  * also the name of the compared product's mark. A matchup or the roundup has a
  * slug that names no mark, so it is not in this list.
  */
-export const LANDING_COMPARISON_LINKS: readonly LandingComparisonLink[] = COMPARE_COLLECTION.articles.flatMap(
-  (article) =>
+export const LANDING_COMPARISON_LINKS: readonly LandingComparisonLink[] = COMPARE_COLLECTION.articles
+  .flatMap((article) =>
     isRivalMarkName(article.slug)
       ? [
           {
@@ -298,7 +321,8 @@ export const LANDING_COMPARISON_LINKS: readonly LandingComparisonLink[] = COMPAR
           },
         ]
       : [],
-);
+  )
+  .toSorted((left, right) => landingRank(left.mark) - landingRank(right.mark));
 
 /** Each offer of OpenBot for Teams has its own colour and icon, which the section sets for this id. */
 export type LandingTeamsOfferId = "servers" | "environments" | "integrations" | "support";
