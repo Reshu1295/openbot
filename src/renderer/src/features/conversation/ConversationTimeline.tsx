@@ -189,6 +189,7 @@ export function ConversationTimeline() {
     setVirtualRootElement,
     shownSubagentId,
     toggleSubagentPanel,
+    sideThreadOpen,
   } = useConversationViewScope();
   const { t, format, sourceText } = useText();
   // A named function, not a ternary in the prop: the compiler wraps a ternary prop in a memo, and
@@ -547,11 +548,11 @@ export function ConversationTimeline() {
   return (
     <>
       <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {keyedPrompt()
+        {keyedPrompt() && !sideThreadOpen()
           ? t("prompt.inputRequiredAnnouncement", { question: keyedPrompt()?.prompt.questions[0]?.question ?? "" })
           : ""}
       </span>
-      <Show when={chatSearchOpen()}>
+      <Show when={chatSearchOpen() && !sideThreadOpen()}>
         <ChatSearch
           query={chatSearchQuery()}
           current={activeChatSearchIndex()}
@@ -564,7 +565,7 @@ export function ConversationTimeline() {
         />
       </Show>
 
-      <Show when={props.unreadCount > 0 && !unreadDividerVisible()}>
+      <Show when={props.unreadCount > 0 && !unreadDividerVisible() && !sideThreadOpen()}>
         <UnreadMessagesBanner
           count={props.unreadCount}
           busy={markingRead()}
@@ -574,7 +575,8 @@ export function ConversationTimeline() {
       </Show>
 
       <div
-        class={["conversation-scroll", scrollFades.classes()]}
+        class={["conversation-scroll", scrollFades.classes(), { "conversation-covered": sideThreadOpen() }]}
+        inert={sideThreadOpen()}
         ref={(element) => {
           setScrollElement(element);
           rail.ref(element);

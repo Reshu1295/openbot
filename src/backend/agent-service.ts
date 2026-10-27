@@ -4169,12 +4169,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       if (wasOpen) this.#tasks.reopen(task);
       throw new Error(sourceText("error.backend.threadStillRunning"));
     });
-    yield* this.#forgetExecutionThread(task.threadId);
     // The person's messages and their files go with the thread. A message between the agent and another
     // agent stays in the other agent's history: a request from the thread and a teammate's answer to it.
     yield* this.#mailbox
       .deleteTaskMessages(task.agentId, task.taskId)
       .pipe(Effect.mapError(({ cause }) => new AgentLifecycleFailed({ operation: "delete task messages", cause })));
+    // The provider sessions close only now: a thread that a failed step keeps resumes its own session
+    // when it opens again.
+    yield* this.#forgetExecutionThread(task.threadId);
     yield* lifecycleStep("delete task", () => {
       if (this.#mailbox.taskBusy(task.agentId, task.taskId))
         throw new Error(sourceText("error.backend.threadStillRunning"));

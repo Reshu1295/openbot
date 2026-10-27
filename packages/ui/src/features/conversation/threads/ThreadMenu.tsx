@@ -23,7 +23,7 @@ function ThreadMenuList(props: ThreadHeaderProps) {
           >
             <span class="agent-threads-menu-title">{thread.title}</span>
             <ThreadStatusMark status={thread.status} />
-            <span class="agent-threads-menu-time">{sidebarMessageTime(thread.updatedAt, format)}</span>
+            <span class="agent-threads-menu-time ui-menu-trailing">{sidebarMessageTime(thread.updatedAt, format)}</span>
           </DropdownMenu.Item>
         )}
       </For>
@@ -103,7 +103,9 @@ export function ThreadMenu(props: ThreadHeaderProps & { mode: ThreadRowMode }) {
                         onSelectAfterClose={() => props.onRestore(thread.id)}
                       >
                         <span class="agent-threads-menu-title">{thread.title}</span>
-                        <span class="agent-threads-menu-time">{sidebarMessageTime(thread.updatedAt, format)}</span>
+                        <span class="agent-threads-menu-time ui-menu-trailing">
+                          {sidebarMessageTime(thread.updatedAt, format)}
+                        </span>
                       </DropdownMenu.Item>
                     )}
                   </For>

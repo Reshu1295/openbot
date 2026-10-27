@@ -124,6 +124,7 @@ export function ConversationComposer() {
     providerSilentMinutes,
     providerOffline,
     agentProviderName,
+    sideThreadOpen,
   } = useConversationViewScope();
   const { t, format, sourceText: localizeSourceText } = useText();
   const messageLabel = () =>
@@ -361,7 +362,7 @@ export function ConversationComposer() {
   );
   function ComposerBody() {
     return (
-      <div class="composer-wrap">
+      <div class={["composer-wrap", { "conversation-covered": sideThreadOpen() }]} inert={sideThreadOpen()}>
         {channel ? <channel.AboveComposer /> : null}
         <Show when={speaking() && props.agent}>
           {(agent) => (

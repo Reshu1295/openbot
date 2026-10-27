@@ -245,10 +245,12 @@
   white-space: nowrap;
 }
 
-/* Fixed widths put the badges in one column, on whole pixels, so their icons stay centred. */
+/* The time shows in full, also on a 12-hour clock. Its minimum width keeps the badges in one column,
+ * on whole pixels, so their icons stay centred. */
 .agent-threads-menu-time {
-  width: 44px;
+  min-width: 44px;
   flex: 0 0 auto;
+  white-space: nowrap;
   color: var(--openbot-text-muted);
   font-size: var(--openbot-text-sm);
   font-variant-numeric: tabular-nums;

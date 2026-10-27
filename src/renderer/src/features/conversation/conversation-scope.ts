@@ -87,6 +87,8 @@ export function createConversationViewScope(props: ConversationProps) {
   /** A view shows one agent or one channel for its whole life, so each branch below is fixed. */
   const channel = untrack(() => props.channel);
   const agentReady = () => props.agentStatus.phase === "ready";
+  /** A side thread covers the agent's own chat, which stays mounted under it. */
+  const sideThreadOpen = () => props.threads?.open !== undefined;
   const providerUpdateRequired = () =>
     props.agentStatus.providers?.find(
       (provider) => provider.id === props.agent?.provider && provider.state === "outdated",
@@ -1623,6 +1625,7 @@ export function createConversationViewScope(props: ConversationProps) {
     });
 
   return {
+    sideThreadOpen,
     replyJump,
     voiceConversationAvailable,
     startVoiceConversation,
