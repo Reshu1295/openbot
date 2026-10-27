@@ -52,6 +52,7 @@ import type { ConversationProps } from "./conversation-types";
 import { agentSkillsMode } from "./installed-skills-source";
 import { MarketplaceSuggestionChatCard, marketplaceSuggestionKnown } from "./MarketplaceSuggestionChatCard";
 import { McpSignInChatCard } from "./McpSignInChatCard";
+import { createMessageImageFiles } from "./message-image-files";
 import { RoutineChatCard } from "./RoutineChatCard";
 import { createChatWebhookRoutines, RoutineWebhookChatCard } from "./RoutineWebhookChatCard";
 import { desktopChatEventRoutinesApi } from "./routine-webhooks-api";
@@ -275,6 +276,7 @@ export function ConversationTimeline() {
   );
 
   const runtime = conversationRuntime(props);
+  const loadImageFile = createMessageImageFiles(runtime.agent);
   /** The agent that asks in a card: in a channel, the working agent whose card shows. */
   const interactionAgentName = () => (channel ? channel.interactionAgentName() : props.agent?.name);
   /**
@@ -1229,6 +1231,12 @@ export function ConversationTimeline() {
                             onOpenQuote={openQuote}
                             onDownload={(attachment) => attachmentAction(attachment, "download")}
                             mediaSource={runtime.attachmentMedia}
+                            loadImageFile={(file) =>
+                              loadImageFile(file, {
+                                serverId: props.server?.id ?? "local",
+                                agentId: workspaceAgentId(),
+                              })
+                            }
                             actions={
                               <>
                                 <Show when={pending()}>

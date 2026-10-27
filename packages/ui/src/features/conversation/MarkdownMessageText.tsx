@@ -1,6 +1,7 @@
 import { fileReferenceName, isFileReference } from "@openbot/brand/file-reference";
 import { blockChatMath, chatMathBlockStart, chatMathStart, inlineChatMath } from "@openbot/contracts/chat-math";
 import { chatPreviewKind } from "@openbot/contracts/chat-preview";
+import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import { Button, Checkbox } from "@openbot/ui";
 import { Dynamic } from "@solidjs/web";
 import { Marked, type Token, type Tokens, type TokensList } from "marked";
@@ -1187,6 +1188,39 @@ function mentionedFileTarget(value: string, directory: FileDirectoryContext | nu
     path: `${directory.path.replace(/[/\\]+$/u, "")}${separator}${path}`,
     kind: directory.kind,
   };
+}
+
+const IMAGE_FILE_PATTERN = /\.(?:avif|gif|jpe?g|png|svg|webp)$/iu;
+/** A message shows at most this many named image files, as many as it can attach. */
+const IMAGE_FILE_LIMIT = INPUT_LIMITS.attachments;
+
+/** A local image file that a message names, in a code span or a file link. */
+export type MessageImageFile = FileDirectoryContext;
+
+/** The image files that a message names in code spans and file links, in order, without repeats. */
+export function messageImageFiles(body: string): MessageImageFile[] {
+  const directory = messageFileDirectory(body);
+  const files = new Map<string, MessageImageFile>();
+  void markdown.walkTokens(lexBlockTokens(body, true), (token) => {
+    const file = tokenIs(token, "codespan")
+      ? mentionedFileTarget(token.text, directory)
+      : tokenIs(token, "link")
+        ? linkFileTarget(token.href)
+        : null;
+    if (file && IMAGE_FILE_PATTERN.test(fileReferenceName(file.path))) files.set(`${file.kind}:${file.path}`, file);
+  });
+  return [...files.values()].slice(0, IMAGE_FILE_LIMIT);
+}
+
+/** The file that a link opens as a chip, as the `link` token draws it. */
+function linkFileTarget(href: string): FileDirectoryContext | null {
+  if (safeBrowserUrl(href)) return null;
+  const fileUrl = fileUrlPath(href);
+  // The shared-file resolver does not decode, and the workspace resolver does.
+  const shared = sharedFileTarget(fileUrl === null ? href : decodedFileUrlPath(fileUrl));
+  if (shared) return { path: shared, kind: "shared" };
+  const workspace = workspaceFileTarget(fileUrl ?? href);
+  return workspace ? { path: workspace, kind: "workspace" } : null;
 }
 
 /** What the image viewer calls a markdown image: its alt text, else the file name in its URL. */

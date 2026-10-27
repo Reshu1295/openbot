@@ -1,4 +1,5 @@
 import type { FilePreview, WorkspaceDirectory, WorkspaceDirectoryEntry } from "@openbot/contracts/ipc";
+import { bytesToBase64 } from "@openbot/team-client/base64";
 import {
   ArrowLeft,
   Button,
@@ -134,6 +135,12 @@ export default function FilePreviewPanel(props: FilePreviewPanelProps) {
       }
       if (!preview.bytes || !BLOB_PREVIEW_KINDS.has(preview.previewKind)) {
         setPreviewUrl(null);
+        return;
+      }
+      // The renderer policy allows `data:` images and no object URL images. A `data:` SVG also has
+      // no app origin when it is opened on its own.
+      if (preview.previewKind === "image") {
+        setPreviewUrl(`data:${preview.mimeType};base64,${bytesToBase64(preview.bytes)}`);
         return;
       }
       const url = URL.createObjectURL(new Blob([new Uint8Array(preview.bytes).buffer], { type: preview.mimeType }));
