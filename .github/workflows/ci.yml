@@ -357,6 +357,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:messaging-discord-access
 
+      - name: Run the turn input E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:turn-input
+
       - name: Run the zero-filled settings file E2E test
         if: ${{ !cancelled() }}
         run: bun run test:zero-filled-settings
@@ -495,6 +499,7 @@ jobs:
             .openbot-build/agent-hide-restore-e2e/
             .openbot-build/messaging-pause-resume-e2e/
             .openbot-build/messaging-discord-access-e2e/
+            .openbot-build/turn-input-e2e/
             .openbot-build/zero-filled-settings-e2e/
             .openbot-build/provider-update-busy-e2e/
             .openbot-build/provider-update-after-app-upgrade-e2e/

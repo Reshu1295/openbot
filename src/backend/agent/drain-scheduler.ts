@@ -563,12 +563,16 @@ export class DrainScheduler {
     // The teammate answers that start in this turn too. A channel task, an external message and a
     // routine run in its own session always run alone; a teammate's answer in an external
     // conversation takes the other answers to the same request. The person's message goes last, so
-    // the turn answers it with the answers already read.
-    const companions =
+    // the turn answers it with the answers already read, and the person's later queued messages
+    // follow it in queue order.
+    const replies =
       channelDelivery || ownSession || (messagingDelivery && delivery.sender.kind !== "agent")
         ? []
         : this.#mailbox.repliesToStartWith(delivery.id);
-    let batch = delivery.sender.kind === "user" ? [...companions, context] : [context, ...companions];
+    const laterMessages =
+      channelDelivery || ownSession || messagingDelivery ? [] : this.#mailbox.userMessagesToStartWith(delivery.id);
+    const companions = [...replies, ...laterMessages];
+    let batch = delivery.sender.kind === "user" ? [...replies, context, ...laterMessages] : [context, ...replies];
     let confirmedTurnId: string | null = null;
     // The session of a routine run in its own session. Closed here when no turn starts on it.
     let routineThreadId: string | null = null;
@@ -705,12 +709,14 @@ export class DrainScheduler {
         );
       };
       const completeInput = promptInput(execution?.text);
-      // A channel packet with only unread messages goes only to the session that read the others. The
-      // session can change from here to the retry below, as when the provider cannot resume it.
-      const delta = channelDelivery ? channels?.delta(delivery.id) : undefined;
+      // A channel packet with only unread messages, or an external message without the guidance, goes
+      // only to the session that read the rest. The session can change from here to the retry below,
+      // as when the provider cannot resume it.
+      const shortened = channelDelivery ? channels : messagingDelivery ? messaging : undefined;
+      const delta = shortened?.delta(delivery.id);
       const deltaInput = delta ? promptInput(delta.text) : null;
       const inputForThread = (providerThreadId: string) => {
-        const input = deltaInput && channels?.sendsDelta(delivery.id, providerThreadId) ? deltaInput : completeInput;
+        const input = deltaInput && shortened?.sendsDelta(delivery.id, providerThreadId) ? deltaInput : completeInput;
         const handoff = this.#threads.consumePendingHandoff(providerThreadId);
         if (!handoff) return input;
         return input.map((item, index) =>
@@ -819,6 +825,7 @@ export class DrainScheduler {
         yield* this.#mailbox.markRunning(item.delivery.id, response.turn.id).pipe(toDeliveryStartFailed);
       if (this.#channels)
         yield* this.#channels.accepted(delivery.id, threadId, response.turn.id).pipe(toDeliveryStartFailed);
+      if (messagingDelivery) this.#messaging?.accepted(delivery.id, threadId);
       if (this.#hooks.turnEnded(response.turn.id)) {
         // The end found these messages before they ran, or while the writes above waited, so it
         // left them running. Nothing else settles them.

@@ -1363,6 +1363,39 @@ export class MailboxStore {
     );
   }
 
+  /**
+   * The person's messages queued right after this one in its lane, which start in the same turn.
+   * Each turn makes the provider read the whole session again, so messages that waited together are
+   * read together. The run stops at the first message of another kind or of another person, so the
+   * queue order stays.
+   */
+  userMessagesToStartWith(deliveryId: string): DeliveryContext[] {
+    const next = this.#state.deliveries.find((candidate) => candidate.id === deliveryId);
+    if (!next) return [];
+    const messages = this.#messagesById();
+    const first = this.#requireMessage(next.messageId, messages);
+    if (!isChatMessageFromPerson(first)) return [];
+    const lane = first.taskId ?? null;
+    const queued = this.#queuedFor(next.recipientAgentId).filter(
+      (candidate) => this.#taskIdOf(candidate, messages) === lane && !this.#isHeldReply(candidate),
+    );
+    const start = queued.findIndex((candidate) => candidate.id === next.id);
+    if (start < 0) return [];
+    const run: StoredDelivery[] = [];
+    for (const candidate of queued.slice(start + 1)) {
+      const message = this.#requireMessage(candidate.messageId, messages);
+      if (
+        !this.#mayStart(candidate) ||
+        candidate.resumeAfterUsageLimit ||
+        !isChatMessageFromPerson(message) ||
+        message.senderMember?.id !== first.senderMember?.id
+      )
+        break;
+      run.push(candidate);
+    }
+    return this.#contexts(run);
+  }
+
   /** The agents that were sent a request and whose delivery ended with no answer. */
   unansweredRecipients(requestId: string): string[] {
     return this.#state.deliveries
@@ -3033,6 +3066,16 @@ function recordFinishedQueueEdit(delivery: StoredDelivery, editId: string, outco
 }
 
 /** An agent's answer to a request. A linked message that asks for a reply is a new request. */
+/** A message the person wrote in the agent's chat or a task, not one of a channel or a messaging app. */
+function isChatMessageFromPerson(message: StoredMessage): boolean {
+  return (
+    message.sender.kind === "user" &&
+    message.channelId === undefined &&
+    message.messaging === undefined &&
+    message.messagingReturn === undefined
+  );
+}
+
 function isAnswer(
   message: StoredMessage,
 ): message is StoredMessage & { sender: { kind: "agent"; agentId: string }; replyToMessageId: string } {

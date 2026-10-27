@@ -805,7 +805,10 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       scheduleDrain: (agentId) => this.#drain.scheduleDrain(agentId),
       rotateSession: (agentId, client, threadId) => this.#threads.rotateProviderSession(agentId, client, threadId),
       rotatesSession: (agentId, threadId) => this.#threads.rotatesSession(agentId, threadId),
-      compacted: (threadId) => this.channels.contextCompacted(threadId),
+      compacted: (threadId) => {
+        this.channels.contextCompacted(threadId);
+        this.messaging.contextCompacted(threadId);
+      },
     });
     this.#attention = new AttentionRegistry({
       conversation: this.#conversation,
@@ -1014,15 +1017,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         const session = agent ? this.#store.database.activeProviderSession(threadId, agent.provider) : null;
         return session ? this.#compaction.contextInputCharacters(session.externalSessionId) : 120_000;
       },
-      // Claude and the app-server providers report each compaction. A `handoff` provider is
-      // compacted by OpenBot, which gives the new session the complete packet, and the ACP client
-      // reports a compaction that the agent does by itself. Another ACP agent or Pi can compact with
-      // no signal, so its next packet would leave out what the summary dropped.
-      reportsCompactions: (agentId) => {
-        const agent = this.#store.list().find((item) => item.id === agentId);
-        const mode = agent ? this.#providers.clientForAgent(agent)?.contextCompaction : undefined;
-        return mode === "native" || mode === "events" || mode === "handoff";
-      },
+      reportsCompactions: (agentId) => this.#reportsCompactions(agentId),
       forgetThread: (threadId) => this.#forgetExecutionThread(threadId).pipe(toChannelOperationError),
       loadedSnapshot: (threadId) => this.#conversation.loadedExecutionSnapshot(threadId),
       // A held agent gets no channel assignment: one that waited for the reset would hold its
@@ -1121,6 +1116,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       interrupt: (agentId, turnId, threadId) => this.interrupt(agentId, turnId, threadId).pipe(toMessagingThreadFailed),
       forgetThread: (threadId) => this.#forgetExecutionThread(threadId).pipe(toMessagingThreadFailed),
       ownChat: (threadId) => this.#store.ownsThread(threadId),
+      contextSession: (agentId, threadId) => {
+        const agent = this.#store.list().find((item) => item.id === agentId);
+        if (!agent || !this.#reportsCompactions(agentId)) return null;
+        return this.#store.database.activeProviderSession(threadId, agent.provider)?.externalSessionId ?? null;
+      },
     });
     this.#memoryHold = new MemoryHold({
       memory: hostMemory,
@@ -2199,6 +2199,18 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       (creationModel(input, this.#endpoints.available(), this.#providers.status().providers) ?? this.#startingChoice())
         ?.provider ?? null
     );
+  }
+
+  /**
+   * Claude and the app-server providers report each compaction. A `handoff` provider is compacted by
+   * OpenBot, which gives the new session the complete prompt, and the ACP client reports a compaction
+   * that the agent does by itself. Another ACP agent or Pi can compact with no signal, so a prompt
+   * that names earlier context instead of repeating it could lose what the summary dropped.
+   */
+  #reportsCompactions(agentId: string): boolean {
+    const agent = this.#store.list().find((item) => item.id === agentId);
+    const mode = agent ? this.#providers.clientForAgent(agent)?.contextCompaction : undefined;
+    return mode === "native" || mode === "events" || mode === "handoff";
   }
 
   /** The provider and model setup or Settings recorded. */
