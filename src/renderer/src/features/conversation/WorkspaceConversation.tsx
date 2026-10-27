@@ -213,14 +213,6 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
     return agent ? approvalOfThread(agent.id, agent.threadId) : undefined;
   });
 
-  const activeBrowserTakeover = createMemo(() => {
-    const agent = activeAgent();
-    const event = agent ? pendingPrompts()[attentionKey(agent.id, agent.threadId)] : undefined;
-    return event?.type === "browser-takeover-requested" && event.request.threadId === agent?.threadId
-      ? event.request
-      : undefined;
-  });
-
   /**
    * Access and auto-approve of a joined server's agent, read from its host. Null for this
    * computer's agents, for a member, and for a host without `agent-admin-v1`.
@@ -369,11 +361,25 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       tabs: agentThreads,
       approvals: approvals(),
       prompts: Object.values(pendingPrompts()).filter((event) => event?.type === "prompt"),
+      takeovers: Object.values(pendingPrompts()).flatMap((event) =>
+        event?.type === "browser-takeover-requested" ? [event.request] : [],
+      ),
       newThreadTitle: t("conversation.threads.new"),
-      onRespondApproval: (approval, decision) =>
-        respondToApprovalRequest(approval.agentId, approval.requestId, decision),
+      onRespondApproval: (approval, decision, options) =>
+        respondToApprovalRequest(approval.agentId, approval.requestId, decision, options),
       onAnswerPrompt: answerThreadPrompt,
     });
+  });
+  /** The takeover of the open thread: of a side thread while one is open, else of the agent's own chat. */
+  const activeBrowserTakeover = createMemo(() => {
+    const agent = activeAgent();
+    if (!agent) return undefined;
+    const open = threads()?.open;
+    if (open !== undefined) return threads()?.takeover;
+    const event = pendingPrompts()[attentionKey(agent.id, agent.threadId)];
+    return event?.type === "browser-takeover-requested" && event.request.threadId === agent.threadId
+      ? event.request
+      : undefined;
   });
   /**
    * A usage limit holds the active agent's queued message on this computer. The chat asks where to
@@ -598,7 +604,9 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
         agentMemoryLimit={generalSettings().agentMemoryLimit}
         onClearAgentContext={clearActiveAgentContext()}
         onCompactAgentContext={compactActiveAgentContext()}
-        onRespondToBrowserTakeover={respondToBrowserTakeover}
+        onRespondToBrowserTakeover={(decision, options) =>
+          respondToBrowserTakeover(decision, activeBrowserTakeover()?.threadId, options)
+        }
         onCancelQueuedMessage={cancelQueuedMessage}
         waits={activeWaits()}
         threads={threads()}

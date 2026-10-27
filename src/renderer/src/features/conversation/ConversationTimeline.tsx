@@ -53,6 +53,7 @@ import { agentSkillsMode } from "./installed-skills-source";
 import { MarketplaceSuggestionChatCard, marketplaceSuggestionKnown } from "./MarketplaceSuggestionChatCard";
 import { McpSignInChatCard } from "./McpSignInChatCard";
 import { createMessageImageFiles } from "./message-image-files";
+import { PendingBrowserTakeover } from "./PendingBrowserTakeover";
 import { RoutineChatCard } from "./RoutineChatCard";
 import { createChatWebhookRoutines, RoutineWebhookChatCard } from "./RoutineWebhookChatCard";
 import { desktopChatEventRoutinesApi } from "./routine-webhooks-api";
@@ -112,9 +113,7 @@ export function ConversationTimeline() {
     activeChatSearchIndex,
     agentActivitySpaceReserved,
     attachmentAction,
-    browserTakeoverPreview,
     browserTakeoverResolution,
-    browserTakeoverTab,
     channel,
     chatSearchMatches,
     chatSearchOpen,
@@ -146,8 +145,6 @@ export function ConversationTimeline() {
     moveChatSearch,
     openExternalMessageUrl,
     openReactionMessageId,
-    openBrowserTakeoverTab,
-    localSignIn,
     openRoutineSettings,
     openSkillSettings,
     openSharedFile,
@@ -166,7 +163,6 @@ export function ConversationTimeline() {
     providerSilentMinutes,
     agentProviderName,
     replyJump,
-    respondToBrowserTakeover,
     replyToMessage,
     addPageText,
     setPageContext,
@@ -1450,25 +1446,14 @@ export function ConversationTimeline() {
               )}
             </Show>
             <Show when={props.browserTakeover}>
-              <Loading>
-                <BrowserTakeoverCard
-                  request={props.browserTakeover}
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={browserTakeoverTab()}
-                  preview={browserTakeoverPreview().preview}
-                  previewStatus={browserTakeoverPreview().status}
-                  onOpen={openBrowserTakeoverTab}
-                  onComplete={() => respondToBrowserTakeover("complete")}
-                  onCancel={() => respondToBrowserTakeover("cancel")}
-                  onSignInLocally={localSignIn.canStartForTakeover() ? localSignIn.startForTakeover : undefined}
-                  signInBlocked={localSignIn.blockedTakeover()}
-                  browserSecret={{
-                    loadPreview: runtime.browser.capturePreview,
-                    vaultSave: props.server?.kind === "local",
-                    onRespond: runtime.agent.respondToBrowserSecret,
-                  }}
-                />
-              </Loading>
+              {(request) => (
+                <Loading>
+                  <PendingBrowserTakeover
+                    request={request()}
+                    agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
+                  />
+                </Loading>
+              )}
             </Show>
             <Show when={!props.browserTakeover && browserTakeoverResolution()}>
               {(resolution) => (

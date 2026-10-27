@@ -43,6 +43,7 @@ import { errorReference, type UserErrorDetails } from "@openbot/user-errors";
 import { createEffect, createMemo, createSignal, createStore, onSettled } from "solid-js";
 import { toAgentProfile } from "../../app-message-projection";
 import { mergeConversationPage, missingReplyOriginals } from "../conversation/conversation-merge";
+import type { PromptAnswerOptions } from "../conversation/conversation-types";
 import { appendTurnStepLine, type TurnStepLines } from "../conversation/turn-step-lines";
 import { followsServerUpdate } from "../servers/server-update-flow";
 import { createSidebarPreferences } from "../sidebar/sidebar-preferences";
@@ -1767,11 +1768,13 @@ export function createWebWorkspace(
       });
       await refresh();
     },
-    async respondToBrowserTakeover(decision: "complete" | "cancel") {
+    /** Answers a takeover: of the selected agent's own chat, or of its open side thread. */
+    async respondToBrowserTakeover(
+      request: (typeof state.takeovers)[number],
+      decision: "complete" | "cancel",
+      options?: PromptAnswerOptions,
+    ) {
       const current = generation;
-      const threadId = state.agents.find((agent) => agent.id === selectedId)?.threadId;
-      const request = state.takeovers.find((item) => item.agentId === selectedId && item.threadId === threadId);
-      if (!request) return false;
       try {
         await runtime.respondToTakeover({ requestId: request.requestId, decision });
         if (disposed || current !== generation) return false;
@@ -1780,7 +1783,9 @@ export function createWebWorkspace(
         });
         return true;
       } catch (error) {
-        if (current === generation) report(error);
+        if (current !== generation) return false;
+        if (options?.onError) options.onError(error);
+        else report(error);
         return false;
       }
     },

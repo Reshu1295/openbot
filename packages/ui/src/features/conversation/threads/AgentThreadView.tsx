@@ -67,9 +67,9 @@ export interface AgentThreadViewProps {
   /** The approval that the thread's running turn waits for. */
   approval?: AgentApproval | undefined;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
-  /** Whether the thread's running turn waits for the answer to a question. */
+  /** Whether the thread's running turn waits for the person: a question or a browser takeover. */
   waitsForAnswer?: boolean | undefined;
-  /** The card of that question. */
+  /** The card of that wait. */
   prompt?: JSX.Element | undefined;
 }
 

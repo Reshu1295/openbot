@@ -325,9 +325,14 @@ const Turns = createSimpleContext({
       return respondToApprovalRequest(agent.id, approval.requestId, decision);
     }
 
-    async function respondToBrowserTakeover(decision: "complete" | "cancel"): Promise<boolean> {
+    /** Answers the takeover of the active agent's thread: its own chat, or the side thread `threadId`. */
+    async function respondToBrowserTakeover(
+      decision: "complete" | "cancel",
+      threadId?: string,
+      options?: PromptAnswerOptions,
+    ): Promise<boolean> {
       const agent = activeAgent();
-      const key = agent ? attentionKey(agent.id, agent.threadId) : undefined;
+      const key = agent ? attentionKey(agent.id, threadId ?? agent.threadId) : undefined;
       const event = key ? pendingPrompts()[key] : undefined;
       if (!agent || !key || event?.type !== "browser-takeover-requested") return false;
       const serverId = activeServerId();
@@ -336,7 +341,8 @@ const Turns = createSimpleContext({
         setPendingPrompts((current) => ({ ...current, [key]: undefined }));
         return true;
       } catch (error) {
-        appendUiError(agent.id, error, currentText().t("app.errorStatus.browserTakeover"), serverId);
+        if (options?.onError) options.onError(error);
+        else appendUiError(agent.id, error, currentText().t("app.errorStatus.browserTakeover"), serverId);
         return false;
       }
     }

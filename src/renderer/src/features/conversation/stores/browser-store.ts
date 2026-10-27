@@ -216,8 +216,22 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
       messageMarker: latestMessageMarker(),
       signInBlocked: blockedTakeoverSignIn(),
     } satisfies BrowserTakeoverResolutionState;
-    const completed = await deps.props.onRespondToBrowserTakeover(decision);
-    if (completed && latestMessageMarker() === resolution.messageMarker) setBrowserTakeoverResolution(resolution);
+    // The takeover of an open side thread: a failure shows where the person answered, and the agent's
+    // own chat keeps no card of it.
+    const sideThread = request.threadId === deps.props.threads?.open?.threadId;
+    const completed = await deps.props.onRespondToBrowserTakeover(
+      decision,
+      sideThread
+        ? {
+            onError: (error) => {
+              const { t, errorMessage } = currentText();
+              toast.error(errorMessage(error, t("app.errorStatus.browserTakeover")));
+            },
+          }
+        : undefined,
+    );
+    if (completed && !sideThread && latestMessageMarker() === resolution.messageMarker)
+      setBrowserTakeoverResolution(resolution);
     return completed;
   };
   let previousBrowserTabCount = 0;

@@ -151,7 +151,11 @@ import { Conversation, createConversationController } from "../conversation/Conv
 import { clearStoredQueueEdit } from "../conversation/composer-draft";
 import { ConversationControllerProvider } from "../conversation/conversation-controller-context";
 import { composerDraftKey } from "../conversation/conversation-keys";
-import type { AgentSettingsRequest, ConversationThreads } from "../conversation/conversation-types";
+import type {
+  AgentSettingsRequest,
+  ConversationThreads,
+  PromptAnswerOptions,
+} from "../conversation/conversation-types";
 import { webEventRoutinesApi } from "../conversation/routine-webhooks-api";
 import type { FilesPort } from "../files/files-port";
 import { hostSetupProviderProps } from "../onboarding/host-setup-provider-props";
@@ -243,6 +247,21 @@ const QUEUE_EDIT_ACCOUNT_KEY = "openbot.web.queue-edit-account";
 function newAgentAvatar(): Pick<FirstAgentDraft, "avatarSeed" | "avatarHue"> {
   const { avatarSeed, avatarHue } = createFirstAgentDraft();
   return { avatarSeed, avatarHue };
+}
+
+/**
+ * Sends a side thread's answer. A failure goes to the card's `onError`, so the thread shows it; with no
+ * `onError`, the card's own error handling gets it.
+ */
+async function reportedFailure(send: () => Promise<unknown>, options: PromptAnswerOptions | undefined) {
+  try {
+    await send();
+    return true;
+  } catch (error) {
+    if (!options?.onError) throw error;
+    options.onError(error);
+    return false;
+  }
 }
 
 /** The pages of the connected host that cover the conversation. */
@@ -1325,13 +1344,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     workspace.state.capabilities.includes(SIGN_IN_RELAY_CAPABILITY) ||
     (workspace.state.capabilities.includes(MCP_SIGN_IN_CAPABILITY) &&
       workspace.state.capabilities.includes("browser-view"));
-  const browserTakeover = createMemo(() => {
-    const agent = workspace.selected();
-    if (!agent) return undefined;
-    return workspace.state.takeovers.find(
-      (request) => request.agentId === agent.id && request.threadId === agent.threadId,
-    );
-  });
   const clearSelectedAgentContext = createMemo(() => {
     const agent = workspace.selected();
     if (!agent || !workspace.runtime.admin || !workspace.state.capabilities.includes(CONTEXT_RESET_CAPABILITY))
@@ -1369,22 +1381,22 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       tabs: current.tabs,
       approvals: workspace.state.approvals,
       prompts: workspace.state.prompts,
+      takeovers: workspace.state.takeovers,
       newThreadTitle: t("conversation.threads.new"),
-      onRespondApproval: async (item, decision) => {
-        await workspace.approve({ requestId: item.requestId, decision });
-        return true;
-      },
-      onAnswerPrompt: async (prompt, answers, options) => {
-        try {
-          await workspace.answer({ requestId: prompt.requestId, answers });
-        } catch (error) {
-          if (!options?.onError) throw error;
-          options.onError(error);
-          return false;
-        }
-        return true;
-      },
+      onRespondApproval: (item, decision, options) =>
+        reportedFailure(() => workspace.approve({ requestId: item.requestId, decision }), options),
+      onAnswerPrompt: (prompt, answers, options) =>
+        reportedFailure(() => workspace.answer({ requestId: prompt.requestId, answers }), options),
     });
+  });
+  /** The takeover of the open thread: of a side thread while one is open, else of the agent's own chat. */
+  const browserTakeover = createMemo(() => {
+    const agent = workspace.selected();
+    if (!agent) return undefined;
+    if (threads()?.open !== undefined) return threads()?.takeover;
+    return workspace.state.takeovers.find(
+      (request) => request.agentId === agent.id && request.threadId === agent.threadId,
+    );
   });
   // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.
   // The marker does not tell whether the routine is paused; an agent makes an active routine unless told otherwise.
@@ -2492,7 +2504,12 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 remoteTaskLimitLoaded={remoteAgentAdmin.taskLimit() !== undefined}
                 onUpdateAgentPermissions={remoteAgentAdmin.settings() ? remoteAgentAdmin.update : undefined}
                 onClearAgentContext={clearSelectedAgentContext()}
-                onRespondToBrowserTakeover={(decision) => workspace.respondToBrowserTakeover(decision)}
+                onRespondToBrowserTakeover={(decision, options) => {
+                  const request = browserTakeover();
+                  return request
+                    ? workspace.respondToBrowserTakeover(request, decision, options)
+                    : Promise.resolve(false);
+                }}
                 onCancelQueuedMessage={workspace.cancelQueued}
                 onSteerQueuedMessage={workspace.steerQueued}
                 onUpdateQueuedMessage={workspace.updateQueued}
