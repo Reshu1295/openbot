@@ -26,7 +26,7 @@ export interface EventsRouteDependencies {
   events?: HostEventsApi | undefined;
 }
 
-async function runEventsEffect<A>(operation: Effect.Effect<A, HostEventsFailure>): Promise<A> {
+export async function runEventsEffect<A>(operation: Effect.Effect<A, HostEventsFailure>): Promise<A> {
   try {
     return await Effect.runPromise(operation);
   } catch (error) {

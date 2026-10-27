@@ -71,7 +71,6 @@ export const messages = {
   "agentSettings.avatar.saveFailed": "Não foi possível salvar o avatar do agente.",
   "agentSettings.avatar.processFailed": "Não foi possível processar o avatar do agente.",
   "agentSettings.runtime.model": "Modelo do agente",
-  "agentSettings.runtime.providerBusy": "Aguarde o trabalho atual terminar antes de trocar de provedor ou conta.",
   "agentSettings.runtime.modelUnavailable": "Os modelos ficam disponíveis após a conexão de uma CLI de agente.",
   "agentSettings.runtime.reasoning": "Raciocínio",
   "agentSettings.runtime.reasoningLabel": "Nível de raciocínio do agente",
@@ -81,8 +80,8 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "Acesso do agente",
   "agentSettings.runtime.busyMessage": "Durante o trabalho",
   "agentSettings.runtime.busyMessageLabel": "Mensagens enquanto o agente trabalha",
-  "agentSettings.runtime.taskLimit": "Tarefas paralelas",
-  "agentSettings.runtime.taskLimitLabel": "Tarefas executadas ao mesmo tempo",
+  "agentSettings.runtime.taskLimit": "Tópicos em paralelo",
+  "agentSettings.runtime.taskLimitLabel": "Tópicos executados ao mesmo tempo",
   "agentSettings.runtime.workingDirectory": "Diretório de trabalho",
   "agentSettings.runtime.notAvailable": "Ainda não disponível",
   "agentSettings.runtime.fullAccessNote":
@@ -101,7 +100,7 @@ export const messages = {
     "{provider} não pode orientar um turno em andamento. As mensagens enviadas enquanto ele trabalha esperam na fila.",
   "agentSettings.taskLimit.default": "Padrão ({count})",
   "agentSettings.taskLimit.oneTurn":
-    "{provider} executa um turno por vez. As tarefas e o chat deste agente esperam uns pelos outros.",
+    "{provider} executa um turno por vez. Os tópicos deste agente esperam uns pelos outros.",
   "agentSettings.notifications.title": "Notificações",
   "agentSettings.newChat.title": "Novo chat",
   "agentSettings.newChat.description": "O agente esquece este chat. Sua configuração é mantida.",

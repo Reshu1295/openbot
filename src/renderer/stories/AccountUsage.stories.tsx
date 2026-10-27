@@ -32,6 +32,26 @@ const mixedRows = accountUsageProviderRows({
       id: "antigravity",
       primary: null,
       secondary: { usedPercent: 4, windowDurationMins: 10_080, resetsAt: weeklyReset },
+      groups: [
+        {
+          name: "Gemini Models",
+          models: ["Gemini Flash", "Gemini Pro"],
+          primary: null,
+          secondary: { usedPercent: 4, windowDurationMins: 10_080, resetsAt: weeklyReset },
+        },
+        {
+          name: "Gemini 4 Argon",
+          models: ["Gemini 4 Argon"],
+          primary: null,
+          secondary: { usedPercent: 100, windowDurationMins: 10_080, resetsAt: fiveHourReset },
+        },
+        {
+          name: "Claude and GPT models",
+          models: ["Claude Opus", "Claude Sonnet", "GPT-OSS"],
+          primary: null,
+          secondary: { usedPercent: 12, windowDurationMins: 10_080, resetsAt: weeklyReset },
+        },
+      ],
     },
     {
       id: "cursor",

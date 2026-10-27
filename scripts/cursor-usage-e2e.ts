@@ -2,7 +2,9 @@
 // `cursor-agent acp` and a local server in place of the Cursor backend (`CURSOR_API_ENDPOINT`). The
 // sign-in is a fake `auth.json` in a temporary home. Checks that a split plan gives the Cursor
 // models window and the other models window for the billing cycle, that a plan with only a total
-// gives one window, and that a rejected token and a missing sign-in give no reading.
+// gives one window, that a merged plan gives the total alone and names Grok as sharing its quota, that
+// a plan info that fails to read keeps the split, and that a rejected token and a missing sign-in give
+// no reading.
 // `bun scripts/cursor-usage-e2e.ts`. Writes .openbot-build/cursor-usage-e2e/report.json.
 //
 // On macOS the reader asks the login Keychain first. With the Cursor CLI signed in there, the
@@ -12,6 +14,7 @@ import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { normalizeAccountUsage } from "../src/backend/agent/account-usage";
 import type { AgentClient } from "../src/backend/agent-client";
 import { cursorAuthFile } from "../src/backend/cursor-usage";
 import { runCauseEffect } from "../src/backend/effect-boundary";
@@ -21,6 +24,7 @@ import { NO_PROVIDER_CREDENTIALS, requireProviderDriver } from "../src/backend/p
 const OUT = resolve(import.meta.dirname, "../.openbot-build/cursor-usage-e2e");
 const FAKE_TOKEN = "fake-cursor-access-token";
 const USAGE_PATH = "/aiserver.v1.DashboardService/GetCurrentPeriodUsage";
+const PLAN_INFO_PATH = "/aiserver.v1.DashboardService/GetPlanInfo";
 const CYCLE_START = Date.UTC(2026, 9, 1);
 const CYCLE_END = Date.UTC(2026, 9, 31);
 
@@ -74,6 +78,8 @@ interface Report {
   passed: boolean;
   splitPlan?: UsageCase;
   totalOnlyPlan?: UsageCase;
+  mergedPlan?: UsageCase;
+  planInfoFailed?: UsageCase;
   rejectedToken?: UsageCase;
   noSignIn?: UsageCase;
 }
@@ -81,7 +87,12 @@ interface Report {
 const root = await mkdtemp(join(tmpdir(), "openbot-cursor-usage-e2e-"));
 const report: Report = { passed: false };
 const clients: AgentClient[] = [];
-let answer: { status: number; body: unknown } = { status: 200, body: {} };
+interface Answer {
+  status: number;
+  body: unknown;
+}
+const NOT_MERGED: Answer = { status: 200, body: { planInfo: { planName: "Pro" }, isMerged: false } };
+let answers: Record<string, Answer> = {};
 let requests: UsageRequest[] = [];
 
 function readBody(request: IncomingMessage): Promise<string> {
@@ -104,6 +115,7 @@ const server = createServer((request, response) => {
       fakeToken: request.headers.authorization === `Bearer ${FAKE_TOKEN}`,
       body,
     });
+    const answer = answers[request.url ?? ""] ?? { status: 404, body: { code: "not_found" } };
     response.writeHead(answer.status, { "Content-Type": "application/json" });
     response.end(JSON.stringify(answer.body));
   });
@@ -128,8 +140,8 @@ async function install(): Promise<string> {
 
 const executable = await install();
 
-async function readUsage(status: number, body: unknown): Promise<UsageCase> {
-  answer = { status, body };
+async function readUsage(status: number, body: unknown, planInfo: Answer = NOT_MERGED): Promise<UsageCase> {
+  answers = { [USAGE_PATH]: { status, body }, [PLAN_INFO_PATH]: planInfo };
   requests = [];
   const client = requireProviderDriver("cursor").createClient(
     { executable, version: "2026.10.01-e373342", source: "managed" },
@@ -157,17 +169,24 @@ try {
     planUsage: { autoPercentUsed: 37.5, apiPercentUsed: 82, totalPercentUsed: 60 },
   });
   report.splitPlan = split;
-  assert.equal(split.requests.length, 1, "one usage request");
-  assert.ok(split.requests[0]?.fakeToken, "the request carries the CLI's sign-in (sign the macOS CLI out first)");
+  assert.ok(
+    split.requests.every((request) => request.fakeToken),
+    "the requests carry the CLI's sign-in (sign the macOS CLI out first)",
+  );
   assert.deepEqual(
-    { ...split.requests[0], fakeToken: undefined },
-    { method: "POST", path: USAGE_PATH, fakeToken: undefined, body: "{}" },
+    split.requests.map(({ fakeToken: _, ...request }) => request).sort((a, b) => a.path.localeCompare(b.path)),
+    [
+      { method: "POST", path: USAGE_PATH, body: "{}" },
+      { method: "POST", path: PLAN_INFO_PATH, body: "{}" },
+    ],
+    "one usage request and one plan info request",
   );
   assert.deepEqual(split.reading.rateLimits, {
     limitId: "cursor",
     primary: { usedPercent: 37.5, ...cycle },
     secondary: { usedPercent: 82, ...cycle },
   });
+  assert.equal(split.reading.sharedQuotaWith, undefined, "a split plan shares no quota");
 
   // 2. A plan with only a total fills the first window with it.
   const total = await readUsage(200, {
@@ -181,14 +200,57 @@ try {
     primary: { usedPercent: 100, ...cycle },
     secondary: null,
   });
+  assert.equal(total.reading.sharedQuotaWith, undefined, "a plan that is not merged shares no quota");
 
-  // 3. A token the backend rejects gives no reading.
-  const rejected = await readUsage(401, { code: "unauthenticated" });
+  // 3. A merged plan includes no other models: the total alone, with no other models window. That
+  // total is the Grok plan quota, so the reading and the dock limit name Grok as sharing it.
+  const merged = await readUsage(
+    200,
+    {
+      billingCycleStart: String(CYCLE_START),
+      billingCycleEnd: String(CYCLE_END),
+      planUsage: { autoPercentUsed: 37.5, apiPercentUsed: 0, totalPercentUsed: 45 },
+    },
+    { status: 200, body: { planInfo: { planName: "Pro" }, isMerged: true } },
+  );
+  report.mergedPlan = merged;
+  assert.deepEqual(merged.reading.rateLimits, {
+    limitId: "cursor",
+    primary: { usedPercent: 45, ...cycle },
+    secondary: null,
+  });
+  assert.equal(merged.reading.sharedQuotaWith, "grok", "a merged plan shares the Grok quota");
+  assert.equal(normalizeAccountUsage(merged.reading).limits[0]?.sharedQuotaWith, "grok", "the dock limit keeps it");
+
+  // 4. A plan info that fails to read keeps the split reading.
+  const planInfoFailed = await readUsage(
+    200,
+    {
+      billingCycleStart: String(CYCLE_START),
+      billingCycleEnd: String(CYCLE_END),
+      planUsage: { autoPercentUsed: 37.5, apiPercentUsed: 82, totalPercentUsed: 60 },
+    },
+    { status: 500, body: { code: "internal" } },
+  );
+  report.planInfoFailed = planInfoFailed;
+  assert.deepEqual(planInfoFailed.reading.rateLimits, {
+    limitId: "cursor",
+    primary: { usedPercent: 37.5, ...cycle },
+    secondary: { usedPercent: 82, ...cycle },
+  });
+  assert.equal(planInfoFailed.reading.sharedQuotaWith, undefined, "an unread plan info shares no quota");
+
+  // 5. A token the backend rejects gives no reading.
+  const rejected = await readUsage(
+    401,
+    { code: "unauthenticated" },
+    { status: 401, body: { code: "unauthenticated" } },
+  );
   report.rejectedToken = rejected;
-  assert.equal(rejected.requests.length, 1);
+  assert.equal(rejected.requests.length, 2);
   assert.equal(rejected.reading.rateLimits ?? null, null, "a rejected token gives no reading");
 
-  // 4. With no sign-in file there is nothing to send.
+  // 6. With no sign-in file there is nothing to send.
   await rm(authFile, { force: true });
   const noSignIn = await readUsage(200, { planUsage: { autoPercentUsed: 1 } });
   report.noSignIn = noSignIn;

@@ -304,6 +304,7 @@ export const messages = {
   "mobile.agent.runtime.provider": "Провайдер",
   "mobile.agent.runtime.account": "Аккаунт",
   "mobile.agent.runtime.accountNumbered": "Аккаунт {number}",
+  "mobile.agent.runtime.accountApiKey": "API-ключ",
   "mobile.agent.runtime.accountUnsupported": "Этот хост не позволяет менять аккаунт агента с удалённого устройства.",
   "mobile.agent.runtime.model": "Модель",
   "mobile.agent.runtime.reasoning": "Рассуждение",

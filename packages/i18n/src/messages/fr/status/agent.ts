@@ -34,4 +34,6 @@ export const messages = {
   "status.agent.skillUsing": "Utilisation de la compétence {name}…",
   "status.agent.skillReading": "Lecture d’une compétence…",
   "status.agent.memoryChanges": "Souvenirs : {saved} enregistrés, {updated} mis à jour, {forgotten} oubliés.",
+  "status.agent.memoryChangesWithConflicts":
+    "Souvenirs : {saved} enregistrés, {updated} mis à jour, {forgotten} oubliés, {notChanged} non modifiés, car un autre fil les a modifiés avant.",
 } as const satisfies PartialTranslation<typeof source>;

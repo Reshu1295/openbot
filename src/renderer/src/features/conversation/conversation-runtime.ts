@@ -14,11 +14,13 @@ import type { BrowserProfileCalls } from "../browser/browser-profiles-port";
 import type { SharedTableCalls } from "./conversation-port";
 import type { ConversationProps } from "./conversation-types";
 import type { EventRoutinesApi } from "./routine-webhooks-api";
+import type { AgentRoutinesApi } from "./routines-port";
 
 export interface ConversationRuntime {
   agent: Pick<
     OpenBotDesktopApi["agent"],
     | "discardDraftAttachment"
+    | "importAttachmentData"
     | "downloadAttachments"
     | "editQueuedMessage"
     | "listInstalledSkills"
@@ -79,6 +81,8 @@ export interface ConversationRuntime {
    * desktop port. Any member reads tab labels; only an owner or admin gets the other calls.
    */
   browserProfiles?: BrowserProfileCalls | undefined;
+  /** The agent routine calls of a client without the desktop port. */
+  routines?: AgentRoutinesApi | undefined;
   /** The host admin calls of a client without the desktop port. Absent, skills, tables and publishing are hidden. */
   admin?:
     | {

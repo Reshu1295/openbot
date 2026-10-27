@@ -32,7 +32,7 @@ import { conversationPort, type SharedTableCalls } from "./conversation-port";
 import type { ConversationRuntime } from "./conversation-runtime";
 import { agentMemoriesPort } from "./memories-port";
 import type { EventRoutinesApi } from "./routine-webhooks-api";
-import { agentRoutinesPort, eventRoutinesPort, type RoutinesPort } from "./routines-port";
+import { type AgentRoutinesApi, agentRoutinesPort, eventRoutinesPort, type RoutinesPort } from "./routines-port";
 import { SharedTablesModal } from "./SharedTablesModal";
 
 interface AgentSettingsPanelProps
@@ -67,6 +67,8 @@ interface AgentSettingsPanelProps
   agents?: readonly AgentProfile[] | undefined;
   /** Event routine calls for a host that advertises `events-v1`; absent keeps the released schedule API. */
   eventRoutines?: EventRoutinesApi | undefined;
+  /** The released schedule API of a client without the desktop port. Absent, preload sends it. */
+  routines?: AgentRoutinesApi | undefined;
   onCreateSkill?: (() => void) | undefined;
   onTrySkill?: ((skill: SkillDetail) => void) | undefined;
   /** Reads a file in the agent workspace, on the computer that runs the agent. */
@@ -168,6 +170,7 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
       props.localHost === true && agentAutomationAllowed(props.agent, props.agentDefaults ?? DEFAULT_AGENT_DEFAULTS),
       // Set only for the host on this computer, the one place the policy is kept.
       props.localHost === true,
+      props.routines,
     ),
   );
   const routinesPort = createMemo(() => {
@@ -195,31 +198,39 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
   // An effect runs again for an equal value, and each activity of the agent gives a new agent
   // object. The memo keeps an open view, such as a routine edit, until the agent changes.
   const currentAgentId = createMemo(() => props.agent.id);
-  createEffect(currentAgentId, (agentId) => {
-    setDraft((state) => {
-      state.tables.open = false;
-      state.memories.open = false;
-      state.routines.open = false;
-      state.files.open = false;
-      state.skills.open = false;
-      state.skills.reopenAfterMarketplace = false;
-    });
-    if (untrack(() => !props.remoteClient || props.tablesVisible !== false)) {
-      void tableCalls()
-        .listTables()
-        .catch(() => [])
-        .then((items) => {
-          setDraft((state) => {
-            state.tables.count = items.length;
+  createEffect(
+    () => ({
+      agentId: currentAgentId(),
+      // Read here, not in the callback: a prop can be a compiled memo, and the callback has no owner.
+      remoteClient: untrack(() => props.remoteClient === true),
+      tablesVisible: untrack(() => props.tablesVisible !== false),
+    }),
+    ({ agentId, remoteClient, tablesVisible }) => {
+      setDraft((state) => {
+        state.tables.open = false;
+        state.memories.open = false;
+        state.routines.open = false;
+        state.files.open = false;
+        state.skills.open = false;
+        state.skills.reopenAfterMarketplace = false;
+      });
+      if (!remoteClient || tablesVisible) {
+        void tableCalls()
+          .listTables()
+          .catch(() => [])
+          .then((items) => {
+            setDraft((state) => {
+              state.tables.count = items.length;
+            });
           });
-        });
-    }
-    void untrack(() => loadSkillsCount(agentId));
-    if (!props.remoteClient) {
-      loadMemoriesCount(agentId);
-      untrack(() => loadRoutinesCount(routinesPort()));
-    }
-  });
+      }
+      void untrack(() => loadSkillsCount(agentId));
+      if (!remoteClient) {
+        loadMemoriesCount(agentId);
+        untrack(() => loadRoutinesCount(routinesPort()));
+      }
+    },
+  );
 
   // The counts follow a memory or routine change, also one that the agent makes in a turn.
   createEffect(
@@ -292,11 +303,14 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
   }
 
   createEffect(
-    () => props.skillsMarketplaceOpen === true,
-    (open) => {
+    () => ({
+      open: props.skillsMarketplaceOpen === true,
+      // Read here, not in the callback: the prop can be a compiled memo, and the callback has no owner.
+      covered: untrack(() => props.workspaceCovered === true),
+    }),
+    ({ open, covered }) => {
       if (lastSkillsMarketplaceOpen && !open && untrack(() => draft.skills.reopenAfterMarketplace)) {
         // The Marketplace page can close for another page. The skills dialog then stays closed.
-        const covered = untrack(() => props.workspaceCovered === true);
         setDraft((state) => {
           state.skills.reopenAfterMarketplace = false;
           state.skills.open = !covered;

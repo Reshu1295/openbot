@@ -140,6 +140,29 @@ export function isAgentUsageLimitReturn(value: unknown): value is AgentUsageLimi
   );
 }
 
+/**
+ * Local-only. The provider, model, account and effort to use from the next turn, while this turn
+ * still runs.
+ */
+export interface AgentPendingRuntime extends AgentModelChoice {
+  reasoningEffort: AgentReasoningEffort;
+}
+
+export function isAgentPendingRuntime(value: unknown): value is AgentPendingRuntime {
+  return isDynamicRecord(value) && isAgentModelChoice(value) && isReasoningEffort(value.reasoningEffort);
+}
+
+/**
+ * The account of the next turn. A queued runtime without an account uses the provider's own
+ * sign-in, not the account of the running turn.
+ */
+export function agentNextProviderAccountId(agent: {
+  providerAccountId?: string | undefined;
+  pendingRuntime?: AgentPendingRuntime | undefined;
+}): string | undefined {
+  return agent.pendingRuntime ? agent.pendingRuntime.providerAccountId : agent.providerAccountId;
+}
+
 export function isAgentBackupModels(value: unknown): value is AgentBackupModels {
   return (
     isDynamicRecord(value) &&
@@ -255,6 +278,11 @@ export interface AgentSummary {
    */
   usageLimitReturn?: AgentUsageLimitReturn;
   /**
+   * Local-only. The provider, model, account and effort to use from the next turn, while this turn
+   * still runs. Absent means the next turn uses the provider, model, account and effort on this agent.
+   */
+  pendingRuntime?: AgentPendingRuntime;
+  /**
    * ISO 8601 time when a user hid the agent. Local-only, like `access`: a remote client reads the
    * hidden agents through `agent-hidden-v1`. Absent means the agent is not hidden.
    */
@@ -313,6 +341,7 @@ function hasAgentSummaryFields(value: DynamicRecord): boolean {
     (value.providerAccountId === undefined || isProviderAccountId(value.providerAccountId)) &&
     (value.backupModels === undefined || isAgentBackupModels(value.backupModels)) &&
     (value.usageLimitReturn === undefined || isAgentUsageLimitReturn(value.usageLimitReturn)) &&
+    (value.pendingRuntime === undefined || isAgentPendingRuntime(value.pendingRuntime)) &&
     (value.hiddenAt === undefined || isHiddenAt(value.hiddenAt)) &&
     (value.threadId === null || isIdentifier(value.threadId)) &&
     isBoundedString(value.workspacePath, INPUT_LIMITS.path) &&

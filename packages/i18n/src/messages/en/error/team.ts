@@ -88,6 +88,8 @@ export const messages = defineMessages("error.team", {
   "error.team.hostTimezoneUnsupported": "The server timezone is not supported by this connection.",
   "error.team.routineResultsUnsupported": "Routine destinations are not supported by this connection.",
   "error.team.agentMemoryLimitUnsupported": "The agent memory limit is not supported by this connection.",
+  "error.team.promptCacheTtlUnsupported": "The prompt cache time is not supported by this connection.",
+  "error.team.providerDefaultUnsupported": "The default provider is not supported by this connection.",
   "error.team.agentAccessUnsupported": "Roles are not supported by this connection.",
   "error.team.agentAccessStale": "Someone changed the roles. Open them again and make your change.",
   "error.team.agentViewOnly": "You can only view this agent.",
@@ -125,6 +127,8 @@ export const messages = defineMessages("error.team", {
   "error.team.signInRelayUnsupported": "This server cannot relay sign-ins. Update OpenBot on the host.",
   "error.team.connectorsUnsupported":
     "This server cannot manage its connections from here. Update OpenBot on the host.",
+  "error.team.vaultUnsupported": "This server cannot open its Vault from here. Update OpenBot on the host.",
+  "error.team.vaultResetReadable": "The Vault on this server can be read, so it was not reset.",
   "error.team.discordAccessUnsupported": "This server cannot set Discord roles. Update OpenBot on it.",
   "error.team.connectorPageRefused": "The server sent a page that OpenBot does not open.",
   "error.team.signInRelayUnknown": "This sign-in ended or does not exist.",

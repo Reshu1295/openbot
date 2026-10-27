@@ -24,6 +24,8 @@ interface GeneralStoreProps {
    * read, so the row shows no key badge rather than a wrong one.
    */
   openCodeKeyStatus?: () => ProviderApiKeyStatus | undefined;
+  /** Whether a Claude key is saved, read the same way. Absent where the host does not read the key. */
+  claudeKeyStatus?: () => ProviderApiKeyStatus | undefined;
   /** The joined server whose host runs these providers. Absent when this computer runs them. */
   providerHostName?: string | undefined;
   /** The providers that the user turned off in OpenBot. */
@@ -58,9 +60,11 @@ export function createSettingsGeneralStore(props: GeneralStoreProps) {
       const keyStatus =
         provider === "opencode"
           ? props.openCodeKeyStatus?.()
-          : provider === "antigravity" && agent?.apiKeyInUse
-            ? ("saved" as const)
-            : undefined;
+          : provider === "claude"
+            ? props.claudeKeyStatus?.()
+            : provider === "antigravity" && agent?.apiKeyInUse
+              ? ("saved" as const)
+              : undefined;
       return {
         id: provider,
         name: agentProviderName(provider),

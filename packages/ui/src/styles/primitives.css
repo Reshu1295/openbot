@@ -248,10 +248,6 @@
   border-color: var(--openbot-danger-focus);
 }
 
-:where(.ui-button-variant-destructive, .ui-button-variant-destructive-ghost):focus-visible {
-  box-shadow: 0 0 0 3px var(--openbot-danger-focus);
-}
-
 :where(.ui-button)[aria-invalid="true"] {
   border-color: var(--openbot-danger-border);
   box-shadow: 0 0 0 3px var(--openbot-danger-focus);
@@ -600,9 +596,9 @@
   color: var(--openbot-text-placeholder);
 }
 
+/* A focused field gets a neutral border and no ring. */
 :where(.ui-input, .ui-textarea, .ui-native-select):focus-visible {
   border-color: var(--openbot-border-focus);
-  box-shadow: var(--openbot-focus-ring);
 }
 
 :where(.ui-input, .ui-textarea, .ui-native-select)[aria-invalid="true"] {
@@ -659,9 +655,8 @@
 }
 
 .ui-select .ui-select-trigger:focus-visible {
-  border-color: var(--openbot-border-strong);
+  border-color: var(--openbot-border-focus);
   outline: 0;
-  box-shadow: 0 0 0 3px var(--openbot-hover);
 }
 
 .ui-select-trigger[data-disabled] {
@@ -2517,4 +2512,14 @@ button.ui-bubble-content {
 /* Keep notification actions usable while a Kobalte modal blocks the page. */
 .ui-toast-layer {
   pointer-events: auto;
+}
+
+/* The toasts float over areas that move the window: the window headers, and the full window on the
+ * sign-in, setup, onboarding and loading screens. The window swallows mouse events over a
+ * `-webkit-app-region: drag` area, so a pointer on a toast left the stack and collapsed it, and only its
+ * buttons, which are `no-drag`, could be reached. The `::after` is the strip Sonner puts in the gap
+ * between expanded toasts, so the pointer can cross it. */
+.ui-toaster [data-sonner-toast],
+.ui-toaster [data-sonner-toast]::after {
+  -webkit-app-region: no-drag;
 }

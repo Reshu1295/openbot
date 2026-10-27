@@ -7,8 +7,11 @@
 // (d) Stop on a delivery that stays running after its turn ended frees the queue;
 // (e) Stop while the normal turn end runs does not settle the completed turn as interrupted;
 // (f) a turn end that fails after its deliveries settled still closes the stored turn;
-// (g) a delivery that runs again under the same turn id, after its session was refused, runs to its end (#2468).
+// (g) a delivery that runs again under the same turn id, after its session was refused, runs to its end (#2468);
+// (h) a turn row that stays `running` although no thread names it as its active turn is closed at restart,
+//     in the agent's own chat, a task thread and a channel thread.
 // `bun scripts/stuck-running-deliveries-e2e.ts`. Writes .openbot-build/stuck-running-deliveries-e2e/report.json.
+import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -37,6 +40,7 @@ process.env.OPENBOT_FAKE_CODEX_CONTROL = controlPath;
 mkdirSync(home, { recursive: true });
 
 const { AgentService } = await import("../src/backend/agent-service");
+const { AgentThreadStore } = await import("../src/backend/agent-threads/agent-thread-store");
 const { AgentStore } = await import("../src/backend/agent-store");
 const { runCauseEffect } = await import("../src/backend/effect-boundary");
 const { MailboxStore } = await import("../src/backend/mailbox-store");
@@ -648,7 +652,62 @@ try {
     return null;
   });
 
-  report.passed = report.cases.length === 8 && report.cases.every((entry) => entry.passed);
+  await runCase("h: a running turn row that no thread names is closed at restart", async (details) => {
+    const agent = second.store.list()[0];
+    if (!agent?.threadId) return "No agent thread survived the restart.";
+    // The agent's own chat, a task thread and a channel thread each keep one stale row.
+    const taskThreadId = new AgentThreadStore(second.database).create({
+      agentId: agent.id,
+      origin: "user",
+      title: "Stale turn task",
+      titleSource: "auto",
+    }).threadId;
+    const channels = second.agents.channels.store;
+    const channelId = `channel-${randomUUID()}`;
+    channels.commit(randomUUID(), {
+      channel: channels.create(channelId, {
+        name: "stale-turns",
+        title: "Stale turns",
+        instructions: "",
+        members: [{ agentId: agent.id }],
+        leadAgentId: agent.id,
+      }),
+      messages: [],
+      tasks: [],
+      assignments: [],
+    });
+    const channelThreadId = channels.context(channelId, agent.id).threadId;
+    const staleTurns = {
+      agent: { threadId: agent.threadId, turnId: "stale-turn-of-a-dead-run" },
+      task: { threadId: taskThreadId, turnId: "stale-task-turn-of-a-dead-run" },
+      channel: { threadId: channelThreadId, turnId: "stale-channel-turn-of-a-dead-run" },
+    };
+    const insert = second.database.connection.prepare(
+      `INSERT INTO projection_turns
+         (turn_id, thread_id, provider_session_id, status, started_at, completed_at, last_event_sequence)
+       VALUES (?, ?, NULL, 'running', ?, NULL, 0)`,
+    );
+    for (const stale of Object.values(staleTurns)) insert.run(stale.turnId, stale.threadId, new Date().toISOString());
+    await shutdown(second);
+    current = null;
+    const third = await start();
+    current = third;
+    const thirdError = await initialize(third);
+    details.initializeError = thirdError;
+    const rows = Object.fromEntries(
+      Object.entries(staleTurns).map(([kind, stale]) => [kind, turnRow(third.database, stale.turnId)]),
+    );
+    details.turnRows = rows;
+    if (thirdError) return "The restart failed.";
+    for (const [kind, row] of Object.entries(rows)) {
+      if (!row) return `The stale ${kind} turn row is gone.`;
+      if (row.status !== "interrupted" || !row.completedAt)
+        return `The stale ${kind} turn row stays running after the restart.`;
+    }
+    return null;
+  });
+
+  report.passed = report.cases.length === 9 && report.cases.every((entry) => entry.passed);
   if (!report.passed) process.exitCode = 1;
 } catch (error) {
   report.error = error instanceof Error ? (error.stack ?? error.message) : String(error);

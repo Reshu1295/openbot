@@ -35,17 +35,24 @@ import {
   type CentralAuthState,
   type CentralAuthUser,
   type ChatWindowTarget,
+  CUSTOM_AGENT_LIMITS,
   type CustomAgentCheckResult,
   type CustomAgentResult,
   type CustomAgentSummary,
+  type CustomAgentUsage,
   type CustomProviderResult,
   type CustomProviderSummary,
   DEFAULT_AGENT_DEFAULTS,
   type DetectedAcpAgent,
   type DetectedModelServer,
   type DiscoverModelsResult,
+  decodeExternalLinkTarget,
   decodeScheduledUpdateRestart,
   type ExportResult,
+  type ExternalLinkBrowser,
+  type ExternalLinkBrowsers,
+  type ExternalLinkFallback,
+  type ExternalLinkPreference,
   type GitHubConnectorRepositories,
   type GitHubConnectorStatus,
   type HostedSiteList,
@@ -64,6 +71,7 @@ import {
   isCustomAgentCheckResult,
   isCustomAgentResult,
   isCustomAgentSummary,
+  isCustomAgentUsage,
   isCustomProviderResult,
   isCustomProviderSummary,
   isDetectedAcpAgent,
@@ -349,6 +357,34 @@ export function decodeAppBehaviorPreference(value: unknown): AppBehaviorPreferen
   };
 }
 
+export function decodeExternalLinkPreference(value: unknown): ExternalLinkPreference {
+  const target = decodeExternalLinkTarget(decodeRecord(value, "external link preference").target);
+  if (!target) throw new Error("Invalid external link target.");
+  return { target };
+}
+
+function decodeExternalLinkBrowser(value: unknown): ExternalLinkBrowser {
+  const browser = decodeRecord(value, "browser");
+  return { name: requiredString(browser, "name"), path: requiredString(browser, "path") };
+}
+
+export function decodeExternalLinkBrowserOrNull(value: unknown): ExternalLinkBrowser | null {
+  return value === null ? null : decodeExternalLinkBrowser(value);
+}
+
+export function decodeExternalLinkBrowsers(value: unknown): ExternalLinkBrowsers {
+  const list = decodeRecord(value, "browser list");
+  if (!Array.isArray(list.browsers)) throw new Error("Invalid browser list.");
+  return {
+    defaultBrowser: decodeExternalLinkBrowserOrNull(list.defaultBrowser),
+    browsers: list.browsers.map(decodeExternalLinkBrowser),
+  };
+}
+
+export function decodeExternalLinkFallback(value: unknown): ExternalLinkFallback {
+  return { name: requiredString(decodeRecord(value, "external link fallback"), "name") };
+}
+
 export function decodeRemoteSessionReusePreference(value: unknown): RemoteSessionReusePreference {
   return {
     keepBetweenRuns: requiredBoolean(decodeRecord(value, "remote session preference"), "keepBetweenRuns"),
@@ -571,6 +607,13 @@ export function decodeCustomAgents(value: unknown): CustomAgentSummary[] {
 
 export function decodeCustomAgentResult(value: unknown): CustomAgentResult {
   if (!isCustomAgentResult(value)) throw new Error("Invalid custom agent response.");
+  return value;
+}
+
+export function decodeCustomAgentUsage(value: unknown): CustomAgentUsage[] {
+  if (!Array.isArray(value) || value.length > CUSTOM_AGENT_LIMITS.agents || !value.every(isCustomAgentUsage)) {
+    throw new Error("Invalid custom agent usage response.");
+  }
   return value;
 }
 

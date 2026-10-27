@@ -1,4 +1,5 @@
 import { agentProviderName, decodeHostProviderAccounts, isAccountUsage } from "@openbot/contracts/ipc";
+import { CLAUDE_API_KEY_ACCOUNT_ID } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import {
   type PlanLimitRow,
   type PlanLimits,
@@ -127,7 +128,12 @@ export function planLimitName(row: PlanLimitRow, accounts: PlanLimits["accounts"
     list.findIndex((account) => account.id === (row.accountId ?? list[0]?.id)),
   );
   const account = list[index];
-  const name = account?.label || account?.email || t("mobile.agent.runtime.accountNumbered", { number: index + 1 });
+  const name =
+    account?.label ||
+    account?.email ||
+    (account?.id === CLAUDE_API_KEY_ACCOUNT_ID
+      ? t("mobile.agent.runtime.accountApiKey")
+      : t("mobile.agent.runtime.accountNumbered", { number: index + 1 }));
   return `${provider} · ${name}`;
 }
 

@@ -68,6 +68,7 @@ export const messages = {
   "usage.panel.label": "Использование агентов",
   "usage.panel.title": "Использование",
   "usage.panel.allAgents": "Все агенты",
+  "usage.panel.workflows": "Рабочие процессы",
   "usage.panel.agents": "Агенты использования",
   "usage.panel.metric": "Показатель использования",
   "usage.panel.period": "Период использования",

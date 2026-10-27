@@ -19,7 +19,7 @@ const meta = {
       onChange: fn(),
       onReasoningEffortChange: fn(),
     },
-    sidePanel: { open: false, running: 0, onToggle: fn() },
+    sidePanel: { open: false, onToggle: fn() },
   },
   parameters: { layout: "fullscreen", a11y: { test: "error" } },
 } satisfies Meta<typeof ConversationHeader>;
@@ -38,10 +38,7 @@ export const OfflineHost: Story = {
   },
 };
 export const AgentUsingBrowser: Story = {
-  args: { sidePanel: { open: true, actingAgentName: STORY_AGENT.name, running: 0, onToggle: fn() } },
-};
-export const TasksRunning: Story = {
-  args: { sidePanel: { open: false, running: 2, onToggle: fn() } },
+  args: { sidePanel: { open: true, actingAgentName: STORY_AGENT.name, onToggle: fn() } },
 };
 /** A model chosen during the turn. The picker names it; the badge says that it starts with the next turn. */
 export const ModelAfterThisTurn: Story = {
@@ -53,8 +50,22 @@ export const ModelAfterThisTurn: Story = {
       reasoningEffort: STORY_AGENT.reasoningEffort,
       modelOptions: STORY_MODELS,
       agentStatus: STORY_AGENT_STATUS,
-      providerChangesDisabled: true,
-      disabledReason: "Wait for the current work to finish before changing the provider or account.",
+      onChange: fn(),
+      onReasoningEffortChange: fn(),
+    },
+  },
+};
+/** A provider chosen during the turn. The running turn keeps its provider; the next turn uses the new one. */
+export const ProviderAfterThisTurn: Story = {
+  args: {
+    pendingModel: { running: "Codex · GPT-5.6 Luna", next: "Grok · Grok 4.6" },
+    modelPicker: {
+      provider: "grok",
+      value: "grok-4.6",
+      reasoningEffort: STORY_AGENT.reasoningEffort,
+      modelOptions: STORY_MODELS,
+      agentStatus: STORY_AGENT_STATUS,
+      accountChoice: true,
       onChange: fn(),
       onReasoningEffortChange: fn(),
     },

@@ -171,6 +171,60 @@ on a joined host.
   service, so the tool router reads it through a getter. The canvas chat panel sends the user's request
   to the open agent's own conversation and shows the answer of the turn that read it.
 
+## Workflows
+
+A workflow is a graph of steps that the user draws on the canvas of the Workflows page (the
+`Waypoints` button of the page rail). It is not part of one agent: a graph can name several agents,
+models, conditions, approvals and outputs. The host keeps the workflows. A joined desktop and the
+web client use them through the optional `workflows-v1` capability (see
+[Workflows](servers.md#workflows)). The agent event `workflows-changed` names the workflow that
+changed, on this computer and on a joined host.
+
+- `packages/ui/src/features/workflows/` is the canvas. It reads no application context: it takes
+  the document, catalogs, run state and callbacks as props. Edits stay local for fast drags and
+  undo, and the canvas gives the new document after each history step.
+  `src/renderer/src/features/workflows/` holds `WorkflowsPage.tsx`, `workflows-port.ts` (the port
+  over `window.openbot.workflows`) and `workflows-controller.ts`. The controller is the same for the
+  page and the stories. It saves the graph 400 ms after the last edit, one save at a time on its
+  base revision. A failed save keeps the edit for the next save. A change from another device, a
+  conflict or a restore loads the graph again, and undo on the canvas gets the edits back.
+- `src/backend/workflows/` owns the tables of migration 46: workflows, nodes, edges, versions,
+  triggers, webhook triggers and receipts, runs, steps and output posts. The rows are written
+  directly, not through `dispatch`, as for routine flows. `workflow-graph.ts` checks the graph rules
+  (branch edges only from a condition, port types, limits). A graph can have loops. A save with an old revision
+  answers the current graph as a conflict. The store keeps at most 50 versions: one when the newest
+  is older than 5 minutes, one on a restore, and one when a run starts on a graph revision that has
+  no version yet.
+- `Workflows` (`workflows.ts`) is an Effect service on its own managed runtime. A run copies the
+  graph. Each pass ends the steps that ended and starts each node whose inputs are in
+  (`workflow-walk.ts`). Passes run one at a time; a pass runs after a turn or queue event, after
+  each user action, and at startup. A node runs again when a node before it has a newer step, as
+  after a retry. A retry uses the node's current settings, so a fix made after the failure applies;
+  it uses the run's copy when the node is gone or is now another kind. An edge back to an earlier node (`workflowLoopEdges` in the contracts) is a loop:
+  when its source is done and newer, the earlier node runs again with that answer as one more
+  input. A loop has no pass limit. It ends when a condition takes the other branch, a step fails or
+  is rejected, or the user stops the run. The canvas marks a loop with no condition as endless.
+- An agent step is a routine handoff (`AgentService.enqueueRoutineHandoff`, with the workflow as the
+  routine) and ends when its delivery ends. Its tokens count under the agent. A model step and a
+  condition run in a process without tools; a condition must answer yes or no, and only the edges of
+  that branch stay active. That process (`warm-generations.ts`) stays for 5 idle minutes, so the
+  next step does not start the provider again. Each step still starts a new ephemeral thread, so no
+  step sees the text of another. The process stops when the provider's main client stops or
+  changes, after a failed step, and at shutdown. The tokens of these steps count under one reserved
+  usage row, `WORKFLOWS_USAGE_ID`, beside the agents. An
+  approval waits for the user; a rejection stops the run. An output shows a desktop notification or
+  posts to a messaging place.
+- `WorkflowTriggers` (`workflow-triggers.ts`) gives schedule triggers to the routine timer as an
+  extra due source. An occurrence is skipped while the workflow has an open run, and missed
+  occurrences become one run. A webhook trigger has a route of its own owner kind (`workflow`); see
+  [Route lifecycle](events.md#route-lifecycle).
+- A restart keeps approvals and agent steps, because their state is in the database and the
+  mailbox. The first pass fails a model step that was running, and ends a run that was stopping. An
+  agent step fails with `agentMissing` when its agent is deleted. A post that did not start is sent; a
+  post that was on its way fails as uncertain, and the user retries the step.
+- Image, asset, file output and message trigger nodes are kept in the graph but do not run yet; a
+  run that reaches one fails with `nodeUnsupported`.
+
 ## Hidden agents
 
 A user hides an agent from its sidebar menu in place of a delete. The agent keeps its thread, files,
@@ -203,12 +257,17 @@ its agent count and no actions. A joined server without the capability has no se
 the profile's agents to Shared. The agent has no tool to change its profile, and tool results do not
 name it. See [Browser sessions](browser.md#browser-sessions) for the storage and the partitions.
 
-## Agent tasks
+## Agent threads
 
-A task is a separate execution thread of one agent. The agent keeps one identity, workspace and
-provider settings; each task has its own provider thread, conversation, queue, progress and result.
-`projection_agent_tasks` (migration 38) links a task to its thread. A mailbox message with a
-`taskId` belongs to that task, and `DrainScheduler` drains each task as its own lane. The main chat
+A side thread (in code and on the wire still a **task**) is a separate execution thread of one agent.
+The agent keeps one identity, workspace and provider settings; each side thread has its own provider
+thread, conversation, queue, progress and result. The agent's own chat is its main thread and has no
+side thread row. `projection_agent_threads` (`src/backend/agent-threads/agent-thread-schema.ts`,
+migration 47) holds one row for each side thread, with its title and the source of the title
+(`auto`, `agent` or `user`). Migration 47 moved every task of `projection_agent_tasks` (migration 38)
+there: a closed task became an archived thread, and the task id stays as `legacy_task_id`. The task id
+of a side thread is `legacy_task_id ?? thread_id`, so a stored mailbox message and a released client
+that name the task still find it. A mailbox message with a `taskId` belongs to that side thread, and `DrainScheduler` drains each task as its own lane. The main chat
 lane does not count toward the task limit. At most `limit` task turns of one agent run at the same
 time. `agentTaskLimit` gives the limit: the agent's local `taskLimit` setting (1 to
 `AGENT_TASK_LIMIT_MAX`, in `agent_json`), else `AGENT_TASK_LIMIT_DEFAULT` (2). An owner or admin of
@@ -218,12 +277,23 @@ turn at a time. Other task messages wait with a `hold` reason: `task-limit`, `ag
 `usage-limit`, `server-busy`, `agent-busy` or `one-turn`. The server-wide `TurnSlots` limit of a
 hosted server is separate.
 
-The user starts a task from the Tasks tab of the side panel ("New task") or moves a queued message to one ("Run as
-task"). The agent starts one with the `start_task` OpenBot tool, up to 8 open tasks. An agent has at most 50
+The chat header shows a tab for the main thread and one for each open side thread, a "+" button and a
+menu of all threads with an "Archived" group (`packages/ui/src/features/conversation/threads/`). The
+user starts a side thread with "+" (a draft tab that becomes a thread with its first message) or moves
+a queued message to one ("Run in new thread"). Which tabs are open, their order and the open tab are
+kept per device in `localStorage` (`openbot:thread-tabs:v1`, server id → agent id); closing a tab
+does not change the thread. Archive is the task close; opening or sending to an archived thread
+restores it. Rename sets a `user` title, which later messages do not change. Delete hides the thread
+at once and shows an Undo toast; when the toast ends, `AgentService.deleteTask` cancels the queued
+messages and deletes the thread with its conversation, attachments, event history and provider
+session. It refuses a thread with a running turn. The main thread has no archive, rename or delete.
+
+The agent starts a side thread with the `start_task` OpenBot tool, up to 8 open tasks. On desktop and
+the web, it opens as a tab of the agent and does not take focus. An agent has at most 50
 open tasks (`INPUT_LIMITS.agentTasks`, the size of the task list), so each open task stays visible. A message to a
 running task waits in the task, or steers the turn when the agent's busy-message mode is "steer"
 and the provider steers natively, as in the main chat. Stop interrupts the task turn; close moves
-the task to "Earlier tasks" when no message of it waits, starts or runs, and reopen moves it back. Boot recovery registers the task threads and
+the task to "Closed" on the phone and to "Archived" on desktop and the web when no message of it waits, starts or runs, and reopen moves it back. Boot recovery registers the task threads and
 starts queued tasks again. When a task's provider session ends, the next session gets a handoff of
 that task's own transcript, as the main chat does; channel threads still get none.
 
@@ -232,15 +302,20 @@ capability (`packages/contracts/src/team-protocol/agent-tasks-v1.ts`, host route
 `src/main/team-api/route-agent-tasks.ts`). Its routes are `POST /v1/agent-tasks/{list,read,start,send,stop,close,reopen}`
 with the ids in the body. A member who can send a message to the agent can use them; no role is
 checked, and the member is the sender of a start and of a message. A hidden agent, or one that the
-peer cannot see, answers 404. A start and a message carry text only, and "Run as task" stays local.
+peer cannot see, answers 404. A start and a message carry text only, and "Run in new thread" stays local.
 The host sends the task events (`agent-tasks-changed`, `agent-task-conversation`,
 `agent-task-conversation-delta`) in their local shape, only to a peer with the capability, and not
-for a hidden agent. A server without the capability shows no tasks, and a task control there fails
-with `error.backend.taskRemoteUnsupported`. Prompts, approvals and warnings of a task turn show in the main chat. A provider
+for a hidden agent. The optional `agent-threads-v1` capability
+(`packages/contracts/src/team-protocol/agent-threads-v1.ts`, host route
+`src/main/team-api/route-agent-threads.ts`) adds `POST /v1/agent-threads/{rename,delete}` with the
+agent and task ids in the body. They need the `chat` agent level; a hidden agent answers 404. A server
+with only `agent-tasks-v1` shows threads with no rename or delete. A server without either shows only
+the main thread, and a task control there fails with `error.backend.taskRemoteUnsupported`. Prompts, approvals and warnings of a task turn show in the main chat. On desktop and the web, the
+approval of a side thread turn also shows in that thread. A provider
 error of a task turn goes to the task: `AgentTasks` stores the redacted text in the task's `error`
-column, and the next turn of the task clears it. The panel shows it after a restart too.
+column, and the next turn of the task clears it. The thread shows it after a restart too.
 
-The Tasks page and the phone share the section and title rules in `@openbot/team-client/agent-tasks`.
+On desktop and the web, a task opens as a thread in the chat header. The phone uses the section and title rules in `@openbot/team-client/agent-tasks`.
 On the phone, the server drawer opens the Tasks screen (`apps/mobile/src/app/(app)/server-tasks.tsx`) when
 the host serves the capability. A task opens as a full screen (`apps/mobile/src/app/(app)/task/[taskId].tsx`)
 with the message list and header of the agent's chat, the task actions in place of the browser
@@ -257,9 +332,17 @@ server that the provider starts, so OpenBot cannot queue its calls; `ThreadLifec
 session without it, and the instructions send desktop work to the agent's own chat. Tasks share the
 workspace, and OpenBot does not lock files; the `start_task` guidance warns the agent about this.
 
-A provider change is refused with `error.agent.waitForTasksBeforeProviderChange` while a task turn
-runs. After the change, `AgentService` retires the provider sessions of the chat and of each task
-thread, so each one gets a handoff on the new provider. The channel threads of the agent
+A provider, account or custom-agent change that a user or an agent asks for while a turn, a task or
+a queued message waits is stored on the agent as `pendingRuntime`. The running work keeps its
+sessions. When the drain is about to start the next message and no work has started,
+`AgentService` applies the queued runtime first (the `next-turn` move), then retires the provider
+sessions of the chat and of each task thread, so each one gets a handoff on the new provider. A
+queued change that fails on an idle agent, such as for a provider that is now off, is removed. An
+update that also changes other fields, a move to a backup model, a Team API request (its released
+protocol has no `pendingRuntime`), and the automatic usage-limit, provider-error and endpoint moves
+still wait for idle work (`error.agent.waitForTasksBeforeProviderChange` /
+`error.agent.waitBeforeProviderChange`). A Team API model or effort change keeps the queued
+change, because the remote client cannot see it. The channel threads of the agent
 (`ChannelStore.contextThreadsForAgent`) are retired too, and their work steps are saved. A channel
 turn also carries its own self-contained context packet. The instance transfer file keeps `taskLimit`.
 
@@ -318,6 +401,7 @@ and the one action that unblocks it; for a service with a plugin, that action is
 enable the plugin. It can offer to create a specialist teammate, but it creates one only after the user agrees.
 
 An agent that delegates work can follow and stop it. `openbot.list_agents` reports each agent's
+description to 300 characters (`read_agent` returns all of it), its
 `status` (a starting delivery and a context compaction count as `working`), `queuedMessages`
 (channel work excluded), `turnStartedAt`, and `lastActivityAt`. The last two come from the provider
 notifications that `TurnLifecycle` sees; they are in memory only, so after a restart
@@ -335,6 +419,16 @@ another teammate's copy of that request is queued, starting or running (`Mailbox
 When the last copy ends, the waiting answers start in one turn, and the prompt names each teammate
 whose copy ended with no answer. A message from the person does not wait: it starts at once and
 takes the answers that are already in. Each end of a copy schedules a drain for the requester.
+
+A message from another agent follows the recipient's busy-message mode, as a message from the
+person does. When the mode is "steer", the provider steers natively and the recipient runs a chat
+turn, `send_message` and the result relay take the message into that turn
+(`AgentService.#steerAgentMessage`). Channel, messaging and task work, and each answer to a request
+that went to two or more teammates, stay queued (`MailboxStore.steersChatTurn`), so those answers
+still start together. A message from an agent that cannot steer gets no fallback reason on its row.
+The person can steer any queued answer into the running turn from the waiting block on desktop, the
+web and mobile; it has no other queue action. That is the person's choice, so it can take one answer
+of a group before the others.
 
 This policy lives in `src/backend/agent/developer-instructions.ts` and is supplied on both thread
 start and resume. Codex receives `developerInstructions`; Claude and Pi append them to the system
@@ -378,7 +472,12 @@ it into managed avatar storage. Generated avatar settings remove the custom imag
 the existing agent service and validate arguments before changing state.
 `openbot.create_agent` also accepts an optional `provider`, `model` and `reasoningEffort`. The
 read-only `openbot.list_models` returns the models of each provider that the model picker shows, with
-their reasoning efforts and the default model for a request that names only a provider. A provider
+their reasoning efforts and the default model for a request that names only a provider. With no
+`query`, a provider lists its default model, the models that local agents use as their model or as a
+backup model, then its first catalog models up to 8 models in total; `omittedModels` counts the
+others. A `query` searches all models by the words of their id or name and returns 20 at
+most. `create_agent` and `update_profile` still accept each catalog model, and an unknown model
+error names the same short list. A provider
 that can hold more than one account also lists its accounts, with the provider's own sign-in
 (`default`) first: the id, the name the user gave it (or null), and the state. It never lists the
 account email, credentials or account folders. `update_profile` takes the
@@ -442,9 +541,18 @@ at the start of the draft, so it shows as a quote chip and is saved and sent wit
 page's next context replaces it. Full screen puts the frame's
 box in the top layer with the Popover API, so the frame does not load again; it exits before the app
 opens a dialog for the page. Only the renderer's allowlist of shortcuts (`chat-visual-shortcuts.ts`)
-leaves the page, as a key event on the frame element. Mobile shows the
-page as its file and does not run it: in react-native-webview, a script in any frame can reach the
-bridge to the app. `html_preview` lets the agent look at a page before it publishes it: the main
+leaves the page, as a key event on the frame element. Mobile runs the
+page in its own react-native-webview `WebView` (`html-page-view.native.tsx`), in the chat at the agent's
+height with no touches, and on the preview screen. It gets the base styles and the app theme from
+`chatVisualDocument` with `bootstrap: false`, from a string at `about:blank`, and a
+`form-action 'none'` policy. The view has no `onMessage` and injects no script, so
+react-native-webview adds no message handler or JavaScript interface, and the page cannot reach the
+app; never run a page in an Expo DOM component, which has a bridge to the app. A
+tapped web link opens in the browser, and the page goes to no other address. A link opens only
+within a second of a touch: Android WebView asks the app only about main-frame GET loads and gives
+no cause, and WebKit calls a script `click()` on a link a click. iOS keeps the page storage in memory (`incognito`); Android turns off DOM storage
+and third-party cookies, because its `incognito` clears every web view of the app. An Android build
+without the native module shows the page with no scripts. `html_preview` lets the agent look at a page before it publishes it: the main
 process draws it in a hidden window with its own in-memory session (`ChatVisualPreviewer`)
 and returns a PNG, the content height and the console lines. The file preview shows an HTML file in
 the same frame. On desktop, a shared or workspace HTML file preview gives the client a temporary

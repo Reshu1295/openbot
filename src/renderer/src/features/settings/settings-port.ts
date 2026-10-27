@@ -11,6 +11,10 @@ export interface SettingsPort {
   getAppBehaviorPreference: OpenBotDesktopApi["getAppBehaviorPreference"];
   getApprovalAutomation: OpenBotDesktopApi["getApprovalAutomation"];
   getBusyMessageModePreference: OpenBotDesktopApi["getBusyMessageModePreference"];
+  getExternalLinkPreference: OpenBotDesktopApi["getExternalLinkPreference"];
+  listExternalLinkBrowsers: OpenBotDesktopApi["listExternalLinkBrowsers"];
+  chooseExternalLinkApp: OpenBotDesktopApi["chooseExternalLinkApp"];
+  onExternalLinkFallback: OpenBotDesktopApi["onExternalLinkFallback"];
   getRemoteNetworkRoute: OpenBotDesktopApi["getRemoteNetworkRoute"];
   getRemoteSessionReusePreference: OpenBotDesktopApi["getRemoteSessionReusePreference"];
   onAgentMemoryLimitPreference: OpenBotDesktopApi["onAgentMemoryLimitPreference"];
@@ -20,6 +24,7 @@ export interface SettingsPort {
   setAnalyticsPreference: OpenBotDesktopApi["setAnalyticsPreference"];
   setAppBehaviorPreference: OpenBotDesktopApi["setAppBehaviorPreference"];
   setBusyMessageModePreference: OpenBotDesktopApi["setBusyMessageModePreference"];
+  setExternalLinkPreference: OpenBotDesktopApi["setExternalLinkPreference"];
   setRemoteNetworkRoute: OpenBotDesktopApi["setRemoteNetworkRoute"];
   setRemoteSessionReusePreference: OpenBotDesktopApi["setRemoteSessionReusePreference"];
   agent: Pick<OpenBotDesktopApi["agent"], "listAgents" | "updateAgent">;

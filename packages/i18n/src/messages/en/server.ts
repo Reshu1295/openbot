@@ -229,6 +229,9 @@ export const messages = defineMessages("server", {
   "server.role.owner": "Owner",
   "server.settings.generalTitle": "General",
   "server.settings.generalDescription": "Manage this server’s name, logo, and preferences.",
+  "server.settings.vaultTitle": "Vault",
+  "server.settings.vaultDescription":
+    "Save logins, cards and contact info that every agent on this server can fill in.",
   "server.settings.membersTitle": "Members",
   "server.settings.membersDescription": "Publish this server, invite people, and manage access.",
   "server.settings.desktopTitle": "Remote desktop",
@@ -243,8 +246,6 @@ export const messages = defineMessages("server", {
   "server.settings.importDescription": "Move your agents from Grok Bot or Hermes Agent to this server.",
   "server.settings.transferTitle": "Transfer",
   "server.settings.transferDescription": "Move this server's agents and server settings to or from a file.",
-  "server.settings.connectorsTitle": "Connectors",
-  "server.settings.connectorsDescription": "Connect accounts that every agent on this server can use.",
   "server.settings.routinesTitle": "Routines",
   "server.settings.routinesDescription": "Show the routine schedule of this computer in a calendar app.",
   "server.routineFeed.title": "Calendar feed",

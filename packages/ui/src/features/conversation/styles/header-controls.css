@@ -94,7 +94,7 @@
 .provider-model-trigger:focus-visible,
 .provider-model-rail-button:focus-visible,
 .provider-model-option:focus-visible {
-  outline: 1px solid var(--openbot-accent);
+  outline: 1px solid var(--openbot-border-focus);
   outline-offset: 1px;
 }
 

@@ -2,7 +2,9 @@
 // store and the direct-message store are the real ones on temporary files. The agent service, the
 // mailbox and the browser are small in-memory stand-ins that record each call, so a check can show
 // that a refused request did not reach them. The checks cover the protocol and auth gates, sign-in
-// and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`,
+// and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`, the
+// host's Vault (`vault-v1`, and the CSV import of `vault-import-v1`) over the real service and store,
+// a password that an admin saves from the secure card (`browser-secret-vault-v1`),
 // direct-message isolation, agents hidden from an older
 // protocol, the queue routes, the attachment and file routes with their size limits, and the error
 // codes. Writes .openbot-build/team-api-routes-e2e/report.json.
@@ -16,7 +18,9 @@ import { isDeepStrictEqual } from "node:util";
 import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import {
   AGENT_PROVIDERS,
+  type AgentModelId,
   type AgentProviderId,
+  type AgentStatus,
   type AgentSummary,
   type AttachmentDataInput,
   type BitwardenConnectorStatus,
@@ -46,9 +50,19 @@ import {
   BROWSER_PROFILES_ROUTES,
 } from "@openbot/contracts/team-protocol/browser-profiles-v1";
 import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
+import {
+  PROVIDER_DEFAULT_CAPABILITY,
+  PROVIDER_DEFAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/provider-default-v1";
+import {
   PROVIDER_USAGE_RESET_CAPABILITY,
   PROVIDER_USAGE_RESET_ROUTES,
 } from "@openbot/contracts/team-protocol/provider-usage-reset-v1";
+import { PROVIDERS_V5_CAPABILITY, PROVIDERS_V5_ROUTES } from "@openbot/contracts/team-protocol/providers-v5";
+import { PROVIDERS_V8_CAPABILITY, PROVIDERS_V8_ROUTES } from "@openbot/contracts/team-protocol/providers-v8";
 import { QueueEditRejectedError, TEAM_QUEUE_EDIT_CAPABILITY } from "@openbot/contracts/team-protocol/queue-edit-v1";
 import {
   ROUTINE_RESULTS_CAPABILITY,
@@ -61,6 +75,8 @@ import {
   TEAM_CAPABILITIES_HEADER,
   TEAM_PROTOCOL_VERSION_HEADER,
 } from "@openbot/contracts/team-protocol/v1";
+import { VAULT_IMPORT_CAPABILITY, VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
+import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect } from "effect";
@@ -80,6 +96,8 @@ import type { TeamApiAgents, TeamApiBrowser, TeamApiMailbox } from "../src/main/
 import { isPeerHiddenProvider } from "../src/main/team-api/provider-visibility";
 import { TeamApiServer } from "../src/main/team-api-server";
 import { TeamStore } from "../src/main/team-store";
+import { VaultService } from "../src/main/vault-service";
+import { VaultStore } from "../src/main/vault-store";
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/team-api-routes-e2e");
 const APP_VERSION = "0.43.0";
@@ -138,6 +156,11 @@ const routineResultOptions: RoutineResultConnectionOption[] = [
   },
 ];
 let routineDestination: RoutineResultDestination | null = null;
+// The setup choice of the host: Codex with its own default model.
+let providerDefault: { provider: AgentProviderId | null; model: AgentModelId | null } = {
+  provider: "codex",
+  model: null,
+};
 
 function check(name: string, passed: boolean, detail: unknown = null): void {
   checks.push({ name, passed, detail });
@@ -243,6 +266,17 @@ function queueSnapshot(agentId: string): QueueSnapshot {
     ],
   };
 }
+
+// The provider keys that the fake host keeps.
+const providerKeys = new Set<string>();
+const NO_STATUS: AgentStatus = {
+  phase: "ready",
+  cliVersion: null,
+  auth: { kind: "unknown" },
+  capabilities: { chat: "ready", browser: "unavailable", computerUse: "unavailable" },
+  message: null,
+  fullAccess: true,
+};
 
 let hidden: HiddenAgentsSnapshot = { agents: [{ agentId: "agent-pi", hiddenAt: new Date(0).toISOString() }] };
 
@@ -380,7 +414,7 @@ const fakeAgents: TeamApiAgents = {
   agentIdForRequest: () => undefined,
   respondToPrompt: unused("respondToPrompt"),
   respondToApproval: unused("respondToApproval"),
-  respondToBrowserSecret: unused("respondToBrowserSecret"),
+  respondToBrowserSecret: (input) => Effect.sync(() => record("respondToBrowserSecret", input)),
   respondToBrowserTakeover: unused("respondToBrowserTakeover"),
 };
 
@@ -510,6 +544,11 @@ const createBitwardenHost = () =>
     },
   });
 const bitwardenConnector = createBitwardenHost();
+// The host's Vault: the real service and store, over the same reversible cipher.
+const vaultFile = join(root, "openbot-vault-v1.json");
+const vault = new VaultService({ store: new VaultStore(vaultFile, fakeCipher), canPersist: () => true });
+await Effect.runPromise(vault.load());
+const VAULT_PASSWORD = "e2e-vault-password-7f3c";
 /** Resolves with the first status after a host sign-in started (`connecting`) and then ended. */
 function bitwardenSettled(connector: BitwardenConnectorService): Promise<BitwardenConnectorStatus> {
   return new Promise((resolveStatus) => {
@@ -602,6 +641,16 @@ try {
         busyMessageMode: { get: () => ({ mode: "queue" }) },
         agentDefaults: { get: () => DEFAULT_AGENT_DEFAULTS },
       }),
+      // The setup file in memory. The host writes it and tells the agent service, as `saveSetup` does.
+      defaultProvider: {
+        get: () => Effect.sync(() => providerDefault),
+        set: (input) =>
+          Effect.sync(() => {
+            record("setDefaultProvider", input);
+            providerDefault = { provider: input.preferredProvider, model: input.preferredModel };
+            return providerDefault;
+          }),
+      },
       // A routine results service over one agent routine. The host's own name of the connection wins.
       routineResults: {
         options: () => Effect.succeed(routineResultOptions),
@@ -620,8 +669,53 @@ try {
             return Effect.succeed(routineDestination);
           }),
       },
+      // A credential store in memory. The service runs the change as the host's does.
+      providers: {
+        service: {
+          startProviderCodeLogin: unused("providers.startProviderCodeLogin"),
+          submitProviderCodeLogin: unused("providers.submitProviderCodeLogin"),
+          cancelProviderCodeLogin: unused("providers.cancelProviderCodeLogin"),
+          changeProviderCredential: (provider, change) => {
+            record("changeProviderCredential", provider);
+            return change().pipe(Effect.as(NO_STATUS));
+          },
+          clearProviderCredential: (_provider, change) => change().pipe(Effect.as(NO_STATUS)),
+        },
+        credentials: {
+          status: (provider) => (providerKeys.has(provider) ? "saved" : "missing"),
+          set: (provider, key) =>
+            Effect.sync(() => {
+              record("setProviderKey", provider, key);
+              providerKeys.add(provider);
+            }),
+          clear: (provider) =>
+            Effect.sync(() => {
+              record("clearProviderKey", provider);
+              providerKeys.delete(provider);
+            }),
+        },
+        runtimes: {
+          getStatus: unused("providers.runtimes.getStatus"),
+          download: unused("providers.runtimes.download"),
+          cancel: unused("providers.runtimes.cancel"),
+          checkForUpdates: unused("providers.runtimes.checkForUpdates"),
+          // Pi is ready for DeepSeek. For Inception it is still to come.
+          startKeyProviderCli: (provider) =>
+            Effect.sync(() => {
+              record("startKeyProviderCli", provider);
+              return provider === "inception";
+            }),
+        },
+        customProviders: {
+          list: unused("providers.customProviders.list"),
+          save: unused("providers.customProviders.save"),
+          remove: unused("providers.customProviders.remove"),
+        },
+        pasteSignIn: false,
+      },
     },
     bitwardenConnector,
+    vault,
     browserProfiles,
     // Only the disk of the host answers here; the storage-v1 routes are not part of this run.
     storage: {
@@ -1160,19 +1254,18 @@ try {
         isDeepStrictEqual(ids(v8), ["agent-ada", "agent-oc", "agent-pi"]),
       { v3: ids(v3), v6: ids(v6), v7: ids(v7), v8: ids(v8) },
     );
-    // Each frozen list is the released vocabulary of its protocol. Protocol 8 and later hide only the
-    // local-only providers, which every protocol hides.
+    // Each frozen list is the released vocabulary of its protocol. Protocol 8 and later hide none.
     const hiddenBy = (protocol: number) =>
       AGENT_PROVIDERS.filter((provider) => isPeerHiddenProvider(provider, protocol));
     const expectedHidden: Record<number, readonly string[]> = {
-      1: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception"],
-      3: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception"],
-      4: ["antigravity", "acp", "cursor", "cline", "pi", "muse", "inception"],
-      5: ["cursor", "cline", "pi", "muse", "inception"],
-      6: ["pi", "muse", "inception"],
-      7: ["inception"],
-      8: ["inception"],
-      9: ["inception"],
+      1: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      3: ["opencode", "antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      4: ["antigravity", "acp", "cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      5: ["cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
+      6: ["pi", "muse", "inception", "deepseek", "openrouter"],
+      7: ["inception", "deepseek", "openrouter"],
+      8: [],
+      9: [],
     };
     const hiddenRows = Object.entries(expectedHidden).map(([protocol, expected]) => ({
       protocol: Number(protocol),
@@ -1180,7 +1273,7 @@ try {
       expected: AGENT_PROVIDERS.filter((provider) => expected.includes(provider)),
     }));
     check(
-      "the frozen provider lists hide each provider that a protocol below 8 does not know, and every protocol hides Inception",
+      "the frozen provider lists hide each provider that a protocol below 8 does not know, and protocol 8 hides none",
       hiddenRows.every((row) => isDeepStrictEqual(row.hidden, row.expected)),
       hiddenRows,
     );
@@ -1491,6 +1584,96 @@ try {
     );
   }
 
+  // ---- Default provider (provider-default-v1) ----
+  {
+    const capabilities = [PROVIDER_DEFAULT_CAPABILITY];
+    const compatibility = await call("GET", TEAM_API_ROUTES.compatibility, { protocol: 7 });
+    check(
+      "the host advertises provider-default-v1",
+      list(field(compatibility.body, "capabilities")).includes(PROVIDER_DEFAULT_CAPABILITY),
+      summary(compatibility),
+    );
+    const adminRead = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, { token: adaToken, json: {}, capabilities });
+    check(
+      "an admin reads the default provider of the host",
+      adminRead.status === 200 && isDeepStrictEqual(adminRead.body, { provider: "codex", model: null }),
+      summary(adminRead),
+    );
+    const unsupported = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, { token: adaToken, json: {} });
+    check(
+      "the default-provider routes without the capability get 400 providerDefaultUnsupported",
+      errorIs(unsupported, 400, sourceText("error.team.providerDefaultUnsupported")),
+      summary(unsupported),
+    );
+    const writes = callsOf("setDefaultProvider").length;
+    const memberRead = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, {
+      token: bobToken,
+      json: {},
+      capabilities,
+    });
+    const memberSet = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: bobToken,
+      json: { provider: "claude", model: null },
+      capabilities,
+    });
+    check(
+      "a member cannot read or set the default provider",
+      errorIs(memberRead, 403, sourceText("error.team.adminRequired")) &&
+        errorIs(memberSet, 403, sourceText("error.team.adminRequired")) &&
+        callsOf("setDefaultProvider").length === writes,
+      [summary(memberRead), summary(memberSet)],
+    );
+    const unknownProvider = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "not-a-provider", model: null },
+      capabilities,
+    });
+    const badModel = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "claude", model: "bad model" },
+      capabilities,
+    });
+    check(
+      "the host refuses an unknown provider or an invalid model, and writes nothing",
+      unknownProvider.status === 400 && badModel.status === 400 && callsOf("setDefaultProvider").length === writes,
+      [summary(unknownProvider), summary(badModel)],
+    );
+    const hiddenSet = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "deepseek", model: null },
+      capabilities,
+    });
+    check(
+      "a protocol 7 admin cannot set DeepSeek, which that protocol does not show",
+      hiddenSet.status === 400 && callsOf("setDefaultProvider").length === writes,
+      summary(hiddenSet),
+    );
+    const adminSet = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "deepseek", model: null },
+      capabilities,
+      protocol: 8,
+    });
+    const readBack = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, {
+      token: adaToken,
+      json: {},
+      capabilities,
+      protocol: 8,
+    });
+    const oldRead = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, { token: adaToken, json: {}, capabilities });
+    check(
+      "a protocol 8 admin sets DeepSeek as the default and reads it back; protocol 7 reads no default",
+      adminSet.status === 200 &&
+        isDeepStrictEqual(adminSet.body, { provider: "deepseek", model: null }) &&
+        isDeepStrictEqual(readBack.body, { provider: "deepseek", model: null }) &&
+        isDeepStrictEqual(oldRead.body, { provider: null, model: null }) &&
+        isDeepStrictEqual(callsOf("setDefaultProvider").at(-1), [
+          { preferredProvider: "deepseek", preferredModel: null },
+        ]),
+      [summary(adminSet), summary(readBack), summary(oldRead)],
+    );
+  }
+
   // ---- Browser profiles (browser-profiles-v1) ----
   {
     const profileCapabilities = [AGENT_HIDDEN_CAPABILITY, TEAM_QUEUE_EDIT_CAPABILITY, BROWSER_PROFILES_CAPABILITY];
@@ -1694,6 +1877,60 @@ try {
       "the disk route ignores a path in the body and reads the disk of the OpenBot data",
       withBody.status === 200 && isDeepStrictEqual(withBody.body, expected) && callsOf("disk").length === 3,
       summary(withBody),
+    );
+  }
+
+  // ---- Keys of the key-only providers (providers-v8) ----
+  {
+    const v8 = { token: adaToken, protocol: 8, capabilities: [PROVIDERS_V8_CAPABILITY] };
+    const key = ["sk", "e2e", "deepseek", "fake0000"].join("-");
+    const before = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    const set = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, { ...v8, json: { provider: "deepseek", key } });
+    const after = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    check(
+      "an admin on providers-v8 saves a DeepSeek key on the host, and the host starts the Pi CLI for it",
+      before.status === 200 &&
+        field(before.body, "status") === "missing" &&
+        set.status === 200 &&
+        isDeepStrictEqual(callsOf("setProviderKey"), [["deepseek", key]]) &&
+        isDeepStrictEqual(callsOf("startKeyProviderCli"), [["deepseek"]]) &&
+        isDeepStrictEqual(callsOf("changeProviderCredential"), [["deepseek"]]) &&
+        after.status === 200 &&
+        field(after.body, "status") === "saved",
+      [summary(before), summary(set), summary(after)],
+    );
+    const cleared = await call("POST", PROVIDERS_V8_ROUTES.apiKeyClear, { ...v8, json: { provider: "deepseek" } });
+    const afterClear = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    check(
+      "an admin on providers-v8 clears the DeepSeek key",
+      cleared.status === 200 &&
+        isDeepStrictEqual(callsOf("clearProviderKey"), [["deepseek"]]) &&
+        field(afterClear.body, "status") === "missing",
+      [summary(cleared), summary(afterClear)],
+    );
+    const v5 = await call("POST", PROVIDERS_V5_ROUTES.apiKeySet, {
+      token: adaToken,
+      capabilities: [PROVIDERS_V5_CAPABILITY],
+      json: { provider: "openrouter", key },
+    });
+    const member = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, {
+      ...v8,
+      token: bobToken,
+      json: { provider: "openrouter", key },
+    });
+    check(
+      "providers-v5 refuses a key-only provider's key, a member gets 403, and neither saves a key",
+      v5.status === 400 && member.status === 403 && callsOf("setProviderKey").length === 1,
+      [summary(v5), summary(member)],
+    );
+    // No Pi process runs while Pi downloads, so a restart of the provider would fail on the missing CLI.
+    const pending = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, { ...v8, json: { provider: "inception", key } });
+    check(
+      "while the host downloads Pi, a key-only provider's key is saved without a provider restart",
+      pending.status === 200 &&
+        isDeepStrictEqual(callsOf("setProviderKey").at(-1), ["inception", key]) &&
+        isDeepStrictEqual(callsOf("changeProviderCredential"), [["deepseek"]]),
+      summary(pending),
     );
   }
 
@@ -1903,6 +2140,203 @@ try {
         !existsSync(bitwardenData) &&
         !bitwardenConnector.connected(),
       summary(disconnect),
+    );
+  }
+
+  // ---- The host's Vault (vault-v1) ----
+  {
+    const vaultCapabilities = [VAULT_CAPABILITY];
+    const vaultCall = (token: string, path: string, json: unknown = {}) =>
+      call("POST", path, { token, json, capabilities: vaultCapabilities });
+    const login = {
+      kind: "login",
+      id: null,
+      website: "https://shop.example.com",
+      username: "ada@example.com",
+      notes: "",
+      password: VAULT_PASSWORD,
+    };
+    const unsupported = await call("POST", VAULT_ROUTES.list, { token: adaToken, json: {} });
+    check(
+      "the Vault routes without the capability get 400 vaultUnsupported",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")),
+      summary(unsupported),
+    );
+    const memberList = await vaultCall(bobToken, VAULT_ROUTES.list);
+    const memberSave = await vaultCall(bobToken, VAULT_ROUTES.save, login);
+    check(
+      "a member cannot list or change the host's Vault",
+      errorIs(memberList, 403, sourceText("error.team.adminRequired")) &&
+        errorIs(memberSave, 403, sourceText("error.team.adminRequired")) &&
+        vault.state().items.length === 0,
+      [summary(memberList), summary(memberSave)],
+    );
+    const saved = await vaultCall(adaToken, VAULT_ROUTES.save, login);
+    const items = field(saved.body, "items");
+    const itemId = field(saved.body, "items", 0, "id");
+    check(
+      "an admin adds a login; the answer lists it with no password",
+      saved.status === 200 &&
+        field(saved.body, "status") === "ready" &&
+        Array.isArray(items) &&
+        items.length === 1 &&
+        field(saved.body, "items", 0, "hasPassword") === true &&
+        typeof itemId === "string" &&
+        !saved.text.includes(VAULT_PASSWORD) &&
+        !readFileSync(vaultFile, "utf8").includes(VAULT_PASSWORD),
+      summary(saved),
+    );
+    assert.ok(typeof itemId === "string", "the Vault save did not answer an item id.");
+    const listed = await vaultCall(adaToken, VAULT_ROUTES.list);
+    check(
+      "the list carries the login with no password",
+      listed.status === 200 &&
+        field(listed.body, "items", 0, "username") === "ada@example.com" &&
+        !listed.text.includes(VAULT_PASSWORD),
+      summary(listed),
+    );
+    const memberReveal = await vaultCall(bobToken, VAULT_ROUTES.reveal, { id: itemId, field: "password" });
+    const revealed = await vaultCall(adaToken, VAULT_ROUTES.reveal, { id: itemId, field: "password" });
+    check(
+      "only an admin gets the saved password, and only from reveal",
+      errorIs(memberReveal, 403, sourceText("error.team.adminRequired")) &&
+        !memberReveal.text.includes(VAULT_PASSWORD) &&
+        revealed.status === 200 &&
+        isDeepStrictEqual(revealed.body, { value: VAULT_PASSWORD }),
+      [summary(memberReveal), { status: revealed.status }],
+    );
+    const badCard = await vaultCall(adaToken, VAULT_ROUTES.save, {
+      kind: "card",
+      id: null,
+      label: "",
+      nameOnCard: "Ada",
+      expMonth: 12,
+      expYear: 2030,
+      billingContactId: null,
+      number: "4111111111111112",
+      securityCode: "123",
+    });
+    const malformed = await vaultCall(adaToken, VAULT_ROUTES.save, { ...login, kind: "note" });
+    check(
+      "a card number that fails the check is refused with catalog text, and a malformed item is refused",
+      errorIs(badCard, 400, sourceText("error.vault.cardNumberInvalid")) &&
+        malformed.status === 400 &&
+        vault.state().items.length === 1,
+      [summary(badCard), summary(malformed)],
+    );
+    const readableReset = await vaultCall(adaToken, VAULT_ROUTES.reset);
+    check(
+      "a reset of a Vault that the host can read gets 409 and keeps every item",
+      errorIs(readableReset, 409, sourceText("error.team.vaultResetReadable")) && vault.state().items.length === 1,
+      summary(readableReset),
+    );
+    const deleted = await vaultCall(adaToken, VAULT_ROUTES.delete, { id: itemId });
+    const missing = await vaultCall(adaToken, VAULT_ROUTES.delete, { id: itemId });
+    check(
+      "an admin deletes the login; a second delete says the item is gone",
+      deleted.status === 200 &&
+        isDeepStrictEqual(deleted.body, { status: "ready", items: [] }) &&
+        errorIs(missing, 400, sourceText("error.vault.itemMissing")),
+      [summary(deleted), summary(missing)],
+    );
+    // A file that the host cannot decrypt: the Vault is `unreadable` until an admin resets it.
+    writeFileSync(vaultFile, JSON.stringify({ version: 1, record: "bm90LWEtcmVjb3Jk" }));
+    await Effect.runPromise(vault.load());
+    const unreadable = await vaultCall(adaToken, VAULT_ROUTES.list);
+    const reset = await vaultCall(adaToken, VAULT_ROUTES.reset);
+    check(
+      "an admin resets a Vault that the host cannot read to no items",
+      isDeepStrictEqual(unreadable.body, { status: "unreadable", items: [] }) &&
+        reset.status === 200 &&
+        isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
+      [summary(unreadable), summary(reset)],
+    );
+  }
+
+  // ---- A password saved from the secure card (browser-secret-vault-v1) ----
+  {
+    const capabilities = ["browser-secret-handoff", BROWSER_SECRET_VAULT_CAPABILITY];
+    const answer = { requestId: "auth-1", agentId: "agent-ada", secret: VAULT_PASSWORD, decision: "takeover" };
+    const before = callsOf("respondToBrowserSecret").length;
+    const unsupported = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: adaToken,
+      json: answer,
+      capabilities: ["browser-secret-handoff"],
+    });
+    const noHandoff = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: adaToken,
+      json: answer,
+      capabilities: [BROWSER_SECRET_VAULT_CAPABILITY],
+    });
+    const member = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: bobToken,
+      json: answer,
+      capabilities,
+    });
+    check(
+      "a save without either capability gets 400, and a member gets 403; none reaches the agent",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(noHandoff, 400, sourceText("error.team.secureAuthUnsupported")) &&
+        errorIs(member, 403, sourceText("error.team.adminRequired")) &&
+        callsOf("respondToBrowserSecret").length === before,
+      [summary(unsupported), summary(noHandoff), summary(member)],
+    );
+    const saved = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: adaToken,
+      json: answer,
+      capabilities,
+    });
+    check(
+      "an admin submits the password with a save; the answer does not carry it",
+      saved.status === 200 &&
+        isDeepStrictEqual(saved.body, {}) &&
+        !saved.text.includes(VAULT_PASSWORD) &&
+        // The route sends a submit with the save, whatever decision the body names.
+        isDeepStrictEqual(callsOf("respondToBrowserSecret").at(-1), [
+          { requestId: "auth-1", agentId: "agent-ada", decision: "submit", secret: VAULT_PASSWORD, saveToVault: true },
+        ]),
+      summary(saved),
+    );
+  }
+
+  // ---- A CSV import into the host's Vault (vault-import-v1) ----
+  {
+    const csvPassword = ["vault", "e2e", "csv", "password"].join("-");
+    const importCall = (token: string, json: unknown, capabilities = [VAULT_IMPORT_CAPABILITY]) =>
+      call("POST", VAULT_IMPORT_ROUTES.import, { token, json, capabilities });
+    const csv = [
+      "url,username,password",
+      `https://mail.example.com,ada,${csvPassword}`,
+      `http://old.example.com,ada,${csvPassword}`,
+    ].join("\n");
+    const unsupported = await importCall(adaToken, { csv }, [VAULT_CAPABILITY]);
+    const member = await importCall(bobToken, { csv });
+    check(
+      "a CSV import needs vault-import-v1 and an owner or admin",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(member, 403, sourceText("error.team.adminRequired")) &&
+        vault.state().items.length === 0,
+      [summary(unsupported), summary(member)],
+    );
+    const loggedBefore = logged.length;
+    const imported = await importCall(adaToken, { csv });
+    const logins = vault.state().items.filter((item) => item.kind === "login");
+    check(
+      "an admin imports a CSV export: the HTTPS login is added, the other row skipped, and only the counts answer",
+      imported.status === 200 &&
+        isDeepStrictEqual(imported.body, { imported: 1, skipped: 1 }) &&
+        logins.length === 1 &&
+        logins[0] !== undefined &&
+        vault.reveal({ id: logins[0].id, field: "password" }) === csvPassword &&
+        !imported.text.includes(csvPassword) &&
+        !logged.slice(loggedBefore).some((line) => line.includes(csvPassword)),
+      summary(imported),
+    );
+    const notCsv = await importCall(adaToken, { csv: "name\nnothing" });
+    check(
+      "a file that is not a password export gets the Vault's own sentence",
+      errorIs(notCsv, 400, sourceText("error.vault.csvInvalid")),
+      summary(notCsv),
     );
   }
 

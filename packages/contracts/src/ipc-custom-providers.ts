@@ -38,6 +38,12 @@ export interface CustomProviderHeader {
   value: string;
 }
 
+/** A header of an edit. `value: null` keeps the value that main holds for this name. */
+export interface CustomProviderHeaderInput {
+  name: string;
+  value: string | null;
+}
+
 /**
  * Renderer to main. This is the one renderer-to-main payload that carries a secret, so nothing on
  * this path may log it.
@@ -57,8 +63,10 @@ export interface SaveCustomProviderInput {
 /**
  * Renderer to main, on this computer only: the Team API has no edit route. The id names a saved
  * endpoint and does not change. A field that is absent keeps its stored value, so the form can send
- * a blank key and no headers without discarding the credentials that the user does not type again.
- * There is no way to clear a stored key here: remove the endpoint and add it again for that.
+ * a blank key without discarding the key that the user does not type again. `headers` replaces the
+ * saved list: a header with a `null` value keeps its saved value, and a saved header that is not in
+ * the list is removed. There is no way to clear a stored key here: remove the endpoint and add it
+ * again for that.
  */
 export interface UpdateCustomProviderInput {
   id: string;
@@ -66,7 +74,7 @@ export interface UpdateCustomProviderInput {
   baseUrl: string;
   models: CustomProviderModel[];
   apiKey?: string;
-  headers?: CustomProviderHeader[];
+  headers?: CustomProviderHeaderInput[];
 }
 
 export interface DeleteCustomProviderInput {
@@ -79,6 +87,11 @@ export interface CustomProviderSummary {
   name: string;
   baseUrl: string;
   hasApiKey: boolean;
+  /**
+   * The names of the saved headers, so Edit can show them. The values never come back. Absent in a
+   * Team API list, which keeps its released fields.
+   */
+  headerNames?: string[];
   /**
    * The models the user listed for this endpoint, which is how the renderer names one before the
    * CLI has listed it: onboarding must record a custom model for a custom choice, and the endpoint
@@ -136,9 +149,18 @@ export function isCustomProviderSummary(value: unknown): value is CustomProvider
     isBoundedString(value.name, INPUT_LIMITS.agentName) &&
     isBoundedString(value.baseUrl, CUSTOM_PROVIDER_LIMITS.baseUrl) &&
     typeof value.hasApiKey === "boolean" &&
+    (value.headerNames === undefined || isHeaderNames(value.headerNames)) &&
     Array.isArray(value.models) &&
     value.models.length <= CUSTOM_PROVIDER_LIMITS.models &&
     value.models.every(isCustomProviderModel)
+  );
+}
+
+function isHeaderNames(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= CUSTOM_PROVIDER_LIMITS.headers &&
+    value.every((name) => isCustomProviderHeaderName(name) && name.length <= INPUT_LIMITS.identifier)
   );
 }
 
@@ -175,6 +197,17 @@ export function composedCustomModelId(providerId: string, modelId: string): stri
 export function isCustomProviderModelId(modelId: string, providerIds: ReadonlySet<string>): boolean {
   const separator = modelId.indexOf("/");
   return separator > 0 && providerIds.has(modelId.slice(0, separator));
+}
+
+/** The custom provider that a model id names before its first `/`, as `composedCustomModelId` makes it. */
+export function customProviderOfModel<T extends { readonly id: string }>(
+  modelId: string | null | undefined,
+  providers: readonly T[],
+): T | undefined {
+  const separator = modelId?.indexOf("/") ?? -1;
+  if (!modelId || separator <= 0) return undefined;
+  const providerId = modelId.slice(0, separator);
+  return providers.find((provider) => provider.id === providerId);
 }
 
 /** A header name is compared case-insensitively, the way HTTP does. */

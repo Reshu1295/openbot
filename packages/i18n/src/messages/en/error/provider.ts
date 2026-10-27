@@ -6,6 +6,7 @@ export const messages = defineMessages("error.provider", {
     "OpenBot could not register MCP servers in the Codex configuration. Check that your Codex config.toml is valid and writable, then restart OpenBot.",
   "error.provider.computerUseConfig":
     "OpenBot could not register Computer Use in the Codex configuration. Check that your Codex config.toml is valid and writable, then restart OpenBot. You can turn off Computer Use in the teammate settings to continue without it.",
+  "error.provider.codexUnresponsive": "Codex stopped answering, so OpenBot ended its process.",
   "error.provider.endpointsReadOnly":
     "The saved endpoints were written by a newer version of OpenBot, or the file cannot be read. Update OpenBot to change them.",
   "error.provider.endpointNoSecureStorage":
@@ -56,6 +57,9 @@ export const messages = defineMessages("error.provider", {
     "OpenBot could not reach the provider release sources. Check the connection and try again.",
   "error.provider.runtimesUnsupported": "Provider runtimes are not available on this platform.",
   "error.provider.closing": "OpenBot is closing.",
+  "error.provider.removeWhileOn": "Turn the provider off before you remove its download.",
+  "error.provider.removeWhileDownloading": "Wait for the download to end, then remove it.",
+  "error.provider.removeIncomplete": "A program uses some files of this CLI. Close it, then try again.",
   "error.provider.cliOverride": "Remove the explicit CLI path override before updating in OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "The runtime update did not complete.",
   "error.provider.downloadHttp": "Runtime download failed with HTTP {status}.",
@@ -98,6 +102,7 @@ export const messages = defineMessages("error.provider", {
   "error.provider.headerNameTooLong": "A header name is too long.",
   "error.provider.headerNameDuplicate": "Two headers have the same name.",
   "error.provider.headerValueInvalid": "A header value is missing or too long.",
+  "error.provider.headerValueMissing": "The header {name} needs a value.",
   "error.provider.apiKeyTooLong": "The API key is too long.",
   "error.provider.localOnly": "Providers can only be changed on the computer that runs the agents.",
   "error.provider.keyRequired": "A provider key is required.",
@@ -187,6 +192,8 @@ export const messages = defineMessages("error.provider", {
     "OpenCode's model provider reported an invalid upload request. Choose another model and continue. Check saved routines before you create them again.\n{detail}",
   "error.provider.opencodeUnreadableContent":
     "This model cannot read a file or image in this chat. Choose a model that can read files, then send your message again.",
+  "error.provider.opencodeFreeLimit":
+    "The free OpenCode models reached their usage limit. All free models share this limit. To continue, paste an OpenCode Go key in the OpenCode settings, or choose a model from another provider.",
   "error.provider.opencodeProviderFailed":
     "The model provider failed on its side. Your connection is not the cause. Try again later or choose another model.\n{detail}",
   "error.provider.opencodeNetwork":
@@ -256,11 +263,16 @@ export const messages = defineMessages("error.provider", {
   "error.provider.httpsSignInLinkOnly": "Only HTTPS sign-in links can open in the browser.",
   "error.provider.geminiKeyRefused":
     "Gemini refused the saved API key. Replace or remove the key in Settings, then connect again.",
+  "error.provider.keyProviderRefused":
+    "{provider} refused the saved API key. Replace or remove the key in Settings, then try again.",
+  "error.provider.keyProviderNoBalance":
+    "The {provider} account of the saved API key has no balance. Add credit to the account, then try again.",
   "error.provider.messageTooLarge": "OpenBot stopped {provider} because it sent a message larger than {limit} MB.",
   "error.provider.customAgentIdInvalid":
     "An agent ID must be lowercase letters, digits or `-`, and cannot be the ID of a built-in provider.",
   "error.provider.customAgentEnvInvalid":
     "A variable name must be letters, digits or `_`, and not start with a digit. Use each name once, at most 16 names.",
+  "error.provider.customAgentUsagePromptInvalid": "A usage command must be one line of at most 256 characters.",
   "error.provider.customAgentCommandInvalid":
     "The command must be a full path, a path that starts with ~/, or a command name with no spaces.",
   "error.provider.customAgentArgsInvalid": "An argument cannot contain a line break. Use at most 32 arguments.",
@@ -297,6 +309,8 @@ export const messages = defineMessages("error.provider", {
   "error.provider.accountNotFound": "This {provider} account is not on this computer. Refresh and try again.",
   "error.provider.accountAlreadyAdded": "This {provider} account is already connected.",
   "error.provider.accountDefault": "The first {provider} account cannot be removed.",
+  "error.provider.accountUsesKey":
+    "This {provider} account uses the saved API key and has no sign-in. Change the key in Server settings → Providers.",
   "error.provider.accountInUse": "An agent on this account is working. Try again when the agent stops.",
   "error.provider.accountsReadOnly":
     "The saved provider accounts cannot be read. Update OpenBot before you change them.",
@@ -351,6 +365,8 @@ export const messages = defineMessages("error.provider", {
     "Muse authentication is not verified. Connect on the host computer, or set a Meta API key.",
   "error.provider.museSignIn": "Sign in to Muse on the host computer to continue.",
   "error.provider.inceptionSignIn": "Add an Inception API key to continue.",
+  "error.provider.deepseekSignIn": "Add a DeepSeek API key to continue.",
+  "error.provider.openrouterSignIn": "Add an OpenRouter API key to continue.",
   "error.provider.terminalLoginFailed":
     "The sign-in terminal could not open. Open the provider CLI on this host and sign in there, then refresh providers.",
   "error.provider.nativeArchiveInvalid": "The provider download does not contain a valid installation.",

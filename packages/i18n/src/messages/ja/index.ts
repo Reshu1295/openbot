@@ -47,8 +47,10 @@ import { messages as team } from "./team";
 import { messages as uiBlock } from "./uiBlock";
 import { messages as update } from "./update";
 import { messages as usage } from "./usage";
+import { messages as vault } from "./vault";
 import { messages as webClient } from "./webClient";
 import { messages as window } from "./window";
+import { messages as workflow } from "./workflow";
 
 /**
  * Japanese. Written from the English source and not yet reviewed by a native speaker: read it as a
@@ -102,6 +104,7 @@ export const ja = {
   ...sidebar,
   ...channel,
   ...diagram,
+  ...workflow,
   ...agent,
   ...agentTemplate,
   ...importAgent,
@@ -109,6 +112,7 @@ export const ja = {
   ...island,
   ...computerUse,
   ...connector,
+  ...vault,
   ...uiBlock,
   ...sitePage,
 } as const satisfies PartialTranslation<AppMessages>;

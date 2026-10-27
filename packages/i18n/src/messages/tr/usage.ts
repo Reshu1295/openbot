@@ -63,6 +63,7 @@ export const messages = {
   "usage.panel.label": "Ajan kullanımı",
   "usage.panel.title": "Kullanım",
   "usage.panel.allAgents": "Tüm ajanlar",
+  "usage.panel.workflows": "İş akışları",
   "usage.panel.agents": "Kullanım ajanları",
   "usage.panel.metric": "Kullanım metriği",
   "usage.panel.period": "Kullanım dönemi",

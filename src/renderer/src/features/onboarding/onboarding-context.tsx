@@ -53,6 +53,8 @@ const Setup = createSimpleContext({
 
     onSettled(() => {
       void readSetupState();
+      // A joined owner or admin can change the default provider of this computer from a phone.
+      return onboardingPort().onSetupState(setSetupState);
     });
 
     async function retrySetupRead(): Promise<void> {

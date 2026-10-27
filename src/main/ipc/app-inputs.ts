@@ -14,6 +14,7 @@ import type {
   DynamicIslandPreference,
   DynamicIslandPresentation,
   ExternalDestination,
+  ExternalLinkPreference,
   HostUpdateSettingsChange,
   IdleRestartTarget,
   InstallMarketplaceAgentInput,
@@ -41,6 +42,7 @@ import type {
   VerifyEmailCodeInput,
 } from "@openbot/contracts/ipc";
 import {
+  decodeExternalLinkTarget,
   IDLE_RESTART_TARGETS,
   isAgentDefaults,
   isAgentMemoryLimit,
@@ -116,6 +118,12 @@ export function parseAgentMemoryLimitPreference(input: unknown): AgentMemoryLimi
 export function parseChatWindowTarget(input: unknown): ChatWindowTarget {
   if (!isDynamicRecord(input)) throw new Error("A chat is required.");
   return { serverId: requireString(input.serverId, "Server"), agentId: requireString(input.agentId, "Agent") };
+}
+
+export function parseExternalLinkPreference(input: unknown): ExternalLinkPreference {
+  const target = isDynamicRecord(input) ? decodeExternalLinkTarget(input.target) : null;
+  if (!target) throw new Error("The external link setting is required.");
+  return { target };
 }
 
 export function parseRemoteSessionReusePreference(input: unknown): RemoteSessionReusePreference {

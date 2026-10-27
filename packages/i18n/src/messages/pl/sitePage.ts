@@ -43,8 +43,7 @@ export const messages = {
   "sitePage.connect.failure.tabClosed":
     "Karta OpenBot, która rozpoczęła połączenie z {name}, nie odpowiedziała. Otwórz OpenBot w przeglądarce i ponownie połącz {name}.",
   "sitePage.connect.failure.failed": "{name} nie zakończył połączenia. Spróbuj ponownie.",
-  "sitePage.connect.restartHint":
-    "W OpenBot otwórz {serverSettings}, potem {connectors}, potem {name} i wybierz {connect}.",
+  "sitePage.connect.restartHint": "W OpenBot otwórz {marketplace}, potem {apps}, potem {name} i wybierz {connect}.",
   "sitePage.connect.notOpened":
     "Uruchom OpenBot, a potem spróbuj ponownie. Jeśli OpenBot nie jest zainstalowany na tym komputerze, pobierz go i połącz {name} w aplikacji.",
   "sitePage.openApp.title": "Nic się nie otworzyło?",

@@ -3,7 +3,10 @@
 // Cursor's ACP process does not report usage, so this is the request the Cursor CLI sends itself:
 // `aiserver.v1.DashboardService/GetCurrentPeriodUsage` on its API endpoint, as Connect JSON, with
 // the access token of the CLI's sign-in. The answer splits the plan into Cursor's own models
-// (`autoPercentUsed`) and every other model (`apiPercentUsed`) for one billing cycle.
+// (`autoPercentUsed`) and every other model (`apiPercentUsed`) for one billing cycle. The included
+// usage of a merged plan (`GetPlanInfo` `isMerged`) covers Grok and Composer only, so its reading is
+// the total alone, as in the Cursor app. That total is the quota of the Grok plan, so the reading
+// names Grok as sharing it, and the rail shows one ring for both.
 
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -16,6 +19,7 @@ import { type AccountRateLimitsReadResult, type AccountRateLimitWindowResult, ge
 /** The CLI's default endpoint. `CURSOR_API_ENDPOINT` moves the CLI, so it moves this read too. */
 const CURSOR_API_ENDPOINT = "https://api2.cursor.sh";
 const CURRENT_PERIOD_USAGE_PATH = "/aiserver.v1.DashboardService/GetCurrentPeriodUsage";
+const PLAN_INFO_PATH = "/aiserver.v1.DashboardService/GetPlanInfo";
 const CURSOR_USAGE_TIMEOUT_MS = 10_000;
 const KEYCHAIN_TIMEOUT_MS = 3_000;
 
@@ -72,10 +76,12 @@ const readAccessToken = Effect.fn("Cursor.readAccessToken")(function* () {
   return Option.isSome(auth) ? auth.value.accessToken : null;
 });
 
-export const readCursorUsage = Effect.fn("Cursor.readUsage")(function* () {
-  const accessToken = yield* readAccessToken();
-  if (!accessToken) return NO_USAGE;
-  const endpoint = process.env.CURSOR_API_ENDPOINT?.trim() || CURSOR_API_ENDPOINT;
+/** The answer of one dashboard call, or null when the backend rejects the token. */
+const postDashboard = Effect.fn("Cursor.postDashboard")(function* (
+  endpoint: string,
+  path: string,
+  accessToken: string,
+) {
   return yield* Effect.acquireUseRelease(
     Effect.sync(() => new AbortController()),
     (controller) =>
@@ -83,7 +89,7 @@ export const readCursorUsage = Effect.fn("Cursor.readUsage")(function* () {
         const response = yield* Effect.tryPromise({
           try: () =>
             // Appended, not resolved: a resolved absolute path drops a path in the endpoint.
-            fetch(`${endpoint.replace(/\/+$/u, "")}${CURRENT_PERIOD_USAGE_PATH}`, {
+            fetch(`${endpoint.replace(/\/+$/u, "")}${path}`, {
               method: "POST",
               headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
               body: "{}",
@@ -91,19 +97,37 @@ export const readCursorUsage = Effect.fn("Cursor.readUsage")(function* () {
             }),
           catch: (cause) => new CursorUsageFailed({ cause }),
         });
-        if (response.status === 401 || response.status === 403) return NO_USAGE;
+        if (response.status === 401 || response.status === 403) return null;
         if (!response.ok)
           return yield* new CursorUsageFailed({
             cause: new Error(`Cursor usage returned HTTP ${response.status}.`),
           });
-        const body = yield* Effect.tryPromise({
+        return yield* Effect.tryPromise({
           try: (): Promise<unknown> => response.json(),
           catch: (cause) => new CursorUsageFailed({ cause }),
         });
-        return cursorRateLimits(body);
       }),
     (controller) => Effect.sync(() => controller.abort()),
   );
+});
+
+const MergedPlan = Schema.Struct({ isMerged: Schema.Literal(true) });
+
+export const readCursorUsage = Effect.fn("Cursor.readUsage")(function* () {
+  const accessToken = yield* readAccessToken();
+  if (!accessToken) return NO_USAGE;
+  const endpoint = process.env.CURSOR_API_ENDPOINT?.trim() || CURSOR_API_ENDPOINT;
+  const [usage, planInfo] = yield* Effect.all(
+    [
+      postDashboard(endpoint, CURRENT_PERIOD_USAGE_PATH, accessToken),
+      // A plan info that fails to read keeps the split reading, as before the plan info was read.
+      postDashboard(endpoint, PLAN_INFO_PATH, accessToken).pipe(Effect.option),
+    ],
+    { concurrency: "unbounded" },
+  );
+  if (usage === null) return NO_USAGE;
+  const merged = Option.isSome(planInfo) && Option.isSome(Schema.decodeUnknownOption(MergedPlan)(planInfo.value));
+  return cursorRateLimits(usage, merged);
 });
 
 /** Connect JSON writes an int64 as a string. */
@@ -120,9 +144,10 @@ const PlanUsage = Schema.Struct({
 
 /**
  * The primary window holds Cursor's own models and the secondary one every other model; the dock
- * names them by slot. A plan that reports only the total fills the primary window with it.
+ * names them by slot. A merged plan, or a plan that reports only the total, fills the primary
+ * window with the total.
  */
-function cursorRateLimits(value: unknown): AccountRateLimitsReadResult {
+function cursorRateLimits(value: unknown, merged: boolean): AccountRateLimitsReadResult {
   const period = Schema.decodeUnknownOption(CurrentPeriodUsage)(value);
   const plan = Schema.decodeUnknownOption(PlanUsage)(getRecord(value, "planUsage") ?? {});
   if (Option.isNone(period) || Option.isNone(plan)) return NO_USAGE;
@@ -137,9 +162,13 @@ function cursorRateLimits(value: unknown): AccountRateLimitsReadResult {
   const window = (usedPercent: number | undefined): AccountRateLimitWindowResult | null =>
     usedPercent === undefined ? null : { usedPercent: Math.max(0, Math.min(100, usedPercent)), ...cycle };
   const { autoPercentUsed, apiPercentUsed, totalPercentUsed } = plan.value;
-  const split = autoPercentUsed !== undefined || apiPercentUsed !== undefined;
+  const split = !merged && (autoPercentUsed !== undefined || apiPercentUsed !== undefined);
   const primary = window(split ? autoPercentUsed : totalPercentUsed);
   const secondary = split ? window(apiPercentUsed) : null;
   if (!primary && !secondary) return NO_USAGE;
-  return { rateLimits: { limitId: "cursor", primary, secondary }, rateLimitsByLimitId: null };
+  return {
+    rateLimits: { limitId: "cursor", primary, secondary },
+    rateLimitsByLimitId: null,
+    ...(merged ? { sharedQuotaWith: "grok" as const } : {}),
+  };
 }

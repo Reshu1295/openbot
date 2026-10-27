@@ -7,6 +7,10 @@ export const messages = {
   "notification.needsBrowserStep": "Precisa que você conclua uma etapa no navegador.",
   "notification.needsApprovalFor": "Precisa da sua aprovação: {action}",
   "notification.finished": "Terminou o trabalho.",
+  // A workflow step that waits for a person to approve or reject it.
+  "notification.workflowApproval": "Uma etapa aguarda sua aprovação.",
+  // A workflow output step that tells the user its result.
+  "notification.workflowOutput": "Um fluxo de trabalho tem um novo resultado.",
   "notification.failed": "Parou com um erro.",
   "notification.channelTitle": "{agent} em {channel}",
   "notification.channelMessage": "Enviou uma mensagem.",

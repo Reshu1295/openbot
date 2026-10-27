@@ -124,7 +124,7 @@ export const messages = {
   "mobile.chat.attachment.addFailed": "Не удалось добавить вложение",
   "mobile.chat.attachment.limit": "Можно прикрепить не более {limit} файлов.",
   "mobile.chat.attachment.unsupported":
-    "{name}: выберите изображения, аудио MP3, видео MOV, архивы ZIP, PDF, документы Office, EML, текстовые файлы, Markdown, данные или исходный код.",
+    "{name}: выберите изображения, аудио MP3, видео MOV или MP4, архивы ZIP, PDF, документы Office, EML, текстовые файлы, Markdown, данные или исходный код.",
   "mobile.chat.attachment.hostRejectsType":
     "{name}: компьютер-хост не принимает файлы {type}. Обновите там OpenBot, чтобы прикреплять их.",
   "mobile.chat.attachment.hostRejects":

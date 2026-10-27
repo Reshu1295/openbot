@@ -3,6 +3,7 @@ import {
   type ClientAgentSummary,
   type HostAnalytics,
   type HostAnalyticsInput,
+  WORKFLOWS_USAGE_ID,
 } from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import {
@@ -169,6 +170,7 @@ export function AgentUsagePanel(props: AgentUsagePanelProps) {
   // The filter and the per-agent table both name an agent by id, and props.agentName only
   // names the panel's own agent, so it must not label another agent's row.
   const agentLabel = (id: string): UsageAgentLabel => {
+    if (id === WORKFLOWS_USAGE_ID) return { name: t("usage.panel.workflows"), provider: "" };
     const agent = state.agents.find((candidate) => candidate.id === id);
     return {
       name: agent?.name ?? (id === props.agentId ? props.agentName : undefined) ?? id,
@@ -196,6 +198,9 @@ export function AgentUsagePanel(props: AgentUsagePanelProps) {
               ...[
                 ...new Set([
                   ...state.agents.map((agent) => agent.id),
+                  ...(state.result?.agents.some((agent) => agent.agentId === WORKFLOWS_USAGE_ID)
+                    ? [WORKFLOWS_USAGE_ID]
+                    : []),
                   ...(state.range.agentId ? [state.range.agentId] : []),
                 ]),
               ].map((id) => `agent:${id}`),

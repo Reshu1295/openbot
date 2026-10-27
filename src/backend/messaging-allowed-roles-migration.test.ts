@@ -49,12 +49,16 @@ function seed(db: DatabaseSync, version: number): void {
         '2026-01-02', '2026-01-02', 3)`).run();
 }
 
-/** Every row of every table, by table name. */
+/**
+ * Every row of every table, by table name. Migration 47 replaces the empty task table with the thread
+ * table; `agent-thread-migration.test.ts` checks that move.
+ */
 function contents(db: DatabaseSync): Record<string, unknown[]> {
   const tables = db
     .prepare(
       `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'
-       AND name <> 'schema_migrations' AND name NOT LIKE 'agent_memory_search%' ORDER BY name`,
+       AND name <> 'schema_migrations' AND name NOT LIKE 'agent_memory_search%'
+       AND name NOT IN ('projection_agent_tasks', 'projection_agent_threads') ORDER BY name`,
     )
     .all()
     .map((row) => String(row.name));
@@ -66,7 +70,7 @@ function roleTables(db: DatabaseSync) {
 }
 
 function expectHealthy(db: DatabaseSync): void {
-  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 45 });
+  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 47 });
   expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
   expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });
@@ -83,7 +87,21 @@ describe("messaging allowed roles migration", () => {
       if (version < 25) seedConnection(db);
       const before = contents(db);
       migrateOpenBotDatabase(db);
-      expect(contents(db)).toEqual({ ...before, projection_messaging_allowed_roles: [], browser_profiles: [] });
+      expect(contents(db)).toEqual({
+        ...before,
+        projection_messaging_allowed_roles: [],
+        browser_profiles: [],
+        workflow_edges: [],
+        workflow_nodes: [],
+        workflow_output_deliveries: [],
+        workflow_runs: [],
+        workflow_steps: [],
+        workflow_trigger_webhooks: [],
+        workflow_triggers: [],
+        workflow_versions: [],
+        workflow_webhook_receipts: [],
+        workflows: [],
+      });
       expectHealthy(db);
     },
   );
@@ -101,7 +119,21 @@ describe("messaging allowed roles migration", () => {
     expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
     db.exec("DROP TRIGGER fail_marker");
     migrateOpenBotDatabase(db);
-    expect(contents(db)).toEqual({ ...before, projection_messaging_allowed_roles: [], browser_profiles: [] });
+    expect(contents(db)).toEqual({
+      ...before,
+      projection_messaging_allowed_roles: [],
+      browser_profiles: [],
+      workflow_edges: [],
+      workflow_nodes: [],
+      workflow_output_deliveries: [],
+      workflow_runs: [],
+      workflow_steps: [],
+      workflow_trigger_webhooks: [],
+      workflow_triggers: [],
+      workflow_versions: [],
+      workflow_webhook_receipts: [],
+      workflows: [],
+    });
     expectHealthy(db);
   });
 
@@ -109,9 +141,9 @@ describe("messaging allowed roles migration", () => {
     const db = databaseAt(43);
     seed(db, 43);
     const before = contents(db);
-    db.exec("INSERT INTO schema_migrations VALUES(46,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(48,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
-    db.exec("DELETE FROM schema_migrations WHERE version=46; DELETE FROM schema_migrations WHERE version=20");
+    db.exec("DELETE FROM schema_migrations WHERE version=48; DELETE FROM schema_migrations WHERE version=20");
     expect(() => migrateOpenBotDatabase(db)).toThrow("missing version 20");
     expect(contents(db)).toEqual(before);
     expect(roleTables(db)).toEqual([]);

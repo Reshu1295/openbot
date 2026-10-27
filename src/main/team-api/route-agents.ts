@@ -23,10 +23,15 @@ import { hiddenProviderAgentIds, isPeerHiddenProvider } from "./provider-visibil
 import { readFile } from "node:fs/promises";
 import { isAvatarMimeType } from "@openbot/contracts/avatar-images";
 import { AVATAR_IMAGE_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
-import type { CreateAgentInput, DuplicateAgentResult } from "@openbot/contracts/ipc";
+import { type CreateAgentInput, type DuplicateAgentResult, WORKFLOWS_USAGE_ID } from "@openbot/contracts/ipc";
 import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import { V5_AGENT_MODEL } from "@openbot/contracts/team-protocol/v5-adapter";
 import { V6_AGENT_MODEL } from "@openbot/contracts/team-protocol/v6-adapter";
+import { WORKFLOWS_CAPABILITY } from "@openbot/contracts/team-protocol/workflows-v1";
 import { sourceText } from "@openbot/i18n/source";
 import type { Effect } from "effect";
 import type { AgentDuplicationFailed } from "../../backend/agent/duplication-gate";
@@ -49,6 +54,7 @@ import {
   promptRequestId,
   readBinary,
   readJson,
+  requireAdmin,
   requireAgentLevel,
   stringField,
 } from "./request-helpers";
@@ -112,9 +118,19 @@ export async function routeAgents(
       endDate: url.searchParams.get("endDate"),
       timeZone: url.searchParams.get("timeZone"),
     });
-    if (input.agentId && !agents.listAgents().some((agent) => agent.id === input.agentId))
+    // A peer without workflows-v1 does not know the Workflows row.
+    const workflows = capabilities.has(WORKFLOWS_CAPABILITY);
+    if (
+      input.agentId &&
+      !(workflows && input.agentId === WORKFLOWS_USAGE_ID) &&
+      !agents.listAgents().some((agent) => agent.id === input.agentId)
+    )
       throw new HttpError(404, sourceText("error.team.agentNotFound"));
-    return json(200, agents.getHostAnalytics(input));
+    const report = agents.getHostAnalytics(input);
+    return json(
+      200,
+      workflows ? report : { ...report, agents: report.agents.filter((row) => row.agentId !== WORKFLOWS_USAGE_ID) },
+    );
   }
   if (
     method === "POST" &&
@@ -228,7 +244,8 @@ export async function routeAgents(
     if (method === "PATCH" && !action) {
       const input = agentUpdate(await readJson(request), agentId);
       if (input.provider !== undefined) requireVisibleProvider({ provider: input.provider });
-      return json(200, await runCauseEffect(agents.updateAgent(input)));
+      // The released protocol has no `pendingRuntime`, so a provider change during work is refused.
+      return json(200, await runCauseEffect(agents.updateAgent(input, undefined, false)));
     }
     if (method === "POST" && action === "duplicate") {
       const body = await readJson(request);
@@ -296,11 +313,12 @@ export async function routeAgents(
     const requestId = promptRequestId(body.requestId);
     requireRequestAgent(agents.agentIdForRequest(requestId));
     await runCauseEffect(
-      agents.respondToApproval({
-        requestId,
-        decision: approvalDecision(body.decision),
-      }),
-    ).catch(inactiveAsConflict);
+      agents.respondToApproval(
+        { requestId, decision: approvalDecision(body.decision) },
+        // Some approvals let agents use what is the owner's alone, such as a saved card.
+        { owner: member.role === "owner" },
+      ),
+    ).catch(refusedPromptAnswer);
     return empty(204);
   }
   if (method === "POST" && url.pathname === BROWSER_SECRET_RESPONSE_PATH) {
@@ -311,6 +329,19 @@ export async function routeAgents(
     requireRequestAgent(input.agentId);
     await runCauseEffect(agents.respondToBrowserSecret(input));
     return empty(204);
+  }
+  if (method === "POST" && url.pathname === BROWSER_SECRET_VAULT_ROUTES.respond) {
+    // The submit has the gates of the released route; the save adds its own.
+    if (!capabilities.has("browser-secret-handoff"))
+      throw new HttpError(400, sourceText("error.team.secureAuthUnsupported"));
+    if (!capabilities.has(BROWSER_SECRET_VAULT_CAPABILITY))
+      throw new HttpError(400, sourceText("error.team.vaultUnsupported"));
+    // The Vault is the owner's and the admins', as on the `vault-v1` routes.
+    requireAdmin(member);
+    const input = parseBrowserSecretResponse({ ...(await readJson(request)), decision: "submit" });
+    requireRequestAgent(input.agentId);
+    await runCauseEffect(agents.respondToBrowserSecret({ ...input, saveToVault: true }));
+    return json(200, {});
   }
   if (method === "POST" && url.pathname === TEAM_API_ROUTES.respond.browserTakeover) {
     const body = await readJson(request);
@@ -358,7 +389,7 @@ function inactiveAsConflict(error: unknown): never {
   throw error;
 }
 
-/** As `inactiveAsConflict`, and a member's answer that only the owner or an admin may give is forbidden. */
+/** As `inactiveAsConflict`, and an answer that the member's role may not give is forbidden. */
 function refusedPromptAnswer(error: unknown): never {
   if (error instanceof ForbiddenAttentionAnswer) throw new HttpError(403, error.message);
   return inactiveAsConflict(error);

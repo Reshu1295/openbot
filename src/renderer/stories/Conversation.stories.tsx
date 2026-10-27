@@ -1839,6 +1839,11 @@ export const WaitingForReplies: Story = {
   },
 };
 
+/** Every card above the input at once: one card with a line between each part, and no gaps. */
+export const WaitingForRepliesWithUsageLimit: Story = {
+  args: { ...WaitingForReplies.args, accountUsage: UsageLimitReached.args?.accountUsage },
+};
+
 /** The plan of the turn that runs: the block is open and the running step shimmers. */
 export const PlanInProgress: Story = {
   args: {

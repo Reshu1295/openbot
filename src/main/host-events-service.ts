@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import type { WorkflowTriggerInput, WorkflowWebhookSecret } from "@openbot/contracts/ipc";
 import type {
   EventFilter,
   EventJsonValue,
@@ -28,7 +29,9 @@ import type { WebhookRoutineWriter } from "../backend/agent/webhook-routine-tool
 import { causeHelpers } from "../backend/effect-boundary";
 import type { RoutineRecords } from "../backend/routine-records";
 import type { OwnedRoutineRecord, RoutineRecordInput, WebhookReceiveResult } from "../backend/routine-store";
+import type { WebhookRouteOwner } from "../backend/webhook-route-store";
 import { WEBHOOK_EVENT_TYPE_MAX_LENGTH } from "../backend/webhook-trigger";
+import type { WorkflowWebhookDelivery, WorkflowWebhookResult } from "../backend/workflows/workflows";
 import {
   type HostEventsApi,
   HostEventsFailure,
@@ -57,8 +60,16 @@ export interface HostWebhookRelay {
   revokeRoute(routeId: string): Effect.Effect<void, { readonly cause: unknown }>;
 }
 
+/** The webhook triggers of workflows: they share the routes, the relay and the route limit. */
+interface HostWorkflowWebhooks {
+  receive(delivery: WorkflowWebhookDelivery): Effect.Effect<WorkflowWebhookResult, { readonly cause: unknown }>;
+  /** The workflow whose webhook address changed. */
+  changed(workflowId: string): void;
+}
+
 export interface HostEventsServiceOptions {
   routines: RoutineRecords;
+  workflows?: HostWorkflowWebhooks;
   cipher: SecretCipher;
   relay: HostWebhookRelay;
   accountPrincipal: () => string | null;
@@ -116,7 +127,7 @@ function testEventData(filters: readonly EventFilter[]): EventJsonValue {
   return root;
 }
 
-type ReceivedDelivery = WebhookReceiveResult<unknown> | { kind: "unavailable" };
+type ReceivedDelivery = WebhookReceiveResult<unknown> | WorkflowWebhookResult | { kind: "unavailable" };
 
 function deliveryStatus(result: ReceivedDelivery) {
   switch (result.kind) {
@@ -233,6 +244,21 @@ export class HostEventsService implements HostEventsApi {
     (operation) => this.#writes.withPermit(operation),
   ).bind(this);
 
+  /**
+   * Gives a webhook trigger of a workflow a new signing secret. The first secret makes its route, so
+   * the route limit counts it then. The secret leaves the host only in this result.
+   */
+  readonly rotateWorkflowSecret = Effect.fn("HostEvents.rotateWorkflowSecret")(function* (
+    this: HostEventsService,
+    input: WorkflowTriggerInput,
+  ): Effect.fn.Return<WorkflowWebhookSecret, HostEventsFailure> {
+    const secret = yield* this.#writeWorkflowSecret(input);
+    // As after a routine save: the relay sync runs after the write lock is released.
+    yield* this.syncRoutes({ all: false });
+    this.#options.workflows?.changed(input.workflowId);
+    return { secret };
+  }).bind(this);
+
   readonly listActivity = Effect.fn("HostEvents.listActivity")(function* (
     this: HostEventsService,
     input: ListEventActivityInput,
@@ -302,7 +328,9 @@ export class HostEventsService implements HostEventsApi {
     });
     if (received?.kind === "started")
       return { eventType, status: "started", reason: null, runId: runIdOf(received.run) };
-    if (received?.kind === "ignored") return { eventType, status: "ignored", reason: received.reason, runId: null };
+    // The route is a routine's, so it is never busy or refused: only a workflow skips a request so.
+    if (received?.kind === "ignored" && received.reason !== "busy" && received.reason !== "refused")
+      return { eventType, status: "ignored", reason: received.reason, runId: null };
     return yield* eventFailure(
       sourceText(status === 503 ? "error.backend.webhookTestUnavailable" : "error.backend.webhookTestFailed"),
     );
@@ -346,7 +374,7 @@ export class HostEventsService implements HostEventsApi {
         }
       }
       const current = yield* eventStep(() => routes.list());
-      const updatedOwners = new Map<string, EventRoutineOwner>();
+      const updatedOwners = new Map<string, WebhookRouteOwner>();
       for (const route of current) {
         if (!isCurrent()) return true;
         if (this.#options.accountPrincipal() === null) {
@@ -386,7 +414,10 @@ export class HostEventsService implements HostEventsApi {
       if (changed && enabled) relay.refresh();
       relay.setEnabled(enabled);
       // An open editor shows "URL pending" until it reloads the routine.
-      for (const owner of updatedOwners.values()) this.#options.routines.changed(owner);
+      for (const owner of updatedOwners.values()) {
+        if (owner.kind === "workflow") this.#options.workflows?.changed(owner.id);
+        else this.#options.routines.changed(owner);
+      }
       if (failed) logger.warn("Some webhook routes are not ready. Local settings were retained.");
       return !failed;
     },
@@ -440,17 +471,27 @@ export class HostEventsService implements HostEventsApi {
     const body = decodeWebhookBody(input.body);
     if (!body) return { status: 400, received: null };
     const receivedAt = new Date().toISOString();
-    const received = yield* toHostEventsFailure(
-      this.#options.routines.receiveWebhook(route.owner, route.routineId, {
-        deliveryId: input.deliveryId,
-        eventType: body.type,
-        data: body.data,
-        occurredAt: body.occurredAt ?? receivedAt,
-        receivedAt,
-      }),
-    );
+    const event = {
+      deliveryId: input.deliveryId,
+      eventType: body.type,
+      data: body.data,
+      occurredAt: body.occurredAt ?? receivedAt,
+      receivedAt,
+    };
+    const { owner } = route;
+    const received: ReceivedDelivery =
+      owner.kind === "workflow"
+        ? yield* this.#receiveWorkflow({ workflowId: owner.id, nodeId: route.routineId, event })
+        : yield* toHostEventsFailure(this.#options.routines.receiveWebhook(owner, route.routineId, event));
     return { status: deliveryStatus(received), received };
   });
+
+  /** A route of a workflow while this host has no workflows is gone, as a deleted routine is. */
+  #receiveWorkflow(delivery: WorkflowWebhookDelivery): Effect.Effect<ReceivedDelivery, HostEventsFailure> {
+    const workflows = this.#options.workflows;
+    if (!workflows) return Effect.succeed({ kind: "gone" });
+    return toHostEventsFailure(workflows.receive(delivery));
+  }
 
   /** Writes the routine under the write lock, so the route limit check and the write are one step. */
   readonly #saveRecord = Effect.fn("HostEvents.saveRecord")(
@@ -486,6 +527,23 @@ export class HostEventsService implements HostEventsApi {
         }),
       );
       return { saved, secret };
+    },
+    (operation) => this.#writes.withPermit(operation),
+  );
+
+  readonly #writeWorkflowSecret = Effect.fn("HostEvents.writeWorkflowSecret")(
+    function* (this: HostEventsService, input: WorkflowTriggerInput) {
+      const routes = this.#options.routines.routes;
+      const known = yield* eventStep(() => routes.hasWorkflowRoute(input.workflowId, input.nodeId));
+      if (!known && (yield* eventStep(() => routes.list())).length >= WEBHOOK_ROUTES_LIMIT)
+        return yield* eventFailure(sourceText("error.backend.webhookRouteLimit", { limit: WEBHOOK_ROUTES_LIMIT }));
+      const secret = newWebhookSecret();
+      const secretCiphertext = yield* this.#encrypt(secret);
+      const written = yield* eventStep(() =>
+        routes.rotateWorkflowSecret(input.workflowId, input.nodeId, secretCiphertext),
+      );
+      if (!written) return yield* eventFailure(sourceText("error.workflow.webhookMissing"));
+      return secret;
     },
     (operation) => this.#writes.withPermit(operation),
   );

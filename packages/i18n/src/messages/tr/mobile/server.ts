@@ -408,6 +408,32 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Tarayıcı girişlerini Bitwarden'dan doldurur. Masaüstü uygulamasında kurun.",
+  "mobile.server.connectors.bitwarden.hostSummary": "Tarayıcı girişlerini Bitwarden veya Vaultwarden'dan doldurur",
+  "mobile.server.connectors.bitwarden.description":
+    "{host} üzerindeki tarayıcı girişlerini Bitwarden veya Vaultwarden'dan doldurun.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} kendi Bitwarden CLI'si ile oturum açar. Kasanızda Shared with OpenBot adlı bir klasör oluşturun ve içine yalnızca ajanların kullanabileceği girişleri koyun. Web kasasında Ayarlar › Güvenlik › Anahtarlar'ı açın ve API anahtarınızı görüntüleyin.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Sunucu adresi",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden veya Vaultwarden sunucunuzun adresi. {host} bu adrese HTTPS ile ulaşabilmelidir.",
+  "mobile.server.connectors.bitwarden.clientId": "API anahtarı client_id",
+  "mobile.server.connectors.bitwarden.clientSecret": "API anahtarı client_secret",
+  "mobile.server.connectors.bitwarden.masterPassword": "Ana parola",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host}, yeniden başlatmadan sonra kilidi tekrar açabilmek için API anahtarını ve ana parolayı şifreli olarak saklar. Bu telefon bunları saklamaz.",
+  "mobile.server.connectors.bitwarden.connect": "Bitwarden'a bağlan",
+  "mobile.server.connectors.bitwarden.connecting": "Bağlanıyor…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} Bitwarden'da oturum açıyor. İlk oturum açma birkaç dakika sürebilir.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Paylaşılan klasör",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Bitwarden'daki klasör",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Ajanların bir girişle oturum açmasına izin vermek için girişi Bitwarden'da bu klasöre taşıyın. Durdurmak için kaldırın.",
+  "mobile.server.connectors.bitwarden.disconnect": "Bitwarden bağlantısını kes",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Bitwarden bağlantısı kesilsin mi?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} API anahtarını ve ana parolayı kaldırır. {host} üzerindeki ajanlar artık Bitwarden'dan giriş bilgisi dolduramaz.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Her ajan için depolar, sorunlar ve çekme istekleri",
   "mobile.server.connectors.github.description":
@@ -615,6 +641,11 @@ export const messages = {
   "mobile.server.settings.providers": "Sağlayıcılar",
   "mobile.server.settings.providersConnected": { one: "{count} bağlı", other: "{count} bağlı" },
   "mobile.server.providers.description": "Bu sunucuyu çalıştıran bilgisayarın yapay zekâ sağlayıcıları.",
+  "mobile.server.providers.connectedTitle": "Bağlandı",
+  "mobile.server.providers.otherTitle": "Bağlı değil",
+  "mobile.server.providers.defaultProvider": "Varsayılan sağlayıcı",
+  "mobile.server.providers.defaultProviderHint":
+    "Bu sunucudaki yeni bir ajan bu sağlayıcıyla başlar. Daha sonra her ajan için değiştirebilirsiniz.",
   "mobile.server.providers.loading": "Sağlayıcılar yükleniyor…",
   "mobile.server.providers.loadFailed": "Bu sunucunun sağlayıcıları yüklenemedi.",
   "mobile.server.providers.runtimesFailed": "Bu sunucunun indirmeleri yüklenemedi.",
@@ -673,6 +704,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Anahtar değiştirilemedi. Tekrar deneyin.",
   "mobile.server.providers.newKey": "Anahtar",
   "mobile.server.providers.replaceKey": "Yeni anahtar",
+  "mobile.server.providers.keyPlaceholder": "Anahtarınızı yapıştırın",
   "mobile.server.providers.saveKey": "Anahtarı kaydet",
   "mobile.server.providers.removeKey": "Anahtarı kaldır",
   "mobile.server.providers.removeKeyTitle": "Anahtar sunucudan kaldırılsın mı?",

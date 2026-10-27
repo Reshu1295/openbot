@@ -19,10 +19,12 @@ export const messages = {
   "marketplace.version": "バージョン {version}",
 
   "marketplace.title": "マーケットプレイス",
-  "marketplace.close": "マーケットプレイスを閉じる",
   "marketplace.kinds": "マーケットプレイスのコンテンツの種類",
   "marketplace.tab.agents": "エージェント",
   "marketplace.tab.skills": "スキル",
+  "marketplace.description.apps": "エージェントが使うツールやサービスに接続します。",
+  "marketplace.description.agents": "独自の指示とスキルを持つ、すぐに使えるエージェント。",
+  "marketplace.description.skills": "エージェントにタスクやツールの使い方を教える指示。",
 
   "marketplace.plugins.missing": "このプラグインは OpenBot のカタログにありません。",
 
@@ -86,17 +88,24 @@ export const messages = {
   "marketplace.app.reconnectNamed": "{name} を再接続",
   "marketplace.app.connected": "接続済み",
   "marketplace.app.attention": "対応が必要",
+  "marketplace.app.partialTitle": "{name} は完了していません",
+  "marketplace.app.partialDescription":
+    "一部のアプリまたはスキルがインストールされていません。再接続するとインストールされます。",
   "marketplace.app.notConnected": "未接続",
   "marketplace.app.custom": "MCP サーバー",
   "marketplace.app.githubTagline": "リポジトリ、Issue、プルリクエスト",
   "marketplace.app.onePasswordTagline": "共有したログイン情報でサイトにサインイン",
+  "marketplace.app.slackTagline": "Slack のメンションとダイレクトメッセージ",
+  "marketplace.app.discordTagline": "Discord のメンションとダイレクトメッセージ",
+  "marketplace.app.telegramTagline": "Telegram のグループとダイレクトチャット",
+  "marketplace.app.bitwardenTagline": "共有フォルダーのログイン情報でサイトにサインイン",
   "marketplace.app.onePasswordCategory": "ログインと認証情報の管理",
   "marketplace.app.yourApps": "あなたのアプリ",
-  "marketplace.app.moreApps": "その他のアプリ",
+  "marketplace.app.addCustom": "カスタムを追加",
   "marketplace.app.server": "サーバー",
   "marketplace.app.command": "コマンド",
   "marketplace.app.address": "アドレス",
-  "marketplace.app.disconnect.title": "切断",
+  "marketplace.app.disconnect.title": "{name} を切断",
   "marketplace.app.disconnect.description":
     "{name} とそのスキルをこのコンピューターから削除します。あとでもう一度接続できます。",
   "marketplace.app.disconnect.action": "切断",
@@ -105,6 +114,17 @@ export const messages = {
   "marketplace.app.remove.action": "削除",
   "marketplace.app.remove.confirmTitle": "{name} を削除しますか？",
   "marketplace.app.remove.keep": "残す",
+  "marketplace.app.connection": "接続",
+  "marketplace.app.setup.account": "ブラウザーで {name} アカウントにサインインします。",
+  "marketplace.app.setup.key": "{name} アカウントの API キーが必要です。",
+  "marketplace.app.setup.keySaved": "{field} は {host} に保存されています。",
+  "marketplace.app.setup.desktop": "{name} デスクトップアプリの {address} で動作します。",
+  "marketplace.app.setup.desktopConnected": "{address} に接続済みです。",
+  "marketplace.app.setup.open": "サインインもキーも不要です。",
+  "marketplace.app.connectAgain": "もう一度接続",
+  "marketplace.app.signInTitle": "{name} にもう一度サインインしてください",
+  "marketplace.app.signInDescription":
+    "{name} が保存済みのサインインを拒否しました。もう一度サインインするまで、エージェントはこのアプリを使用できません。",
 
   "marketplace.plugin.aave.tagline": "Aave のデータとトランザクション",
   "marketplace.plugin.aave.description":
@@ -173,6 +193,15 @@ export const messages = {
     "このリポジトリのスタイルを使って、Paper で設定ページをデザインしてください。",
   "marketplace.plugin.paper.prompt.tokens":
     "開いている Paper のファイルにあるデザイントークンを一覧にして、私たちのテーマと比較してください。",
+  "marketplace.plugin.appleApps.tagline": "Mac のメール、カレンダーなど",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps を使うと、エージェントはこの Mac のメール、カレンダー、連絡先、リマインダー、メモ、メッセージ、Safari を使えます。macOS でのみ動作します。OpenBot は mcp-icloud を起動します。これは Apple や OpenBot が作ったものではない、コミュニティのサーバーです。サーバーはこのコンピューター上で AppleScript を使ってアプリを操作し、アカウントもキーも不要です。エージェントが初めてアプリを使うとき、macOS は OpenBot にそのアプリの操作を許可するか確認します。後で変更するには、システム設定 › プライバシーとセキュリティ › オートメーション を開いてください。エージェントはメールや iMessage を送信し、イベント、連絡先、リマインダーを変更・削除できるので、承認する前に各書き込みを確認してください。ツールが読んだ内容（メールの本文など）は、エージェントのモデルプロバイダーに送られます。",
+  "marketplace.plugin.appleApps.app":
+    "メール、カレンダー、連絡先、リマインダー、メモ、メッセージ、Safari を、ローカルの mcp-icloud サーバーで操作します。macOS とオートメーションの許可が必要です。",
+  "marketplace.plugin.appleApps.prompt.unread": "Apple のメールで、今日の未読メールを要約してください。",
+  "marketplace.plugin.appleApps.prompt.today": "今日と明日の Apple カレンダーの予定を教えてください。",
+  "marketplace.plugin.appleApps.prompt.schedule":
+    "プロジェクト会議に関する最新のメールを探して、その会議をカレンダーに追加してください。",
   "marketplace.plugin.sentry.tagline": "エラーとクラッシュのトリアージ",
   "marketplace.plugin.sentry.description":
     "Sentry を使うと、エージェントは最近のエラーを検索し、スタックトレースと影響を受けたリリースを調べ、デプロイ後に何が壊れたかをまとめられます。各ユーザーはブラウザーで自分の Sentry アカウントにサインインします。",
@@ -190,6 +219,24 @@ export const messages = {
   "marketplace.plugin.vercel.prompt.failedBuild": "直近の本番デプロイが失敗したのはなぜですか？",
   "marketplace.plugin.vercel.prompt.recentDeployments": "今日のデプロイとそのステータスを一覧にしてください。",
   "marketplace.plugin.vercel.prompt.runtimeErrors": "過去 1 時間にランタイムエラーが発生したルートはどれですか？",
+  "marketplace.plugin.cloudflare.tagline": "Workers、DNS、ストレージ、ログ",
+  "marketplace.plugin.cloudflare.description":
+    "Cloudflare を使うと、エージェントは Cloudflare API を通じて Workers、DNS レコード、R2、D1、KV を一覧表示して管理し、Workers のログを照会し、Cloudflare のドキュメントを検索できます。各ユーザーはブラウザーで自分の Cloudflare アカウントにサインインします。Cloudflare の同意ページでは Read only を選んでください。既定の Minimal では、エージェントは Workers、ログ、DNS レコードを参照できません。書き込み権限があると、エージェントは Workers のデプロイと削除、DNS レコードの変更、その他のアカウント設定の変更ができます。",
+  "marketplace.plugin.cloudflare.app":
+    "Workers、DNS、ストレージ、ログを、ブラウザーでサインインする Cloudflare の API MCP サーバーで提供します。",
+  "marketplace.plugin.cloudflare.prompt.workers":
+    "自分の Cloudflare アカウントにはどの Workers がデプロイされていますか？",
+  "marketplace.plugin.cloudflare.prompt.errors": "過去 1 時間にエラーを記録した Cloudflare Workers はどれですか？",
+  "marketplace.plugin.cloudflare.prompt.dns":
+    "自分の Cloudflare アカウントの各ゾーンの DNS レコードを一覧表示してください。",
+  "marketplace.plugin.supabase.tagline": "データベース、ログ、Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase を使うと、エージェントはプロジェクトを一覧表示し、SQL を実行し、テーブルのスキーマとログを読み、advisors のセキュリティとパフォーマンスの指摘を確認し、Edge Functions とブランチを管理し、Supabase のドキュメントを検索できます。各ユーザーはブラウザーで自分の Supabase アカウントにサインインし、組織を選びます。エージェントにはフルアクセスが与えられます。データを変更または削除する SQL の実行、マイグレーションの適用、Edge Functions のデプロイ、プロジェクトの作成と一時停止ができます。",
+  "marketplace.plugin.supabase.app":
+    "データベース、ログ、Edge Functions を、ブラウザーでサインインする Supabase の MCP サーバーで提供します。",
+  "marketplace.plugin.supabase.prompt.projects": "自分の Supabase 組織にはどのプロジェクトがありますか？",
+  "marketplace.plugin.supabase.prompt.tables": "自分の Supabase データベースのテーブルと列を一覧表示してください。",
+  "marketplace.plugin.supabase.prompt.errors": "自分の Supabase プロジェクトが過去 1 時間に記録したエラーは何ですか？",
   "marketplace.plugin.context7.tagline": "最新のライブラリドキュメント",
   "marketplace.plugin.context7.description":
     "Context7 はライブラリとフレームワークの最新のドキュメントと API リファレンスを取得するので、回答はプロジェクトが実際に使っているバージョンに基づきます。アカウントもキーも不要です。",
@@ -239,6 +286,17 @@ export const messages = {
     "このフレームワークのバージョンについて、レビュアーは何と言っていますか？",
   "marketplace.plugin.braveSearch.prompt.news": "この製品分野の今日の発表を探してください。",
   "marketplace.plugin.braveSearch.prompt.compare": "この 2 つのベンダーを、情報源を引用して比較してください。",
+  "marketplace.plugin.obsidian.tagline": "保管庫のノート",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian を使うと、エージェントが保管庫のノートを検索、閲覧、作成できるため、保管庫をエージェントの記憶として使えます。ローカルサーバーは、このコンピューターの Obsidian アプリにある Local REST API プラグインに接続します。プラグインの API キーは、1 つの環境変数としてローカルサーバーに渡されます。エージェントが使う間は Obsidian を開いたままにしてください。",
+  "marketplace.plugin.obsidian.app":
+    "ノートの検索、閲覧、編集。Local REST API プラグインのキーを使うローカル MCP サーバー経由です。",
+  "marketplace.plugin.obsidian.prompt.recall":
+    "このプロジェクトの決定事項について、私のノートには何が書かれていますか？",
+  "marketplace.plugin.obsidian.prompt.save": "この決定を保管庫に新しいノートとして保存してください。",
+  "marketplace.plugin.obsidian.prompt.log": "今日の作業のまとめを「作業ログ」ノートに追加してください。",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    'Obsidian で Settings > Local REST API を開きます。API キーをコピーし、"Enable non-encrypted (HTTP) server" をオンにしてください。',
   "marketplace.plugin.resend.tagline": "トランザクションメール",
   "marketplace.plugin.resend.description":
     "Resend を使うと、エージェントは 1 つの API でトランザクションメールを送信し、配信を確認できます。Resend ダッシュボードの API キーは、1 つの環境変数としてローカルサーバーに渡されます。",
@@ -257,6 +315,85 @@ export const messages = {
   "marketplace.plugin.composio.prompt.apps": "Composio で使えるアプリと操作はどれですか？",
   "marketplace.plugin.composio.hint.url": "Composio アカウントにある MCP サーバーの URL",
   "marketplace.plugin.composio.hint.apiKey": "Composio アカウントの Settings > Sessions & API Key で確認できます。",
+  "marketplace.plugin.neon.tagline": "Postgres のプロジェクト、ブランチ、マイグレーション",
+  "marketplace.plugin.neon.description":
+    "Neon を使うと、エージェントはプロジェクトとブランチを一覧表示し、SQL を実行し、テーブルスキーマを読み、一時ブランチでスキーマ変更をテストし、遅いクエリを見つけ、Neon のドキュメントを検索できます。各ユーザーはブラウザーで自分の Neon アカウントにサインインし、認可時に読み取り専用アクセスを選べます。フルアクセスの場合、エージェントはデータを変更または削除する SQL を実行でき、ブランチ、データベース、プロジェクトの作成、リセット、削除もできます。Neon は MCP サーバーを開発とテスト向けに推奨しており、本番データベースでの使用は推奨していません。",
+  "marketplace.plugin.neon.app":
+    "Postgres のプロジェクト、ブランチ、SQL、マイグレーションを、ブラウザーでサインインする Neon の MCP サーバーで提供します。",
+  "marketplace.plugin.neon.prompt.projects": "私の Neon アカウントにはどのプロジェクトとブランチがありますか？",
+  "marketplace.plugin.neon.prompt.slowQueries":
+    "私の Neon データベースで最も遅いクエリはどれですか？その理由も教えてください。",
+  "marketplace.plugin.neon.prompt.migration":
+    "一時ブランチで orders テーブルにインデックスを追加し、適用する前に結果を見せてください。",
+  "marketplace.plugin.prisma.tagline": "Postgres データベース、バックアップ、Compute アプリ",
+  "marketplace.plugin.prisma.description":
+    "Prisma を使うと、エージェントは Prisma Postgres データベースを一覧表示・作成し、スキーマを読み、SQL を実行し、バックアップを一覧表示して新しいデータベースに復元し、Object Storage のバケットを管理し、Compute のビルドとログを読み、Prisma のドキュメントを検索できます。各ユーザーはブラウザーで自分の Prisma アカウントにサインインし、ワークスペースを選びます。エージェントはフルアクセスを持ちます。データを変更または削除する SQL の実行、スキーマの更新、データベースとバケットの削除、Compute デプロイの停止、ロールバック、削除ができます。",
+  "marketplace.plugin.prisma.app":
+    "データベース、SQL、バックアップ、Compute アプリを、ブラウザーでサインインする Prisma の MCP サーバーで提供します。",
+  "marketplace.plugin.prisma.prompt.databases": "私の Prisma ワークスペースにはどのデータベースがありますか？",
+  "marketplace.plugin.prisma.prompt.backups": "私のデータベースで利用できるバックアップをすべて見せてください。",
+  "marketplace.plugin.prisma.prompt.logs": "最新の Compute デプロイのランタイムログを見せてください。",
+  "marketplace.plugin.netlify.tagline": "プロジェクト、デプロイ、リクエストログ",
+  "marketplace.plugin.netlify.description":
+    "Netlify を使うと、エージェントはプロジェクトとデプロイを一覧表示し、エッジのリクエストログを読み、プロジェクトを作成し、既存のプロジェクトにコードをデプロイできます。各ユーザーはブラウザーで自分の Netlify アカウントにサインインします。エージェントはユーザーのアカウントと同じアクセス権を持ちます。環境変数、フォーム、訪問者のアクセス設定の変更、拡張機能のインストールや削除、フォームの送信データと環境変数の削除ができます。",
+  "marketplace.plugin.netlify.app":
+    "プロジェクト、デプロイ、リクエストログ、サイト設定を、ブラウザーでサインインする Netlify の MCP サーバーで提供します。",
+  "marketplace.plugin.netlify.prompt.latestDeploy":
+    "私の各 Netlify プロジェクトの最新デプロイのステータスはどうなっていますか？",
+  "marketplace.plugin.netlify.prompt.errors": "過去 1 日にサーバーエラーを返したサイトの URL はどれですか？",
+  "marketplace.plugin.netlify.prompt.deploy": "このフォルダーを既存の Netlify プロジェクトにデプロイしてください。",
+  "marketplace.plugin.railway.tagline": "プロジェクト、サービス、デプロイ",
+  "marketplace.plugin.railway.description":
+    "Railway を使うと、エージェントはプロジェクトとサービスを一覧表示し、プロジェクトを作成し、サービスを再デプロイし、フィーチャーフラグを管理できます。複数の手順が必要な作業は Railway Agent に任せることもできます。Railway Agent はログを読み、デプロイが失敗した理由を調べ、サービスを作成し、変数を設定します。各ユーザーはブラウザーで自分の Railway アカウントにサインインし、エージェントが使えるワークスペースとプロジェクトを選びます。それらのプロジェクトでは、エージェントはフルアクセスを持ちます。ステージされた変更のデプロイやフィーチャーフラグの削除ができ、Railway Agent を通じてサービス、変数、データベース、ネットワークも変更できます。",
+  "marketplace.plugin.railway.app":
+    "プロジェクト、サービス、デプロイを、ブラウザーでサインインする Railway の MCP サーバーで提供します。",
+  "marketplace.plugin.railway.prompt.projects":
+    "自分の Railway ワークスペースにはどのプロジェクトとサービスがありますか？",
+  "marketplace.plugin.railway.prompt.crash":
+    "Railway のバックエンドサービスがデプロイ時にクラッシュするのはなぜですか？",
+  "marketplace.plugin.railway.prompt.redeploy": "自分の Railway プロジェクトの API サービスを再デプロイしてください。",
+  "marketplace.plugin.render.tagline": "サービス、デプロイ、ログ",
+  "marketplace.plugin.render.description":
+    "Render を使うと、エージェントはワークスペースとサービスを一覧表示し、ログ、イベント、メトリクスを読み、デプロイ履歴を確認し、デプロイを開始し、Render Postgres で読み取り専用の SQL を実行できます。Render の API キーは 1 つの Authorization ヘッダーに入ります。このキーは Render アカウントのすべてのワークスペースに届きます。エージェントは Web サービス、静的サイト、cron ジョブ、Postgres データベース、Key Value インスタンスを作成でき、これには費用がかかる場合があります。また、サービスの環境変数を置き換えることもできます。サーバーはリソースを削除できません。",
+  "marketplace.plugin.render.app":
+    "サービス、デプロイ、ログ、メトリクスを、API キーを使う Render の MCP サーバーで提供します。",
+  "marketplace.plugin.render.prompt.services": "自分の Render ワークスペースにはどのサービスがありますか？",
+  "marketplace.plugin.render.prompt.logs": "Render の Web サービスが直近 1 時間に記録したエラーは何ですか？",
+  "marketplace.plugin.render.prompt.deploy": "Render サービスの最後のデプロイが失敗したのはなぜですか？",
+  "marketplace.plugin.atlassian.tagline": "Jira の作業項目と Confluence のページ",
+  "marketplace.plugin.atlassian.description":
+    "Atlassian を使うと、エージェントは Jira の作業項目、Confluence のページ、Bitbucket のプルリクエストを検索して読み、作業項目、ページ、コメントを作成または更新できます。各ユーザーはブラウザーで自分の Atlassian アカウントにサインインし、同意画面でアクセスを承認します。エージェントはユーザーと同じ権限を持ちます。作業項目とページの変更、ページの権限の変更、プルリクエストのマージができます。Jira のデータを削除するツールは、組織の管理者がオンにするまでオフのままです。ツールを呼び出すたびに Rovo クレジットを使います。",
+  "marketplace.plugin.atlassian.app":
+    "Jira、Confluence、Bitbucket を、ブラウザーでサインインする Atlassian の MCP サーバーで提供します。",
+  "marketplace.plugin.atlassian.prompt.assigned": "自分に割り当てられている未完了の Jira の作業項目はどれですか？",
+  "marketplace.plugin.atlassian.prompt.releasePage":
+    "リリース手順についての Confluence のページを探して要約してください。",
+  "marketplace.plugin.atlassian.prompt.newItem":
+    "ログインのバグについて、再現手順を付けて Jira の作業項目を作成してください。",
+  "marketplace.plugin.todoist.tagline": "タスク、プロジェクト、リマインダー",
+  "marketplace.plugin.todoist.description":
+    "Todoist を使うと、エージェントは日付、テキスト、ラベル、フィルターでタスクを探し、タスクを追加して日程を変更し、プロジェクト、セクション、ラベル、コメント、リマインダーを管理できます。各ユーザーはブラウザーで自分の Todoist アカウントにサインインします。エージェントには読み取りと書き込みの権限があり、タスク、プロジェクト、その他の項目を変更、完了、削除できます。",
+  "marketplace.plugin.todoist.app":
+    "タスク、プロジェクト、リマインダーを、ブラウザーでサインインする Todoist の MCP サーバーで提供します。",
+  "marketplace.plugin.todoist.prompt.today": "今日が期限の Todoist タスクはどれですか？",
+  "marketplace.plugin.todoist.prompt.capture": "これらのアクション項目を Todoist のインボックスに追加してください。",
+  "marketplace.plugin.todoist.prompt.overdue": "期限切れの Todoist タスクを明日に移してください。",
+  "marketplace.plugin.trello.tagline": "ボード、リスト、カード",
+  "marketplace.plugin.trello.description":
+    "Trello を使うと、エージェントはボード、リスト、カード、チェックリスト、コメントを検索して読み、ボードとカードを作成し、リストとカードを移動し、カードを完了にし、チェックリスト、コメント、ラベルを追加できます。また、ユーザーの Trello インボックスのカードを読んで追加し、Planner の予定を読むこともできます。予定は、接続された Google または Outlook のカレンダーから来ることがあります。各ユーザーはブラウザーで自分の Trello アカウントにサインインし、同意画面でワークスペースを選びます。エージェントには、それらのワークスペースでユーザーと同じ権限があります。カードとリストをアーカイブできますが、サーバーは何も完全には削除できません。",
+  "marketplace.plugin.trello.app":
+    "ボード、リスト、カードを、ブラウザーでサインインする Trello の MCP サーバーで提供します。",
+  "marketplace.plugin.trello.prompt.myCards": "自分に割り当てられた Trello カードはどれですか？",
+  "marketplace.plugin.trello.prompt.board": "Trello ボードで進行中の作業をまとめてください。",
+  "marketplace.plugin.trello.prompt.newCards": "これらのアクション項目をカードとして Trello ボードに追加してください。",
+  "marketplace.plugin.huggingface.tagline": "Hub のモデル、データセット、論文",
+  "marketplace.plugin.huggingface.description":
+    "Hugging Face を使うと、エージェントは Hugging Face Hub のモデル、データセット、Spaces、コレクション、論文を検索し、モデルカードやリポジトリのファイルを読み、データセットをプレビューし、Hugging Face のドキュメントを検索できます。公開されている Hub のデータを使うので、アカウントもキーも不要です。ツールは読み取り専用で、エージェントはリポジトリの作成やジョブの実行はできません。",
+  "marketplace.plugin.huggingface.app":
+    "モデル、データセット、Spaces、論文、ドキュメントの検索を、サインイン不要の Hugging Face MCP サーバーで提供します。",
+  "marketplace.plugin.huggingface.prompt.models": "Hugging Face で音声認識用の小さなオープンモデルを探してください。",
+  "marketplace.plugin.huggingface.prompt.papers": "今日 Hugging Face で話題の論文はどれですか？",
+  "marketplace.plugin.huggingface.prompt.dataset": "気象の時系列データセットを探して、その列を見せてください。",
   "marketplace.auth.apiKey": "API キー",
   "marketplace.auth.personalApiKey": "個人用 API キー",
   "marketplace.auth.mcpUrl": "MCP URL",

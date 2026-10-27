@@ -94,6 +94,8 @@ export const messages = {
   "error.team.hostTimezoneUnsupported": "Questa connessione non supporta il fuso orario del server.",
   "error.team.routineResultsUnsupported": "Questa connessione non supporta le destinazioni delle routine.",
   "error.team.agentMemoryLimitUnsupported": "Questa connessione non supporta il limite di memorie degli agenti.",
+  "error.team.promptCacheTtlUnsupported": "Questa connessione non supporta la durata della cache dei prompt.",
+  "error.team.providerDefaultUnsupported": "Questa connessione non supporta il provider predefinito.",
   "error.team.attachmentNameRequired": "Serve un nome di allegato sicuro.",
   "error.team.attachmentNotFound": "Allegato non trovato.",
   "error.team.sharedFileTooLarge": "Il file condiviso supera il limite di 100 MB.",

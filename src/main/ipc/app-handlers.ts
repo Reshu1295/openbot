@@ -10,9 +10,11 @@ import {
   type AppVariant,
   type ChatWindowTarget,
   type ExternalDestination,
+  type ExternalLinkBrowser,
+  externalLinkAppName,
   GROK_BOT_EXPORT_URL,
 } from "@openbot/contracts/ipc";
-import { app, type BrowserWindow, shell } from "electron";
+import { app, type BrowserWindow, dialog, type OpenDialogOptions } from "electron";
 import { version as developmentVersion } from "../../../package.json";
 import type { AgentService } from "../../backend/agent-service";
 import type { BrowserHost } from "../../backend/browser-host";
@@ -24,6 +26,7 @@ import type { AppBehaviorService } from "../app-behavior-service";
 import type { AppearanceService } from "../appearance-service";
 import type { ApprovalAutomation } from "../approval-automation-store";
 import type { BusyMessageModePreferenceStore } from "../busy-message-mode-preference-store";
+import type { ExternalLinkOpener, ExternalLinkPreferenceStore } from "../external-link-opener";
 import type { InterfaceSizeService } from "../interface-size-service";
 import type { LanguageService } from "../language-service";
 import type { LogoColorService } from "../logo-color-service";
@@ -46,6 +49,7 @@ import {
   parseBusyMessageModePreference,
   parseChatWindowTarget,
   parseExternalDestination,
+  parseExternalLinkPreference,
   parseRemoteNetworkRoutePreference,
   parseRemoteSessionReusePreference,
   parseSetup,
@@ -102,6 +106,10 @@ export interface AppIpcDependencies {
   /** Applies a changed network route to the devices that are connected to this computer now. */
   applyRemoteNetworkRoute: () => Promise<void>;
   remoteSessionCache: RemoteSessionCache;
+  externalLinkPreference: ExternalLinkPreferenceStore;
+  externalLinks: ExternalLinkOpener;
+  /** Opens a web page in the program that the user chose in Settings. */
+  openLink: (url: string) => Promise<void>;
   appBehavior: AppBehaviorService;
   language: LanguageService;
   logoColor: LogoColorService;
@@ -133,6 +141,9 @@ export function appIpcHandlers({
   remoteNetworkRoute,
   applyRemoteNetworkRoute,
   remoteSessionCache,
+  externalLinkPreference,
+  externalLinks,
+  openLink,
   appBehavior,
   language,
   logoColor,
@@ -241,12 +252,32 @@ export function appIpcHandlers({
         await initializeAgent();
         return state;
       }),
-      openExternal: payloadHandler(parseExternalDestination, (parsed) => {
-        return shell.openExternal(EXTERNAL_DESTINATIONS[parsed]);
-      }),
-      openUrl: payloadHandler(stringPayload("URL", INPUT_LIMITS.browserUrl), (url) =>
-        openHttpLink(url, (address) => shell.openExternal(address)),
+      openExternal: payloadHandler(parseExternalDestination, (parsed) => openLink(EXTERNAL_DESTINATIONS[parsed])),
+      openUrl: payloadHandler(stringPayload("URL", INPUT_LIMITS.browserUrl), (url) => openHttpLink(url, openLink)),
+      getExternalLinkPreference: handler(() => externalLinkPreference.get()),
+      setExternalLinkPreference: payloadHandler(parseExternalLinkPreference, (parsed) =>
+        runCauseEffect(externalLinkPreference.set(parsed)),
       ),
+      listExternalLinkBrowsers: handler(() => runCauseEffect(externalLinks.listBrowsers())),
+      chooseExternalLinkApp: handler(async (): Promise<ExternalLinkBrowser | null> => {
+        const mainWindow = getMainWindow();
+        // macOS shows an application bundle as one file, so the dialog can offer only applications.
+        const options: OpenDialogOptions = {
+          title: language.translate("dialog.chooseExternalLinkApp"),
+          properties: ["openFile"],
+          ...(process.platform === "darwin"
+            ? {
+                defaultPath: "/Applications",
+                filters: [{ name: language.translate("dialog.filter.applications"), extensions: ["app"] }],
+              }
+            : {}),
+        };
+        const result = mainWindow
+          ? await dialog.showOpenDialog(mainWindow, options)
+          : await dialog.showOpenDialog(options);
+        const path = result.canceled ? undefined : result.filePaths[0];
+        return path ? { name: externalLinkAppName(path), path } : null;
+      }),
       openChatWindow: payloadHandler(parseChatWindowTarget, openChatWindow),
       getChatWindows: handler(chatWindowTargets),
     },

@@ -74,7 +74,12 @@ export function decodeAgentSummary(value: unknown): ClientAgentSummary {
   // Backup models stay on their host, and this decoder drops them. A later host can save a provider
   // or more models than this version accepts, so they are not checked. An owner or admin reads them
   // on `agent-backup-models-v1`.
-  const { backupModels: _backupModels, usageLimitReturn: _usageLimitReturn, ...record } = decodeRecord(value, "agent");
+  const {
+    backupModels: _backupModels,
+    usageLimitReturn: _usageLimitReturn,
+    pendingRuntime: _pendingRuntime,
+    ...record
+  } = decodeRecord(value, "agent");
   // Servers older than 63b55606 omit `avatarUrl` entirely. The shared guard requires the field, so
   // normalize the absent case to null before validating rather than loosening the guard for everyone.
   const candidate = record.avatarUrl === undefined ? { ...record, avatarUrl: null } : record;
@@ -193,7 +198,6 @@ export const decodeRoutineRun = guardedDecoder(isRoutineRun, "remote routine run
 export const decodeRoutineRuns = guardedListDecoder(isRoutineRun, "remote routine history");
 export const decodeRemoteRoutineFlowCanvas = guardedDecoder(isRoutineFlowCanvas, "remote routine flow canvas");
 export const decodeRemoteRoutineFlowLink = guardedDecoder(isRoutineFlowLink, "remote routine flow link");
-
 export function decodeSidebarLayoutSnapshot(value: unknown): SidebarLayoutSnapshot {
   if (!isSidebarLayoutSnapshot(value)) throw new Error("Invalid sidebar layout response.");
   return value;

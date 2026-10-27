@@ -5,6 +5,7 @@ import { AnsweredPromptsProvider } from "./answered-prompts";
 import { AppBootstrap } from "./app-bootstrap";
 import { AuthProvider } from "./features/account/account-context";
 import { AgentTasksProvider } from "./features/agent-tasks/agent-tasks-context";
+import { AgentThreadsProvider } from "./features/agent-threads/agent-threads-context";
 import { AgentActionsProvider } from "./features/agents/agent-actions";
 import { AgentEventBridge } from "./features/agents/agent-event-bridge";
 import { AgentReadTrackingProvider } from "./features/agents/agent-read-tracking";
@@ -186,26 +187,28 @@ function ScopedProviders(props: ParentProps<ScopedConversationProps>): JSX.Eleme
               <ProvidersProvider>
                 <TurnsProvider>
                   <AgentTasksProvider>
-                    <ConversationProvider>
-                      <BrowserTabsProvider>
-                        <SidebarProvider>
-                          <NavigationProvider>
-                            <ServerSelectionProvider>
-                              <AgentActionsProvider>
-                                <ServerScopeProvider>
-                                  <AgentEventBridge />
-                                  {/* The Dynamic Island follows the main window only. */}
-                                  <Show when={!platform.chatWindow}>
-                                    <DynamicIslandBridge />
-                                  </Show>
-                                  {props.children}
-                                </ServerScopeProvider>
-                              </AgentActionsProvider>
-                            </ServerSelectionProvider>
-                          </NavigationProvider>
-                        </SidebarProvider>
-                      </BrowserTabsProvider>
-                    </ConversationProvider>
+                    <AgentThreadsProvider>
+                      <ConversationProvider>
+                        <BrowserTabsProvider>
+                          <SidebarProvider>
+                            <NavigationProvider>
+                              <ServerSelectionProvider>
+                                <AgentActionsProvider>
+                                  <ServerScopeProvider>
+                                    <AgentEventBridge />
+                                    {/* The Dynamic Island follows the main window only. */}
+                                    <Show when={!platform.chatWindow}>
+                                      <DynamicIslandBridge />
+                                    </Show>
+                                    {props.children}
+                                  </ServerScopeProvider>
+                                </AgentActionsProvider>
+                              </ServerSelectionProvider>
+                            </NavigationProvider>
+                          </SidebarProvider>
+                        </BrowserTabsProvider>
+                      </ConversationProvider>
+                    </AgentThreadsProvider>
                   </AgentTasksProvider>
                 </TurnsProvider>
               </ProvidersProvider>

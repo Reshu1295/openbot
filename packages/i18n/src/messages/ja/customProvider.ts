@@ -46,12 +46,10 @@ export const messages = {
   "customProvider.error.baseUrlCredential": "認証情報は URL ではなくヘッダーに入れてください。",
 
   "customProvider.saved.restarted": "保存しました。OpenBot がモデルを読み込んでいます。",
-  "customProvider.saved.skippedBusy":
-    "保存しました。OpenCode は現在のタスクが止まったあとで一覧を読み込みます。そのあとで「接続」を押してください。",
+  "customProvider.saved.skippedBusy": "保存しました。OpenCode は現在のタスクが止まったあとで一覧を読み込みます。",
   "customProvider.saved.notRunning": "保存しました。OpenCode は次回の起動時に一覧を読み込みます。",
   "customProvider.removed.restarted": "削除しました。OpenBot がモデルを読み込んでいます。",
-  "customProvider.removed.skippedBusy":
-    "削除しました。OpenCode は現在のタスクが止まったあとで一覧を読み込みます。そのあとで「接続」を押してください。",
+  "customProvider.removed.skippedBusy": "削除しました。OpenCode は現在のタスクが止まったあとで一覧を読み込みます。",
   "customProvider.removed.notRunning": "削除しました。OpenCode は次回の起動時に一覧を読み込みます。",
   "customProvider.saveFailed": "OpenBot はこのエンドポイントを保存できませんでした。",
   "customProvider.removeFailed": "OpenBot は {name} を削除できませんでした。",
@@ -70,8 +68,7 @@ export const messages = {
   "customProvider.field.baseUrl": "ベース URL",
   "customProvider.field.apiKey": "API キー",
   "customProvider.field.apiKeyHint": "省略できます。ヘッダーで認証する場合は空のままにしてください。",
-  "customProvider.field.apiKeyKeptHint":
-    "キーは保存済みです。キーと保存済みのヘッダーをそのまま使う場合は、空のままにしてください。",
+  "customProvider.field.apiKeyKeptHint": "キーは保存済みです。そのまま使う場合は、空のままにしてください。",
   "customProvider.models": "モデル",
   "customProvider.model.id": "モデル {number} の ID",
   "customProvider.model.name": "モデル {number} の表示名",
@@ -82,6 +79,7 @@ export const messages = {
   "customProvider.header.name": "ヘッダー {number} の名前",
   "customProvider.header.value": "ヘッダー {number} の値",
   "customProvider.header.valuePlaceholder": "値",
+  "customProvider.header.keptPlaceholder": "保存済みです。変更しない場合は空のままにしてください。",
   "customProvider.header.remove": "ヘッダー {number} を削除",
   "customProvider.header.add": "ヘッダーを追加",
   "customProvider.submit": "送信",
@@ -155,6 +153,9 @@ export const messages = {
   "customProvider.acp.commandHint": "起動するプログラムです。OpenBot は PATH からこれを探します。",
   "customProvider.acp.args": "引数",
   "customProvider.acp.argsHint": "引数はスペースで区切ってください。スペースを含む引数は引用符で囲んでください。",
+  "customProvider.acp.usagePrompt": "使用量コマンド",
+  "customProvider.acp.usagePromptHint":
+    "OpenBot は最短 5 分ごとにこれを送信し、最新の回答を表示します。/usage など、エージェント自身が答えるコマンドを使用してください。",
   "customProvider.acp.env": "環境変数",
   "customProvider.acp.env.name": "変数 {number} の名前",
   "customProvider.acp.env.value": "変数 {number} の値",
@@ -185,6 +186,7 @@ export const messages = {
   "customProvider.acp.error.envDuplicate": "このエージェントはすでに {name} を設定しています。",
   "customProvider.acp.error.envValueRequired": "この変数の値を入力してください。",
   "customProvider.acp.error.envValueLength": "値は {max} 文字未満にしてください。",
+  "customProvider.acp.error.usagePromptInvalid": "{max} 文字以内の 1 行にしてください。",
   "customProvider.acp.error.agentIdPattern":
     "小文字の英字、数字、ハイフンを使い、英字か数字で始めてください。40 文字以内にしてください。",
 

@@ -5,6 +5,7 @@ import {
   type ProviderUsageResetOutcome,
   type ProviderUsageResets,
 } from "@openbot/contracts/ipc";
+import { CLAUDE_API_KEY_ACCOUNT_ID } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import type { AppTranslate } from "@openbot/i18n";
 
 /** One account of a provider row, with the agents that use it. */
@@ -34,7 +35,7 @@ export interface ProviderAccountActions {
   resetUsage?: ((provider: AgentProviderId, accountId: string) => Promise<ProviderUsageResetOutcome>) | undefined;
 }
 
-/** The name an account shows: the user's name for it, its email, or its place in the list. */
+/** The name an account shows: the user's name for it, its email, "API key", or its place in the list. */
 export function providerAccountName(
   t: AppTranslate,
   accounts: readonly Pick<ProviderAccountStatus, "id" | "label" | "email">[],
@@ -45,10 +46,20 @@ export function providerAccountName(
     accounts.findIndex((account) => account.id === accountId),
   );
   const account = accounts[index];
-  return account?.label || account?.email || t("provider.account.numbered", { number: index + 1 });
+  return (
+    account?.label ||
+    account?.email ||
+    (account && isApiKeyAccount(account.id) ? t("provider.account.apiKey") : null) ||
+    t("provider.account.numbered", { number: index + 1 })
+  );
 }
 
 /** Whether an agent's account is this one. An agent with no account uses the provider's first. */
 export function isAgentAccount(agentAccountId: string | undefined | null, accountId: string): boolean {
   return (agentAccountId || DEFAULT_PROVIDER_ACCOUNT_ID) === accountId;
+}
+
+/** Whether the account is the one of the saved Claude key: it has no sign-in and no plan usage. */
+export function isApiKeyAccount(accountId: string): boolean {
+  return accountId === CLAUDE_API_KEY_ACCOUNT_ID;
 }

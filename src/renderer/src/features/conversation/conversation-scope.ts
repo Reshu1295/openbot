@@ -1,11 +1,16 @@
-import { isKnownAgentProvider } from "@openbot/contracts/agent-providers";
+import { isKnownAgentProvider, providerDisplayName } from "@openbot/contracts/agent-providers";
 import {
   type FileQuoteTarget,
   fileQuoteId,
   fileQuoteTarget,
   limitedQuoteText,
 } from "@openbot/contracts/chat-tag-references";
-import type { McpSignInRelayPage, UpdateAgentInput } from "@openbot/contracts/ipc";
+import {
+  customProviderOfModel,
+  type McpSignInRelayPage,
+  relayableSignInLink,
+  type UpdateAgentInput,
+} from "@openbot/contracts/ipc";
 import type { QuoteRequest } from "@openbot/ui/features/conversation/ComposerEditor";
 import { currentText } from "@openbot/ui/text";
 import { usesTouchLayout } from "@openbot/ui/utils";
@@ -67,6 +72,12 @@ const READER_INPUT_WINDOW_MS = 250;
  */
 const handledSettingsRequests = new WeakSet<AgentSettingsRequest>();
 
+/** An http or https page that the built-in browser can show. A relayed sign-in page needs this computer's browser. */
+function builtInBrowserPage(url: string): boolean {
+  const page = URL.parse(url);
+  return (page?.protocol === "http:" || page?.protocol === "https:") && relayableSignInLink(url) === null;
+}
+
 function followConversationBottom(element: HTMLDivElement): void {
   element.scrollTop = element.scrollHeight - element.clientHeight;
 }
@@ -76,6 +87,8 @@ export function createConversationViewScope(props: ConversationProps) {
   /** A view shows one agent or one channel for its whole life, so each branch below is fixed. */
   const channel = untrack(() => props.channel);
   const agentReady = () => props.agentStatus.phase === "ready";
+  /** A side thread covers the agent's own chat, which stays mounted under it. */
+  const sideThreadOpen = () => props.threads?.open !== undefined;
   const providerUpdateRequired = () =>
     props.agentStatus.providers?.find(
       (provider) => provider.id === props.agent?.provider && provider.state === "outdated",
@@ -242,11 +255,6 @@ export function createConversationViewScope(props: ConversationProps) {
     activeRightPanel,
     settingsOpen,
     filesOpen,
-    taskPanelOpen,
-    taskPanelTaskId,
-    taskListOpen,
-    openTaskPanel,
-    showTaskList,
     panelSubagentId,
     openSubagentPanel,
     sidePanel,
@@ -373,6 +381,14 @@ export function createConversationViewScope(props: ConversationProps) {
     providerSilentMinutes,
     providerOffline,
   } = activity;
+  /** The name of what the agent's turns wait for. OpenCode serves a custom endpoint, so it names the endpoint (#3234). */
+  const agentProviderName = () => {
+    const agent = props.agent;
+    if (!agent) return undefined;
+    const endpoint =
+      agent.provider === "opencode" ? customProviderOfModel(agent.model, props.customProviders ?? []) : undefined;
+    return endpoint?.name ?? providerDisplayName(agent.provider);
+  };
   const browser = createBrowserStore({
     props,
     browserOpenRequests: resources.browserOpenRequests,
@@ -540,7 +556,11 @@ export function createConversationViewScope(props: ConversationProps) {
     setChatSearchTotal,
     setActiveChatSearchIndex,
   });
-  const { closeChatSearch, moveChatSearch, handleChatSearchShortcut, setChatSearchInputElement } = search;
+  const { closeChatSearch, moveChatSearch, setChatSearchInputElement } = search;
+  /** The search finds messages of the agent's own chat. A side thread covers it, so the shortcut does nothing there. */
+  const handleChatSearchShortcut = (event: KeyboardEvent) => {
+    if (!sideThreadOpen()) search.handleChatSearchShortcut(event);
+  };
   const voice = createVoiceStore({
     props,
     resources,
@@ -595,6 +615,8 @@ export function createConversationViewScope(props: ConversationProps) {
   const actions = createComposerActions({
     props,
     attachmentBusy,
+    setAttachmentBusy,
+    attachmentImports: resources.importTargetAgents,
     agentReady: () => agentReady() && !providerUpdateRequired(),
     drafts,
     setDrafts,
@@ -671,6 +693,8 @@ export function createConversationViewScope(props: ConversationProps) {
   const {
     updateTeamTyping,
     addAttachments,
+    pasteFiles,
+    releaseCutAttachments,
     openAttachmentPicker,
     openAttachmentPickerFromKey,
     editQueuedMessage,
@@ -857,12 +881,14 @@ export function createConversationViewScope(props: ConversationProps) {
         setActiveRightPanel("browser");
         return;
       }
-      if (chatSearchOpen()) {
+      // A side thread covers the search and the queued message edit of the agent's own chat. Escape in
+      // the thread does not close or cancel what the user cannot see.
+      if (chatSearchOpen() && !sideThreadOpen()) {
         event.preventDefault();
         closeChatSearch();
         return;
       }
-      if (currentEditingDeliveryId()) {
+      if (currentEditingDeliveryId() && !sideThreadOpen()) {
         void cancelQueuedMessageEdit();
         return;
       }
@@ -1187,11 +1213,21 @@ export function createConversationViewScope(props: ConversationProps) {
     () => {
       const agent = props.agent;
       if (!agent) return null;
+      const queued = agent.pendingRuntime;
       return {
-        signature: [agent.id, agent.provider, agent.model, agent.reasoningEffort].join("\u0000"),
-        provider: agent.provider,
-        model: agent.model,
-        reasoningEffort: agent.reasoningEffort,
+        signature: [
+          agent.id,
+          agent.provider,
+          agent.model,
+          agent.reasoningEffort,
+          queued?.provider,
+          queued?.model,
+          queued?.reasoningEffort,
+          queued?.providerAccountId,
+        ].join("\u0000"),
+        provider: queued?.provider ?? agent.provider,
+        model: queued?.model ?? agent.model,
+        reasoningEffort: queued?.reasoningEffort ?? agent.reasoningEffort,
       };
     },
     (agent) => {
@@ -1233,12 +1269,7 @@ export function createConversationViewScope(props: ConversationProps) {
       setSidebarFilePreview(null);
       setRightPanels((current) => ({ ...current, [preview.ownerAgentId]: "none" }));
     }
-    if (
-      !previousAgentId ||
-      !agentId ||
-      (panel !== "settings" && panel !== "file-preview" && panel !== "files" && panel !== "task")
-    )
-      return;
+    if (!previousAgentId || !agentId || (panel !== "settings" && panel !== "file-preview" && panel !== "files")) return;
     setRightPanels((current) => ({ ...current, [agentId]: "none" }));
   }
 
@@ -1274,9 +1305,11 @@ export function createConversationViewScope(props: ConversationProps) {
       activeBrowserTabId: props.activeBrowserTabId,
       onActivateBrowserTab: activateBrowserTab,
       suspended: props.browserVisibilitySuspended,
+      // Read here, not in the callback: the prop can be a compiled memo, and the callback has no owner.
+      browserDisabled: untrack(() => props.browserEnabled === false),
     }),
-    ({ activeTab, screenOpen, activeBrowserTabId, onActivateBrowserTab, suspended }) => {
-      if (untrack(() => props.browserEnabled === false) || suspended) return;
+    ({ activeTab, screenOpen, activeBrowserTabId, onActivateBrowserTab, suspended, browserDisabled }) => {
+      if (browserDisabled || suspended) return;
       setBrowserAddress(activeTab?.url ?? "https://www.google.com");
       if (screenOpen && activeTab && activeTab.id !== activeBrowserTabId) {
         onActivateBrowserTab(activeTab.id);
@@ -1398,6 +1431,19 @@ export function createConversationViewScope(props: ConversationProps) {
     const target = currentTarget();
     const runtime = conversationRuntime(props);
     try {
+      // A relayed sign-in page must open on this computer, so it does not go to the built-in browser.
+      // A joined server's browser runs on its host, and the other members see its tabs.
+      // When no tab opens, the link opens as it does with no setting.
+      if (
+        props.openLinksInBrowser &&
+        props.server?.kind !== "remote" &&
+        props.browserEnabled !== false &&
+        builtInBrowserPage(url) &&
+        (await openBrowserAddress(url, true))
+      ) {
+        setActiveRightPanel("browser");
+        return;
+      }
       if (target && runtime.agent.openMessageLink) {
         const page = await runtime.agent.openMessageLink({ agentId: target.agentId, url }, target.serverId);
         if (page) setMessageLinkRelay({ url, target, page });
@@ -1526,6 +1572,9 @@ export function createConversationViewScope(props: ConversationProps) {
     noteReaderIntent(event.deltaY < 0);
   }
   function readerKeyDown(event: KeyboardEvent) {
+    // A control that used the key, such as the rows of a trace dialog, did not scroll the chat. A key in
+    // a side thread does not scroll the agent's own chat under it.
+    if (event.defaultPrevented || sideThreadOpen()) return;
     if (event.key === "ArrowUp" || event.key === "PageUp" || event.key === "Home") noteReaderIntent(true);
     else if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === "End") noteReaderIntent(false);
     else if (event.key === " ") noteReaderIntent(event.shiftKey);
@@ -1583,6 +1632,7 @@ export function createConversationViewScope(props: ConversationProps) {
     });
 
   return {
+    sideThreadOpen,
     replyJump,
     voiceConversationAvailable,
     startVoiceConversation,
@@ -1656,6 +1706,8 @@ export function createConversationViewScope(props: ConversationProps) {
     composerHasContent,
     copiedMessageId,
     copyMessage,
+    pasteFiles,
+    releaseCutAttachments,
     clearSubmittedDraft,
     currentDraft,
     currentTarget,
@@ -1671,12 +1723,7 @@ export function createConversationViewScope(props: ConversationProps) {
     expandedEmojiMessageId,
     scrollFades,
     filesOpen,
-    taskPanelOpen,
-    taskPanelTaskId,
     activeRightPanel,
-    taskListOpen,
-    openTaskPanel,
-    showTaskList,
     panelSubagentId,
     shownSubagentId,
     toggleSubagentPanel,
@@ -1742,6 +1789,7 @@ export function createConversationViewScope(props: ConversationProps) {
     renderedAgentActivity,
     providerSilentMinutes,
     providerOffline,
+    agentProviderName,
     reorderPresentedQueue,
     replyTarget,
     replyToMessage,

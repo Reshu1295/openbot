@@ -282,9 +282,13 @@ export class BootRecovery {
 
   recoverPersistedTurns(): void {
     for (const { delivery } of this.#mailbox.unresolvedDeliveries()) this.#orphanedDeliveryIds.add(delivery.id);
+    const runningTurns = this.#store.database.readRunningTurnIds();
     for (const agent of this.threads()) {
       if (!agent.threadId) continue;
       const turnId = this.#store.database.readConversationRuntime(agent.id, agent.threadId).activeTurnId;
+      // A running turn that is not the thread's active turn has no writer left, and no turn of
+      // this process runs yet, so the recovery write below closes it too (#2214).
+      const staleTurns = (runningTurns.get(agent.threadId) ?? []).filter((candidate) => candidate !== turnId);
       const changedMessages = this.#store.database
         .readConversationRecoveryMessages(agent.id, agent.threadId, turnId)
         .flatMap((message) => {
@@ -304,7 +308,7 @@ export class BootRecovery {
             ? [changed]
             : [];
         });
-      const changed = turnId !== null || changedMessages.length > 0;
+      const changed = turnId !== null || changedMessages.length > 0 || staleTurns.length > 0;
       if (!changed) continue;
       const revision = this.#store.database.persistConversationChanges({
         agentId: agent.id,
@@ -362,7 +366,7 @@ export class BootRecovery {
             agentId: agent.id,
             publicThreadId,
             cwd: typeof params.cwd === "string" ? params.cwd : agent.workspacePath,
-            findDelivery: (deliveryId) => this.#mailbox.getDelivery(deliveryId),
+            findDelivery: (deliveryId) => this.#mailbox.deliveryForProviderMessage(agent.id, deliveryId),
             findMessageDelivery: (messageId) => this.#mailbox.deliveryForMessage(messageId, agent.id),
             quietRoutineDelivery: (deliveryId) => this.#hooks.quietRoutineDelivery(deliveryId),
           }).pipe(toBootRecoveryFailed);

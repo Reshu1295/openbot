@@ -43,6 +43,12 @@ table, IPC channel or product string, or when a term in the code disagrees with 
 - **thread**: durable `projection_threads` record. **conversation**: its read projection, with no
   separate table. **provider session**: private CLI resume state (`projection_provider_sessions`).
   **team session**: authenticated remote connection. **turn**: one exchange in a thread.
+- **side thread**: a second conversation of one agent next to its own chat, the **main thread**
+  (`projection_agent_threads`, `AgentThreadRecord`). The UI calls both a thread. Code and the
+  `agent-tasks-v1` wire still call a side thread a **task** (`AgentTask`, `taskId`), and its task id
+  is `legacy_task_id ?? thread_id`. **archive** hides a side thread from the tabs and lists it under
+  "Archived"; it is the task close (`closed`, `archived_at`). A **tab** is a device-local view of a
+  thread; closing it does not change the thread.
 - **role**: a custom role of a server that sets which agents its members can use, and at which
   level (`AgentAccessRole`, `agent-access-v1`, `openbot-agent-access-v1.json`). The **Everyone** role
   applies to every member. It is not the team role (`TeamRole`: owner, admin, member), which the UI
@@ -58,6 +64,14 @@ table, IPC channel or product string, or when a term in the code disagrees with 
 - **webhook route**: the opaque route ID of one webhook routine, and the public Signal URL that
   contains it (`WebhookRouteStore`, D1 `webhook_routes`). A **receipt** records one received
   delivery ID for deduplication.
+- **workflow**: a graph of steps on the Workflows page that can name several agents, models,
+  conditions, approvals and outputs (`WorkflowStore`, `Workflows`, `workflows`, `workflows-v1`). It
+  is not a **routine flow**, which hands the answer of one agent's routine on to other agents
+  (`routine-flows-v1`). A **workflow run** is one pass through a copy of the graph
+  (`workflow_runs`); a **workflow step** is one try of one node, in a run or alone
+  (`workflow_steps`). A **workflow version** is a saved copy of the graph that the user can restore
+  (`workflow_versions`). A **workflow webhook trigger** is a trigger node with a webhook route of
+  the `workflow` owner kind (`workflow_trigger_webhooks`).
 - **shared table**: a table an agent created in the one file every agent shares
   (`~/OpenBot/Shared/Data/agent-data.db`, `SharedTable`, `AgentTables`). `openbot.db` is the
   application's database and holds none of these. **owner**: the agent whose id

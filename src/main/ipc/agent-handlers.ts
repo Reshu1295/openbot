@@ -3,6 +3,10 @@ import {
   AGENT_SESSION_SETTINGS_CAPABILITY,
   AGENT_SESSION_SETTINGS_ROUTES,
 } from "@openbot/contracts/team-protocol/agent-session-settings-v1";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 // An agent's core surface: status, agents, conversations, the queue and the prompts
 // a turn can raise. Memories, routines and attachments are their own registrars.
 // Every one of these routes to the local service or to a remote server by the
@@ -25,19 +29,21 @@ import {
   isAgentModelOption,
   parseAgentAnalyticsInput,
   parseAskSideQuestion,
-  parseBrowserSecretResponse,
   parseChannelCommand,
   parseChannelRead,
   parseGenerateAgentProfile,
   parseHostAnalyticsInput,
+  parseLocalBrowserSecretResponse,
   parseResetAgentSessionSetting,
   parseSaveAgentProfile,
   parseSetAgentHiddenInput,
   parseSetAgentSessionSetting,
+  remoteBrowserSecretResponse,
 } from "@openbot/contracts/ipc";
 import { isDynamicRecord } from "@openbot/contracts/runtime-values";
 import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
 import { AGENT_TASKS_CAPABILITY, AGENT_TASKS_ROUTES } from "@openbot/contracts/team-protocol/agent-tasks-v1";
+import { AGENT_THREADS_CAPABILITY, AGENT_THREADS_ROUTES } from "@openbot/contracts/team-protocol/agent-threads-v1";
 import { CHANNEL_ROUTES } from "@openbot/contracts/team-protocol/channels-v1";
 import { CONTEXT_RESET_CAPABILITY, CONTEXT_RESET_ROUTES } from "@openbot/contracts/team-protocol/context-reset-v1";
 import {
@@ -98,6 +104,7 @@ import {
   parsePromptResponse,
   parseQueueEdit,
   parseReadConversationPage,
+  parseRenameAgentTask,
   parseReorderQueue,
   parseRunQueuedMessageAsTask,
   parseSearchConversationFiles,
@@ -118,7 +125,7 @@ const modelLogger = createOpenBotLogger("provider-models");
 
 /** A joined server without `agent-tasks-v1`, or a task request that it cannot carry, fails with a reason. */
 function taskRemoteUnsupported(): never {
-  throw new Error(sourceText("error.backend.taskRemoteUnsupported"));
+  throw new Error(sourceText("error.backend.threadRemoteUnsupported"));
 }
 
 /** The body of an `agent-tasks-v1` request: the agent, with the task, the text of a start or message, or both. */
@@ -173,6 +180,10 @@ export function agentIpcHandlers({
   const remoteTaskRequest = <T>(serverId: string, path: string, decoder: ResponseDecoder<T>, body: RemoteTaskBody) => {
     if (!remoteServers.supportsCapability(serverId, AGENT_TASKS_CAPABILITY)) taskRemoteUnsupported();
     return runCauseEffect(remoteServers.request(serverId, path, decoder, { method: "POST", body }));
+  };
+  const remoteThreadRequest = (serverId: string, path: string, body: AgentTaskInput & { title?: string }) => {
+    if (!remoteServers.supportsCapability(serverId, AGENT_THREADS_CAPABILITY)) taskRemoteUnsupported();
+    return runCauseEffect(remoteServers.request(serverId, path, acceptEmpty, { method: "POST", body }));
   };
   return {
     agent: {
@@ -527,7 +538,13 @@ export function agentIpcHandlers({
       }),
       searchConversationMessages: scopedHandler(parseSearchConversationMessages, {
         local: (parsed) =>
-          host.searchAgentConversationMessages(parsed.query, parsed.agentId, parsed.cursor, parsed.limit),
+          host.searchAgentConversationMessages(
+            parsed.query,
+            parsed.agentId,
+            parsed.cursor,
+            parsed.limit,
+            parsed.includeSideThreads,
+          ),
         remote: (parsed, serverId) =>
           runCauseEffect(
             remoteServers.searchAgentConversationMessages(
@@ -648,6 +665,20 @@ export function agentIpcHandlers({
         remote: (parsed, serverId) =>
           remoteTaskRequest(serverId, AGENT_TASKS_ROUTES.reopen, acceptEmpty, agentTaskBody(parsed)),
       }),
+      // A joined server renames and deletes through `agent-threads-v1`; `agent-tasks-v1` has neither.
+      renameTask: scopedHandler(parseRenameAgentTask, {
+        local: (parsed) => service.renameTask(parsed, parsed.title),
+        remote: (parsed, serverId) =>
+          remoteThreadRequest(serverId, AGENT_THREADS_ROUTES.rename, {
+            agentId: parsed.agentId,
+            taskId: parsed.taskId,
+            title: parsed.title,
+          }),
+      }),
+      deleteTask: scopedHandler(parseAgentTask, {
+        local: (parsed) => runCauseEffect(service.deleteTask(parsed)),
+        remote: (parsed, serverId) => remoteThreadRequest(serverId, AGENT_THREADS_ROUTES.delete, agentTaskBody(parsed)),
+      }),
       acknowledgeFailedTurn: scopedHandler(parseAcknowledgeFailedTurn, {
         local: (parsed) => service.acknowledgeFailedTurn(parsed.agentId, parsed.turnId),
         remote: (parsed, serverId) =>
@@ -765,12 +796,26 @@ export function agentIpcHandlers({
             }),
           ),
       }),
-      respondToBrowserSecret: scopedHandler(parseBrowserSecretResponse, {
+      respondToBrowserSecret: scopedHandler(parseLocalBrowserSecretResponse, {
         local: (parsed) => runCauseEffect(service.respondToBrowserSecret(parsed)),
-        remote: (parsed, serverId) =>
-          runCauseEffect(
-            remoteServers.request(serverId, BROWSER_SECRET_RESPONSE_PATH, decodeVoid, { method: "POST", body: parsed }),
-          ),
+        remote: (parsed, serverId) => {
+          // A save goes to the Vault of the joined server, on the route that only its owner or an admin can use.
+          if (parsed.decision !== "submit" || !parsed.saveToVault)
+            return runCauseEffect(
+              remoteServers.request(serverId, BROWSER_SECRET_RESPONSE_PATH, decodeVoid, {
+                method: "POST",
+                body: remoteBrowserSecretResponse(parsed),
+              }),
+            );
+          if (!remoteServers.supportsCapability(serverId, BROWSER_SECRET_VAULT_CAPABILITY))
+            throw new Error(sourceText("error.team.vaultUnsupported"));
+          return runCauseEffect(
+            remoteServers.request(serverId, BROWSER_SECRET_VAULT_ROUTES.respond, acceptEmpty, {
+              method: "POST",
+              body: remoteBrowserSecretResponse(parsed),
+            }),
+          );
+        },
       }),
       respondToBrowserTakeover: scopedHandler(parseBrowserTakeoverResponse, {
         local: (parsed) => runCauseEffect(service.respondToBrowserTakeover(parsed)),

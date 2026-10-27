@@ -43,6 +43,8 @@ export const messages = {
   "onboarding.provider.cursorPlan": "Plan Cursor lub klucz API",
   "onboarding.provider.clineAccount": "Darmowe modele z kontem Cline",
   "onboarding.provider.inceptionKey": "Modele Mercury z kluczem API Inception",
+  "onboarding.provider.deepseekKey": "Modele DeepSeek z kluczem API DeepSeek",
+  "onboarding.provider.openrouterKey": "Wiele modeli z kluczem API OpenRouter",
   "onboarding.provider.tryFree": "Wypróbuj za darmo",
   "onboarding.provider.noSignIn": "Bez logowania",
   "onboarding.provider.more": "Więcej dostawców",

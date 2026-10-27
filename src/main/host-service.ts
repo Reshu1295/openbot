@@ -91,6 +91,7 @@ interface HostServiceOptions {
   connectors?: ForwardedApiOptions["connectors"];
   onePasswordConnector?: ForwardedApiOptions["onePasswordConnector"];
   bitwardenConnector?: ForwardedApiOptions["bitwardenConnector"];
+  vault?: ForwardedApiOptions["vault"];
   providerHostSignIns?: ForwardedApiOptions["providerHostSignIns"];
   providerAccounts?: ForwardedApiOptions["providerAccounts"];
   providerUsageResets?: ForwardedApiOptions["providerUsageResets"];
@@ -101,6 +102,7 @@ interface HostServiceOptions {
   agentImport?: ForwardedApiOptions["agentImport"];
   instanceTransfer?: ForwardedApiOptions["instanceTransfer"];
   routineFlows?: ForwardedApiOptions["routineFlows"];
+  workflows?: ForwardedApiOptions["workflows"];
   hiddenAgents?: ForwardedApiOptions["hiddenAgents"];
   agentAccess?: AgentAccessStore;
   agentTasks?: ForwardedApiOptions["agentTasks"];
@@ -385,6 +387,7 @@ export class HostService extends EventEmitter<HostEvents> {
       ...(options.connectors === undefined ? {} : { connectors: options.connectors }),
       ...(options.onePasswordConnector === undefined ? {} : { onePasswordConnector: options.onePasswordConnector }),
       ...(options.bitwardenConnector === undefined ? {} : { bitwardenConnector: options.bitwardenConnector }),
+      ...(options.vault === undefined ? {} : { vault: options.vault }),
       ...(options.providerHostSignIns === undefined ? {} : { providerHostSignIns: options.providerHostSignIns }),
       ...(options.providerAccounts === undefined ? {} : { providerAccounts: options.providerAccounts }),
       ...(options.providerUsageResets === undefined ? {} : { providerUsageResets: options.providerUsageResets }),
@@ -397,6 +400,7 @@ export class HostService extends EventEmitter<HostEvents> {
       ...(options.agentImport === undefined ? {} : { agentImport: options.agentImport }),
       ...(options.instanceTransfer === undefined ? {} : { instanceTransfer: options.instanceTransfer }),
       ...(options.routineFlows === undefined ? {} : { routineFlows: options.routineFlows }),
+      ...(options.workflows === undefined ? {} : { workflows: options.workflows }),
       ...(options.hiddenAgents === undefined ? {} : { hiddenAgents: options.hiddenAgents }),
       ...(options.agentAccess === undefined ? {} : { agentAccess: options.agentAccess }),
       ...(options.agentTasks === undefined ? {} : { agentTasks: options.agentTasks }),
@@ -1100,8 +1104,14 @@ export class HostService extends EventEmitter<HostEvents> {
     );
   }
 
-  searchAgentConversationMessages(query: string, agentId?: string, cursor?: string, limit = 100) {
-    return this.#options.agents.searchConversationMessages(query, agentId, cursor, limit);
+  searchAgentConversationMessages(
+    query: string,
+    agentId?: string,
+    cursor?: string,
+    limit = 100,
+    includeSideThreads = false,
+  ) {
+    return this.#options.agents.searchConversationMessages(query, agentId, cursor, limit, includeSideThreads);
   }
 
   searchAgentConversationFiles(query: string, cursor?: string, limit = 50) {

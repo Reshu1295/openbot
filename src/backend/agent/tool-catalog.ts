@@ -1,10 +1,10 @@
-import type { AgentSummary } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import { z } from "zod";
 import { BROWSER_DYNAMIC_TOOLS, OPENBOT_BROWSER_NAMESPACE } from "../browser-tools";
 import { DEVICE_DYNAMIC_TOOLS, OPENBOT_DEVICE_NAMESPACE } from "../device-tools";
 import { OPENBOT_DYNAMIC_TOOLS, OPENBOT_TOOL_DEFINITIONS } from "../openbot-tools";
 import type { DynamicToolCallParams } from "../protocol";
+import { advertisedJsonSchema } from "./advertised-json-schema";
 import { toolGuidance } from "./tool-guidance";
 
 /** Discovery changes visibility only. Original definitions and execution owners stay authoritative. */
@@ -86,7 +86,7 @@ export const VISIBLE_DYNAMIC_TOOLS = [
       type: "function" as const,
       name: definition.name,
       description: definition.description,
-      inputSchema: z.toJSONSchema(z.strictObject(definition.shape), { target: "draft-7" }),
+      inputSchema: advertisedJsonSchema(z.strictObject(definition.shape)),
     })),
   },
 ];
@@ -134,8 +134,8 @@ export function resolveDeferredTool(params: DynamicToolCallParams): DynamicToolC
   return { ...params, namespace: entry.namespace, tool: entry.tool, arguments: parsed.data.arguments };
 }
 
-function toolGuidanceFor(entries: readonly (typeof BUILTIN_TOOL_CATALOG)[number][], agent: AgentSummary): string[] {
-  return [...new Set(entries.map((entry) => toolGuidance(entry.namespace, entry.tool, agent)))].filter(Boolean);
+function toolGuidanceFor(entries: readonly (typeof BUILTIN_TOOL_CATALOG)[number][]): string[] {
+  return [...new Set(entries.map((entry) => toolGuidance(entry.namespace, entry.tool)))].filter(Boolean);
 }
 
 type BuiltinCatalog = readonly (typeof BUILTIN_TOOL_CATALOG)[number][];
@@ -147,7 +147,6 @@ export interface ToolDiscoveryOptions {
 
 export function discoverTools(
   params: DynamicToolCallParams,
-  agent: AgentSummary,
   { deviceTools }: ToolDiscoveryOptions = { deviceTools: false },
 ) {
   const catalog: BuiltinCatalog = deviceTools
@@ -188,7 +187,7 @@ export function discoverTools(
         ? { name: entry.name, description: entry.description, inputSchema: entry.inputSchema }
         : { name: entry.name, description: entry.description.slice(0, 180) },
     );
-    const guidance = toolGuidanceFor([...ready], agent);
+    const guidance = toolGuidanceFor([...ready]);
     const result = guidance.length > 0 ? { tools, guidance } : { tools };
     return found.some(({ entry }) => entry.namespace === OPENBOT_BROWSER_NAMESPACE)
       ? result
@@ -199,6 +198,6 @@ export function discoverTools(
   const entries = [...new Set(parsed.data.names)].map((name) => requireTool(catalog, name));
   return {
     tools: entries.map(({ name, description, inputSchema }) => ({ name, description, inputSchema })),
-    guidance: toolGuidanceFor(entries, agent),
+    guidance: toolGuidanceFor(entries),
   };
 }

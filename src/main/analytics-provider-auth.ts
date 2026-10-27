@@ -1,4 +1,6 @@
 import { type AgentSummary, DEFAULT_PROVIDER_ACCOUNT_ID, isFreeOpencodeModel } from "@openbot/contracts/ipc";
+import { CLAUDE_API_KEY_ACCOUNT_ID } from "@openbot/contracts/team-protocol/claude-api-key-v1";
+import { CLAUDE_API_KEY_ACCOUNT_TYPE } from "../backend/protocol";
 
 /** How an agent's turns are paid for. `custom` is an endpoint the user added, local or remote. */
 export const PROVIDER_AUTH_KINDS = ["subscription", "api_key", "free", "custom", "unknown"] as const;
@@ -28,9 +30,14 @@ export function providerAuthKind(agent: AgentSummary, facts: ProviderAuthFacts):
       if (account?.type !== "chatgpt") return "unknown";
       return account.planType === "free" ? "free" : "subscription";
     }
-    case "claude":
+    case "claude": {
+      // The account of the saved key, or the own sign-in when it has no claude.ai account.
+      if (agent.providerAccountId === CLAUDE_API_KEY_ACCOUNT_ID) return "api_key";
       if (addedAccount) return "unknown";
-      return facts.account("claude")?.planType ? "subscription" : "unknown";
+      const account = facts.account("claude");
+      if (account?.type === CLAUDE_API_KEY_ACCOUNT_TYPE) return "api_key";
+      return account?.planType ? "subscription" : "unknown";
+    }
     case "grok":
       // With a key set, the CLI picks the method it advertises, which the host does not see.
       if (facts.envKey("XAI_API_KEY")) return "unknown";
@@ -41,7 +48,9 @@ export function providerAuthKind(agent: AgentSummary, facts: ProviderAuthFacts):
       if (facts.hasApiKey("muse")) return "api_key";
       return facts.account("muse") ? "subscription" : "unknown";
     case "inception":
-      return facts.hasApiKey("inception") ? "api_key" : "unknown";
+    case "deepseek":
+    case "openrouter":
+      return facts.hasApiKey(agent.provider) ? "api_key" : "unknown";
     case "cursor":
       if (facts.envKey("CURSOR_API_KEY")) return "api_key";
       return facts.account("cursor") ? "subscription" : "unknown";

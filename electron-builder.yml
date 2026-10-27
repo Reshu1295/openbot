@@ -48,6 +48,9 @@ extraResources:
   # `openbot-cli.mjs` runs tasks on agents through the Local scripts API; see docs/automation.md.
   - from: resources/cli
     to: cli
+  # `cpu-limit.cjs` makes os.cpus() follow the CPU limit for the Node programs of agents on a server.
+  - from: resources/agent-runtime
+    to: agent-runtime
   - from: build/icon-production.png
     to: icons/icon-production.png
   - from: build/icon-dev.png
@@ -80,13 +83,24 @@ extraResources:
 # build has no missing `from` to fail on and no other platform's driver to carry.
 directories:
   output: dist
+toolsets:
+  # The static AppImage runtime (AppImage/type2-runtime) has libfuse built in, so the AppImage starts
+  # on Arch Linux, Omarchy and other systems with no libfuse.so.2. It needs only `fusermount3`
+  # from fuse3. The default toolset needs libfuse.so.2. `--appimage-extract` works with both.
+  appimage: "1.0.3"
 mac:
   category: public.app-category.productivity
   minimumSystemVersion: "13.0"
   notarize: true
   hardenedRuntime: true
+  # macOS 26 shows the catalog that `CFBundleIconName` names, with our own dark version; without it,
+  # macOS 26 makes the dark icon a black tile with black eyes. The catalog also has flat images, and
+  # `icon.icns` stays for macOS versions that read only `CFBundleIconFile`. Make the catalog again
+  # with `bun scripts/compile-macos-icon.ts` after a change to the `.icon` file.
   icon: build/icon-production.icns
   extraResources:
+    - from: build/macos/Assets.car
+      to: Assets.car
     - from: build/icon-production-macos-safe-area.png
       to: icons/icon-production-macos-safe-area.png
     - from: build/icon-dev-macos-safe-area.png
@@ -110,6 +124,7 @@ mac:
   entitlementsInherit: build/entitlements.mac.inherit.plist
   darkModeSupport: true
   extendInfo:
+    CFBundleIconName: Icon
     ElectronTeamID: ZTRDTUL87R
     NSMicrophoneUsageDescription: OpenBot uses the microphone to transcribe voice prompts locally on this Mac.
     # Computer Use runs the driver as a child process, so macOS asks for both grants in OpenBot's

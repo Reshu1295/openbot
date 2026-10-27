@@ -1,8 +1,16 @@
-import { mkdirSync, mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type { ClientSideConnection, InitializeResponse } from "@agentclientprotocol/sdk";
-import type { AgentAuthState, AgentModelOption, AgentProviderId } from "@openbot/contracts/ipc";
+import {
+  type AgentAuthState,
+  type AgentModelOption,
+  type AgentProviderId,
+  customProviderOfModel,
+  DEFAULT_PROMPT_CACHE_TTL,
+  type KeyOnlyProviderId,
+  type PromptCacheTtl,
+} from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import { Effect } from "effect";
 import { AcpAgentClient, type AcpHistoryPersistence } from "./acp-client";
@@ -353,6 +361,14 @@ export interface ProviderClientContext {
    */
   readonly agentEnvironment?: (inherited?: NodeJS.ProcessEnv) => Readonly<Record<string, string>>;
   /**
+   * Variables that every provider process gets on a server, and so every program an agent starts: the
+   * marker that the server memory guard finds leftover processes by, and the CPU limit module for Node
+   * (`agentProcessEnvironment` in `src/main/server-memory.ts`). Fixed while the app runs. They are not
+   * part of `agentEnvironment`: Codex gets that in each thread configuration and replaces a session
+   * whose variables change, so Codex gets these in the spawn environment of its app-server instead.
+   */
+  readonly serverEnvironment?: Readonly<Record<string, string>>;
+  /**
    * The home folder variable of a provider account after the first, for a driver with `accounts`.
    * Every process the client starts gets it, the account check included, so the client signs in
    * and keeps its sessions in that folder only.
@@ -364,6 +380,11 @@ export interface ProviderClientContext {
    * custom agent is saved.
    */
   readonly customAgents?: CustomAgentSource;
+  /**
+   * How long this server asks Claude to keep the prompt cache, read at each spawn. Optional for the
+   * same reason as `reportMcpDrops`: without it the CLI uses its own cache time.
+   */
+  readonly promptCacheTtl?: () => PromptCacheTtl;
 }
 
 /** The agent environment with the account's home folder after it, so the account folder wins. */
@@ -373,6 +394,31 @@ function withAccountEnvironment(
   const { agentEnvironment, accountEnvironment } = context;
   if (!accountEnvironment) return agentEnvironment;
   return (inherited) => ({ ...agentEnvironment?.(inherited), ...accountEnvironment });
+}
+
+/**
+ * Claude's agent environment with the prompt cache time of this server. `5m`, the default, leaves the
+ * CLI's own choice. `1h` sets `ENABLE_PROMPT_CACHING_1H`, which the CLI reads last: a `promptCacheTtl`
+ * in the Claude settings or `CLAUDE_CODE_PROMPT_CACHE_TTL` still wins. The CLI reads the flag before
+ * its subscription rules, so subagents, an API key and a subscription on extra usage also get 1 hour.
+ */
+function claudeAgentEnvironment(
+  context: ProviderClientContext,
+): (inherited?: NodeJS.ProcessEnv) => Readonly<Record<string, string>> {
+  const environment = withAccountEnvironment(context);
+  return (inherited) => ({
+    ...((context.promptCacheTtl?.() ?? DEFAULT_PROMPT_CACHE_TTL.ttl) === "1h" ? { ENABLE_PROMPT_CACHING_1H: "1" } : {}),
+    ...environment?.(inherited),
+  });
+}
+
+/**
+ * The saved Anthropic API key, for the provider's own sign-in when it has no claude.ai account. An
+ * account after the first has its own `CLAUDE_CONFIG_DIR`; the account of the key carries the key in
+ * its environment, and no other account gets it.
+ */
+function claudeFallbackApiKey(context: ProviderClientContext): (() => string | null) | undefined {
+  return context.accountEnvironment ? undefined : () => context.apiKey("claude");
 }
 
 /** Nothing stored and no endpoint, for tests and for call sites that predate the credential store. */
@@ -447,9 +493,9 @@ export interface BuiltInProviderDriver {
   validateAccount(account: NonNullable<AccountReadResult["account"]>): void;
 }
 
-/** Pi and Inception run the same Pi client. Inception adds its key, which loads its extension. */
+/** Pi and the key-only providers run the same Pi client. A key-only provider adds its key extension. */
 function piClient(
-  provider: "pi" | "inception",
+  provider: "pi" | KeyOnlyProviderId,
   cli: AgentCliInfo,
   timeout: number,
   context: ProviderClientContext,
@@ -463,12 +509,18 @@ function piClient(
           confine: (target) => {
             const paths = piStatePaths();
             for (const path of paths.writable) mkdirSync(path, { recursive: true, mode: 0o700 });
+            // Pi writes an empty `auth.json` before it reads one, and the confined process cannot.
+            try {
+              writeFileSync(join(piAgentDirectory(), "auth.json"), "{}", { flag: "wx", mode: 0o600 });
+            } catch (error) {
+              if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+            }
             return confineSpawnTarget(target, confinement, paths);
           },
         }
       : {}),
     extraEnv: () => ({ ...context.agentEnvironment?.() }),
-    ...(provider === "inception" ? { inceptionApiKey: () => context.apiKey("inception") } : {}),
+    ...piKeyProvider(provider, context),
     ...(context.providerStateDirectory ? { providerStateDirectory: context.providerStateDirectory } : {}),
     mcpServers: context.mcpServers,
     ...(context.reportMcpDrops ? { reportMcpDrops: context.reportMcpDrops } : {}),
@@ -478,8 +530,12 @@ function piClient(
   });
 }
 
+function piKeyProvider(provider: "pi" | KeyOnlyProviderId, context: ProviderClientContext) {
+  return provider === "pi" ? {} : { keyProvider: { id: provider, apiKey: () => context.apiKey(provider) } };
+}
+
 function piProfileClient(
-  provider: "pi" | "inception",
+  provider: "pi" | KeyOnlyProviderId,
   cli: AgentCliInfo,
   timeout: number,
   context: ProviderClientContext,
@@ -487,7 +543,7 @@ function piProfileClient(
   return new PiAgentClient(cli, {
     requestTimeoutMs: timeout,
     profileGeneration: true,
-    ...(provider === "inception" ? { inceptionApiKey: () => context.apiKey("inception") } : {}),
+    ...piKeyProvider(provider, context),
     ...(context.providerStateDirectory ? { providerStateDirectory: context.providerStateDirectory } : {}),
   });
 }
@@ -512,6 +568,28 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
     createClient: (cli, timeout, context, confinement) => piClient("inception", cli, timeout, context, confinement),
     createProfileClient: (cli, timeout, context) => piProfileClient("inception", cli, timeout, context),
     authState: (account) => ({ kind: "inception", email: account?.email ?? null }),
+    validateAccount: () => undefined,
+  },
+  {
+    id: "deepseek",
+    // The key is pasted into OpenBot. Pi's own sign-in stays on the Pi row.
+    signIn: { kind: "external" },
+    cliProvider: "pi",
+    resolveCli: resolvePiCli,
+    createClient: (cli, timeout, context, confinement) => piClient("deepseek", cli, timeout, context, confinement),
+    createProfileClient: (cli, timeout, context) => piProfileClient("deepseek", cli, timeout, context),
+    authState: (account) => ({ kind: "deepseek", email: account?.email ?? null }),
+    validateAccount: () => undefined,
+  },
+  {
+    id: "openrouter",
+    // The key is pasted into OpenBot. Pi's own sign-in stays on the Pi row.
+    signIn: { kind: "external" },
+    cliProvider: "pi",
+    resolveCli: resolvePiCli,
+    createClient: (cli, timeout, context, confinement) => piClient("openrouter", cli, timeout, context, confinement),
+    createProfileClient: (cli, timeout, context) => piProfileClient("openrouter", cli, timeout, context),
+    authState: (account) => ({ kind: "openrouter", email: account?.email ?? null }),
     validateAccount: () => undefined,
   },
   {
@@ -569,6 +647,7 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
     createClient: (cli, requestTimeoutMs, context) =>
       new CodexAppServerClient(cli.executable, requestTimeoutMs, {
         ...cliPathEnvironment(cli),
+        ...context.serverEnvironment,
         ...context.accountEnvironment,
       }),
     authState: (account) => ({ kind: "chatgpt", email: account?.email ?? null }),
@@ -611,7 +690,9 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         context.mcpToolRuntimes,
         context.mcpEndpoint,
         context.providerStateDirectory,
-        withAccountEnvironment(context),
+        claudeAgentEnvironment(context),
+        undefined,
+        claudeFallbackApiKey(context),
       ),
     authState: (account) => ({ kind: "claude", email: account?.email ?? null }),
     validateAccount: () => undefined,
@@ -693,6 +774,8 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         }),
         signInMessage: openCodeSignInMessage(context.customProviders().length),
         modelName: (id, name) => openCodeModelName(id, name, context.customProviders),
+        // A stalled turn on a custom endpoint names the endpoint, not OpenCode (#3234).
+        providerName: (modelId) => customProviderOfModel(modelId, context.customProviders())?.name ?? null,
         servesModel: context.servesModel,
         mcpServers: context.mcpServers,
         reportMcpDrops: context.reportMcpDrops,
@@ -753,9 +836,9 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         mcpToolRuntimes: context.mcpToolRuntimes,
         mcpEndpoint: context.mcpEndpoint,
         history: context.history?.("antigravity"),
-        readRateLimits: (_connection, privatePrompt) =>
+        readRateLimits: (_connection, privatePrompt, model) =>
           antigravityAnswersUsageCommand(cli.version)
-            ? privatePrompt(ANTIGRAVITY_USAGE_PROMPT).pipe(Effect.map(antigravityRateLimits))
+            ? privatePrompt(ANTIGRAVITY_USAGE_PROMPT).pipe(Effect.map((answer) => antigravityRateLimits(answer, model)))
             : Effect.succeed({ rateLimits: null, rateLimitsByLimitId: null }),
       }),
     // A profile-generation client asks one question and must not act: no MCP servers, and every

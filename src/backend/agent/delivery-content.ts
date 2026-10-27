@@ -1,8 +1,11 @@
 import { createHash } from "node:crypto";
+import { join } from "node:path";
 import { expandAttachmentReferences } from "@openbot/contracts/attachment-references";
 import { expandChatTagReferences } from "@openbot/contracts/chat-tag-references";
 import type { AgentSummary, AgentWait, ConversationSnapshot, QueueDelivery, RoutineRun } from "@openbot/contracts/ipc";
+import { redactText } from "@openbot/logging";
 import { wokenWaitsPromptText } from "../agent-waits/agent-waits";
+import { homeSkillRoot, homeSkillTagSlug } from "../home-skills";
 import type { DeliveryContext } from "../mailbox-store";
 import { quietRoutineRun, ROUTINE_NO_UPDATE_TOOL, ROUTINE_REPORT_FAILURE_TOOL } from "./routine-quiet-runs";
 
@@ -196,7 +199,7 @@ export function deliveryPromptInput(context: DeliveryContext, sources: DeliveryP
       ? [
           "This is a reply to a message you sent earlier.",
           "Surface or summarize the result naturally for the user, and start with the name of the teammate.",
-          "When the reply reports blocked work, do not repeat that work with the same tools. Give the user the blocker and the action from its Unblock line. When OpenBot has a plugin for the service and that plugin is not in your tools, end your answer with the plugin sentence from your instructions.",
+          "When the reply reports blocked work, do not repeat that work with the same tools. Give the user the blocker and the action from its Unblock line. When OpenBot has a plugin for the service and that plugin is not in your tools, call openbot.suggest_marketplace_app and end your answer as its guidance says.",
           "Reply to the teammate only when the message requests another action, or when you have new information that unblocks its work. Do not send it the same request again. Otherwise do not send an acknowledgement and avoid reply loops.",
         ]
       : delivery.expectsReply === false
@@ -208,7 +211,7 @@ export function deliveryPromptInput(context: DeliveryContext, sources: DeliveryP
         : [
             `After completing the request, send a concise result back to ${senderName} with openbot.send_message.`,
             `Use recipientAgentIds ["${senderAgentId}"], replyToMessageId "${delivery.messageId}", and expectsReply false.`,
-            "Format the reply as three lines: Status: done | partial | blocked, Result: <concrete outcome>, Evidence: <file, test, command, or none>. When Status is blocked, add a fourth line, Unblock: <the one action that unblocks the task>. When OpenBot has a plugin for the service and that plugin is not in your tools, that action is the plugin sentence from your instructions.",
+            "Format the reply as three lines: Status: done | partial | blocked, Result: <concrete outcome>, Evidence: <file, test, command, or none>. When Status is blocked, add a fourth line, Unblock: <the one action that unblocks the task>. When OpenBot has a plugin for the service and that plugin is not in your tools, call openbot.suggest_marketplace_app, and that action is the plugin sentence from its guidance.",
             "Do not acknowledge without a Status line. Do not leave the sender waiting for a result.",
           ];
     text = [
@@ -248,6 +251,33 @@ export function deliveryPromptInput(context: DeliveryContext, sources: DeliveryP
   }
   if (managedAttachments.length) {
     text += `${ATTACHED_FILES_HEADER}${managedAttachments.map((item) => `- ${item.name}: ${item.path}`).join("\n")}`;
+  }
+  if (context.resumeAfterUsageLimit) {
+    const continuationState = context.resumeAfterUsageLimit;
+    const progress = redactText(
+      snapshot.messages
+        .filter(
+          (message) =>
+            message.turnId !== undefined &&
+            continuationState.previousTurnIds.includes(message.turnId) &&
+            message.author === "assistant" &&
+            message.itemType !== "commentary",
+        )
+        .map((message) => renderHandoffMessage(message, agentNames))
+        .join("\n\n"),
+    );
+    const continuation = [
+      HANDOFF_START,
+      "The previous provider reached its usage limit after starting this task.",
+      "Continue the unfinished task from the conversation and captured work steps. The request below is the original goal, not a new task. Do not repeat completed actions. Check the outcome of any interrupted action before you retry it. If the task is already complete, report the result.",
+      ...(progress ? ["--- interrupted task progress ---", progress.slice(-8000)] : []),
+      "--- captured work steps ---",
+      redactText(continuationState.workSteps) ||
+        "Captured work steps are unavailable. Inspect the saved work before you repeat an action.",
+      "These excerpts can be incomplete. Read more history or inspect the saved work when needed.",
+      HANDOFF_END,
+    ].join("\n\n");
+    text = `${continuation}${CURRENT_MESSAGE_SEPARATOR}${text}`;
   }
   return [
     { type: "text", text },
@@ -295,11 +325,25 @@ export function displayMessageReferences(
   return expandAttachmentReferences(
     expandChatTagReferences(
       text,
-      (reference) => (reference.kind === "agent" ? agentNames.get(reference.id) : undefined),
+      (reference) =>
+        reference.kind === "agent"
+          ? agentNames.get(reference.id)
+          : reference.kind === "skill" && options.fileHeadings
+            ? homeSkillTagName(reference.id, reference.name)
+            : undefined,
       options,
     ),
     (reference) => names.get(reference.attachmentId),
   );
+}
+
+/**
+ * A `$` tag of a skill in `~/.agents/skills` names its `SKILL.md` for the provider, because not every
+ * CLI loads that folder. A person reads the name alone.
+ */
+function homeSkillTagName(id: string, name: string): string | undefined {
+  const slug = homeSkillTagSlug(id);
+  return slug === null ? undefined : `${name} at ${join(homeSkillRoot(), slug, "SKILL.md")}`;
 }
 
 export function agentNamesById(agents: AgentSummary[]): ReadonlyMap<string, string> {

@@ -17,6 +17,7 @@ import { AGENT_INSTALL_CAPABILITY } from "@openbot/contracts/team-protocol/agent
 import { AGENT_MEMORY_LIMIT_CAPABILITY } from "@openbot/contracts/team-protocol/agent-memory-limit-v1";
 import { AGENT_PUBLISH_CAPABILITY } from "@openbot/contracts/team-protocol/agent-publish-v1";
 import { AGENT_UPDATE_CAPABILITY } from "@openbot/contracts/team-protocol/agent-update-v1";
+import { BITWARDEN_CONNECTOR_CAPABILITY } from "@openbot/contracts/team-protocol/bitwarden-connector-v1";
 import { CONNECTORS_CAPABILITY } from "@openbot/contracts/team-protocol/connectors-v1";
 import { TEAM_AGENT_CREATE_MODEL_CAPABILITY } from "@openbot/contracts/team-protocol/current";
 import { EVENTS_CAPABILITY } from "@openbot/contracts/team-protocol/events-v1";
@@ -41,6 +42,8 @@ import { SKILLS_ADMIN_CAPABILITY } from "@openbot/contracts/team-protocol/skills
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
 import { TEAM_PROTOCOL_V3 } from "@openbot/contracts/team-protocol/v3";
 import { decodeTeamProtocolSupportV7Base } from "@openbot/contracts/team-protocol/v7-base";
+import { VAULT_IMPORT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-import-v1";
+import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
 import { sourceText } from "@openbot/i18n/source";
 import {
   createRemoteAccountRefresh,
@@ -108,6 +111,7 @@ import {
 } from "@/features/workspace/context/server-recovery-countdown";
 import { useConversationReads } from "@/features/workspace/context/use-conversation-reads";
 import { useServerOrder } from "@/features/workspace/context/use-server-order";
+import { createWorkflowActions } from "@/features/workspace/context/workflow-actions";
 import { WorkspaceContexts } from "@/features/workspace/context/workspace-store";
 import { reduceAgentActivity } from "@/features/workspace/model/agent-activity";
 import {
@@ -206,6 +210,31 @@ const EMPTY_SERVER: MobileServer = {
   membershipId: "",
   role: "member",
 };
+
+/**
+ * The reads that make a server usable, chosen by its capabilities. Each connection reads the hidden
+ * list again, because the events of an interrupted connection are lost. A failed hidden read keeps
+ * the last list and does not stop the connection.
+ */
+function startWorkspaceReads(client: RemoteTeamTransportRef, capabilities: readonly string[]) {
+  const sections = capabilities.includes(SIDEBAR_LAYOUT_CAPABILITY)
+    ? client.request("GET", TEAM_API_ROUTES.sidebarLayout.state, decodeSidebarLayout)
+    : null;
+  const agents = client.request("GET", TEAM_API_ROUTES.agents.all, decodeAgentSummaries);
+  // The hidden list loads with the agents, so a hidden agent does not show for a moment.
+  const hidden = readHostHiddenAgents(
+    (method, path, decode, body) => client.request(method, path, decode, body),
+    capabilities,
+  ).catch(() => undefined);
+  // Reads that start before the compatibility check can lose their reader when the check fails.
+  sections?.catch(() => undefined);
+  agents.catch(() => undefined);
+  return { sections, agents, hidden };
+}
+
+function sameCapabilities(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((capability) => b.includes(capability));
+}
 
 /** The record without `keys`, or the same record when it has none of them. */
 function withoutKeys<T>(record: Record<string, T>, keys: ReadonlySet<string>): Record<string, T> {
@@ -350,6 +379,12 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
   const pinnedAgentIds = (activeServerId ? preferences[activeServerId]?.pinned : null) ?? NO_IDS;
   const hiddenChannelIds = (activeServerId ? preferences[activeServerId]?.hiddenChannels : null) ?? NO_IDS;
   const pinnedChannelIds = (activeServerId ? preferences[activeServerId]?.pinnedChannels : null) ?? NO_IDS;
+  const pinnedWorkflowIds = useMemo(() => {
+    const pins: Record<string, readonly string[]> = {};
+    for (const [serverId, saved] of Object.entries(preferences))
+      if (saved.pinnedWorkflows?.length) pins[serverId] = saved.pinnedWorkflows;
+    return pins;
+  }, [preferences]);
 
   /**
    * Drops the local state of servers that this account no longer has: their waiting requests, cached
@@ -698,7 +733,29 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       await client.connect(serverId, publicKey);
       if (!context.isCurrent()) return;
       context.stage = "compatibility";
-      const compatibility = await client.request("GET", TEAM_API_ROUTES.compatibility, decodeTeamProtocolSupportV7Base);
+      const compatibilityRead = client.request("GET", TEAM_API_ROUTES.compatibility, decodeTeamProtocolSupportV7Base);
+      // On a reconnect the capabilities of the last connection are known, so the workspace reads go
+      // out with the compatibility read and do not wait one more round trip. Their results apply only
+      // after the check. The read state applies when it arrives: it does not depend on the protocol,
+      // and its refresh must start now to keep its order with the event reads.
+      const known = serverCapabilities.current.get(serverId);
+      const loadReads = () =>
+        runTeamEffect(
+          readRefresh.refresh(
+            serverId,
+            () =>
+              Effect.tryPromise(() =>
+                client.request("GET", TEAM_API_ROUTES.agents.conversationReads, decodeConversationReads),
+              ),
+            applyConversationReads,
+            () => context.isCurrent() && !removedServers.current.has(serverId),
+          ),
+        );
+      const early = known
+        ? { capabilities: known, reads: startWorkspaceReads(client, known), conversationReads: loadReads() }
+        : null;
+      early?.conversationReads.catch(() => undefined);
+      const compatibility = await compatibilityRead;
       if (!context.isCurrent()) return;
       supportLog.add(
         "info",
@@ -724,6 +781,12 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
           })
           .catch(() => undefined);
       }
+      // A host that changed its capabilities, such as after an update, gets the reads that they select.
+      const reads =
+        early && sameCapabilities(early.capabilities, compatibility.capabilities)
+          ? early.reads
+          : startWorkspaceReads(client, compatibility.capabilities);
+      const conversationReads = early?.conversationReads ?? loadReads();
       // The sections, the agents and the read state do not depend on each other, so they load together.
       // The first read that fails names the stage.
       let failed = false;
@@ -733,8 +796,8 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
           failed = true;
           throw error;
         });
-      const sections = compatibility.capabilities.includes(SIDEBAR_LAYOUT_CAPABILITY)
-        ? client.request("GET", TEAM_API_ROUTES.sidebarLayout.state, decodeSidebarLayout).then(
+      const sections = reads.sections
+        ? reads.sections.then(
             (layout) => {
               if (context.isCurrent()) applySidebarLayout(serverId, layout);
             },
@@ -752,40 +815,18 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
             },
           )
         : setSidebarByServer((current) => ({ ...current, [serverId]: { layout: null, error: null } }));
-      // The hidden list of the host loads with the agents, so a hidden agent does not show for a moment.
-      // Each connection reads it again, because the events of an interrupted connection are lost. A failed
-      // read keeps the last list and does not stop the connection.
-      const hidden = readHostHiddenAgents(
-        (method, path, decode, body) => client.request(method, path, decode, body),
-        compatibility.capabilities,
-      ).catch(() => undefined);
       const [summaries] = await Promise.all([
         step(
           "agents",
-          Promise.all([client.request("GET", TEAM_API_ROUTES.agents.all, decodeAgentSummaries), hidden]).then(
-            ([summaries, hiddenAgents]) => {
-              if (context.isCurrent()) {
-                if (hiddenAgents !== undefined) applyHostHidden(serverId, hiddenAgents);
-                replaceServerAgents(serverId, summaries);
-              }
-              return summaries;
-            },
-          ),
+          Promise.all([reads.agents, reads.hidden]).then(([summaries, hiddenAgents]) => {
+            if (context.isCurrent()) {
+              if (hiddenAgents !== undefined) applyHostHidden(serverId, hiddenAgents);
+              replaceServerAgents(serverId, summaries);
+            }
+            return summaries;
+          }),
         ),
-        step(
-          "reads",
-          runTeamEffect(
-            readRefresh.refresh(
-              serverId,
-              () =>
-                Effect.tryPromise(() =>
-                  client.request("GET", TEAM_API_ROUTES.agents.conversationReads, decodeConversationReads),
-                ),
-              applyConversationReads,
-              () => context.isCurrent() && !removedServers.current.has(serverId),
-            ),
-          ),
-        ),
+        step("reads", conversationReads),
         sections,
       ]);
       if (!context.isCurrent()) return;
@@ -1181,6 +1222,10 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       }),
     [request, teamApi, queryClient, queryScope],
   );
+  const workflows = useMemo(
+    () => createWorkflowActions({ request, capabilities: serverCapabilities.current }),
+    [request],
+  );
   const browser = useMemo(
     () =>
       createBrowserActions({
@@ -1199,6 +1244,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
     const currentPinnedAgentIds = () =>
       (activeServerIdRef.current ? preferencesRef.current[activeServerIdRef.current]?.pinned : null) ?? NO_IDS;
     const workspace: MobileWorkspaceActions = {
+      ...workflows,
       openBrowserView: browser.openBrowserView,
       controlBrowserTab: browser.controlBrowserTab,
       mutateSidebarLayout: async (serverId, action) => {
@@ -1513,6 +1559,26 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
         if (!saved || (result === "pinned" && !saved.pinnedChannels?.includes(channelId))) return "error";
         return result;
       },
+      toggleWorkflowPin: (workflowId, serverId) => {
+        let result: "pinned" | "unpinned" = "pinned";
+        const saved = updatePreferences(serverId, (current) => {
+          const pinned = current.pinnedWorkflows ?? [];
+          result = pinned.includes(workflowId) ? "unpinned" : "pinned";
+          return {
+            ...current,
+            pinnedWorkflows: result === "unpinned" ? pinned.filter((id) => id !== workflowId) : [...pinned, workflowId],
+          };
+        });
+        return saved ? result : "error";
+      },
+      reconcileWorkflowPins: (serverId, workflowIds) => {
+        const pinned = preferencesRef.current[serverId]?.pinnedWorkflows;
+        if (!pinned?.some((id) => !workflowIds.includes(id))) return;
+        updatePreferences(serverId, (current) => ({
+          ...current,
+          pinnedWorkflows: (current.pinnedWorkflows ?? []).filter((id) => workflowIds.includes(id)),
+        }));
+      },
       toggleAgentPin: (agentId) => {
         const pinned = currentPinnedAgentIds();
         const serverId = currentActiveServer().id;
@@ -1540,6 +1606,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
     }));
   }, [
     browser,
+    workflows,
     hostRequests,
     request,
     teamApi,
@@ -1608,6 +1675,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       hiddenAgents,
       pinnedAgentIds,
       pinnedChannelIds,
+      pinnedWorkflowIds,
       hiddenChannelIds,
       hidesAgentsOnServer: (serverId) =>
         hostOwnsHide(serverCapabilities.current.get(serverId), servers.find((server) => server.id === serverId)?.role),
@@ -1629,6 +1697,9 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       },
       canManageConnectors: (serverId) => administers(serverId, CONNECTORS_CAPABILITY),
       canManageOnePasswordConnector: (serverId) => administers(serverId, ONEPASSWORD_CONNECTOR_CAPABILITY),
+      canManageBitwardenConnector: (serverId) => administers(serverId, BITWARDEN_CONNECTOR_CAPABILITY),
+      canManageVault: (serverId) => administers(serverId, VAULT_CAPABILITY),
+      canImportVault: (serverId) => administers(serverId, VAULT_IMPORT_CAPABILITY),
       // The same rule as the Updates section of the desktop Server Settings.
       serverUpdateAccess: (serverId) => {
         if (administers(serverId, HOST_UPDATE_CAPABILITY)) return "admin";
@@ -1679,6 +1750,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
     hiddenAgents,
     pinnedAgentIds,
     pinnedChannelIds,
+    pinnedWorkflowIds,
     hiddenChannelIds,
     hostHiddenIds,
     supportsPushNotifications,

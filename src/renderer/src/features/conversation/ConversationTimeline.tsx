@@ -1,4 +1,3 @@
-import { providerDisplayName } from "@openbot/contracts/agent-providers";
 import { chatVisualReply } from "@openbot/contracts/chat-visual";
 import type { ConversationMessageSender, MessageReaction } from "@openbot/contracts/ipc";
 import type { ConversationUiBlock } from "@openbot/contracts/ui-blocks";
@@ -7,8 +6,7 @@ import type { AgentMessage, ChatActionMarkerModel } from "@openbot/ui/data";
 import { ChannelActivityIndicator } from "@openbot/ui/features/channels/ChannelActivityIndicator";
 import { AgentActivityIndicator } from "@openbot/ui/features/conversation/AgentActivity";
 import { AgentChatEmptyState } from "@openbot/ui/features/conversation/AgentChatEmptyState";
-import { AgentStepsDisclosure } from "@openbot/ui/features/conversation/AgentSteps";
-import { AgentTaskChips } from "@openbot/ui/features/conversation/AgentTasks";
+import { AgentStepsDisclosure, type AgentStepsTrace } from "@openbot/ui/features/conversation/AgentSteps";
 import { AttachmentCards } from "@openbot/ui/features/conversation/AttachmentCards";
 import { UsageLimitAskCard } from "@openbot/ui/features/conversation/BackupModels";
 import { ChatActionMarker } from "@openbot/ui/features/conversation/ChatActionMarker";
@@ -32,7 +30,7 @@ import { useText } from "@openbot/ui/text";
 import { createMemo, createSignal, For, Loading, lazy, onCleanup, Show, untrack } from "solid-js";
 import { useShowAgentSteps } from "../../agent-steps-preference";
 import { planItems, planTitle } from "../../app-message-projection";
-import { deviceSendShortcut } from "../../send-shortcut-preference";
+import { currentDevicePlatform, deviceSendShortcut } from "../../send-shortcut-preference";
 import { remoteRoutineRecovery } from "../servers/server-capabilities";
 import { speechModelReady } from "../speech/speech-model";
 import { recordingGone, speechReading, spokenReply } from "../speech/speech-playback";
@@ -45,6 +43,7 @@ import {
   toggleSpokenReply,
 } from "../speech/speech-replies";
 import { groupedMessageIds } from "./agent-message-timeline";
+import { browserSecretVault } from "./browser-secret-vault";
 import { continuesSenderRun } from "./chat-grouping";
 import { isChatVisualAppShortcut } from "./chat-visual-shortcuts";
 import { chatVisualPageUrl } from "./chat-visual-url";
@@ -54,11 +53,12 @@ import type { ConversationProps } from "./conversation-types";
 import { agentSkillsMode } from "./installed-skills-source";
 import { MarketplaceSuggestionChatCard, marketplaceSuggestionKnown } from "./MarketplaceSuggestionChatCard";
 import { McpSignInChatCard } from "./McpSignInChatCard";
+import { createMessageImageFiles } from "./message-image-files";
 import { RoutineChatCard } from "./RoutineChatCard";
 import { createChatWebhookRoutines, RoutineWebhookChatCard } from "./RoutineWebhookChatCard";
 import { desktopChatEventRoutinesApi } from "./routine-webhooks-api";
 import { PENDING_SEND_ID_PREFIX, pendingSendRetrySafe } from "./stores/pending-send-store";
-import { createTurnSteps } from "./turn-steps";
+import { createTurnSteps, SUBAGENT_SPAN_PREFIX } from "./turn-steps";
 
 /**
  * A message that renders only an action marker, with no bubble of its own. A routine instruction is
@@ -165,6 +165,7 @@ export function ConversationTimeline() {
     renderedAgentActivity,
     providerOffline,
     providerSilentMinutes,
+    agentProviderName,
     replyJump,
     respondToBrowserTakeover,
     replyToMessage,
@@ -187,17 +188,16 @@ export function ConversationTimeline() {
     followReaderScroll,
     setUnreadMessagesDividerElement,
     setVirtualRootElement,
-    openTaskPanel,
     shownSubagentId,
     toggleSubagentPanel,
+    sideThreadOpen,
   } = useConversationViewScope();
-  const { t, format } = useText();
+  const { t, format, sourceText } = useText();
   // A named function, not a ternary in the prop: the compiler wraps a ternary prop in a memo, and
   // the avatar reads it in a tracked effect, where a new memo halts the reactive system.
   const waitingProviderName = () => {
-    const agent = props.agent;
     const waiting = providerSilentMinutes() !== null || providerOffline();
-    return waiting && agent ? providerDisplayName(agent.provider) : undefined;
+    return waiting ? agentProviderName() : undefined;
   };
   /** An agent reply can be read aloud by this computer's speech model, in this chat's voice. */
   const readAloudAction = (message: AgentMessage) => {
@@ -261,7 +261,6 @@ export function ConversationTimeline() {
         toggleSpokenReply({ serverId: props.server?.id ?? "local", agentId, messageId: message.id }, message.body),
     };
   };
-  const openTasks = () => props.tasks?.snapshot?.tasks.filter((task) => task.state !== "closed") ?? [];
   const compaction = (): ContextCompactionView | null => {
     const state = props.contextState;
     if (state?.agentId !== props.agent?.id || state?.threadId !== props.agent?.threadId || !state?.compaction)
@@ -279,6 +278,8 @@ export function ConversationTimeline() {
   );
 
   const runtime = conversationRuntime(props);
+  // The browser client reads a host file whole, with no size limit, so a named image stays a chip there.
+  const loadImageFile = props.runtime ? undefined : createMessageImageFiles(runtime.agent);
   /** The agent that asks in a card: in a channel, the working agent whose card shows. */
   const interactionAgentName = () => (channel ? channel.interactionAgentName() : props.agent?.name);
   /**
@@ -478,6 +479,33 @@ export function ConversationTimeline() {
     activeTurnId: () => props.activeTurnId,
   });
   const showAgentSteps = useShowAgentSteps();
+  const traceKeyboard = currentDevicePlatform() === "darwin" ? "mac" : "pc";
+  /** The trace that the steps row above an answer opens. */
+  const traceAbove = (messageId: string | undefined): AgentStepsTrace => ({
+    spans: () =>
+      turnSteps.traceAbove(messageId, {
+        agent: props.agent?.name ?? t("chat.message.agentFallback"),
+        thinking: t("chat.trace.step.thinking"),
+        answer: t("chat.trace.step.answer"),
+        progress: sourceText,
+        message: (agents) => t("chat.trace.step.message", { agents }),
+        subagent: (title) => t("chat.trace.step.subagent", { title }),
+        reply: t("chat.trace.step.reply"),
+        agentNames: (ids) =>
+          format.list(
+            ids.map(
+              (id) => props.agents.find((candidate) => candidate.id === id)?.name ?? t("chat.message.agentFallback"),
+            ),
+          ),
+      }),
+    keyboard: traceKeyboard,
+    // The chat shows a subagent of the trace in the side panel, as its card in the chat does.
+    canSelectSpan: (id) => id.startsWith(SUBAGENT_SPAN_PREFIX),
+    onSelectSpan: (id) => {
+      const subagentId = id.slice(SUBAGENT_SPAN_PREFIX.length);
+      if (shownSubagentId() !== subagentId) toggleSubagentPanel(subagentId);
+    },
+  });
   const channelWorkingSteps = createMemo(() => (channel ? turnSteps.workingSteps(channel.workingTurns()) : []));
   let cachedPrompt: { key: string; prompt: NonNullable<ConversationProps["prompt"]> } | null = null;
   const keyedPrompt = createMemo(() => {
@@ -521,11 +549,11 @@ export function ConversationTimeline() {
   return (
     <>
       <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {keyedPrompt()
+        {keyedPrompt() && !sideThreadOpen()
           ? t("prompt.inputRequiredAnnouncement", { question: keyedPrompt()?.prompt.questions[0]?.question ?? "" })
           : ""}
       </span>
-      <Show when={chatSearchOpen()}>
+      <Show when={chatSearchOpen() && !sideThreadOpen()}>
         <ChatSearch
           query={chatSearchQuery()}
           current={activeChatSearchIndex()}
@@ -538,7 +566,7 @@ export function ConversationTimeline() {
         />
       </Show>
 
-      <Show when={props.unreadCount > 0 && !unreadDividerVisible()}>
+      <Show when={props.unreadCount > 0 && !unreadDividerVisible() && !sideThreadOpen()}>
         <UnreadMessagesBanner
           count={props.unreadCount}
           busy={markingRead()}
@@ -548,7 +576,8 @@ export function ConversationTimeline() {
       </Show>
 
       <div
-        class={["conversation-scroll", scrollFades.classes()]}
+        class={["conversation-scroll", scrollFades.classes(), { "conversation-covered": sideThreadOpen() }]}
+        inert={sideThreadOpen()}
         ref={(element) => {
           setScrollElement(element);
           rail.ref(element);
@@ -1156,7 +1185,12 @@ export function ConversationTimeline() {
                     <Show when={turnSteps.stepsAbove(message()?.id)}>
                       {(steps) => (
                         <ChatRowBoundary>
-                          <AgentStepsDisclosure steps={steps()} defaultOpen={showAgentSteps()} />
+                          <AgentStepsDisclosure
+                            steps={steps()}
+                            defaultOpen={showAgentSteps()}
+                            trace={traceAbove(message()?.id)}
+                            facts={turnSteps.factsAbove(message()?.id)}
+                          />
                         </ChatRowBoundary>
                       )}
                     </Show>
@@ -1201,6 +1235,15 @@ export function ConversationTimeline() {
                             onOpenQuote={openQuote}
                             onDownload={(attachment) => attachmentAction(attachment, "download")}
                             mediaSource={runtime.attachmentMedia}
+                            loadImageFile={
+                              loadImageFile &&
+                              ((file) =>
+                                loadImageFile(file, {
+                                  serverId: props.server?.id ?? "local",
+                                  messageId: message()?.id ?? initialMessage.id,
+                                  agentId: workspaceAgentId(),
+                                }))
+                            }
                             actions={
                               <>
                                 <Show when={pending()}>
@@ -1321,144 +1364,141 @@ export function ConversationTimeline() {
               }}
             </For>
           </div>
-          <Show when={!compactionBefore()}>
-            <CompactionMarker />
-          </Show>
-          <div
-            class="agent-activity-slot"
-            data-reserved={agentActivitySpaceReserved() ? "true" : "false"}
-            ref={setAgentActivitySlotElement}
-          >
-            <Show
-              when={!channel}
-              fallback={
-                <Show when={channel && channel.workers().length > 0}>
-                  <ChannelActivityIndicator
-                    workers={channel?.workers() ?? []}
-                    steps={channelWorkingSteps()}
-                    stepsOpenByDefault={showAgentSteps()}
-                  />
-                </Show>
-              }
-            >
-              <Show when={renderedAgentActivity()}>
-                {(activity) => (
-                  <AgentActivityIndicator
-                    agent={activity().agent}
-                    detail={activity().detail}
-                    label={activity().label}
-                    phase={activity().phase}
-                    since={activity().since}
-                    steps={turnSteps.activeSteps()}
-                    stepsOpenByDefault={showAgentSteps()}
-                    waitingFor={waitingProviderName()}
-                  />
-                )}
-              </Show>
+          <div class="conversation-live">
+            <Show when={!compactionBefore()}>
+              <CompactionMarker />
             </Show>
-          </div>
-          <Show when={props.tasks}>
-            {(tasks) => (
-              <AgentTaskChips
-                tasks={openTasks()}
-                onOpen={openTaskPanel}
-                onClose={(taskId) => tasks().onClose(taskId)}
-                waitsForApproval={(task) => tasks().approval(task) !== undefined}
-              />
-            )}
-          </Show>
-          <Show when={keyedPrompt()} keyed>
-            {(entry) => {
-              const presentResolution = () =>
-                props.onPromptResolutionPresented?.(entry.prompt.agentId, entry.prompt.turnId, entry.prompt.requestId);
-              return (
-                <Loading>
-                  <Show
-                    when={pendingPromptBlock()}
-                    fallback={
-                      <QuestionPromptBubble
-                        questions={entry.prompt.questions}
-                        elementRef={setRequiredInteractionElement}
-                        sendShortcut={deviceSendShortcut(props.platform)}
-                        onSubmit={props.onAnswerPrompt}
-                        onResolutionPresented={presentResolution}
-                      />
-                    }
-                  >
-                    {(block) => (
-                      <UiBlockPrompt
-                        block={block()}
-                        agents={props.agents}
-                        onSelectAgent={props.onSelectAgent}
-                        onOpenLink={(url) => void openExternalMessageUrl(url)}
-                        elementRef={setRequiredInteractionElement}
-                        onAnswer={props.onAnswerPrompt}
-                        onAnswered={presentResolution}
-                      />
-                    )}
+            <div
+              class="agent-activity-slot"
+              data-reserved={agentActivitySpaceReserved() ? "true" : "false"}
+              ref={setAgentActivitySlotElement}
+            >
+              <Show
+                when={!channel}
+                fallback={
+                  <Show when={channel && channel.workers().length > 0}>
+                    <ChannelActivityIndicator
+                      workers={channel?.workers() ?? []}
+                      steps={channelWorkingSteps()}
+                      stepsOpenByDefault={showAgentSteps()}
+                    />
                   </Show>
+                }
+              >
+                <Show when={renderedAgentActivity()}>
+                  {(activity) => (
+                    <AgentActivityIndicator
+                      agent={activity().agent}
+                      detail={activity().detail}
+                      label={activity().label}
+                      phase={activity().phase}
+                      since={activity().since}
+                      steps={turnSteps.activeSteps()}
+                      stepsOpenByDefault={showAgentSteps()}
+                      waitingFor={waitingProviderName()}
+                    />
+                  )}
+                </Show>
+              </Show>
+            </div>
+            <Show when={keyedPrompt()} keyed>
+              {(entry) => {
+                const presentResolution = () =>
+                  props.onPromptResolutionPresented?.(
+                    entry.prompt.agentId,
+                    entry.prompt.turnId,
+                    entry.prompt.requestId,
+                  );
+                return (
+                  <Loading>
+                    <Show
+                      when={pendingPromptBlock()}
+                      fallback={
+                        <QuestionPromptBubble
+                          questions={entry.prompt.questions}
+                          elementRef={setRequiredInteractionElement}
+                          sendShortcut={deviceSendShortcut(props.platform)}
+                          onSubmit={props.onAnswerPrompt}
+                          onResolutionPresented={presentResolution}
+                        />
+                      }
+                    >
+                      {(block) => (
+                        <UiBlockPrompt
+                          block={block()}
+                          agents={props.agents}
+                          onSelectAgent={props.onSelectAgent}
+                          onOpenLink={(url) => void openExternalMessageUrl(url)}
+                          elementRef={setRequiredInteractionElement}
+                          onAnswer={props.onAnswerPrompt}
+                          onAnswered={presentResolution}
+                        />
+                      )}
+                    </Show>
+                  </Loading>
+                );
+              }}
+            </Show>
+            <Show keyed when={props.approval}>
+              {(approval) => (
+                <Loading>
+                  <ApprovalCard
+                    approval={approval}
+                    agentName={interactionAgentName()}
+                    onApprove={() => props.onRespondToApproval("accept")}
+                    onReject={() => props.onRespondToApproval("decline")}
+                    onAlwaysAllow={props.onAlwaysAllowApproval}
+                  />
                 </Loading>
-              );
-            }}
-          </Show>
-          <Show keyed when={props.approval}>
-            {(approval) => (
+              )}
+            </Show>
+            <Show when={props.usageLimitAsk}>
+              {(ask) => (
+                <UsageLimitAskCard
+                  provider={ask().provider}
+                  resetsAt={ask().resetsAt}
+                  options={ask().options}
+                  onSend={ask().onSend}
+                  onWait={ask().onWait}
+                />
+              )}
+            </Show>
+            <Show when={props.browserTakeover}>
               <Loading>
-                <ApprovalCard
-                  approval={approval}
-                  agentName={interactionAgentName()}
-                  onApprove={() => props.onRespondToApproval("accept")}
-                  onReject={() => props.onRespondToApproval("decline")}
-                  onAlwaysAllow={props.onAlwaysAllowApproval}
+                <BrowserTakeoverCard
+                  request={props.browserTakeover}
+                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
+                  tab={browserTakeoverTab()}
+                  preview={browserTakeoverPreview().preview}
+                  previewStatus={browserTakeoverPreview().status}
+                  onOpen={openBrowserTakeoverTab}
+                  onComplete={() => respondToBrowserTakeover("complete")}
+                  onCancel={() => respondToBrowserTakeover("cancel")}
+                  onSignInLocally={localSignIn.canStartForTakeover() ? localSignIn.startForTakeover : undefined}
+                  signInBlocked={localSignIn.blockedTakeover()}
+                  browserSecret={{
+                    loadPreview: runtime.browser.capturePreview,
+                    vault: browserSecretVault(props.server),
+                    onRespond: runtime.agent.respondToBrowserSecret,
+                  }}
                 />
               </Loading>
-            )}
-          </Show>
-          <Show when={props.usageLimitAsk}>
-            {(ask) => (
-              <UsageLimitAskCard
-                provider={ask().provider}
-                resetsAt={ask().resetsAt}
-                options={ask().options}
-                onSend={ask().onSend}
-                onWait={ask().onWait}
-              />
-            )}
-          </Show>
-          <Show when={props.browserTakeover}>
-            <Loading>
-              <BrowserTakeoverCard
-                request={props.browserTakeover}
-                agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                tab={browserTakeoverTab()}
-                preview={browserTakeoverPreview().preview}
-                previewStatus={browserTakeoverPreview().status}
-                onOpen={openBrowserTakeoverTab}
-                onComplete={() => respondToBrowserTakeover("complete")}
-                onCancel={() => respondToBrowserTakeover("cancel")}
-                onSignInLocally={localSignIn.canStartForTakeover() ? localSignIn.startForTakeover : undefined}
-                signInBlocked={localSignIn.blockedTakeover()}
-                browserSecret={{
-                  loadPreview: runtime.browser.capturePreview,
-                  onRespond: runtime.agent.respondToBrowserSecret,
-                }}
-              />
-            </Loading>
-          </Show>
-          <Show when={!props.browserTakeover && browserTakeoverResolution()}>
-            {(resolution) => (
-              <BrowserTakeoverCard
-                agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                tab={resolution().tab}
-                preview={resolution().preview}
-                previewStatus={resolution().previewStatus}
-                decision={resolution().decision}
-                signInBlocked={resolution().signInBlocked}
-                onComplete={async () => false}
-                onCancel={async () => false}
-              />
-            )}
-          </Show>
+            </Show>
+            <Show when={!props.browserTakeover && browserTakeoverResolution()}>
+              {(resolution) => (
+                <BrowserTakeoverCard
+                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
+                  tab={resolution().tab}
+                  preview={resolution().preview}
+                  previewStatus={resolution().previewStatus}
+                  decision={resolution().decision}
+                  signInBlocked={resolution().signInBlocked}
+                  onComplete={async () => false}
+                  onCancel={async () => false}
+                />
+              )}
+            </Show>
+          </div>
         </Show>
       </div>
     </>

@@ -61,8 +61,7 @@ const OPENCODE_UNREADABLE_CONTENT =
  * The kind of a model request that OpenCode gave up on, first match wins. A provider gateway
  * reports each kind as `Upstream request failed: <reason>`, so billing and the rate limit come
  * first. The provider's own failure comes before the network: a gateway that could not reach its
- * model was reached by this computer. Text that names no kind, such as OpenCode's own "Free usage
- * exceeded, subscribe to Go", is shown as it is.
+ * model was reached by this computer. Text that names no kind is shown as it is.
  */
 const OPENCODE_REQUEST_FAILURES = [
   [
@@ -95,11 +94,14 @@ function openCodeRequestFailure(
 ): string {
   if (!(error instanceof RequestError) || error.code !== -32603) return detail;
   const reason = error.message.replace(/^Internal error:\s*/u, "");
+  // All free models share one limit, and the free tier has no usage reading that could explain it.
+  if (isRecord(error.data) && error.data.errorName === "provider.free-limit")
+    return sourceText("error.provider.opencodeFreeLimit");
   // OpenCode Console's own text says to replace the key in "your client"; here that is Settings (#2544).
   if (/\bapi key has expired\b[\s\S]*\bopencode console\b/iu.test(detail))
     return sourceText("error.provider.opencodeKeyExpired");
-  // The usage notice reports an exhausted usage limit, and it reads the whole text to find one.
-  if (isUsageLimitDiagnostic(reason)) return detail;
+  // A spent usage limit shows in OpenCode's own words, which the turn also reads for a plan window.
+  if (isUsageLimitDiagnostic(reason)) return redact(reason);
   // The part stays in the session, so each turn on this model fails until the user picks another.
   // The provider's text says nothing more to the user; it goes to the log.
   if (OPENCODE_UNREADABLE_CONTENT.test(reason)) {
@@ -150,4 +152,10 @@ export const OPENCODE_ACP_FLAVOR: AcpFlavor = {
   // A long answer with no tool call otherwise shows nothing until the prompt ends, and the turn
   // looks stuck (#2858).
   streamAnswerBeforePromptReturns: true,
+  // OpenCode 1.18.31 and 2.1.4 pass on the reasoning that an endpoint streams between answer tokens.
+  // Ending the answer at each thought cut words in two, such as "B aca" (#3351).
+  thoughtsInsideAnswer: true,
+  // OpenCode 2.1.4 adds each session's MCP servers to the session's directory under their names. A
+  // second chat of the agent replaced the `openbot` token, and closing it left the first refused.
+  mcpServersPerDirectory: true,
 };

@@ -7,6 +7,8 @@ const WorkspacePreferences = Schema.Struct({
   pinned: Schema.mutableKey(Schema.mutable(Schema.Array(Schema.String))),
   pinnedChannels: Schema.mutableKey(Schema.optional(Schema.mutable(Schema.Array(Schema.String)))),
   hiddenChannels: Schema.mutableKey(Schema.optional(Schema.mutable(Schema.Array(Schema.String)))),
+  /** The workflows that the mobile drawer shows under Workflows. An older app keeps reading the file. */
+  pinnedWorkflows: Schema.mutableKey(Schema.optional(Schema.mutable(Schema.Array(Schema.String)))),
 });
 export type RemoteWorkspacePreferences = typeof WorkspacePreferences.Type;
 const StoredPreferences = Schema.Struct({ version: Schema.Literal(1), ...WorkspacePreferences.fields });
@@ -44,6 +46,7 @@ export function createWorkspacePreferences(
       pinned: value.pinned,
       ...(value.pinnedChannels ? { pinnedChannels: value.pinnedChannels } : {}),
       ...(value.hiddenChannels ? { hiddenChannels: value.hiddenChannels } : {}),
+      ...(value.pinnedWorkflows ? { pinnedWorkflows: value.pinnedWorkflows } : {}),
     };
     cache.set(hostId, preferences);
     return preferences;

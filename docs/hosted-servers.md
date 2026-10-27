@@ -287,8 +287,26 @@ The plan sets the number of active members, owner included: Starter 3, Standard 
 with `getServerEntitlement` when a member joins or is reactivated, and refuses a member over the limit
 (`409 member_limit_reached`). This also applies to a self-hosted host that has a plan.
 
-- A lower limit after a plan change or a plan end removes no one. Active members keep their seats.
-  A new join or a reactivation waits for a free seat.
+- A row in the D1 table `server_member_limits` replaces the plan's limit for one server, such as an
+  enterprise customer's, from 1 to 100. The row names the account that owns the server and applies
+  only while that account owns it, as a plan does. The key is the server ID, so the row stays when
+  the owner deletes the host and registers it again; it stops when the account is deleted. No route
+  writes it; add, change or delete it by hand (`openbot-auth-test` for the test Worker):
+
+  ```sh
+  bunx wrangler d1 execute openbot-auth --cwd apps/auth-api --remote --command \
+    "INSERT INTO server_member_limits(server_id, owner_user_id, member_limit, created_at, updated_at)
+     SELECT host_id, owner_user_id, 50, unixepoch() * 1000, unixepoch() * 1000
+       FROM remote_hosts WHERE host_id = '<server id>'
+     ON CONFLICT(server_id) DO UPDATE SET owner_user_id = excluded.owner_user_id,
+       member_limit = excluded.member_limit, updated_at = excluded.updated_at"
+  ```
+
+  For a hosted server that has not published its host, read the owner from `hosted_servers`. Delete
+  the row to go back to the plan's limit. Clients see the new limit when they read the host list
+  again.
+- A lower limit after a plan change, a plan end or a custom limit removes no one. Active members
+  keep their seats. A new join or a reactivation waits for a free seat.
 - The host list (`GET /v2/remote/hosts/`) gives `memberLimit` for each host. The desktop, web and
   mobile member screens show it. They use 3 when an older Worker sends no limit.
 - After each subscription sync, the Worker sends `account-servers-changed` to each active member,
@@ -620,7 +638,38 @@ do not all pass the check before their processes grow. A start that fails counts
 | --- | --- | --- |
 | `ok` | Other times. After `low`, only at 256 MB above the `low` limit. | Turns start. |
 | `low` | Free memory is less than 512 MB or 12% of the total. | No new turn starts; the message stays queued. The agent shows one notice in each low period. The browser opens no new tab. |
-| `critical` | Free memory is less than 256 MB or 6% of the total. | As `low`. Also, the provider threads with no turn close one time. They open again from their session at the next turn. |
+| `critical` | Free memory is less than 256 MB or 6% of the total. | As `low`. Also, the provider threads with no turn close one time. They open again from their session at the next turn. Leftover agent processes stop (see below). |
+
+Agent processes (`AgentProcesses` in `src/main/server-memory.ts`):
+
+- Each provider process gets `OPENBOT_AGENT_PROCESS=1`, so every program that an agent starts has
+  it too. A job that an agent detaches (`nohup`, `&`, a routine wake-up job), and the workers of a
+  build whose parent the OOM killer stopped, leave main's tree: the kernel gives them to PID 1. The
+  variable still finds them. Xvfb, D-Bus and the keyring start before main and do not have it.
+- Every 5 s, each marked process gets an `oom_score_adj` of at least 500, also after it leaves main's
+  tree, and each of its threads gets the nice value 10. Main and the Electron processes keep their
+  values. The Computer Use driver and remote desktop get the OOM value as children of main, but keep
+  their nice value. So a full CPU slows the agents' builds and not main or the WebRTC host. Without
+  this, a build with many workers took all the CPU and memory, main stopped answering, and the
+  clients lost the connection.
+- At `critical`, main stops leftover processes: marked processes that are not in main's tree. It
+  sends SIGTERM to the largest ones that never had a child and run for at least 5 s, until the free
+  memory is 256 MB above `critical`, and one SIGKILL to each one that still runs 5 s later. A shell
+  or a build that runs other programs is never stopped, and the short command that a shell runs next,
+  such as a routine wake-up command, is too young to be stopped. So a detached job's shell still
+  wakes the agent, with the exit status of the job: 143 when the stopped process was the shell's own
+  child, else the status that the job gives. A job of one process, such as a preview server, is
+  stopped. A provider and its own children are never stopped: the kernel's OOM killer decides for
+  them. The log has one warning for each signal, with the pid, the short name and the memory, never
+  the command line.
+- `NODE_OPTIONS` of each provider process gets `--require=<resources>/agent-runtime/cpu-limit.cjs`.
+  In a container or a unit with a CPU limit, `os.cpus()` lists every CPU of the host, and build tools
+  such as Next.js start a worker for each (63 on a 64-CPU host). The module makes `os.cpus()` and
+  `os.availableParallelism()` count only the CPUs of the cgroup limit (`cpu.max`) and of the CPU
+  affinity. It changes nothing without a limit, or when `/proc` already shows the limit (LXCFS). Codex gets both variables in the
+  environment of its app-server, not in each thread configuration, so its sessions are not replaced.
+  The Claude Agent SDK removes `NODE_OPTIONS` from the environment of the CLI, so Claude gets it in
+  the `env` of its flag settings (`--settings`), which the CLI gives to the Bash tool and its hooks.
 
 When the level is `ok` again, each held message starts. If a file cannot be read, the level stays
 `ok` and main logs one warning.

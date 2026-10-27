@@ -404,6 +404,32 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Compila gli accessi del browser da Bitwarden. Configuralo nell'app desktop.",
+  "mobile.server.connectors.bitwarden.hostSummary": "Compila gli accessi del browser da Bitwarden o Vaultwarden",
+  "mobile.server.connectors.bitwarden.description":
+    "Compila gli accessi del browser su {host} da Bitwarden o Vaultwarden.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} accede con la propria CLI di Bitwarden. Nella tua cassaforte, crea una cartella chiamata Shared with OpenBot e mettici solo gli accessi che gli agenti possono usare. Nella cassaforte web, apri Impostazioni › Sicurezza › Chiavi e mostra la tua chiave API.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Indirizzo del server",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden, o l’indirizzo del tuo server Vaultwarden. {host} deve raggiungerlo tramite HTTPS.",
+  "mobile.server.connectors.bitwarden.clientId": "client_id della chiave API",
+  "mobile.server.connectors.bitwarden.clientSecret": "client_secret della chiave API",
+  "mobile.server.connectors.bitwarden.masterPassword": "Password principale",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} conserva la chiave API e la password principale cifrate, così può sbloccare di nuovo dopo un riavvio. Questo telefono non le conserva.",
+  "mobile.server.connectors.bitwarden.connect": "Connetti Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "Connessione…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} sta accedendo a Bitwarden. Il primo accesso può richiedere alcuni minuti.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Cartella condivisa",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Cartella in Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Sposta un accesso in questa cartella in Bitwarden per permettere agli agenti di usarlo. Rimuovilo per smettere.",
+  "mobile.server.connectors.bitwarden.disconnect": "Disconnetti Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Disconnettere Bitwarden?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} rimuove la chiave API e la password principale. Gli agenti su {host} non possono più compilare gli accessi da Bitwarden.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Repository, issue e pull request per ogni agente",
   "mobile.server.connectors.github.description":
@@ -613,6 +639,11 @@ export const messages = {
   "mobile.server.settings.providers": "Provider",
   "mobile.server.settings.providersConnected": { one: "{count} connesso", other: "{count} connessi" },
   "mobile.server.providers.description": "I provider di IA del computer su cui gira questo server.",
+  "mobile.server.providers.connectedTitle": "Connesso",
+  "mobile.server.providers.otherTitle": "Non connesso",
+  "mobile.server.providers.defaultProvider": "Provider predefinito",
+  "mobile.server.providers.defaultProviderHint":
+    "Un nuovo agente su questo server parte con questo provider. Puoi cambiarlo per ogni agente in seguito.",
   "mobile.server.providers.loading": "Caricamento dei provider…",
   "mobile.server.providers.loadFailed": "Impossibile caricare i provider di questo server.",
   "mobile.server.providers.runtimesFailed": "Impossibile caricare i download di questo server.",
@@ -674,6 +705,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Impossibile modificare la chiave. Riprova.",
   "mobile.server.providers.newKey": "Chiave",
   "mobile.server.providers.replaceKey": "Nuova chiave",
+  "mobile.server.providers.keyPlaceholder": "Incolla la tua chiave",
   "mobile.server.providers.saveKey": "Salva chiave",
   "mobile.server.providers.removeKey": "Rimuovi chiave",
   "mobile.server.providers.removeKeyTitle": "Rimuovere la chiave dal server?",

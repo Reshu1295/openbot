@@ -142,10 +142,22 @@ export const messages = {
   "provider.geminiKey.description":
     "Bu bilgisayara bir Gemini API anahtarı kaydedin. Kayıtlı anahtar, Google hesabınızın yerine kullanılır. Google ile oturum açmak için anahtarı kaldırın ve Gemini satırında Bağlan'ı seçin.",
   "provider.geminiKey.label": "Gemini API anahtarı",
+  "provider.claudeKey.title": "Anthropic API anahtarı",
+  "provider.claudeKey.description":
+    'Ana bilgisayara bir Anthropic API anahtarı kaydedin. Anthropic her isteği anahtara faturalar. Bir ajan için kullanmak üzere ajanın model menüsünde "API anahtarı" hesabını seçin. Claude\'da oturum açık değilse tüm ajanlar anahtarı kullanır.',
+  "provider.claudeKey.label": "Anthropic API anahtarı",
   "provider.inceptionKey.title": "Inception API anahtarı",
   "provider.inceptionKey.description":
     "Mercury modellerini kullanmak için bu bilgisayara bir Inception API anahtarı kaydedin. OpenBot bunları indirdiği Pi CLI'da çalıştırır.",
   "provider.inceptionKey.label": "Inception API anahtarı",
+  "provider.deepseekKey.title": "DeepSeek API anahtarı",
+  "provider.deepseekKey.description":
+    "DeepSeek modellerini kullanmak için bu bilgisayara bir DeepSeek API anahtarı kaydedin. OpenBot bunları indirdiği Pi CLI'da çalıştırır.",
+  "provider.deepseekKey.label": "DeepSeek API anahtarı",
+  "provider.openrouterKey.title": "OpenRouter API anahtarı",
+  "provider.openrouterKey.description":
+    "OpenRouter modellerini kullanmak için bu bilgisayara bir OpenRouter API anahtarı kaydedin. OpenBot bunları indirdiği Pi CLI'da çalıştırır.",
+  "provider.openrouterKey.label": "OpenRouter API anahtarı",
   "provider.openCodeKey.title": "OpenCode Go'da oturum açın",
   "provider.openCodeKey.description":
     "Ücretsiz modeller hesap gerektirmez. Bir anahtar, ücretli Go modellerinin kilidini açar.",
@@ -163,6 +175,7 @@ export const messages = {
   "provider.account.addLabel": "Başka bir {name} hesabı ekle",
   "provider.account.count": { one: "{count} hesap", other: "{count} hesap" },
   "provider.account.numbered": "Hesap {number}",
+  "provider.account.apiKey": "API anahtarı",
   "provider.account.listLabel": "{name} hesapları",
   "provider.account.usedBy": "Kullanan: {agents}",
   "provider.account.failed": "Oturum açılamadı",
@@ -186,4 +199,24 @@ export const messages = {
   "provider.account.resetUsageNoCredit": "{name} hesabında kullanım sıfırlama kredisi kalmadı.",
   "provider.account.resetUsageAlreadyRedeemed": "{name} hesabının bu sıfırlama kredisi zaten kullanıldı.",
   "provider.account.resetUsageFailed": "{name} kullanımı sıfırlanamadı.",
+  "provider.settings.cache": "Önbellek",
+  "provider.settings.promptCache": "İstem önbelleği",
+  "provider.settings.promptCacheDescription":
+    "Claude'un bir ajanın bağlamını turlar arasında önbellekte ne kadar tuttuğu.",
+  "provider.settings.promptCacheHour": "1 saat",
+  "provider.settings.promptCacheDefault": "Claude Code varsayılanı",
+  "provider.settings.promptCacheLoadFailed": "Bu sunucunun istem önbelleği süresi yüklenemedi.",
+  "provider.settings.download": "İndirme",
+  "provider.settings.downloadedCli": "{name} CLI",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 sürüm · {size}",
+    other: "{version} · {count} sürüm · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 sürüm · {size}", other: "{count} sürüm · {size}" },
+  "provider.settings.downloadAgain": "{name} açıldığında OpenBot CLI'yi yeniden indirir.",
+  "provider.settings.removeDownloadConfirm": "{size} kaldırılsın mı?",
+  "provider.settings.removeDownloadKeeps": "Hesaplar, oturumlar ve ajanlar kalır.",
+  "provider.settings.removeDownload": "İndirmeyi kaldır",
+  "provider.settings.removingDownload": "Kaldırılıyor…",
+  "provider.settings.removeDownloadFailed": "İndirme kaldırılamadı.",
 } as const satisfies PartialTranslation<typeof source>;

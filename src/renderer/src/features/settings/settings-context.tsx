@@ -3,6 +3,7 @@ import {
   type ApprovalAutomationPreference,
   agentAutoApprovalEnabled,
   type DynamicIslandGeometry,
+  type ExternalLinkTarget,
 } from "@openbot/contracts/ipc";
 import { DEFAULT_GENERAL_SETTINGS, type GeneralSettingsValue } from "@openbot/ui/features/settings/app-settings";
 import { currentText } from "@openbot/ui/text";
@@ -22,6 +23,10 @@ import { isOpenSettingsShortcut } from "./settings-shortcut";
 import type { SettingsTab } from "./settings-tabs";
 
 const ANALYTICS_APP_VERSION_STORAGE_KEY = "openbot:analytics-app-version";
+
+function sameExternalLinkTarget(left: ExternalLinkTarget, right: ExternalLinkTarget): boolean {
+  return left.kind === right.kind && (left.kind !== "app" || right.kind !== "app" || left.path === right.path);
+}
 
 /** Tells the user why a switch went back to its previous value. */
 function showSaveFailure(error: unknown): void {
@@ -135,6 +140,7 @@ const Settings = createSimpleContext({
     let agentDefaultsChanged = false;
     let agentMemoryLimitChanged = false;
     let keepRemoteSessionsChanged = false;
+    let externalLinkTargetChanged = false;
     let launchAtLoginChanged = false;
     let keepRunningInBackgroundChanged = false;
     let keepAwakeChanged = false;
@@ -311,6 +317,14 @@ const Settings = createSimpleContext({
           (preference) => preference.keepAwakeOnBattery,
         );
       }
+      if (!sameExternalLinkTarget(previous.externalLinkTarget, value.externalLinkTarget)) {
+        externalLinkTargetChanged = true;
+        persistField(
+          "externalLinkTarget",
+          settingsPort().setExternalLinkPreference({ target: value.externalLinkTarget }),
+          (preference) => preference.target,
+        );
+      }
       if (previous.keepRemoteSessions !== value.keepRemoteSessions) {
         keepRemoteSessionsChanged = true;
         persistField(
@@ -422,8 +436,17 @@ const Settings = createSimpleContext({
           autoInstallUpdates: preference.autoInstall,
         }));
       });
+      // A page can open from main with no click here, such as a sign-in page, so main sends the notice.
+      const unsubscribeLinkFallback = settingsPort().onExternalLinkFallback(({ name }) => {
+        const { t } = currentText();
+        actionToast.warning(t("settings.externalLinks.fallback.title", { name }), {
+          id: "external-link-fallback",
+          description: t("settings.externalLinks.fallback.description"),
+        });
+      });
       return () => {
         window.removeEventListener("keydown", handleSettingsShortcut);
+        unsubscribeLinkFallback();
         unsubscribe();
         unsubscribeApprovals();
         unsubscribeMemoryLimit();
@@ -501,6 +524,12 @@ const Settings = createSimpleContext({
                 ? current.keepAwakeOnBattery
                 : preference.keepAwakeOnBattery,
             }));
+          }),
+        settingsPort()
+          .getExternalLinkPreference()
+          .then((preference) => {
+            if (externalLinkTargetChanged) return;
+            setGeneralSettings((current) => ({ ...current, externalLinkTarget: preference.target }));
           }),
         settingsPort()
           .getRemoteSessionReusePreference()

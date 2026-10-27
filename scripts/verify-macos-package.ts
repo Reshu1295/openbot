@@ -44,6 +44,8 @@ const executablePath = resolve(contentsPath, "MacOS/OpenBot");
 const resourcesPath = resolve(contentsPath, "Resources");
 const packagedIconPath = resolve(resourcesPath, "icon.icns");
 const sourceIconPath = resolve("build/icon-production.icns");
+const packagedIconCatalogPath = resolve(resourcesPath, "Assets.car");
+const sourceIconCatalogPath = resolve("build/macos/Assets.car");
 const plistPath = resolve(contentsPath, "Info.plist");
 const voiceRuntimePath = resolve(resourcesPath, "voice/runtime");
 const voiceRuntimeFiles = ["sherpa-onnx.node", "libsherpa-onnx-c-api.dylib", "libonnxruntime.dylib"];
@@ -104,6 +106,7 @@ await Promise.all(
 // entitlement that re-signing under OpenBot's inherited entitlements would drop.
 assertCuaDriverSignature(resolve(cuaDriverPath, "cua-driver"));
 await verifyPackagedIcon(packagedIconPath, sourceIconPath);
+await verifyPackagedIconCatalog(packagedIconCatalogPath, sourceIconCatalogPath);
 await Promise.all(["codex", "claude", "grok"].map((name) => assertAbsent(resolve(resourcesPath, name))));
 await assertAbsent(resolve(resourcesPath, "cloudflared"));
 await assertAbsent(
@@ -116,6 +119,7 @@ expectEqual(plist.CFBundleDisplayName, "OpenBot", "display name");
 expectEqual(plist.CFBundleExecutable, "OpenBot", "executable name");
 expectEqual(plist.CFBundleIdentifier, "app.openbot.desktop", "bundle identifier");
 expectEqual(plist.CFBundleIconFile, "icon.icns", "application icon");
+expectEqual(plist.CFBundleIconName, "Icon", "macOS 26 application icon");
 expectEqual(plist.LSMinimumSystemVersion, "13.0", "minimum macOS version");
 expectEqual(plist.ElectronTeamID, "ZTRDTUL87R", "Apple Team ID");
 if (!Array.isArray(plist.NSUserActivityTypes) || !plist.NSUserActivityTypes.includes("NSUserActivityTypeBrowsingWeb")) {
@@ -226,6 +230,14 @@ async function verifyPackagedIcon(packagedPath: string, sourcePath: string): Pro
     await Promise.all(EXPECTED_MACOS_ICON_FILES.map((name) => access(join(iconSetPath, name))));
   } finally {
     await rm(iconRoot, { recursive: true, force: true });
+  }
+}
+
+/** macOS 26 reads the icon from this catalog. It holds the dark version that the `.icns` cannot. */
+async function verifyPackagedIconCatalog(packagedPath: string, sourcePath: string): Promise<void> {
+  const [packagedCatalog, sourceCatalog] = await Promise.all([readFile(packagedPath), readFile(sourcePath)]);
+  if (!packagedCatalog.equals(sourceCatalog)) {
+    throw new Error("The packaged macOS icon catalog does not match build/macos/Assets.car.");
   }
 }
 

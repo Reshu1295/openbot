@@ -16,12 +16,14 @@ import { useNavigation } from "../../navigation";
 import { createScopeGuard } from "../../scope-lifetime";
 import { createSimpleContext } from "../../simple-context";
 import { useTurns } from "../../turns";
+import { useAgentThreads } from "../agent-threads/agent-threads-context";
 import { useConversation } from "../conversation/conversation-context";
 import { agentConversationKey } from "../conversation/conversation-keys";
 import { useDirectMessages } from "../conversation/direct-messages-context";
 import { useServers } from "../servers/servers-context";
 import { useSidebar } from "../sidebar/sidebar-context";
 import { type NewAgentDraft, newAgentInput } from "./agent-create-input";
+import { attentionAgentId, withoutAttention } from "./agent-runtime-snapshot";
 import { useAgents } from "./agents-context";
 import { agentsPort } from "./agents-port";
 
@@ -69,6 +71,7 @@ const AgentActions = createSimpleContext({
       applyUserHiddenAgents,
     } = useAgents();
     const { initializeConversation, removeConversation } = useConversation();
+    const threads = useAgentThreads();
     const { setActiveTurns, setFailedTurns, setQueues, setPendingPrompts } = useTurns();
     const { sidebarLayout, setSidebarLayout, applySidebarLayoutAction, removePinnedSidebarItemEverywhere } =
       useSidebar();
@@ -286,6 +289,22 @@ const AgentActions = createSimpleContext({
         if (wasActive) setActiveAgentId(agentId);
       }
 
+      function forgetDeletedAgent(): void {
+        analytics.track("agent_action", { action: "delete", result: "succeeded", ...(properties ?? {}) });
+        if (marketplaceAgent) {
+          analytics.track("marketplace_action", { entity: "agent", action: "uninstall", result: "succeeded" });
+        }
+        if (!scopeIsCurrent()) return;
+        forgetHiddenAgent(agentId);
+        threads.forgetAgent(agentId);
+        removeConversation(agentId);
+        setUiErrors((current) => withoutAgent(current, agentConversationKey(serverId, agentId)));
+        setActiveTurns((current) => withoutAgent(current, agentId));
+        setFailedTurns((current) => withoutAgent(current, agentId));
+        setQueues((current) => withoutAgent(current, agentId));
+        setPendingPrompts((current) => withoutAttention(current, (event) => attentionAgentId(event) === agentId));
+      }
+
       async function commit(): Promise<void> {
         if (!settle()) return;
         // Before the wait: a server switch reads the stored pins when the next scope starts. If the delete
@@ -293,19 +312,20 @@ const AgentActions = createSimpleContext({
         removePinnedSidebarItemEverywhere({ kind: "agent", id: agentId });
         try {
           await agentsPort().agent.deleteAgent(agentId, serverId);
-          analytics.track("agent_action", { action: "delete", result: "succeeded", ...(properties ?? {}) });
-          if (marketplaceAgent) {
-            analytics.track("marketplace_action", { entity: "agent", action: "uninstall", result: "succeeded" });
-          }
-          if (!scopeIsCurrent()) return;
-          forgetHiddenAgent(agentId);
-          removeConversation(agentId);
-          setUiErrors((current) => withoutAgent(current, agentConversationKey(serverId, agentId)));
-          setActiveTurns((current) => withoutAgent(current, agentId));
-          setFailedTurns((current) => withoutAgent(current, agentId));
-          setQueues((current) => withoutAgent(current, agentId));
-          setPendingPrompts((current) => withoutAgent(current, agentId));
+          forgetDeletedAgent();
         } catch (error) {
+          // A step after the delete can fail, such as the sidebar write. Main then no longer has the
+          // agent, and putting it back would show an agent that comes back only until a restart.
+          const stillListed = await agentsPort()
+            .agent.listAgents(serverId)
+            .then(
+              (agents) => agents.some((candidate) => candidate.id === agentId),
+              () => true,
+            );
+          if (!stillListed) {
+            forgetDeletedAgent();
+            return;
+          }
           analytics.track("agent_action", {
             action: "delete",
             result: "failed",

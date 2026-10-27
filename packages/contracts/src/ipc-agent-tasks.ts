@@ -112,6 +112,21 @@ export interface AgentTaskInput {
   taskId: string;
 }
 
+/** A person's new title for a side thread. */
+export interface RenameAgentTaskInput extends AgentTaskInput {
+  title: string;
+}
+
+/**
+ * A thread title that a person writes, trimmed: one line with no control, line or paragraph separator
+ * characters. Null when the value is not a valid title. IPC and the Team API use this one rule.
+ */
+export function agentThreadTitle(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const title = value.trim();
+  return title && title.length <= INPUT_LIMITS.agentTaskTitle && !/[\p{Cc}\p{Zl}\p{Zp}]/u.test(title) ? title : null;
+}
+
 function isAgentTaskQueuedMessage(value: unknown): value is AgentTaskQueuedMessage {
   return (
     isDynamicRecord(value) &&

@@ -1,13 +1,24 @@
+import {
+  attachmentReferenceIds,
+  expandAttachmentReferences,
+  rewriteAttachmentReferences,
+  serializeAttachmentReference,
+} from "@openbot/contracts/attachment-references";
 import { fileQuoteTarget } from "@openbot/contracts/chat-tag-references";
-import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
+import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import { type DraftAttachment, LOCAL_SERVER_ID, type QueueDelivery } from "@openbot/contracts/ipc";
 import { TEAM_MESSAGE_CLIENT_ID_CAPABILITY } from "@openbot/contracts/team-protocol/current";
 import { isQueueEditRejected, TEAM_QUEUE_EDIT_CAPABILITY } from "@openbot/contracts/team-protocol/queue-edit-v1";
-import { expandComposerMentions } from "@openbot/ui/features/conversation/ComposerEditor";
+import {
+  type ComposerPasteResult,
+  type ComposerSelection,
+  expandComposerMentions,
+} from "@openbot/ui/features/conversation/ComposerEditor";
 import { currentText } from "@openbot/ui/text";
 import { playActionSound } from "../../../action-sounds";
 import { claimDictatedSend } from "../../speech/speech-replies";
 import { rememberAttachmentKinds } from "../attachment-analytics";
+import { type PastedComposerCopy, rememberComposerFile } from "../composer-clipboard";
 import { copyComposerDraft, EMPTY_DRAFT, QUEUE_EDIT_STORAGE_KEY, type StoredQueueEdit } from "../composer-draft";
 import { composerDraftKey } from "../conversation-keys";
 import { conversationRuntime } from "../conversation-runtime";
@@ -30,6 +41,8 @@ export interface ComposerActionsDeps {
   props: ConversationProps;
   agentReady: () => boolean;
   attachmentBusy: () => boolean;
+  setAttachmentBusy: (busy: boolean) => void;
+  attachmentImports: Map<string, ConversationTarget>;
   drafts: () => Record<string, ComposerDraft>;
   setDrafts: (update: (current: Record<string, ComposerDraft>) => Record<string, ComposerDraft>) => void;
   editingAgentId: () => string | null;
@@ -113,7 +126,7 @@ export function createComposerActions(deps: ComposerActionsDeps) {
   }
 
   async function addAttachments(selected: DraftAttachment[], target = deps.currentTarget()) {
-    if (!target) return;
+    if (!target) return [];
     const pendingSave = deps.editingPendingSave();
     if (
       pendingSave &&
@@ -125,7 +138,7 @@ export function createComposerActions(deps: ComposerActionsDeps) {
       for (const attachment of selected)
         void conversationRuntime(deps.props).agent.discardDraftAttachment(attachment.id, target.serverId);
       deps.setComposerError(t("composer.error.saveUnconfirmed"), target);
-      return;
+      return [];
     }
     deps.clearConversationError(target);
     const key = composerDraftKey(target);
@@ -160,7 +173,7 @@ export function createComposerActions(deps: ComposerActionsDeps) {
         for (const item of accepted)
           void conversationRuntime(deps.props).agent.discardDraftAttachment(item.id, target.serverId);
         deps.setConversationError(target, errorMessage(error, t("composer.error.keepAttachments")));
-        return;
+        return [];
       }
     }
     const currentDraft = deps.drafts()[key] ?? EMPTY_DRAFT;
@@ -177,6 +190,132 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     if (selected.length > accepted.length)
       deps.setComposerError(t("composer.error.attachmentLimit", { limit: INPUT_LIMITS.attachments }), target);
     deps.setShowComposerActions(false);
+    return accepted;
+  }
+
+  async function pasteFiles(
+    files: ReadonlyArray<File | Promise<File>>,
+    selection: ComposerSelection,
+    copy?: Pick<PastedComposerCopy, "text" | "sourceIds">,
+  ): Promise<ComposerPasteResult | undefined> {
+    const target = deps.currentTarget();
+    if (!target || deps.submitting()) return;
+    const before = deps.currentDraft().text;
+    const key = composerDraftKey(target);
+    // Puts `text` at the selection. A view can unmount during import, so newer edits stay and the
+    // text goes at the end. Returns undefined when the message would be too long.
+    const insert = (text: string): ComposerPasteResult | undefined => {
+      const current = deps.drafts()[key] ?? EMPTY_DRAFT;
+      const next =
+        current.text === before
+          ? `${before.slice(0, selection.start)}${text}${before.slice(selection.end)}`
+          : [current.text, text].filter(Boolean).join(" ");
+      if (next.length > INPUT_LIMITS.messageText) return;
+      deps.setDrafts((drafts) => ({ ...drafts, [key]: { ...(drafts[key] ?? EMPTY_DRAFT), text: next } }));
+      return { value: next, caret: current.text === before ? selection.start + text.length : next.length };
+    };
+    const requestId = crypto.randomUUID();
+    const runtime = conversationRuntime(deps.props);
+    deps.attachmentImports.set(requestId, target);
+    deps.setAttachmentBusy(true);
+    deps.clearConversationError(target);
+    try {
+      const originals = await Promise.all(files);
+      const draft = deps.drafts()[key] ?? EMPTY_DRAFT;
+      if (originals.length + draft.attachments.length > INPUT_LIMITS.attachments)
+        throw new Error(t("composer.error.attachmentLimit", { limit: INPUT_LIMITS.attachments }));
+      // Check the sizes before the bytes come into memory, as the path import does.
+      if (originals.some((file) => file.size > ATTACHMENT_LIMITS.fileBytes))
+        throw new Error(t("error.attachment.fileTooLarge"));
+      if (originals.reduce((total, file) => total + file.size, 0) > ATTACHMENT_LIMITS.totalBytes)
+        throw new Error(t("error.attachment.totalTooLarge"));
+      const data = await Promise.all(
+        originals.map(async (file) => ({
+          name: file.name,
+          mimeType: file.type,
+          // A pasted folder has no bytes to read.
+          bytes: new Uint8Array(
+            await file.arrayBuffer().catch(() => {
+              throw new Error(t("error.attachment.unavailable"));
+            }),
+          ),
+        })),
+      );
+      const imported = await runtime.agent.importAttachmentData(data, target.serverId);
+      imported.forEach((attachment, index) => {
+        const file = originals[index];
+        if (file) rememberComposerFile(attachment, file);
+      });
+      const accepted = await addAttachments(imported, target);
+      // The draft refused the files and shows why. The text of a copy still comes, with their names.
+      if (!accepted.length) return copy?.text ? insert(expandAttachmentReferences(copy.text)) : undefined;
+      const replacements = new Map((copy?.sourceIds ?? []).map((id, index) => [id, accepted[index]]));
+      const text =
+        copy === undefined
+          ? accepted.map((attachment) => serializeAttachmentReference(attachment.name, attachment.id)).join(" ")
+          : rewriteAttachmentReferences(copy.text, (reference) => {
+              const attachment = replacements.get(reference.attachmentId);
+              return attachment ? { attachmentId: attachment.id, name: attachment.name } : null;
+            });
+      const result = insert(text);
+      // The files stay in the row, so a paste that does not fit loses no file.
+      if (!result) throw new Error(t("error.agent.messageTooLong"));
+      return result;
+    } catch (error) {
+      deps.setConversationError(target, errorMessage(error, t("composer.error.keepAttachments")));
+      // When the files of a copy cannot come, its text comes with their names, as in another app.
+      return copy?.text ? insert(expandAttachmentReferences(copy.text)) : undefined;
+    } finally {
+      deps.attachmentImports.delete(requestId);
+      deps.setAttachmentBusy(deps.attachmentImports.size > 0);
+    }
+  }
+
+  /**
+   * A cut moves its files with the text. The draft drops each one that `remaining` no longer names, and
+   * discards it after the copy has read its bytes. A file that the copy could not read comes back. A
+   * pending Save keeps its attachments, as in removal.
+   */
+  function releaseCutAttachments(
+    attachments: readonly DraftAttachment[],
+    remaining: string,
+    copied: Promise<ReadonlySet<string>>,
+  ): void {
+    const target = deps.currentTarget();
+    if (!target) return;
+    if (
+      deps.editingPendingSave() &&
+      deps.editingAgentId() === target.agentId &&
+      deps.editingServerId() === target.serverId &&
+      deps.editingDeliveryId()
+    )
+      return;
+    const key = composerDraftKey(target);
+    // The draft can still hold the text from before the cut: Solid batches the write.
+    const referenced = attachmentReferenceIds(remaining);
+    const released = new Set(attachments.map((attachment) => attachment.id).filter((id) => !referenced.has(id)));
+    if (!released.size) return;
+    deps.setDrafts((drafts) => {
+      const draft = drafts[key] ?? EMPTY_DRAFT;
+      return {
+        ...drafts,
+        [key]: { ...draft, attachments: draft.attachments.filter((attachment) => !released.has(attachment.id)) },
+      };
+    });
+    const runtime = conversationRuntime(deps.props);
+    void copied.then((read) => {
+      // A file that the copy could not read goes back to the draft, so the cut loses no file.
+      const unread = attachments.filter((attachment) => released.has(attachment.id) && !read.has(attachment.id));
+      if (unread.length)
+        deps.setDrafts((drafts) => {
+          const draft = drafts[key] ?? EMPTY_DRAFT;
+          const present = new Set(draft.attachments.map((attachment) => attachment.id));
+          const restored = unread.filter((attachment) => !present.has(attachment.id));
+          return { ...drafts, [key]: { ...draft, attachments: [...draft.attachments, ...restored] } };
+        });
+      for (const id of released)
+        if (read.has(id)) void runtime.agent.discardDraftAttachment(id, target.serverId).catch(() => {});
+    });
   }
 
   function openAttachmentPicker() {
@@ -692,6 +831,8 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     updateTeamTyping,
     stopTeamTyping,
     addAttachments,
+    pasteFiles,
+    releaseCutAttachments,
     openAttachmentPicker,
     openAttachmentPickerFromKey,
     editQueuedMessage,

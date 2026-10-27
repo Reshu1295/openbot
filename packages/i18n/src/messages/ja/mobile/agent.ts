@@ -281,6 +281,7 @@ export const messages = {
   "mobile.agent.runtime.provider": "プロバイダー",
   "mobile.agent.runtime.account": "アカウント",
   "mobile.agent.runtime.accountNumbered": "アカウント {number}",
+  "mobile.agent.runtime.accountApiKey": "APIキー",
   "mobile.agent.runtime.accountUnsupported":
     "このホストでは、リモートデバイスからエージェントのアカウントを変更できません。",
   "mobile.agent.runtime.model": "モデル",

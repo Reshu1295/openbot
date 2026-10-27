@@ -108,7 +108,7 @@ Its main jobs are:
 | Signal E2E | `ubuntu-latest` | `bun run test:signal`, when `remote/` or `scripts/` changes |
 | Local scripts CLI E2E | `ubuntu-latest` | `bun run test:automation-cli` |
 | Team API routes E2E | `ubuntu-latest` | `bun run test:team-api-routes`, when desktop code changes |
-| Team API and reverse actions E2E | `ubuntu-latest` | `test:team-legacy-clients`, `test:team-session-revoke`, `test:server-mute`, `test:routine-pause-resume`, `test:agent-hide-restore`, `test:messaging-pause-resume`, `test:messaging-discord-access`, `test:provider-update-busy`, `test:provider-exit-session`, `test:codex-missing-rollout` and `test:zip-attachments`, each with `bun run` in its own step, when the `desktop` lane runs |
+| Team API and reverse actions E2E | `ubuntu-latest` | `test:team-legacy-clients`, `test:team-session-revoke`, `test:sign-in-relay-paste`, `test:server-mute`, `test:routine-pause-resume`, `test:agent-hide-restore`, `test:messaging-pause-resume`, `test:messaging-discord-access`, `test:turn-input`, `test:provider-update-busy`, `test:provider-update-after-app-upgrade`, `test:provider-runtime-remove`, `test:provider-exit-session`, `test:codex-hung-app-server`, `test:codex-missing-rollout`, `test:zip-attachments` and `test:mp4-attachments`, each with `bun run` in its own step, when the `desktop` lane runs |
 | Provider fakes E2E | `ubuntu-latest` | `test:custom-agents`, `test:custom-agents:login-path`, `test:acp-directories`, `test:acp-flavors`, `test:acp-turn-stall`, `test:acp-mcp-names`, `test:provider-conformance`, `test:opencode-expired-key`, `test:opencode-downgraded-session`, `test:cline-free-models` and `test:provider-transcript-replay`, each with `bun run` in its own step, when the `desktop` lane runs. The fake agents are in `scripts/provider-fakes/`; the replayed transcripts of released CLIs are in `scripts/provider-fakes/transcripts/`, and `bun scripts/record-provider-transcript.ts` records a new one |
 | Surfaces | `ubuntu-latest` | Parallel groups described below, then `bun run remote:check:compose` |
 | API | `ubuntu-latest` | `bun run check:api`, then, for a pull request from this repository, upload `apps/auth-api/dist` |
@@ -376,6 +376,26 @@ is a hand edit that a reviewer sees. `--add=<option>` starts an option at its cu
 `tsc`. When an option has no errors left, turn it on in `tsconfig.base.json` and remove it from the
 baseline. Do not name the script `typecheck:*`:
 `bun run typecheck` runs every script that matches that pattern.
+
+### Agent context budget
+
+`bun run check:agent-context` holds the text that OpenBot adds to an agent's context to the byte
+counts in `tools/agent-context/budget.json`. It uses the same rules as the type debt ratchet
+(`scripts/debt-ratchet.ts`): more bytes fail, and fewer bytes fail until `--write` lowers the
+baseline. A raise is a hand edit that a reviewer sees. The fixture agent has no memories, teammates,
+skills, or connected vault, so the counts measure only OpenBot's own text:
+
+- `instructions.claude` and `instructions.codex`: `developerInstructions()` with the options of each
+  provider.
+- `visible-tools`: the visible tool definitions that Codex and the local MCP bridge receive.
+- `catalog.schemas` and `catalog.descriptions`: all built-in catalog tools, which `tool_search` and
+  `tool_describe` return.
+- `guidance`: the distinct `agent/tool-guidance.ts` texts.
+- `list-models.fixture`: the `list_models` result for a synthetic catalog of 200 models.
+
+The script writes the counts to `.openbot-build/agent-context-budget/report.json`. It does not
+measure the schemas that the Claude Agent SDK makes from the Zod shapes of Claude's visible tools.
+CI runs it in the `check` job.
 
 ### Plugin cost
 

@@ -37,7 +37,11 @@ export interface ContextCompactionOptions {
     client: AgentClient,
     threadId: string,
   ): Effect.Effect<string | null, ThreadOperationFailed>;
+  /** Whether `rotateSession` can replace this session. See `ThreadLifecycle.rotatesSession`. */
+  rotatesSession(agentId: string, threadId: string): boolean;
   changed?(): void;
+  /** A provider session finished a compaction: its summary replaces what it read before. */
+  compacted?(threadId: string): void;
 }
 
 /** Whether OpenBot can ask for a compaction of this client, automatically or for the user. */
@@ -45,9 +49,9 @@ export function compactsOnRequest(mode: AgentClient["contextCompaction"]): boole
   return mode === "events" || mode === "request" || mode === "handoff";
 }
 
-/** A queue that Codex refused because a compaction turn runs on `threadId`. */
+/** A queue that Codex refused because a compaction turn runs on the provider thread of its key. */
 interface RefusalHold {
-  threadId: string;
+  agentId: string;
   client: AgentClient;
   timer: NodeJS.Timeout;
 }
@@ -59,8 +63,8 @@ interface RefusalHold {
  * A compaction is a real provider turn, so it arrives on the same notification stream as the
  * agent's own work and has to be told apart from it: `claimTurn` swallows the `turn/started` that
  * belongs to the compaction, and `isCompactionTurn` recognizes its completion. The budget is keyed
- * by *external* provider thread id, `compactingAgents` by agent id, because an agent only ever compacts one
- * thread at a time and the drain guard asks the question by agent.
+ * by *external* provider thread id, and so are the compactions and refusals: the threads of one agent run
+ * in parallel, so a compaction holds the lane of its own thread only (`heldThreads`).
  *
  * Codex refuses input while a compaction turn runs, so the hold lasts until that turn ends: the
  * deadline stops the turn instead of releasing the queue, and a refused `turn/start` puts its
@@ -72,9 +76,10 @@ export class ContextCompaction {
   readonly #emitError: (code: string, error: unknown, agentId?: string) => void;
   readonly #scheduleDrain: (agentId: string) => void;
   readonly #rotateSession: ContextCompactionOptions["rotateSession"];
+  readonly #rotatesSession: ContextCompactionOptions["rotatesSession"];
   readonly #budgets = new Map<string, ThreadContextBudget>();
-  /** The thread that compacts, and the client that runs it once `request` sends it. */
-  readonly #compactingAgents = new Map<string, { threadId: string; client: AgentClient | null }>();
+  /** The agent of each provider thread that compacts, and the client that runs it once `request` sends it. */
+  readonly #compacting = new Map<string, { agentId: string; client: AgentClient | null }>();
   readonly #refusals = new Map<string, RefusalHold>();
   readonly #timeoutMs: number;
   /** How long a stopped compaction, or a refused queue, waits for the turn to end. */
@@ -83,11 +88,13 @@ export class ContextCompaction {
   readonly #awaitingPostCompaction = new Set<string>();
   readonly #durations = new Map<string, number>();
   readonly #changed: () => void;
+  readonly #compacted: (threadId: string) => void;
   readonly #timers = new Map<string, NodeJS.Timeout>();
   #usageTimer: NodeJS.Timeout | null = null;
 
   constructor(options: ContextCompactionOptions) {
     this.#changed = options.changed ?? (() => {});
+    this.#compacted = options.compacted ?? (() => {});
     this.#timeoutMs = options.timeoutMs ?? CONTEXT_COMPACTION_TIMEOUT_MS;
     this.#graceMs = Math.ceil(this.#timeoutMs / 4);
     this.#store = options.store;
@@ -95,6 +102,7 @@ export class ContextCompaction {
     this.#emitError = options.emitError;
     this.#scheduleDrain = options.scheduleDrain;
     this.#rotateSession = options.rotateSession;
+    this.#rotatesSession = options.rotatesSession;
   }
 
   /** Only personal sessions appear in the desktop snapshot; execution threads remain separate. */
@@ -184,6 +192,7 @@ export class ContextCompaction {
       this.#durations.set(threadId, Math.max(1, Date.now() - startedAt));
     this.#display.set(threadId, display);
     this.#emitChanged();
+    if (status === "completed") this.#compacted(threadId);
   }
 
   /** Ends a running compaction whose provider stopped before it reported the result. */
@@ -195,9 +204,17 @@ export class ContextCompaction {
     this.#awaitingPostCompaction.delete(threadId);
   }
 
-  /** One clause of the drain guard the queue engine composes. False means "hold this agent's queue". */
+  /** False while any provider thread of the agent compacts, or waits after a refused start. */
   mayDrain(agentId: string): boolean {
-    return !this.#compactingAgents.has(agentId) && !this.#refusals.has(agentId);
+    return this.heldThreads(agentId).length === 0;
+  }
+
+  /** The provider threads of this agent that compact or wait after a refused start. Their lanes wait. */
+  heldThreads(agentId: string): string[] {
+    const held = new Set<string>();
+    for (const [threadId, compaction] of this.#compacting) if (compaction.agentId === agentId) held.add(threadId);
+    for (const [threadId, hold] of this.#refusals) if (hold.agentId === agentId) held.add(threadId);
+    return [...held];
   }
 
   updateBudget(threadId: string, params: unknown): void {
@@ -236,7 +253,9 @@ export class ContextCompaction {
 
   contextInputCharacters(threadId: string): number {
     const budget = this.#budgets.get(threadId);
-    return budget ? Math.min(120_000, Math.floor(budget.contextWindow * 2)) : 120_000;
+    // A session that `#rotate` started holds a window of 1 until its first usage report: no window is
+    // known yet, and a budget of 2 characters would summarize the channel one character at a time.
+    return budget && budget.contextWindow > 1 ? Math.min(120_000, Math.floor(budget.contextWindow * 2)) : 120_000;
   }
 
   /** `manual`: the user asked, so the thread compacts below the threshold too. */
@@ -244,19 +263,13 @@ export class ContextCompaction {
     const agent = this.#store.list().find((candidate) => candidate.id === agentId);
     const mode = agent ? this.#providers.clientForAgent(agent)?.contextCompaction : undefined;
     if (!agent || !compactsOnRequest(mode)) return false;
-    // Only the agent's own chat has a handoff to start a new session from.
-    if (
-      mode === "handoff" &&
-      (!agent.threadId ||
-        this.#store.database.activeProviderSession(agent.threadId, agent.provider)?.externalSessionId !== threadId)
-    )
-      return false;
+    if (mode === "handoff" && !this.#rotatesSession(agentId, threadId)) return false;
     const budget = this.#budgets.get(threadId);
-    if (!(budget?.pending || (manual && budget)) || budget.phase !== "idle" || this.#compactingAgents.has(agentId)) {
+    if (!(budget?.pending || (manual && budget)) || budget.phase !== "idle" || this.#compacting.has(threadId)) {
       return false;
     }
     budget.phase = "requested";
-    this.#compactingAgents.set(agentId, { threadId, client: null });
+    this.#compacting.set(threadId, { agentId, client: null });
     this.observeCompaction(threadId, "running");
     return true;
   }
@@ -284,7 +297,7 @@ export class ContextCompaction {
       return;
     }
 
-    this.#compactingAgents.set(agentId, { threadId, client });
+    this.#compacting.set(threadId, { agentId, client });
     this.#clearTimer(threadId);
     const timer = setTimeout(() => {
       this.#emitError(
@@ -339,7 +352,7 @@ export class ContextCompaction {
    */
   claimTurn(agentId: string, threadId: string, turnId: string): boolean {
     const budget = this.#budgets.get(threadId);
-    if (budget?.phase !== "requested" || !this.#compactingAgents.has(agentId)) return false;
+    if (budget?.phase !== "requested" || this.#compacting.get(threadId)?.agentId !== agentId) return false;
     budget.phase = "running";
     budget.compactionTurnId = turnId;
     return true;
@@ -380,35 +393,37 @@ export class ContextCompaction {
   }
 
   forgetAgent(agentId: string): void {
-    this.#compactingAgents.delete(agentId);
+    for (const [threadId, compaction] of this.#compacting)
+      if (compaction.agentId === agentId) this.#compacting.delete(threadId);
+    for (const [threadId, hold] of this.#refusals) if (hold.agentId === agentId) this.#endRefusal(threadId, false);
   }
 
   /**
    * Codex refused input because a compaction turn runs on `threadId`, such as one that outlived its
-   * deadline. The agent's queue waits for a turn of that thread to end, for `graceMs` at most: a
+   * deadline. The lane of that thread waits for a turn of it to end, for `graceMs` at most: a
    * refusal proves that nothing ran, so the next start can only be refused again.
    */
   holdForRefusal(agentId: string, threadId: string, client: AgentClient): void {
-    this.#endRefusal(agentId, false);
-    const timer = setTimeout(() => this.#endRefusal(agentId), this.#graceMs);
+    this.#endRefusal(threadId, false);
+    const timer = setTimeout(() => this.#endRefusal(threadId), this.#graceMs);
     timer.unref?.();
-    this.#refusals.set(agentId, { threadId, client, timer });
+    this.#refusals.set(threadId, { agentId, client, timer });
   }
 
   /** A turn of this provider thread ended, so a queue that Codex refused for it can start again. */
   threadTurnEnded(threadId: string): void {
-    for (const [agentId, hold] of this.#refusals) if (hold.threadId === threadId) this.#endRefusal(agentId);
+    this.#endRefusal(threadId);
   }
 
   /** The client stopped or exited, so the compactions and refusals it held end with it. */
   clientEnded(client: AgentClient): void {
-    for (const [agentId, compaction] of this.#compactingAgents) {
+    for (const [threadId, compaction] of this.#compacting) {
       if (compaction.client !== client) continue;
-      this.observeCompaction(compaction.threadId, "failed");
-      this.#release(agentId, compaction.threadId);
-      this.#scheduleDrain(agentId);
+      this.observeCompaction(threadId, "failed");
+      this.#release(compaction.agentId, threadId);
+      this.#scheduleDrain(compaction.agentId);
     }
-    for (const [agentId, hold] of this.#refusals) if (hold.client === client) this.#endRefusal(agentId);
+    for (const [threadId, hold] of this.#refusals) if (hold.client === client) this.#endRefusal(threadId);
   }
 
   dispose(): void {
@@ -416,7 +431,7 @@ export class ContextCompaction {
     this.#usageTimer = null;
     for (const timer of this.#timers.values()) clearTimeout(timer);
     this.#timers.clear();
-    this.#compactingAgents.clear();
+    this.#compacting.clear();
     for (const hold of this.#refusals.values()) clearTimeout(hold.timer);
     this.#refusals.clear();
     this.#budgets.clear();
@@ -510,12 +525,12 @@ export class ContextCompaction {
     this.#scheduleDrain(agentId);
   }
 
-  #endRefusal(agentId: string, drain = true): void {
-    const hold = this.#refusals.get(agentId);
+  #endRefusal(threadId: string, drain = true): void {
+    const hold = this.#refusals.get(threadId);
     if (!hold) return;
     clearTimeout(hold.timer);
-    this.#refusals.delete(agentId);
-    if (drain) this.#scheduleDrain(agentId);
+    this.#refusals.delete(threadId);
+    if (drain) this.#scheduleDrain(hold.agentId);
   }
 
   #release(agentId: string, threadId: string): void {
@@ -526,7 +541,7 @@ export class ContextCompaction {
       budget.phase = "idle";
       budget.compactionTurnId = null;
     }
-    this.#compactingAgents.delete(agentId);
+    if (this.#compacting.get(threadId)?.agentId === agentId) this.#compacting.delete(threadId);
   }
 
   #clearTimer(threadId: string): void {

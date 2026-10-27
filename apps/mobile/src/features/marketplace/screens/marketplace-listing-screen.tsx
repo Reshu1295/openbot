@@ -396,7 +396,13 @@ function SkillPage({
       )}
       <ListingBlock title={t("mobile.marketplace.skill.doc")}>
         <View className="rounded-grouped bg-grouped px-4 py-3" style={{ borderCurve: "continuous" }}>
-          <ChatMarkdown body={skillInstructions(detail)} color={String(foreground)} finished animationEnabled={false} />
+          <ChatMarkdown
+            body={skillInstructions(detail)}
+            color={String(foreground)}
+            finished
+            animationEnabled={false}
+            linkFavicons={false}
+          />
         </View>
       </ListingBlock>
     </>

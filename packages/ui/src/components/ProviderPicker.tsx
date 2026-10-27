@@ -84,9 +84,9 @@ export interface ProviderPickerOption {
   restartPending?: boolean | undefined;
   runtimeStatus?: ProviderRuntimeStatus | undefined;
   /**
-   * Whether the optional OpenCode key is saved. Only the OpenCode row carries it: no other
-   * provider signs in with a pasted key. Absent while unknown, so the row shows no badge rather
-   * than a wrong one.
+   * Whether the provider's key is saved: the optional OpenCode key, a Gemini key in use, or a Claude
+   * key on a host that reads it. Absent while unknown, so the row shows no badge rather than a
+   * wrong one.
    */
   keyStatus?: ProviderApiKeyStatus | undefined;
   /**
@@ -455,6 +455,7 @@ export function ProviderPicker(props: ProviderPickerProps) {
                 connectOptional,
                 runtimeAction,
                 browserConnect,
+                keyConnect,
                 codeFallbackOffered,
                 signInAlternative,
                 connectError,
@@ -673,7 +674,7 @@ export function ProviderPicker(props: ProviderPickerProps) {
                           {t("provider.action.install")}
                         </Button>
                       </Show>
-                      <Show when={!runtimeStatus() && browserConnect()}>
+                      <Show when={!runtimeStatus() && (browserConnect() || keyConnect())}>
                         <Button
                           type="button"
                           variant={providerAction(state(), connecting()) === "connect" ? "default" : "outline"}

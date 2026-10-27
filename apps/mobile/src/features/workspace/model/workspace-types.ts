@@ -22,12 +22,16 @@ import type {
   AgentTemplatePublication,
   AvatarHue,
   AvatarImageInput,
+  BitwardenConnectorStatus,
+  BitwardenHostConnectInput,
   ClearableStorageCategory,
   ConversationFileSearchPage,
   ConversationSearchPage,
   ConversationSnapshot,
   CreateAgentInput,
   CreateRoutineInput,
+  CreateWorkflowInput,
+  DecideWorkflowStepInput,
   DraftAttachment,
   ForeignProviderId,
   GitHubConnectorRepositories,
@@ -57,6 +61,7 @@ import type {
   OnePasswordConnectorStatus,
   QueuedMessageReceipt,
   QueueSnapshot,
+  RenameWorkflowInput,
   ResetAgentSessionSettingInput,
   RespondToApprovalInput,
   RespondToBrowserSecretInput,
@@ -68,6 +73,7 @@ import type {
   RoutineResultConnectionOption,
   RoutineResultDestination,
   RoutineResultRoutineInput,
+  SaveWorkflowGraphInput,
   SetAgentMemoryInclusionInput,
   SetAgentProviderAccountInput,
   SetAgentSessionSettingInput,
@@ -84,6 +90,17 @@ import type {
   UpdateAgentInput,
   UpdateRestartMode,
   UpdateRoutineInput,
+  VaultHostImportResult,
+  VaultSaveInput,
+  VaultState,
+  WorkflowDetail,
+  WorkflowRunDetail,
+  WorkflowRunPage,
+  WorkflowSaveResult,
+  WorkflowStep,
+  WorkflowSummary,
+  WorkflowTriggerInput,
+  WorkflowWebhookSecret,
 } from "@openbot/contracts/ipc";
 import type {
   EventActivity,
@@ -185,12 +202,15 @@ export interface MobileBrowserViewSupport {
   contextMenu: boolean;
   /** `browser-view-viewport`: the host holds the page at the size the phone asks for. */
   viewport: boolean;
+  /** `browser-navigation`: the host loads an address in a tab that is open. */
+  navigation: boolean;
 }
 
 /** What the phone does to a host browser tab, through the released `browser-control` routes. */
 type MobileBrowserTabAction =
   | { type: "navigate"; tabId: string; direction: "back" | "forward" }
   | { type: "reload"; tabId: string }
+  | { type: "load"; tabId: string; url: string }
   | { type: "open"; url: string; ownerAgentId: string; ownerThreadId: string | null }
   | { type: "close"; tabId: string };
 
@@ -255,6 +275,11 @@ export interface MobileWorkspaceContextValue {
   hideChannel: (channelId: string, serverId: string) => boolean;
   unhideChannel: (channelId: string, serverId: string) => boolean;
   toggleChannelPin: (channelId: string, serverId: string) => ToggleAgentPinResult;
+  /** The pinned workflows of each server, in the order the drawer shows them. Saved on this device. */
+  pinnedWorkflowIds: Readonly<Record<string, readonly string[]>>;
+  toggleWorkflowPin: (workflowId: string, serverId: string) => ToggleAgentPinResult;
+  /** Drops the pins of workflows that the host no longer lists. Call only with a complete list. */
+  reconcileWorkflowPins: (serverId: string, workflowIds: readonly string[]) => void;
   conversationStore: MobileConversationStore;
   /** Activity, unread agents, and browser requests. Read them with a selector hook, not from the context. */
   liveState: LiveWorkspaceStore;
@@ -307,6 +332,12 @@ export interface MobileWorkspaceContextValue {
   canManageConnectors: (serverId: string) => boolean;
   /** The same for the host's 1Password connection (`onepassword-connector-v1`). */
   canManageOnePasswordConnector: (serverId: string) => boolean;
+  /** The same for the host's Bitwarden connection (`bitwarden-connector-v1`). */
+  canManageBitwardenConnector: (serverId: string) => boolean;
+  /** True for an owner or admin of a host that serves its Vault to other devices (`vault-v1`). */
+  canManageVault: (serverId: string) => boolean;
+  /** The same for a CSV import from this phone (`vault-import-v1`). */
+  canImportVault: (serverId: string) => boolean;
   /** Reads or changes the host's GitHub connection. The answer names the GitHub pages that the phone opens. */
   githubConnector: (route: GitHubConnectorRoute, serverId: string) => Promise<HostGitHubConnectorStatus>;
   /** The repositories where the host's GitHub App is installed. The host reads them from GitHub. */
@@ -315,6 +346,21 @@ export interface MobileWorkspaceContextValue {
   /** The token goes to the host once. No answer carries it. */
   connectOnePassword: (token: string, serverId: string) => Promise<OnePasswordConnectorStatus>;
   disconnectOnePassword: (serverId: string) => Promise<OnePasswordConnectorStatus>;
+  loadBitwardenConnector: (serverId: string) => Promise<BitwardenConnectorStatus>;
+  /**
+   * The API key and the master password go to the host once. No answer carries them. The host
+   * answers `connecting` at once and signs in after that.
+   */
+  connectBitwarden: (input: BitwardenHostConnectInput, serverId: string) => Promise<BitwardenConnectorStatus>;
+  /** Also stops a sign-in that has not ended. */
+  disconnectBitwarden: (serverId: string) => Promise<BitwardenConnectorStatus>;
+  /** The host's Vault. No answer carries a password, a card number or a security code. */
+  loadVault: (serverId: string) => Promise<VaultState>;
+  /** A new secret goes to the host once; a null secret keeps the saved one. */
+  saveVaultItem: (input: VaultSaveInput, serverId: string) => Promise<VaultState>;
+  deleteVaultItem: (id: string, serverId: string) => Promise<VaultState>;
+  /** The text of a CSV password export. The host adds its logins and answers only the counts. */
+  importVaultCsv: (csv: string, serverId: string) => Promise<VaultHostImportResult>;
   loadMessagingConnections: (platform: MessagingPlatform, serverId: string) => Promise<MessagingOverview>;
   /** The platform's page that the phone opens. The host opens no page. */
   connectMessaging: (input: HostMessagingConnectInput, serverId: string) => Promise<MessagingConnectorPage>;
@@ -542,6 +588,24 @@ export interface MobileWorkspaceContextValue {
   searchFiles: (query: string, serverId: string, cursor?: string) => Promise<ConversationFileSearchPage>;
   /** True when the host advertises `agent-tasks-v1`. A member who can message an agent can use its tasks. */
   canUseTasks: (serverId: string) => boolean;
+  /** True when the host advertises `workflows-v1`. The host shows each member the workflows of their agents. */
+  canUseWorkflows: (serverId: string) => boolean;
+  listWorkflows: (serverId: string) => Promise<WorkflowSummary[]>;
+  loadWorkflow: (workflowId: string, serverId: string) => Promise<WorkflowDetail>;
+  createWorkflow: (input: CreateWorkflowInput, serverId: string) => Promise<WorkflowDetail>;
+  renameWorkflow: (input: RenameWorkflowInput, serverId: string) => Promise<WorkflowSummary>;
+  deleteWorkflow: (workflowId: string, serverId: string) => Promise<void>;
+  /** Answers a conflict with the saved workflow when another device saved it first. */
+  saveWorkflowGraph: (input: SaveWorkflowGraphInput, serverId: string) => Promise<WorkflowSaveResult>;
+  /** The newest runs of a workflow, or the runs older than `before`. */
+  loadWorkflowRuns: (workflowId: string, serverId: string, before?: string) => Promise<WorkflowRunPage>;
+  loadWorkflowRun: (runId: string, serverId: string) => Promise<WorkflowRunDetail>;
+  startWorkflowRun: (workflowId: string, serverId: string) => Promise<WorkflowRunDetail>;
+  stopWorkflowRun: (runId: string, serverId: string) => Promise<void>;
+  retryWorkflowStep: (stepId: string, serverId: string) => Promise<WorkflowStep>;
+  decideWorkflowStep: (input: DecideWorkflowStepInput, serverId: string) => Promise<void>;
+  /** A new webhook secret, which the host shows once. Only an owner or admin can make one. */
+  rotateWorkflowWebhookSecret: (input: WorkflowTriggerInput, serverId: string) => Promise<WorkflowWebhookSecret>;
   /** The tasks of one agent. The host answers 404 for an agent that this member cannot see. */
   loadAgentTasks: (agentId: string, serverId: string) => Promise<AgentTasksSnapshot>;
   loadAgentTaskConversation: (input: AgentTaskInput, serverId: string) => Promise<ConversationSnapshot>;
@@ -632,6 +696,7 @@ export type MobileWorkspaceCapabilityCheck =
   | "canInstallAgentTemplate"
   | "canSearchFiles"
   | "canUseTasks"
+  | "canUseWorkflows"
   | "canReadServerStorage";
 
 type MobileWorkspaceStateKey =
@@ -647,6 +712,7 @@ type MobileWorkspaceStateKey =
   | "hiddenAgents"
   | "pinnedAgentIds"
   | "pinnedChannelIds"
+  | "pinnedWorkflowIds"
   | "hiddenChannelIds"
   | "hidesAgentsOnServer"
   | "canUnhideAgent"
@@ -657,6 +723,9 @@ type MobileWorkspaceStateKey =
   | "hasAgentAccessLimits"
   | "canManageConnectors"
   | "canManageOnePasswordConnector"
+  | "canManageBitwardenConnector"
+  | "canManageVault"
+  | "canImportVault"
   | "serverUpdateAccess"
   | "canReadServerRelease"
   | "canViewHostedSites"

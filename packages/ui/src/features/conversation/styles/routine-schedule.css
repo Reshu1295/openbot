@@ -287,10 +287,6 @@
   text-align: center;
 }
 
-.routine-clock-segment.ui-input:focus-visible {
-  box-shadow: var(--openbot-focus-ring);
-}
-
 .routine-clock-separator {
   color: var(--openbot-text-muted);
 }

@@ -164,6 +164,59 @@ only to a connection with the capability and never for a hidden agent. Webhook c
 rotation and webhook test runs stay on `events-v1`. A client without the capability shows a notice
 in the Routines view; the web client shows the view switch only when the host serves it.
 
+### Workflows
+
+`workflows-v1` serves the workflow canvas (see [Workflows](agents.md#workflows)) to a joined desktop,
+to the web client and to the mobile app. Its routes are `POST /v1/workflows/<name>` with the input in the body:
+`list`, `get`, `create`, `rename`, `delete`, `save-graph`, `versions`, `version-graph`,
+`restore-version`, `start-run`, `run-step`, `stop-step`, `stop-run`, `retry-step`, `decide`, `runs`,
+`run` and `rotate-webhook-secret`. `version-graph` gives the graph of one version for the preview,
+with the same filter as `get`. The contract header in `team-protocol/workflows-v1.ts` records the grant:
+
+- A member sees a workflow only when every agent of its agent steps is visible and no model step
+  names a provider that the member's protocol hides (also for the owner on a remote client). An owner or admin also sees a workflow that names a
+  deleted agent, so they can fix or delete it. The host answers any other workflow, and its runs,
+  steps and versions, with 404.
+- A run, a single step, a stop, a retry or a decision needs the chat level for each named agent. A
+  retry, a stop and a decision check the agents of the current graph and of the run's graph.
+- A change, a rename, a delete, a restore or a new webhook secret needs the manage level for each
+  named agent, before and after the change (403). A restore checks the graph of the version. The
+  desktop shows the canvas read-only when the member does not manage each agent of the graph.
+- A workflow that names no agent, such as one with only model and condition steps, needs no agent
+  level. Each member who sees it can change and run it on the host's providers. This is a product
+  decision: model and condition steps are open to each member who can see the workflow.
+- Only an owner or admin can add an output that posts to a messaging place, or change its place
+  (403 `adminRequired`); a member can keep and run one that is there.
+- A step of an agent that is hidden now does not cross: the generic hidden-agent filter of the
+  answer drops it.
+- A webhook trigger's URL goes only to an owner or admin; a member reads it as null. Only an owner
+  or admin can make a new secret.
+- Step output and error cross with at most 32,000 characters each, and a run sends its newest
+  2,000 steps. When a page of runs would not fit one WebRTC frame, the host empties the step texts
+  of the oldest runs first, then answers 413 `tooLargeToSend`.
+
+Node kinds, port types, statuses, run sources, trigger types and version kinds cross as open names,
+so a newer host can add one. A client shows a workflow with a node kind or a port type that it does
+not know as read-only (`needsNewerApp`), and keeps the node when it saves.
+
+The optional event `workflows-changed { workflowId }` names the workflow that changed, so the
+client reads it again. A client without the capability shows `serverTooOld` on the Workflows page.
+
+The desktop app and the mobile app decode the answers with the same module,
+`packages/team-client/src/workflow-decoding.ts`. The host sends `workflows-changed` for each run
+and step change, so the mobile list, run and drawer read again on the event and do not poll.
+
+The mobile app edits a workflow as a list of steps, not as a canvas
+(`apps/mobile/src/features/workflows/model/workflow-outline.ts`). A graph with one trigger, at most
+one condition, and one path in and out of each step, except the step where the two condition paths
+join, becomes an outline. A change to the outline writes the edges of its steps again, with the
+edge ids of the desktop canvas. A new step goes to the right of the step before it, and the steps
+after it move right by its width. Other nodes, the notes, the shapes and the drawings keep their
+places. Any other graph keeps its edges: the phone changes only the settings of its steps. A save
+that a newer revision refused shows the conflict, and the person keeps the draft or loads the saved
+workflow. The pins of the mobile drawer stay on the phone, in the workspace preferences of the
+account and server (`pinnedWorkflows`); the host does not know them.
+
 ### History extent
 
 `history-extent-v1` lets the chat's scroll rail draw the history that is not loaded on a joined server.
@@ -333,20 +386,26 @@ host advertises a capability only when its `TeamApiAdmin` member exists.
 | `instance-transfer-v1` | Export and import the server's agents and server settings as a transfer file | `instanceTransfer` |
 | `providers-v3` | Code sign-in for Codex, Claude and Grok; send the code a Claude sign-in page shows | `providerAdmin` |
 | `providers-v4` | Code or link sign-in and managed runtimes, Cursor and Cline included | `providerAdmin` |
+| `claude-api-key-v1` | No routes. The host saves an Anthropic API key for Claude through the `providers-v1` key routes | `providerAdmin` |
 | `provider-usage-reset-v1` | Read the usage reset credits of each provider account on the host, and spend one. Only Codex gives credits | `providerAdmin` |
 | `host-admin-v1` | Server name and logo | `hostAdmin` |
 | `host-update-v1` | Check for, download and restart into an app update; cancel a restart that waits | `hostAdmin` |
 | `host-timezone-v1` | Read and set the server timezone | `hostAdmin` |
 | `agent-memory-limit-v1` | Read and set how many memories each agent keeps | `hostAdmin` |
+| `prompt-cache-ttl-v1` | Read and set how long Claude keeps the prompt cache of the host's agents | `hostAdmin` |
+| `provider-default-v1` | Read and set the provider that a new agent of the host starts on | none: only the mobile app sends it |
 | `agent-access-v1` | Read and set the roles that give members access to agents (see [Roles](#roles)) | `hostAdmin` |
 | `discord-access-v1` | Read and set which Discord roles can use OpenBot in a Discord server; list its roles | `messaging` |
 | `events-v1` | Manage webhook routines, their secrets, and activity | `events` |
 | `routine-recovery-v1` | Read and set a routine's missed-run policy; read its runs with the missed occurrences | `events` |
 | `routine-results-v1` | List the messaging connections and their places; read and set where an agent routine sends its answers. Deliveries stay on the host | none: only the mobile app sends it |
 | `webhook-tests-v1` | Send one signed test event to a webhook routine | `events` |
+| `vault-v1` | The host's Vault: list, add, change and delete logins, cards and contact info; show one saved password, card number or security code; reset a Vault that the host cannot read. No CSV import. A change sends `vault-changed` with no data, so a client reads the list again | `vault` |
+| `vault-import-v1` | A CSV password export that an owner or admin sends as text, at most 256 KiB, below the JSON body limit. The host adds its logins as from its own file dialog and answers only the counts. The iPhone app uses it; the phone never calls the `vault-v1` reveal or reset | none: only the mobile app sends it |
 
 These IPC groups take a required server id and route with `scopedHandler`. A key travels only towards
-the host; no response carries one. `providers-v1` has no progress event, so the renderer reads runtime
+the host; no response carries one, except the `vault-v1` reveal: it answers the one secret that the
+admin asked to show or copy. `providers-v1` has no progress event, so the renderer reads runtime
 status again every second while a host download runs. Publishing, macOS permissions, the browser
 sign-in and folder import stay on the host.
 
@@ -393,6 +452,39 @@ agent's memories (`app:agent-memory-limit`). A lower limit deletes no memories. 
 change the 8,192-byte budget of essential memories. Server settings → General → Agents is the only
 place that sets the limit, for this computer (`hostAdmin.setAgentMemoryLimit`, local handler) and for a
 joined server. App Settings does not show it, so that one name does not have two values.
+
+`prompt-cache-ttl-v1` reads and sets how long Claude keeps the prompt cache of the host's agents
+(`openbot-prompt-cache-ttl-v1.json`; `5m` or `1h`, default `5m`). With `1h` the host starts each
+Claude process with `ENABLE_PROMPT_CACHING_1H=1`. Claude Code reads this flag before its subscription
+rules, so subagents and a subscription that uses extra usage also get 1 hour. With `5m`, the default, it
+sets nothing, so Claude Code uses its own choice: 5 minutes with an API key, 1 hour for the main thread of a
+subscription within its limits. A `promptCacheTtl`
+in the Claude settings or `CLAUDE_CODE_PROMPT_CACHE_TTL` on the host still wins. A change applies to
+the next Claude process, not to a running one; an idle thread starts a new process when it resumes.
+The Cache section of the Claude page in Server settings → Providers sets it for this computer and
+for a joined server.
+
+`provider-default-v1` reads and sets the provider, and the model beside it, that a new agent of the
+host starts on when its creator chooses none. It is the setup choice of the host (`openbot-setup`
+file, `preferredProvider` and `preferredModel`): a set writes the file and calls
+`AgentService.setPreferredProvider`, as the local Settings save does. A read gives the provider that
+`AgentService.preferredProvider` uses now, so a host before its setup choice reads `codex`. A
+provider that the client's protocol does not show reads as none (`provider: null`), and the host
+refuses to set it. The phone's Server settings → Providers sets it. The desktop sets it only for this
+computer. A remote set also sends the new setup to each window of the host (`app.setupState`), so
+its Settings show the change at once.
+
+`claude-api-key-v1` has no routes. It tells a client that the host reads the key that the released
+`providers-v1` key routes save for `claude`. The host keeps the key as a Claude account with the
+fixed id `CLAUDE_API_KEY_ACCOUNT_ID`, which `provider-accounts-v1` lists as any other account, so an
+older client can select it too. The agents on it start with `ANTHROPIC_API_KEY` and their own
+`CLAUDE_CONFIG_DIR`, and Anthropic bills each request to the key. The provider's own sign-in first
+checks its claude.ai login without the key. Only when it has no login does it use the key; it then
+reports the account type `claude-api-key`, and the host hides the key account row, because each
+agent already uses the key. A removed key removes its account and moves its agents to the own sign-in.
+A removed account with a saved key comes back at the next account check. An added account never gets
+the key. An older host saved the key but did not use it, so a client shows the Claude key only when
+the host advertises the capability.
 
 `host-update-v1` runs the same update as the host's own Settings. `src/main/requested-update.ts`
 keeps the schedule in memory: who asked, and whether the restart waits until

@@ -14,6 +14,7 @@ import type {
   ConversationQuestionPrompt,
   ConversationReaction,
   ConversationSubagent,
+  ConversationTurnTrace,
   HostedSiteConversationEvent,
   ImageGenerationInfo,
   InstalledSkill,
@@ -152,6 +153,7 @@ export type ChatActionMarkerModel =
   | { kind: "model-switch"; reason: ModelSwitchReason; text: string; timestamp: string }
   /** A member agent changed the channel at a person's request. `text` is the host's note. */
   | { kind: "channel-change"; text: string; timestamp: string }
+  | { kind: "vault-change"; text: string; timestamp: string }
   | {
       kind: "unavailable";
       label: string;
@@ -219,6 +221,11 @@ export interface AgentMessage {
    * that sends only the text, such as a Team API host.
    */
   memoryChanges?: ConversationMemoryChange[] | undefined;
+  /**
+   * The real times of the turn's steps, with its tokens and cost, on the one message of a finished
+   * turn that holds them. Absent on an older turn and from a Team API host.
+   */
+  trace?: ConversationTurnTrace | undefined;
 }
 
 export interface AgentProfile {
@@ -256,6 +263,8 @@ export interface AgentProfile {
   backupModels?: ClientAgentSummary["backupModels"];
   /** Set while the agent works on a backup model for a usage limit: the model it goes back to. */
   usageLimitReturn?: ClientAgentSummary["usageLimitReturn"];
+  /** Set while a turn or task still runs on the previous provider. The next turn uses this runtime. */
+  pendingRuntime?: ClientAgentSummary["pendingRuntime"];
   threadId: string | null;
   /** The agent's working directory. Absent for profiles built before it was tracked. */
   workspacePath?: string;

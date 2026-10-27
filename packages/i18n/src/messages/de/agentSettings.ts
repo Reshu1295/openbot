@@ -72,8 +72,6 @@ export const messages = {
   "agentSettings.avatar.saveFailed": "Der Agentenavatar konnte nicht gespeichert werden.",
   "agentSettings.avatar.processFailed": "Der Agentenavatar konnte nicht verarbeitet werden.",
   "agentSettings.runtime.model": "Agentenmodell",
-  "agentSettings.runtime.providerBusy":
-    "Warte, bis die aktuelle Arbeit abgeschlossen ist, bevor du Anbieter oder Konto wechselst.",
   "agentSettings.runtime.modelUnavailable": "Modelle sind verfügbar, sobald sich eine Agenten-CLI verbindet.",
   "agentSettings.runtime.reasoning": "Denkleistung",
   "agentSettings.runtime.reasoningLabel": "Denkleistungsstufe des Agenten",
@@ -83,8 +81,8 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "Agentenzugriff",
   "agentSettings.runtime.busyMessage": "Während der Arbeit",
   "agentSettings.runtime.busyMessageLabel": "Nachrichten während der Arbeit des Agenten",
-  "agentSettings.runtime.taskLimit": "Aufgaben parallel",
-  "agentSettings.runtime.taskLimitLabel": "Aufgaben, die gleichzeitig laufen",
+  "agentSettings.runtime.taskLimit": "Parallele Threads",
+  "agentSettings.runtime.taskLimitLabel": "Threads, die gleichzeitig laufen",
   "agentSettings.runtime.workingDirectory": "Arbeitsverzeichnis",
   "agentSettings.runtime.notAvailable": "Noch nicht verfügbar",
   "agentSettings.runtime.fullAccessNote":
@@ -103,7 +101,7 @@ export const messages = {
     "{provider} kann einen laufenden Durchlauf nicht steuern. Während der Arbeit gesendete Nachrichten warten in der Warteschlange.",
   "agentSettings.taskLimit.default": "Standard ({count})",
   "agentSettings.taskLimit.oneTurn":
-    "{provider} führt immer nur einen Durchlauf aus. Die Aufgaben und der Chat dieses Agenten warten aufeinander.",
+    "{provider} führt immer nur einen Durchlauf aus. Die Threads dieses Agenten warten aufeinander.",
   "agentSettings.notifications.title": "Benachrichtigungen",
   "agentSettings.newChat.title": "Neuer Chat",
   "agentSettings.newChat.description": "Der Agent vergisst diesen Chat. Seine Einrichtung bleibt erhalten.",

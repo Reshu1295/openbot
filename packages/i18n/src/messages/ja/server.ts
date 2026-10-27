@@ -215,8 +215,6 @@ export const messages = {
   "server.settings.transferTitle": "移行",
   "server.settings.transferDescription":
     "このサーバーのエージェントとサーバー設定を、ファイルに書き出したりファイルから読み込んだりします。",
-  "server.settings.connectorsTitle": "コネクター",
-  "server.settings.connectorsDescription": "このサーバーのすべてのエージェントが使えるアカウントを接続します。",
   "server.settings.routinesTitle": "ルーティン",
   "server.settings.routinesDescription": "このコンピューターのルーティンのスケジュールをカレンダーアプリに表示します。",
   "server.routineFeed.title": "カレンダーフィード",

@@ -89,6 +89,8 @@ export const messages = {
   "error.team.hostTimezoneUnsupported": "Bu bağlantı sunucunun saat dilimini desteklemiyor.",
   "error.team.routineResultsUnsupported": "Bu bağlantı rutin hedeflerini desteklemiyor.",
   "error.team.agentMemoryLimitUnsupported": "Bu bağlantı ajanların bellek sınırını desteklemiyor.",
+  "error.team.promptCacheTtlUnsupported": "Bu bağlantı istem önbelleği süresini desteklemiyor.",
+  "error.team.providerDefaultUnsupported": "Bu bağlantı varsayılan sağlayıcıyı desteklemiyor.",
   "error.team.attachmentNameRequired": "Güvenli bir ek adı gereklidir.",
   "error.team.attachmentNotFound": "Ek bulunamadı.",
   "error.team.sharedFileTooLarge": "Paylaşılan dosya 100 MB sınırını aşıyor.",

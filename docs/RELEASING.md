@@ -540,7 +540,8 @@ The workflow:
    these runner errors are not caused by the app;
 5. builds a signed Windows x64 NSIS installer on a GitHub Windows runner (unsigned in a dry run);
 6. builds unsigned Linux x64 and arm64 AppImages on GitHub Ubuntu 24.04 runners of each architecture,
-   with the launch check under `xvfb-run`;
+   with the launch check under `xvfb-run`. A further check mounts each AppImage with only `fusermount3`,
+   because its static runtime must start on systems with no libfuse2, such as Arch Linux and Omarchy;
 7. verifies all three unpacked applications, update metadata, included runtimes, provider control
    artifacts, licenses, checksums, platform signing contracts, launch behavior, and update artifact
    size limits;

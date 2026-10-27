@@ -95,8 +95,14 @@ export class ConversationReader {
     });
   }, Effect.uninterruptible);
 
-  search(query: string, agentId?: string, cursor?: string, limit = 100): ConversationSearchPage {
-    return this.#store.database.searchConversationMessages(query, agentId, cursor, limit);
+  search(
+    query: string,
+    agentId?: string,
+    cursor?: string,
+    limit = 100,
+    includeSideThreads = false,
+  ): ConversationSearchPage {
+    return this.#store.database.searchConversationMessages(query, agentId, cursor, limit, includeSideThreads);
   }
 
   searchFiles(query: string, cursor?: string, limit = 50): ConversationFileSearchPage {

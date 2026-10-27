@@ -35,10 +35,11 @@
 @import "./features/channels/channels.css";
 @import "@openbot/ui/features/channels/channel-activity.css";
 @import "@openbot/ui/features/diagrams/diagrams.css";
+@import "@openbot/ui/features/workflows/workflow-nodes.css";
+@import "@openbot/ui/features/workflows/workflows.css";
 @import "@openbot/ui/features/usage/agent-usage-report.css";
 @import "./features/usage/usage.css";
 @import "./features/schedule/schedule.css";
-@import "@openbot/ui/features/tasks/tasks.css";
 @import "@openbot/ui/styles/chart.css";
 @import "@openbot/ui/features/files/files.css";
 @import "@openbot/ui/features/import/agent-import.css";
@@ -67,6 +68,7 @@
 @import "./features/provider-updates/provider-updates.css";
 @import "@openbot/ui/features/custom-providers/custom-providers.css";
 @import "@openbot/ui/features/browser/browser-profiles.css";
+@import "@openbot/ui/features/vault/vault.css";
 @import "@openbot/ui/features/agents/agent-template.css";
 @import "@openbot/ui/features/agents/agent-delete-undo-toast.css";
 @import "@openbot/ui/features/updates/whats-new.css";

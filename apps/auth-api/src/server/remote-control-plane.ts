@@ -48,7 +48,7 @@ import {
 import { sourceText } from "@openbot/i18n/source";
 import { Context, Effect, Layer, Result, Schema } from "effect";
 import { importJWK, type JWK, type JWTPayload, SignJWT } from "jose";
-import { getServerEntitlement } from "./billing-entitlement";
+import { getServerEntitlement, SERVER_MEMBER_LIMIT_SQL } from "./billing-entitlement";
 import { OPEN_STATUSES_SQL } from "./billing-errors";
 import { decodeBase64Url, hmacSha256, importHmacSha256Key, randomToken, sha256 } from "./crypto";
 import { PERSISTENT_SESSION_EXPIRES_AT } from "./session-policy";
@@ -2837,14 +2837,18 @@ export class RemoteControlPlane {
   });
 
   /**
-   * The active members that the host's plan allows, or the default for a host with no plan. A lower
-   * limit after a plan change removes no one: members who are active keep their seats.
+   * The active members that the host's custom limit allows, else its plan, else the default for a
+   * host with no plan. A lower limit removes no one: members who are active keep their seats.
    */
   readonly #memberLimit = Effect.fn("RemoteControlPlane.memberLimit")(function* (
     this: RemoteControlPlane,
     hostId: string,
   ): Effect.fn.Return<number, RemoteFailure, RemoteDependencies> {
     const dependencies = yield* RemoteDependencies;
+    const custom = yield* remoteCall(() =>
+      dependencies.database.prepare(SERVER_MEMBER_LIMIT_SQL).bind(hostId).first<{ member_limit: number }>(),
+    );
+    if (custom) return custom.member_limit;
     return memberLimitForPlan(
       (yield* getServerEntitlement(dependencies.database, hostId, dependencies.now()).pipe(
         Effect.mapError((error) => (error instanceof RemoteControlPlaneError ? error : new RemoteOperationError({}))),

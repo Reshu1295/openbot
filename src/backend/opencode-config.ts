@@ -29,7 +29,7 @@ export interface CustomProviderConfig {
  */
 export type CustomProviderSource = () => readonly CustomProviderConfig[];
 
-/** The options block OpenCode hands to its bundled OpenAI-compatible adapter. */
+/** The options block OpenCode hands to its bundled OpenAI-compatible or Anthropic adapter. */
 interface OpenCodeProviderOptions {
   readonly baseURL: string;
   readonly apiKey?: string;
@@ -91,12 +91,27 @@ const OPENCODE_GO_ADVICE = "OpenCode listed no model. Add an OpenCode Go key to 
 /** The provider adapter OpenCode bundles for an OpenAI-compatible endpoint. */
 const OPENCODE_COMPATIBLE_NPM = "@ai-sdk/openai-compatible";
 
+/** The adapter OpenCode bundles for its own Anthropic provider. */
+const OPENCODE_ANTHROPIC_NPM = "@ai-sdk/anthropic";
+
+/**
+ * Anthropic's OpenAI-compatible endpoint ignores prompt caching, so each turn paid the full input
+ * price. An endpoint on Anthropic's own API host uses the Messages API instead: OpenCode 1.19.3 adds
+ * `cacheControl` breakpoints for the `@ai-sdk/anthropic` adapter, and that adapter appends
+ * `/messages` to a base URL that ends in `/v1`.
+ */
+function anthropicBaseUrl(baseUrl: string): string | null {
+  const url = URL.parse(baseUrl);
+  return url?.protocol === "https:" && url.hostname === "api.anthropic.com" ? `${url.origin}/v1` : null;
+}
+
 function providerEntry(provider: CustomProviderConfig): OpenCodeProviderEntry {
+  const anthropic = anthropicBaseUrl(provider.baseUrl);
   return {
-    npm: OPENCODE_COMPATIBLE_NPM,
+    npm: anthropic ? OPENCODE_ANTHROPIC_NPM : OPENCODE_COMPATIBLE_NPM,
     name: provider.name,
     options: {
-      baseURL: provider.baseUrl,
+      baseURL: anthropic ?? provider.baseUrl,
       // An absent key and an empty key are different things to an HTTP client: an empty `apiKey`
       // would be sent as a blank Authorization header, which a keyless local endpoint may reject
       // outright. The spread keeps the key out of the object rather than setting it to undefined.

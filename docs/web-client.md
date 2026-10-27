@@ -55,8 +55,10 @@ mock. The separate web preview implements the browser runtime with that same moc
   Every write needs the same origin and `X-OpenBot-Browser: 1`; all send JSON except the avatar
   upload, which sends the image bytes. A site delete also needs an `Idempotency-Key`. A host logo is
   given to a member of that host, for its current `logoKey` only.
-- The page rail is the same as on desktop: Agents, Routines (when the host supports routines),
-  Schedule, Usage, Marketplace, Settings, and Help. Settings opens a page with the desktop Profile tab
+- The page rail is the same as on desktop: Agents, the pinned pages, More, Marketplace, Settings,
+  and Help. More lists Routines and Tasks (when the host supports them), Schedule, and Usage, and
+  each row has a pin that adds the page to the rail. Usage starts pinned. This browser keeps the
+  pins (`openbot:rail-pins`). Settings opens a page with the desktop Profile tab
   (with Sign out), Preferences (the interface language and the completion sound), and a Billing
   button below the tabs. The server menu opens the Server settings page of the connected host.
   This browser keeps both preferences, also before sign-in (`web-language-preference.ts`,

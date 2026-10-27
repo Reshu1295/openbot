@@ -6,6 +6,7 @@ export const messages = {
     "OpenBot no pudo registrar los servidores MCP en la configuración de Codex. Comprueba que tu config.toml de Codex sea válido y se pueda escribir, y reinicia OpenBot.",
   "error.provider.computerUseConfig":
     "OpenBot no pudo registrar el uso del equipo en la configuración de Codex. Comprueba que tu config.toml de Codex sea válido y se pueda escribir, y reinicia OpenBot. Puedes desactivar el uso del equipo en los ajustes del compañero para continuar sin él.",
+  "error.provider.codexUnresponsive": "Codex dejó de responder, así que OpenBot terminó su proceso.",
   "error.provider.endpointsReadOnly":
     "Los endpoints guardados se escribieron con una versión más reciente de OpenBot o el archivo no se puede leer. Actualiza OpenBot para cambiarlos.",
   "error.provider.endpointNoSecureStorage":
@@ -58,6 +59,9 @@ export const messages = {
   "error.provider.runtimesUnsupported":
     "Los entornos de ejecución de proveedores no están disponibles en esta plataforma.",
   "error.provider.closing": "OpenBot se está cerrando.",
+  "error.provider.removeWhileOn": "Desactiva el proveedor antes de quitar su descarga.",
+  "error.provider.removeWhileDownloading": "Espera a que termine la descarga y luego quítala.",
+  "error.provider.removeIncomplete": "Un programa usa archivos de esta CLI. Ciérralo y vuelve a intentarlo.",
   "error.provider.cliOverride": "Elimina la ruta de CLI definida explícitamente antes de actualizar en OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "La actualización del entorno de ejecución no se completó.",
   "error.provider.downloadHttp": "La descarga del entorno de ejecución falló con HTTP {status}.",
@@ -102,6 +106,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "El nombre de una cabecera es demasiado largo.",
   "error.provider.headerNameDuplicate": "Dos cabeceras tienen el mismo nombre.",
   "error.provider.headerValueInvalid": "Falta el valor de una cabecera o es demasiado largo.",
+  "error.provider.headerValueMissing": "Introduce un valor para la cabecera {name}.",
   "error.provider.apiKeyTooLong": "La clave de API es demasiado larga.",
   "error.provider.localOnly": "Los proveedores solo se pueden cambiar en el equipo que ejecuta los agentes.",
   "error.provider.keyRequired": "Se requiere una clave de proveedor.",
@@ -199,6 +204,8 @@ export const messages = {
     "El proveedor del modelo de OpenCode informó de una solicitud de carga no válida. Elige otro modelo y continúa. Comprueba las rutinas guardadas antes de crearlas de nuevo.\n{detail}",
   "error.provider.opencodeUnreadableContent":
     "Este modelo no puede leer un archivo o una imagen de este chat. Elige un modelo que pueda leer archivos y vuelve a enviar tu mensaje.",
+  "error.provider.opencodeFreeLimit":
+    "Los modelos gratuitos de OpenCode alcanzaron su límite de uso. Todos los modelos gratuitos comparten este límite. Para continuar, pega una clave de OpenCode Go en los ajustes de OpenCode o elige un modelo de otro proveedor.",
   "error.provider.opencodeProviderFailed":
     "El proveedor del modelo tuvo un fallo interno. Tu conexión no es la causa. Inténtalo más tarde o elige otro modelo.\n{detail}",
   "error.provider.opencodeNetwork":
@@ -270,11 +277,17 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Solo se pueden abrir en el navegador enlaces de inicio de sesión HTTPS.",
   "error.provider.geminiKeyRefused":
     "Gemini rechazó la clave de API guardada. Reemplaza o elimina la clave en Ajustes y vuelve a conectar.",
+  "error.provider.keyProviderRefused":
+    "{provider} rechazó la clave de API guardada. Reemplaza o elimina la clave en Ajustes y vuelve a intentarlo.",
+  "error.provider.keyProviderNoBalance":
+    "La cuenta de {provider} de la clave de API guardada no tiene saldo. Añade saldo a la cuenta y vuelve a intentarlo.",
   "error.provider.messageTooLarge": "OpenBot detuvo {provider} porque envió un mensaje de más de {limit} MB.",
   "error.provider.customAgentIdInvalid":
     "Un ID de agente debe contener letras minúsculas, dígitos o `-`, y no puede ser el ID de un proveedor integrado.",
   "error.provider.customAgentEnvInvalid":
     "Un nombre de variable debe contener letras, dígitos o `_`, y no empezar por un dígito. Usa cada nombre una vez, con un máximo de 16 nombres.",
+  "error.provider.customAgentUsagePromptInvalid":
+    "Un comando de uso debe ser una sola línea de 256 caracteres como máximo.",
   "error.provider.customAgentCommandInvalid":
     "El comando debe ser una ruta completa, una ruta que empiece por ~/ o un nombre de comando sin espacios.",
   "error.provider.customAgentArgsInvalid":
@@ -315,6 +328,8 @@ export const messages = {
   "error.provider.accountNotFound": "Esta cuenta de {provider} no está en este equipo. Actualiza e inténtalo de nuevo.",
   "error.provider.accountAlreadyAdded": "Esta cuenta de {provider} ya está conectada.",
   "error.provider.accountDefault": "No se puede eliminar la primera cuenta de {provider}.",
+  "error.provider.accountUsesKey":
+    "Esta cuenta de {provider} usa la clave de API guardada y no tiene inicio de sesión. Cambia la clave en Ajustes del servidor → Proveedores.",
   "error.provider.accountInUse":
     "Un agente que usa esta cuenta está trabajando. Inténtalo de nuevo cuando el agente se detenga.",
   "error.provider.accountsReadOnly":
@@ -371,6 +386,8 @@ export const messages = {
     "La autenticación de Muse no está verificada. Conéctate en el equipo host o define una clave de API de Meta.",
   "error.provider.museSignIn": "Inicia sesión en Muse en el equipo host para continuar.",
   "error.provider.inceptionSignIn": "Añade una clave de API de Inception para continuar.",
+  "error.provider.deepseekSignIn": "Añade una clave de API de DeepSeek para continuar.",
+  "error.provider.openrouterSignIn": "Añade una clave de API de OpenRouter para continuar.",
   "error.provider.terminalLoginFailed":
     "No se pudo abrir la terminal de inicio de sesión. Abre la CLI del proveedor en este host, inicia sesión allí y actualiza los proveedores.",
   "error.provider.nativeArchiveInvalid": "La descarga del proveedor no contiene una instalación válida.",

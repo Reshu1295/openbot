@@ -6,6 +6,7 @@ import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger, toLogValue } from "@openbot/logging";
 import { AGENT_MEMORY_SELECTION_SCHEMA_SQL, migrateAgentMemorySelection } from "./agent-memory-selection";
 import { AGENT_TASK_SCHEMA_SQL } from "./agent-tasks/agent-task-schema";
+import { AGENT_THREAD_MIGRATION_SQL, AGENT_THREAD_SCHEMA_SQL } from "./agent-threads/agent-thread-schema";
 import { AGENT_WAIT_SCHEMA_SQL } from "./agent-waits/agent-wait-schema";
 import { BROWSER_PROFILE_SCHEMA_SQL } from "./browser-profiles/browser-profile-schema";
 import { CHANNEL_SCHEMA_SQL, CHANNEL_SETTINGS_SCHEMA_SQL } from "./channel-schema";
@@ -18,6 +19,7 @@ import {
 } from "./messaging/messaging-schema";
 import { ROUTINE_FLOW_SCHEMA_SQL } from "./routine-flows/routine-flow-schema";
 import { ROUTINE_RESULT_SCHEMA_SQL } from "./routine-results/routine-result-schema";
+import { WORKFLOW_SCHEMA_SQL } from "./workflows/workflow-schema";
 
 const BASELINE_SCHEMA_VERSION = 8;
 
@@ -594,13 +596,14 @@ const LATEST_SCHEMA_SQL =
   AGENT_WAIT_SCHEMA_SQL +
   MESSAGING_MEMORY_SCHEMA_SQL +
   ROUTINE_RESULT_SCHEMA_SQL +
-  AGENT_TASK_SCHEMA_SQL +
   V40_THREAD_MESSAGE_ORDER_INDEX_SQL +
   V41_ATTACHMENT_OWNER_INDEX_SQL +
   V42_ROUTINE_FLOW_SWEEP_INDEX_SQL +
   V43_THREAD_EVENT_TYPE_INDEX_SQL +
   MESSAGING_ALLOWED_ROLES_SCHEMA_SQL +
-  BROWSER_PROFILE_SCHEMA_SQL;
+  BROWSER_PROFILE_SCHEMA_SQL +
+  WORKFLOW_SCHEMA_SQL +
+  AGENT_THREAD_SCHEMA_SQL;
 
 /** The end of the thread message table with the migration 40 columns before its PRIMARY KEY constraint. */
 function withThreadMessageOrderColumns(tableEnd: string): string {
@@ -856,6 +859,19 @@ const MIGRATIONS: readonly OpenBotMigration[] = [
     // Only creates a table, so no foreign-key pause and no vacuum. No agent names a profile yet, so
     // every tab keeps the session it had.
     up: (db) => db.exec(BROWSER_PROFILE_SCHEMA_SQL),
+  },
+  {
+    version: 46,
+    // Only creates tables, so no foreign-key pause and no vacuum. No one has a workflow yet, and agents,
+    // routines and routine flows stay as they were.
+    up: (db) => db.exec(WORKFLOW_SCHEMA_SQL),
+  },
+  {
+    version: 47,
+    // Copies every task into the side-thread table and drops the task table. No table is rebuilt and the
+    // dropped table is a leaf, so no foreign-key pause; few rows, so no vacuum. Mailbox records keep their
+    // task ids: the thread keeps the task id as `legacy_task_id`.
+    up: (db) => db.exec(AGENT_THREAD_MIGRATION_SQL),
   },
 ];
 

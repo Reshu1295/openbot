@@ -8,6 +8,10 @@ export const messages = defineMessages("notification", {
   "notification.needsBrowserStep": "Needs you to finish a step in the browser.",
   "notification.needsApprovalFor": "Needs your approval: {action}",
   "notification.finished": "Finished working.",
+  // A workflow step that waits for a person to approve or reject it.
+  "notification.workflowApproval": "A step waits for your approval.",
+  // A workflow output step that tells the user its result.
+  "notification.workflowOutput": "A workflow has a new result.",
   "notification.failed": "Stopped with an error.",
   // The title of a notification about an agent in a channel: the agent and the channel name.
   "notification.channelTitle": "{agent} in {channel}",

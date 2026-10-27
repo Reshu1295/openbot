@@ -295,7 +295,8 @@ function routineTurnAnswers(
         // steered into the turn waits for the answer.
         if (routine !== false && item.type === "userMessage" && typeof item.clientId === "string") {
           const delivery = input.findDelivery(item.clientId)?.delivery;
-          routine = delivery?.sender.kind === "routine" && input.quietRoutineDelivery(item.clientId);
+          // A continuation turn has its own client ID, so the check uses the delivery's ID.
+          routine = delivery?.sender.kind === "routine" && input.quietRoutineDelivery(delivery.id);
           // A completed delivery with an error is a run whose agent reported a failure: never quiet.
           if (delivery?.status === "completed" && delivery.error !== null) failureReported = true;
         }

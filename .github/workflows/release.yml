@@ -822,6 +822,35 @@ jobs:
         env:
           SUFFIX: ${{ matrix.suffix }}
 
+      # Arch Linux and Omarchy have no libfuse.so.2. The AppImage runtime must be static and mount the
+      # AppImage with only `fusermount3`, as it does when a user starts the download.
+      - name: Mount the AppImage without libfuse2
+        run: |
+          set -euo pipefail
+          sudo apt-get install --no-install-recommends --yes fuse3
+          appImage=$(echo dist/*.AppImage)
+          headers=$(readelf --program-headers "$appImage")
+          if grep -Fq "program interpreter" <<<"$headers"; then
+            echo "The AppImage runtime is not static, so it needs system libraries such as libfuse.so.2." >&2
+            exit 1
+          fi
+          # The runtime prints the mount point and keeps the mount until it stops.
+          output=$(mktemp)
+          "$appImage" --appimage-mount >"$output" &
+          runtime=$!
+          for _ in $(seq 1 60); do
+            [ -s "$output" ] && break
+            sleep 1
+          done
+          mountPoint=$(head -n 1 "$output")
+          if [ -z "$mountPoint" ] || [ ! -x "$mountPoint/openbot" ]; then
+            echo "The AppImage did not mount with fusermount3, or its mount has no openbot executable." >&2
+            cat "$output" >&2
+            exit 1
+          fi
+          kill "$runtime" 2>/dev/null || true
+          wait "$runtime" || true
+
       - name: Generate checksums
         run: |
           set -euo pipefail

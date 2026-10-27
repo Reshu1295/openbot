@@ -1,4 +1,4 @@
-import type { AgentProviderId } from "./agent-providers";
+import { type AgentProviderId, isAgentProvider } from "./agent-providers";
 import { INPUT_LIMITS } from "./input-limits";
 import { isBoundedString, isFiniteNumber, isNullableBoundedString } from "./ipc-bounded-values";
 import type { McpSignInRelayPage } from "./ipc-mcp-servers";
@@ -156,6 +156,8 @@ export type AgentAuthState =
   | { kind: "pi"; email: string | null }
   | { kind: "muse"; email: string | null }
   | { kind: "inception"; email: string | null }
+  | { kind: "deepseek"; email: string | null }
+  | { kind: "openrouter"; email: string | null }
   | { kind: "acp"; email: string | null };
 
 export interface AccountUsageWindow {
@@ -176,12 +178,32 @@ function isAccountUsageWindow(value: unknown): value is AccountUsageWindow {
   );
 }
 
+/** A quota that the provider names and that limits only some of its models, such as Gemini 4 Argon. */
+export interface AccountUsageGroup {
+  /** The provider's name for the group, such as "Gemini Models". */
+  name: string;
+  /** The model names that the provider lists for the group, such as "Gemini Flash". */
+  models: string[];
+  primary: AccountUsageWindow | null;
+  secondary: AccountUsageWindow | null;
+}
+
 export interface AccountUsageLimit {
   id: string;
   /** The provider account the reading is for. Absent for the provider's own sign-in. */
   accountId?: string;
   primary: AccountUsageWindow | null;
   secondary: AccountUsageWindow | null;
+  /**
+   * Antigravity only: each quota group of the plan. `primary` and `secondary` are then the group of
+   * the model that was read, or the "Gemini Models" group. The Team API does not send this field.
+   */
+  groups?: AccountUsageGroup[];
+  /**
+   * The provider whose plan quota this reading also counts: Grok for Cursor on a merged plan. The
+   * rail then shows the ring of that provider alone. The Team API does not send this field.
+   */
+  sharedQuotaWith?: AgentProviderId;
 }
 
 export interface AccountUsage {
@@ -198,8 +220,28 @@ export function isAccountUsage(value: unknown): value is AccountUsage {
         isBoundedString(limit.id, INPUT_LIMITS.identifier) &&
         (limit.accountId === undefined || isProviderAccountId(limit.accountId)) &&
         (limit.primary === null || isAccountUsageWindow(limit.primary)) &&
-        (limit.secondary === null || isAccountUsageWindow(limit.secondary)),
+        (limit.secondary === null || isAccountUsageWindow(limit.secondary)) &&
+        (limit.groups === undefined ||
+          (Array.isArray(limit.groups) &&
+            limit.groups.length <= MAX_USAGE_GROUPS &&
+            limit.groups.every(isAccountUsageGroup))) &&
+        (limit.sharedQuotaWith === undefined || isAgentProvider(limit.sharedQuotaWith)),
     )
+  );
+}
+
+/** The most groups in one reading, and the most models in one group. */
+export const MAX_USAGE_GROUPS = 16;
+
+function isAccountUsageGroup(value: unknown): value is AccountUsageGroup {
+  return (
+    isDynamicRecord(value) &&
+    isBoundedString(value.name, INPUT_LIMITS.identifier) &&
+    Array.isArray(value.models) &&
+    value.models.length <= MAX_USAGE_GROUPS &&
+    value.models.every((model) => isBoundedString(model, INPUT_LIMITS.identifier)) &&
+    (value.primary === null || isAccountUsageWindow(value.primary)) &&
+    (value.secondary === null || isAccountUsageWindow(value.secondary))
   );
 }
 

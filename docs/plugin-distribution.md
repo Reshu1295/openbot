@@ -4,8 +4,8 @@ Status: partly built. The catalog source, the build, the Apps tab of the Marketp
 uninstall, the public pages and the deep link exist. The served catalog does not: steps 3 to 5 of
 [Order of work](#8-order-of-work) are open. This document records the decisions.
 
-The catalog has no GitHub plugin. The built-in GitHub connector is the GitHub app, in the
-Marketplace and in Server settings › Connectors. An MCP row that the retired plugin saved stays,
+The catalog has no GitHub plugin. The built-in GitHub connector is the GitHub app, in
+Marketplace › Apps. An MCP row that the retired plugin saved stays,
 and the Marketplace shows it as a server that the user added. While that row is named `github`, it
 hides the connector's MCP server from agents (`src/backend/agent/mcp-gateway.ts`), so the user must
 remove it.

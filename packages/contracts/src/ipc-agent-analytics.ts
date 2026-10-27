@@ -34,6 +34,12 @@ export interface AnalyticsModel extends AnalyticsTotals {
   model: string;
   share: number;
 }
+/**
+ * The usage row of workflow model and condition steps, beside the agents of a host report. No agent
+ * has this id: an agent id starts with `agent-`.
+ */
+export const WORKFLOWS_USAGE_ID = "openbot:workflows";
+
 export interface AnalyticsAgent extends AnalyticsTotals {
   agentId: string;
   share: number;

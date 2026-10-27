@@ -172,9 +172,7 @@ export function createMainWindowController({
       // both of those rows. The setup window below uses the same offsets.
       ...(process.platform === "darwin"
         ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 12, y: 13 } }
-        : // Windows and Linux draw the application menu as a bar under the title bar. It stays set, so
-          // its shortcuts work, and the Alt key shows it.
-          { autoHideMenuBar: true }),
+        : {}),
       webPreferences: {
         preload: join(__dirname, "../preload/index.cjs"),
         contextIsolation: true,
@@ -184,6 +182,7 @@ export function createMainWindowController({
         webSecurity: true,
       },
     });
+    hideMenuBar(window);
     followWindowGlass(window, MAIN_WINDOW_DARK_BACKGROUND);
 
     window.once("ready-to-show", () => {
@@ -276,7 +275,7 @@ export function createMainWindowController({
       icon: appIconPath,
       ...(process.platform === "darwin"
         ? { titleBarStyle: "hidden" as const, trafficLightPosition: { x: 12, y: 13 } }
-        : { autoHideMenuBar: true }),
+        : {}),
       webPreferences: {
         preload: join(__dirname, "../preload/index.cjs"),
         contextIsolation: true,
@@ -286,6 +285,7 @@ export function createMainWindowController({
         webSecurity: true,
       },
     });
+    hideMenuBar(window);
     followWindowGlass(window, MAIN_WINDOW_DARK_BACKGROUND);
     chatWindows.set(key, { target: { serverId: target.serverId, agentId: target.agentId }, window });
     window.once("ready-to-show", () => window.show());
@@ -715,7 +715,21 @@ export function sendComputerUseHighlightPlacement(
   sendToRenderer(window, IPC_ENDPOINTS.computerUse.highlightPlacement, placement);
 }
 
+/** Set by `hideWindowsForQuit` and never cleared: the process ends after it. */
+let windowsHiddenForQuit = false;
+
+/**
+ * The renderer keeps reading while the services stop, and a read that the closing services fail
+ * must not show its error to the user (#3166). The Dock, the tray, a deep link or a notification
+ * then does not show the window again.
+ */
+export function hideWindowsForQuit(): void {
+  windowsHiddenForQuit = true;
+  for (const window of BrowserWindow.getAllWindows()) if (!window.isDestroyed()) window.hide();
+}
+
 export function showMainWindow(window: BrowserWindow): void {
+  if (windowsHiddenForQuit) return;
   presentMainWindow(window, process.platform, () => app.show());
 }
 
@@ -745,6 +759,17 @@ function zoomFocusedContents(interfaceSize: InterfaceSizeService, step: Interfac
     return;
   }
   focused.setZoomLevel(step === "default" ? 0 : focused.getZoomLevel() + (step === "larger" ? 0.5 : -0.5));
+}
+
+/**
+ * Windows and Linux draw the application menu as a bar under the title bar. The menu stays set, so
+ * its shortcuts work, but the bar is never shown. With `autoHideMenuBar`, a single Alt release
+ * showed the bar above the page and gave it focus, so the composer moved and lost its caret. A
+ * keyboard layout switch with Alt+Shift did the same. Electron attaches the menu in the window
+ * constructor, so the bar exists here, and a later `Menu.setApplicationMenu` does not show it again.
+ */
+function hideMenuBar(window: BrowserWindow): void {
+  if (process.platform !== "darwin") window.setMenuBarVisibility(false);
 }
 
 /**

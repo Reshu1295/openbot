@@ -48,16 +48,6 @@ export const Disabled: Story = {
   args: { disabled: true, disabledReason: "Choose a provider first." },
 };
 
-/** During a turn: the agent's own models and effort stay open, the other providers wait. */
-export const DuringTurn: Story = {
-  args: {
-    reasoningEffort: "medium",
-    onReasoningEffortChange: fn(),
-    providerChangesDisabled: true,
-    disabledReason: "Wait for the current work to finish before changing the provider or account.",
-  },
-};
-
 /** Providers that cannot run stay off the rail. The agent's own provider stays, with its message. */
 export const UnavailableProvidersOpen: Story = {
   args: {

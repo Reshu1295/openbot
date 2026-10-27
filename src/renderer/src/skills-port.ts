@@ -21,6 +21,7 @@ export interface SkillsPort {
     | "listAgentSkills"
     | "listInstalledSkills"
     | "listMcpServers"
+    | "listMcpSignIns"
     | "mcpSignInRelay"
     | "openMcpSignInRelay"
     | "onEvent"

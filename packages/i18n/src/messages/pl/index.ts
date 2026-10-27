@@ -47,8 +47,10 @@ import { messages as team } from "./team";
 import { messages as uiBlock } from "./uiBlock";
 import { messages as update } from "./update";
 import { messages as usage } from "./usage";
+import { messages as vault } from "./vault";
 import { messages as webClient } from "./webClient";
 import { messages as window } from "./window";
+import { messages as workflow } from "./workflow";
 
 /**
  * Polish. Written from the English source: a key that is missing here renders its English source.
@@ -103,6 +105,7 @@ export const pl = {
   ...sidebar,
   ...channel,
   ...diagram,
+  ...workflow,
   ...agent,
   ...agentTemplate,
   ...importAgent,
@@ -110,6 +113,7 @@ export const pl = {
   ...island,
   ...computerUse,
   ...connector,
+  ...vault,
   ...uiBlock,
   ...sitePage,
 } as const satisfies PartialTranslation<AppMessages>;

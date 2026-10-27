@@ -92,7 +92,8 @@
   --openbot-border: rgba(255, 255, 255, 0.035);
   --openbot-border-strong: rgba(255, 255, 255, 0.045);
   --openbot-image-outline: rgba(255, 255, 255, 0.1);
-  --openbot-border-focus: rgba(0, 124, 247, 0.72);
+  /* Focus is neutral: a grey border or a thin grey ring, never blue and never a halo. */
+  --openbot-border-focus: var(--openbot-text-muted);
   --openbot-text-primary: #ffffff;
   --openbot-text-on-light: #141414;
   --openbot-surface-light: #f0f0f0;
@@ -378,7 +379,7 @@
   --openbot-shadow-raised: 0 12px 32px var(--openbot-shadow-popover-ambient);
   --openbot-shadow-card: 0 0 0 transparent;
   --openbot-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.48);
-  --openbot-focus-ring: 0 0 0 3px var(--openbot-accent-soft);
+  --openbot-focus-ring: 0 0 0 1px var(--openbot-border-focus);
   --openbot-layer-dropdown: 40;
   --openbot-layer-popover: 60;
   --openbot-layer-dialog: 100;

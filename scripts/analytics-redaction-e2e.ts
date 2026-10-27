@@ -1,8 +1,9 @@
 // Seeds one random marker into everything a user can type that analytics could read: a custom
 // agent's id, name, arguments and secret environment value, an agent's name and messages, a
 // routine's name and instruction, an MCP server's address, headers and command, and the address of
-// a browser page. It then runs agent turns, a failed turn, a routine run and site visits in a running
-// dev app, receives the analytics of main and the window on a local capture server, and checks that
+// a browser page, and a workflow's title and texts. It then runs agent turns, a failed turn, a
+// routine run, a workflow run and site visits in a running dev app, receives the analytics of main
+// and the window on a local capture server, and checks that
 // no request carries the marker, that the expected events arrived, and that turning analytics off
 // stops them. The turns run on a fake custom agent on this computer, so no model is used. The fake
 // agent reports token usage for each answered turn, and the script checks that the turn event carries
@@ -273,6 +274,7 @@ try {
         command,
         args: [`--token=${marker}arg`],
         env: [{ name: "FAKE_TOKEN", value: `${marker}token` }],
+        usagePrompt: null,
       }),
     { id: customAgentId, command: fakeAgentPath, marker: MARKER },
   );
@@ -400,6 +402,47 @@ try {
   });
   const routineRun = await waitForEvent("system_routine_run");
   check("a routine run is reported", true, routineRun.properties);
+
+  // A prompt into a step of the answering agent: the run sends the agent the marker.
+  const workflow = await page.evaluate(
+    ({ agentId, marker, server }) =>
+      window.openbot.workflows.create(
+        {
+          title: `Workflow ${marker}`,
+          graph: {
+            nodes: [
+              { id: "prompt", kind: "prompt", at: { x: 0, y: 0 }, fields: { text: `Say hello to ${marker}` } },
+              { id: "agent", kind: "agent", at: { x: 300, y: 0 }, fields: { agentId, task: `Greet ${marker}` } },
+            ],
+            edges: [{ id: "edge", from: "prompt", to: "agent", type: "text" }],
+            strokes: [],
+          },
+        },
+        server,
+      ),
+    { agentId: agent.id, marker: MARKER, server: LOCAL_SERVER_ID },
+  );
+  cleanup.push(() =>
+    page.evaluate(({ id, server }) => window.openbot.workflows.delete(id, server), {
+      id: workflow.summary.id,
+      server: LOCAL_SERVER_ID,
+    }),
+  );
+  await page.evaluate(
+    ({ workflowId, server }) =>
+      window.openbot.workflows.startRun({ workflowId, requestId: crypto.randomUUID() }, server),
+    { workflowId: workflow.summary.id, server: LOCAL_SERVER_ID },
+  );
+  const workflowRun = await waitForEvent("system_workflow_run");
+  check(
+    "a workflow run is reported with its outcome, source and step counts",
+    workflowRun.properties.status === "done" &&
+      workflowRun.properties.source === "manual" &&
+      workflowRun.properties.step_count === 2 &&
+      workflowRun.properties.agent_step_count === 1 &&
+      typeof workflowRun.properties.duration_ms === "number",
+    workflowRun.properties,
+  );
 
   const openTab = (url: string) => page.evaluate((address) => window.openbot.browser.open({ url: address }), url);
   const localTab = await openTab(`http://localhost:${localPage.port}/?token=${MARKER}local`);

@@ -1,3 +1,4 @@
+import { isKeyOnlyProvider } from "@openbot/contracts/agent-providers";
 import {
   BILLING_CURRENCIES,
   BILLING_INTERVALS,
@@ -18,6 +19,8 @@ import {
   isAgentModel,
   SPEECH_VOICES,
   type SpeechVoice,
+  WORKFLOW_NODE_KINDS,
+  type WorkflowNodeKind,
 } from "@openbot/contracts/ipc";
 import { isBoolean, isDynamicRecord, isFunction, isNumber, isOneOf, isString } from "@openbot/contracts/runtime-values";
 import { normalizeEmailAddress } from "@openbot/contracts/validation";
@@ -45,6 +48,22 @@ interface AgentAnalyticsProperties {
   reasoning_effort: AgentReasoningEffort;
   server_kind: ServerKind;
 }
+
+const WORKFLOW_ACTIONS = [
+  "create",
+  "rename",
+  "delete",
+  "run",
+  "run_step",
+  "stop_step",
+  "stop_run",
+  "retry_step",
+  "approve",
+  "reject",
+  "restore_version",
+  "rotate_webhook_secret",
+] as const;
+export type WorkflowAnalyticsAction = (typeof WORKFLOW_ACTIONS)[number];
 
 interface DesktopAnalyticsEvents {
   desktop_app_opened: { setup_completed: boolean; signed_in: boolean };
@@ -93,6 +112,14 @@ interface DesktopAnalyticsEvents {
   routine_action: {
     action: "create" | "update" | "delete" | "test";
     trigger_type: string;
+    duration_ms: number;
+    result: AnalyticsResult;
+    failure_code?: string;
+  };
+  workflow_action: {
+    action: WorkflowAnalyticsAction;
+    /** Only on `run_step`: the kind of the node that runs alone. */
+    node_kind?: WorkflowNodeKind;
     duration_ms: number;
     result: AnalyticsResult;
     failure_code?: string;
@@ -372,6 +399,7 @@ const EVENT_PROPERTY_ALLOWLIST = {
   agent_input_action: ["kind", "decision", "result", "failure_code"],
   queue_action: ["action", "result", "failure_code"],
   routine_action: ["action", "trigger_type", "duration_ms", "result", "failure_code"],
+  workflow_action: ["action", "node_kind", "duration_ms", "result", "failure_code"],
   team_action: ["action", "result", "server_kind", "role", "email_bound", "entry_point", "failure_code"],
   browser_action: ["action", "result", "failure_code"],
   search_action: ["scope", "result", "result_count", "failure_code"],
@@ -509,6 +537,20 @@ const SAFE_FAILURE_CODES = new Set([
   "import_failed",
   "copy_failed",
   "revoke_failed",
+  "runtime_download_failed",
+  "disk_space",
+  "download_http",
+  "download_integrity",
+  "download_size",
+  "archive_invalid",
+  "checksum_failed",
+  "version_mismatch",
+  "cli_update_failed",
+  "cli_activate_failed",
+  "cli_select_failed",
+  "cli_signing_in",
+  "provider_off",
+  "download_stopped",
 ]);
 
 const EVENT_ACTIONS: Partial<Record<AnalyticsEventName, readonly string[]>> = {
@@ -516,6 +558,7 @@ const EVENT_ACTIONS: Partial<Record<AnalyticsEventName, readonly string[]>> = {
   agent_input_action: ["prompt", "approval"],
   queue_action: ["cancel", "steer", "edit", "reorder", "interrupt"],
   routine_action: ["create", "update", "delete", "test"],
+  workflow_action: WORKFLOW_ACTIONS,
   team_action: [
     "server_selected",
     "server_joined",
@@ -607,6 +650,7 @@ const EVENT_ENUMS: Partial<Record<AnalyticsEventName, Readonly<Record<string, re
   billing_return_viewed: { kind: ["plan", "license", "portal"] },
   agent_template_action: { entry_point: ["deep_link", "in_app"] },
   usage_viewed: { scope: ["agent", "server"] },
+  workflow_action: { node_kind: WORKFLOW_NODE_KINDS },
 };
 
 const PROPERTY_ENUMS: Readonly<Record<string, readonly string[]>> = {
@@ -707,7 +751,9 @@ function sanitizeDesktopAnalyticsEvent(
 function reportedModel(value: string): string {
   const separator = value.indexOf("/");
   if (separator < 0) return value;
-  return isOneOf(AGENT_PROVIDERS, value.slice(0, separator)) ? value : "custom";
+  // A key-only provider never puts its own id before a model id, so that prefix comes from OpenCode.
+  const prefix = value.slice(0, separator);
+  return isOneOf(AGENT_PROVIDERS, prefix) && !isKeyOnlyProvider(prefix) ? value : "custom";
 }
 
 function sanitizeDesktopProperty(

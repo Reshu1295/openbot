@@ -30,6 +30,8 @@ function initializeMermaid(api: Mermaid, scheme: DocumentColorScheme): void {
     // The app has no drop shadows; on the light palette Mermaid's shows under each box.
     themeVariables: { dropShadow: "none" },
     fontFamily: CHAT_MERMAID_FONT_FAMILY,
+    // HTML labels write a line break as an unclosed `<br>`, and an image of that SVG does not load.
+    htmlLabels: false,
     suppressErrorRendering: true,
   });
 }

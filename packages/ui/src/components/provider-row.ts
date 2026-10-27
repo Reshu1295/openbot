@@ -1,4 +1,4 @@
-import { agentProviderDescriptor } from "@openbot/contracts/agent-providers";
+import { agentProviderDescriptor, isKeyOnlyProvider } from "@openbot/contracts/agent-providers";
 import type {
   AgentProviderId,
   AgentProviderState,
@@ -52,6 +52,8 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
   const runtimeReady = () => (runtimeStatus()?.phase ?? "ready") === "ready";
   /** Connect opens this computer's browser, and the row follows that sign-in. */
   const browserConnect = () => connectKind() === "browser";
+  /** A key-only provider's Connect opens the key dialog, on this computer and on a server. */
+  const keyConnect = () => isKeyOnlyProvider(option().id) && Boolean(host.onSignInProvider);
   /**
    * Connect opens a dialog that the user finishes there, or on another device.
    *
@@ -95,9 +97,9 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
   /** A Connect that failed before the sign-in started. The status reports the rest. */
   const [connectError, setConnectError] = createSignal<string | null>(null);
   const connect = () => {
-    // Inception has no sign-in other than its key, so its Connect and Reconnect open the
-    // key dialog, where the key is also replaced or removed.
-    if (option().id === "inception" && host.onSignInProvider) {
+    // A key-only provider, such as Inception, has no sign-in other than its key, so its Connect and
+    // Reconnect open the key dialog, where the key is also replaced or removed.
+    if (isKeyOnlyProvider(option().id) && host.onSignInProvider) {
       void host.onSignInProvider(option().id);
       return;
     }
@@ -160,7 +162,9 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
    * waits, the badge says so and the action names the version it installs; otherwise the same
    * action checks for one.
    */
-  const updateOffered = () => Boolean(host.onUpdateProvider) && (runtimeStatus()?.phase === "ready" || updatable());
+  // A provider that is off gets no update offer from main, so a check there could only say "up to date".
+  const updateOffered = () =>
+    Boolean(host.onUpdateProvider) && !off() && (runtimeStatus()?.phase === "ready" || updatable());
   const restartOffered = () =>
     Boolean(host.onRestartProvider) && (option().restartPending || (available() && !connecting()));
   const diagnosticsOffered = () => Boolean(option().lastError && option().diagnostics);
@@ -192,17 +196,21 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
     !connectOptional() &&
     (option().id === "opencode" || option().id === "muse"
       ? runtimeAction() === undefined || runtimeAction() === "connect" || runtimeAction() === "restart"
-      : option().id === "claude" && !runtimeStatus() && state() === "sign-in-required" && connectKind() === null);
+      : option().id === "claude" &&
+        !runtimeStatus() &&
+        state() === "sign-in-required" &&
+        connectKind() === null &&
+        !apiKeyOffered());
   /**
    * Gemini's Connect and Reconnect are the Google sign-in, and a saved key wins over it, so the key
    * stays reachable in every state, Connected included: a refused key must stay replaceable and
    * removable. A released host stores a Gemini key but never reads it, so only this computer offers it.
+   * Claude's key works the same way. Its row has a key status only where the host reads the key.
    */
   const apiKeyOffered = () =>
     Boolean(host.onSignInProvider) &&
-    browserConnect() &&
-    option().id === "antigravity" &&
-    runtimeStatus()?.phase === "ready";
+    ((option().id === "antigravity" && browserConnect() && runtimeStatus()?.phase === "ready") ||
+      (option().id === "claude" && option().keyStatus !== undefined && runtimeReady() && state() !== "not-installed"));
   /** OpenCode runs free models while no key is saved. */
   const freeKey = () =>
     option().id === "opencode" && (option().keyStatus === "missing" || option().keyStatus === "unreadable");
@@ -218,6 +226,7 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
     connectKind,
     runtimeReady,
     browserConnect,
+    keyConnect,
     dialogConnect,
     alternative,
     connectOptional,

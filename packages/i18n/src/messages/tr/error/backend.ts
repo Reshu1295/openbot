@@ -311,6 +311,15 @@ export const messages = {
   "error.backend.taskNotFound": "Bu görev kullanılamıyor.",
   "error.backend.taskClosed": "Bu görev kapalı. Mesaj göndermek için yeniden açın.",
   "error.backend.taskStillRunning": "Bu görev hâlâ çalışıyor. Durmasını bekleyin, ardından kapatın.",
+  "error.backend.threadNotFound": "Bu mesaj dizisi kullanılamıyor.",
+  "error.backend.threadStillRunning": "Bu mesaj dizisi hâlâ çalışıyor. Durdurun, ardından yeniden deneyin.",
+  "error.backend.threadArchived": "Bu mesaj dizisi arşivlendi. Mesaj göndermek için geri yükleyin.",
+  "error.backend.threadTitleRequired": "Mesaj dizisine kısa bir başlık verin.",
+  "error.backend.threadOpenLimitReached":
+    "Bu ajanın {count} açık mesaj dizisi var. Bir mesaj dizisini arşivleyin, ardından başka birini başlatın veya geri yükleyin.",
+  "error.backend.threadRemoteUnsupported": "Mesaj dizileri yalnızca bu bilgisayardaki ajanlar için kullanılabilir.",
+  "error.backend.threadMoveRefused":
+    "Yeni bir mesaj dizisinde yalnızca, doğrudan ve tek başına bu ajana gönderdiğiniz bir mesaj çalışabilir.",
   "error.backend.taskTitleRequired": "Göreve kısa bir başlık verin.",
   "error.backend.taskToolInvalid":
     "Göreve en fazla 120 karakterlik bir başlık ve ne yapılacağını anlatan kısa bir talimat verin.",

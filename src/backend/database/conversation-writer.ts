@@ -571,6 +571,15 @@ export class ConversationWriter {
              WHERE thread_id = ? AND turn_id = ?`,
           ).run(status, new Date().toISOString(), sequence, input.threadId, input.detail.turnId);
         }
+        if (input.eventType === "turn.interrupted-by-restart") {
+          // Restart recovery runs before any provider starts, so no turn of this thread runs.
+          // A running row that is not the thread's active turn has no other writer (#2214).
+          db.prepare(
+            `UPDATE projection_turns
+             SET status = 'interrupted', completed_at = COALESCE(completed_at, ?), last_event_sequence = ?
+             WHERE thread_id = ? AND status = 'running'`,
+          ).run(new Date().toISOString(), sequence, input.threadId);
+        }
         db.prepare(`
           INSERT INTO projection_thread_activities
             (activity_id, thread_id, turn_id, activity_type, payload_json, created_at, last_event_sequence)

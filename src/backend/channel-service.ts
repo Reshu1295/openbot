@@ -26,7 +26,12 @@ import { type DynamicRecord, isDynamicRecord, isString } from "@openbot/contract
 import { isFixedSourceText, matchingSourceKeys, sourceText } from "@openbot/i18n/source";
 import { Deferred, Effect, Exit, Fiber, Result, Schema, Scope } from "effect";
 import { type ChannelOperationError, channelFailure, channelResult, channelSync } from "./channel-effects";
-import { ChannelHistory, type ChannelTextModel, isMemberThinking } from "./channel-history";
+import {
+  ChannelHistory,
+  type ChannelTextModel,
+  type DeliveredChannelContext,
+  isMemberThinking,
+} from "./channel-history";
 import {
   CHANNEL_MANAGEMENT_TOOLS,
   type ChannelChangeNote,
@@ -39,7 +44,7 @@ import {
   PERSON_REQUEST_REQUIRED,
 } from "./channel-management";
 import { ChannelMemoryStore } from "./channel-memory-store";
-import { type ChannelAssignment, ChannelStore } from "./channel-store";
+import { type ChannelAssignment, type ChannelContext, ChannelStore } from "./channel-store";
 import type { DeliveryContext, MailboxStore } from "./mailbox-store";
 import type { OpenBotDatabase } from "./openbot-database";
 import { extractJsonObject, StructuredOutputError } from "./structured-output";
@@ -66,6 +71,11 @@ export interface ChannelHooks {
   /** Whether this agent switches without asking and has a backup model that is ready now. */
   usageLimitBackup?(agentId: string): boolean;
   contextCharacters?(agentId: string, threadId: string): number;
+  /**
+   * Whether the agent's provider reports each compaction, its own automatic ones too. Only then can a
+   * packet leave out the messages that the session read: a compaction resets what it read.
+   */
+  reportsCompactions?(agentId: string): boolean;
   /** The thread's snapshot when main has it in memory, which a streaming turn always has. */
   loadedSnapshot?(threadId: string): ConversationSnapshot | undefined;
   /** Removes live provider state for an execution thread before its durable rows are deleted. */
@@ -157,6 +167,15 @@ export class ChannelService {
   readonly #assignmentTerminalWaiters = new Map<string, Set<() => void>>();
   /** The active assignments last seen per channel, so turn traffic reports no new hold. */
   readonly #activeAssignments = new Map<string, string>();
+  /** By delivery: the packet with only unread messages, and the provider session that read the rest. */
+  readonly #deltas = new Map<string, { sessionId: string; text: string }>();
+  /**
+   * The cursors that this process accepted, by channel, agent and session. A cursor from an earlier
+   * run is not used: an earlier version did not reset it at a compaction.
+   */
+  readonly #acceptedContexts = new Set<string>();
+  /** By delivery: the count of in-place message changes when its packet was built. */
+  readonly #preparedChanges = new Map<string, number>();
 
   constructor(
     database: OpenBotDatabase,
@@ -1338,6 +1357,8 @@ export class ChannelService {
 
   deliveryFailed(deliveryId: string, reason: string): Effect.Effect<void, ChannelOperationError> {
     return Effect.gen({ self: this }, function* () {
+      this.#deltas.delete(deliveryId);
+      this.#preparedChanges.delete(deliveryId);
       const assignment = yield* channelSync(() => this.store.assignmentForDelivery(deliveryId));
       if (!assignment || !activeAssignment(assignment)) return;
       const task = (yield* channelSync(() => this.store.tasks(assignment.channelId))).find(
@@ -1359,17 +1380,28 @@ export class ChannelService {
    * new revision and the assignment ends, so nothing holds the agent's resources while it waits: the
    * pump assigns the task again once the agent takes turns. False when there is no active assignment
    * to give back, or when a transfer is pending on it. A task whose routine drops late work is
-   * cancelled instead.
+   * cancelled instead. `continueWork` keeps the assignment for a ready backup to continue now.
    */
   readonly requeueForLimit = Effect.fn("ChannelService.requeueForLimit")(function* (
     this: ChannelService,
     deliveryId: string,
+    continueWork = false,
   ) {
     const assignment = this.store.assignmentForDelivery(deliveryId);
     if (!assignment || !activeAssignment(assignment) || assignment.pendingRevision !== null) return false;
     const task = this.store.tasks(assignment.channelId).find((item) => item.id === assignment.taskId);
     const current = task?.revision === assignment.taskRevision && (task.state === "queued" || task.state === "running");
     const skipped = task && current && this.hooks.skipAtLimit?.(task) ? this.#skippedTasks(task) : null;
+    if (continueWork) {
+      if (!task || !current || skipped) return false;
+      // The ready backup keeps this assignment and its delivery, including the interrupted work.
+      this.store.update(this.store.get(assignment.channelId), {
+        assignments: [{ ...assignment, state: "queued", turnId: null }],
+        tasks: [{ ...task, state: "queued", error: null }],
+      });
+      this.publish(assignment.channelId);
+      return true;
+    }
     this.store.update(this.store.get(assignment.channelId), {
       assignments: [{ ...assignment, state: "interrupted" }],
       tasks:
@@ -1639,12 +1671,18 @@ export class ChannelService {
     const agent = this.hooks.agents().find((item) => item.id === assignment.agentId);
     if (!agent) return yield* channelFailure(new Error(sourceText("error.backend.channelAssigneeUnavailable")));
     const context = yield* channelSync(() => this.store.context(channel.id, agent.id));
+    this.#preparedChanges.set(delivery.delivery.id, this.store.completedMessageChanges(channel.id));
+    const delivered = this.#deliveredContext(channel.id, context, agent);
     const history = yield* this.#history.prepare(
       task,
       agent,
       this.hooks.agents().find((item) => item.id === channel.leadAgentId),
+      delivered,
       this.hooks.contextCharacters?.(agent.id, context.threadId),
     );
+    if (delivered && history.delta !== null)
+      this.#deltas.set(delivery.delivery.id, { sessionId: delivered.sessionId, text: history.delta });
+    else this.#deltas.delete(delivery.delivery.id);
     const current = (yield* channelSync(() => this.store.tasks(channel.id))).find((item) => item.id === task.id);
     if (
       !current ||
@@ -1663,6 +1701,63 @@ export class ChannelService {
     return { threadId: context.threadId, text: history.text };
   }).bind(this);
 
+  /**
+   * What the member's active provider session already read of the channel, or null when the next
+   * packet must be complete: the session is new, another one, or compacted since (cursor zero).
+   */
+  #deliveredContext(
+    channelId: string,
+    context: ChannelContext,
+    agent: AgentSummary,
+  ): (DeliveredChannelContext & { sessionId: string }) | null {
+    if (
+      !context.sessionId ||
+      context.throughSequence <= 0 ||
+      !this.#acceptedContexts.has(JSON.stringify([channelId, agent.id, context.sessionId])) ||
+      !this.hooks.reportsCompactions?.(agent.id)
+    )
+      return null;
+    const session = this.store.database.activeProviderSession(context.threadId, agent.provider);
+    return session?.externalSessionId === context.sessionId
+      ? { sessionId: context.sessionId, throughSequence: context.throughSequence }
+      : null;
+  }
+
+  #acceptContext(
+    channelId: string,
+    agentId: string,
+    sessionId: string,
+    throughSequence: number,
+    summaryVersion: number,
+  ): void {
+    this.store.acceptContext(channelId, agentId, sessionId, throughSequence, summaryVersion);
+    this.#acceptedContexts.add(JSON.stringify([channelId, agentId, sessionId]));
+  }
+
+  /** The packet of a delivery with only the unread messages, and the session that read the others. */
+  delta(deliveryId: string): { sessionId: string; text: string } | undefined {
+    return this.#deltas.get(deliveryId);
+  }
+
+  /**
+   * Whether the turn on this provider session gets the delta. Another session, as when the provider
+   * cannot resume the old one, has not read the channel and gets the complete packet.
+   */
+  sendsDelta(deliveryId: string, sessionId: string): boolean {
+    if (this.#deltas.get(deliveryId)?.sessionId === sessionId) return true;
+    this.#deltas.delete(deliveryId);
+    return false;
+  }
+
+  /** The provider compacted this session; the next packet of each channel in it is complete. */
+  contextCompacted(sessionId: string): void {
+    try {
+      this.store.resetContextsForSession(sessionId);
+    } catch (error) {
+      this.hooks.error(error);
+    }
+  }
+
   accepted(deliveryId: string, sessionId: string, turnId: string): Effect.Effect<void, ChannelOperationError> {
     return Effect.gen({ self: this }, function* () {
       const assignment = yield* channelSync(() => this.store.assignmentForDelivery(deliveryId));
@@ -1671,18 +1766,35 @@ export class ChannelService {
         (item) => item.id === assignment.taskId,
       );
       if (!task) return;
-      yield* channelSync(() =>
-        this.store.acceptContext(
-          assignment.channelId,
-          assignment.agentId,
-          sessionId,
-          assignment.throughSequence,
-          assignment.summaryVersion,
-        ),
-      );
+      // The drain and the turn start both report the same turn. Only the first report saves the
+      // cursor: a changed message or a compaction can reset it before the second report.
+      const repeated = assignment.state === "running" && assignment.turnId === turnId;
+      // A message that the packet showed changed after it was built, so the packet shows it as it was.
+      // The cursor goes to zero, and the next packet is complete.
+      const prepared = this.#preparedChanges.get(deliveryId);
+      this.#preparedChanges.delete(deliveryId);
+      const cursor =
+        prepared === undefined || prepared === this.store.completedMessageChanges(assignment.channelId)
+          ? { throughSequence: assignment.throughSequence, summaryVersion: assignment.summaryVersion }
+          : { throughSequence: 0, summaryVersion: 0 };
+      // The delta went to another session, so this session did not read the earlier messages. The
+      // cursor stays on the other session, and the next packet is complete.
+      const delta = this.#deltas.get(deliveryId);
+      this.#deltas.delete(deliveryId);
+      if (!repeated && (delta === undefined || delta.sessionId === sessionId)) {
+        yield* channelSync(() =>
+          this.#acceptContext(
+            assignment.channelId,
+            assignment.agentId,
+            sessionId,
+            cursor.throughSequence,
+            cursor.summaryVersion,
+          ),
+        );
+      }
       yield* channelSync(() =>
         this.store.update(this.store.get(assignment.channelId), {
-          assignments: [{ ...assignment, state: "running", turnId }],
+          assignments: [{ ...assignment, ...cursor, state: "running", turnId }],
           tasks: task.revision === assignment.taskRevision ? [{ ...task, state: "running" }] : [],
         }),
       );
@@ -1789,7 +1901,7 @@ export class ChannelService {
       return history.get(id) ?? undefined;
     };
     const messages: ChannelMessage[] = [];
-    for (const message of turnId === undefined
+    for (let message of turnId === undefined
       ? snapshot.messages
       : snapshot.messages.filter((item) => item.turnId === turnId)) {
       if (
@@ -1806,6 +1918,22 @@ export class ChannelService {
       const result = existing(`channel-result-${assignment.id}-revision-${assignment.taskRevision}`);
       if (result?.message.text === message.text) continue;
       const original = existing(message.id);
+      // The result is the answer of the turn. Answer text that the running turn writes after it, such
+      // as a "Yes.", folds into its steps. Before, it showed as a second reply from the same member.
+      // Text from before the result has a row with a lower sequence and stays as it is, and so do the
+      // rows of older turns.
+      if (
+        result &&
+        result.message.turnId === message.turnId &&
+        message.author === "assistant" &&
+        !message.questionPrompt &&
+        !message.attachments?.length &&
+        (!message.itemType || message.itemType === "agentMessage" || message.itemType === "final_answer") &&
+        (original
+          ? original.message.itemType === "commentary" && original.sequence > result.sequence
+          : activeAssignment(assignment))
+      )
+        message = { ...message, itemType: "commentary" };
       const messageId =
         original?.superseded && task?.revision === assignment.taskRevision
           ? `${message.id}-revision-${task.revision}`
@@ -2212,7 +2340,9 @@ export class ChannelService {
     const turnId = assignment.turnId;
     const agent = this.hooks.agents().find((item) => item.id === assignment.agentId);
     if (!agent) return false;
-    const threadId = (yield* channelSync(() => this.store.context(channelId, agent.id))).threadId;
+    const context = yield* channelSync(() => this.store.context(channelId, agent.id));
+    const threadId = context.threadId;
+    const prepared = this.store.completedMessageChanges(channelId);
     let history: Effect.Success<ReturnType<ChannelHistory["prepare"]>>;
     try {
       history = channelResult(
@@ -2221,6 +2351,7 @@ export class ChannelService {
             task,
             agent,
             this.hooks.agents().find((item) => item.id === this.store.get(channelId).leadAgentId),
+            this.#deliveredContext(channelId, context, agent),
             this.hooks.contextCharacters?.(agent.id, threadId),
           ),
         ),
@@ -2245,7 +2376,7 @@ export class ChannelService {
       threadId,
       turnId,
       task.requestMessageId,
-      `The user corrected this task. Apply this current request and do not present earlier work as its completion.\n\n${history.text}`,
+      `The user corrected this task. Apply this current request and do not present earlier work as its completion.\n\n${history.delta ?? history.text}`,
     ).pipe(Effect.mapError(channelFailure));
     if (
       (yield* channelSync(() => this.store.tasks(channelId))).find((item) => item.id === task.id)?.revision !==
@@ -2273,6 +2404,11 @@ export class ChannelService {
     }
     const pendingOutcome = latest.pendingOutcome;
     const accepted = outcome === "accepted";
+    // As in `accepted`: a message changed after the packet was built, so the next packet is complete.
+    const cursor =
+      prepared === this.store.completedMessageChanges(channelId)
+        ? { throughSequence: history.throughSequence, summaryVersion: history.summaryVersion }
+        : { throughSequence: 0, summaryVersion: 0 };
     yield* channelSync(() =>
       this.store.update(this.store.get(channelId), {
         assignments: [
@@ -2281,8 +2417,8 @@ export class ChannelService {
             taskRevision: accepted ? task.revision : latest.taskRevision,
             pendingRevision: null,
             pendingOutcome: null,
-            throughSequence: accepted ? history.throughSequence : latest.throughSequence,
-            summaryVersion: accepted ? history.summaryVersion : latest.summaryVersion,
+            throughSequence: accepted ? cursor.throughSequence : latest.throughSequence,
+            summaryVersion: accepted ? cursor.summaryVersion : latest.summaryVersion,
           },
         ],
         tasks: accepted ? [{ ...task, state: "running" }] : [],
@@ -2292,12 +2428,12 @@ export class ChannelService {
       const session = yield* channelSync(() => this.store.database.activeProviderSession(threadId, agent.provider));
       if (session)
         yield* channelSync(() =>
-          this.store.acceptContext(
+          this.#acceptContext(
             channelId,
             agent.id,
             session.externalSessionId,
-            history.throughSequence,
-            history.summaryVersion,
+            cursor.throughSequence,
+            cursor.summaryVersion,
           ),
         );
     }

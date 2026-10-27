@@ -409,6 +409,33 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Rellena los inicios de sesión del navegador desde Bitwarden. Configúralo en la app de escritorio.",
+  "mobile.server.connectors.bitwarden.hostSummary":
+    "Rellena los inicios de sesión del navegador desde Bitwarden o Vaultwarden",
+  "mobile.server.connectors.bitwarden.description":
+    "Rellena los inicios de sesión del navegador en {host} desde Bitwarden o Vaultwarden.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} inicia sesión con su propia CLI de Bitwarden. En tu caja fuerte, crea una carpeta llamada Shared with OpenBot y pon en ella solo los inicios de sesión que los agentes pueden usar. En la caja fuerte web, abre Configuración › Seguridad › Claves y muestra tu clave de API.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Dirección del servidor",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden, o la dirección de tu servidor Vaultwarden. {host} debe llegar a ella por HTTPS.",
+  "mobile.server.connectors.bitwarden.clientId": "client_id de la clave de API",
+  "mobile.server.connectors.bitwarden.clientSecret": "client_secret de la clave de API",
+  "mobile.server.connectors.bitwarden.masterPassword": "Contraseña maestra",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} guarda la clave de API y la contraseña maestra cifradas, para poder desbloquear de nuevo después de reiniciarse. Este teléfono no las guarda.",
+  "mobile.server.connectors.bitwarden.connect": "Conectar Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "Conectando…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} está iniciando sesión en Bitwarden. El primer inicio de sesión puede tardar unos minutos.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Carpeta compartida",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Carpeta en Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Mueve un inicio de sesión a esta carpeta en Bitwarden para que los agentes puedan usarlo. Retíralo para impedir su uso.",
+  "mobile.server.connectors.bitwarden.disconnect": "Desconectar Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "¿Desconectar Bitwarden?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} elimina la clave de API y la contraseña maestra. Los agentes de {host} ya no pueden rellenar inicios de sesión desde Bitwarden.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary":
     "Repositorios, incidencias y solicitudes de incorporación para todos los agentes",
@@ -627,6 +654,11 @@ export const messages = {
   "mobile.server.settings.providers": "Proveedores",
   "mobile.server.settings.providersConnected": { one: "{count} conectado", other: "{count} conectados" },
   "mobile.server.providers.description": "Los proveedores de IA del equipo que ejecuta este servidor.",
+  "mobile.server.providers.connectedTitle": "Conectado",
+  "mobile.server.providers.otherTitle": "Sin conexión",
+  "mobile.server.providers.defaultProvider": "Proveedor predeterminado",
+  "mobile.server.providers.defaultProviderHint":
+    "Un agente nuevo en este servidor empieza con este proveedor. Puedes cambiarlo para cada agente más tarde.",
   "mobile.server.providers.loading": "Cargando proveedores…",
   "mobile.server.providers.loadFailed": "No se pudieron cargar los proveedores de este servidor.",
   "mobile.server.providers.runtimesFailed": "No se pudieron cargar las descargas de este servidor.",
@@ -688,6 +720,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "No se pudo cambiar la clave. Inténtalo de nuevo.",
   "mobile.server.providers.newKey": "Clave",
   "mobile.server.providers.replaceKey": "Clave nueva",
+  "mobile.server.providers.keyPlaceholder": "Pega tu clave",
   "mobile.server.providers.saveKey": "Guardar clave",
   "mobile.server.providers.removeKey": "Eliminar clave",
   "mobile.server.providers.removeKeyTitle": "¿Eliminar la clave del servidor?",

@@ -1,3 +1,45 @@
+import { isDynamicRecord } from "@openbot/contracts/runtime-values";
+
+/**
+ * Codex's text record of a completed fallback, as Codex 0.163 writes it when `LOG_FORMAT` is not
+ * `json`: `<time>  WARN codex_otel::auth_storage: credential storage file fallback completed
+ * credential_kind="codex" … outcome="not_found" … secure_error="none" …`.
+ */
+const CODEX_FALLBACK_LINE =
+  /^(?:\S+\s+)?(?:TRACE|DEBUG|INFO|WARN)\s+codex_otel::auth_storage: credential storage file fallback completed\s/u;
+
+/**
+ * Codex can finish a credential-store fallback while the provider keeps working. The record has a
+ * `secure_error` field even when its value is `none`, so a keyword search reads it as an error.
+ * Codex writes the record only when `RUST_LOG` lets warnings through, as text or, with
+ * `LOG_FORMAT=json`, as JSON. Keep only this completed, non-error fallback in the log. Failed
+ * storage operations and authentication replies still use the normal failure paths.
+ */
+export function isCodexCredentialFallbackDiagnostic(message: string): boolean {
+  if (CODEX_FALLBACK_LINE.test(message)) {
+    // A space before the name, so `secure_outcome` is not read as `outcome`.
+    return /\ssecure_error="none"(?:\s|$)/u.test(message) && /\soutcome="(?:success|not_found)"(?:\s|$)/u.test(message);
+  }
+  try {
+    const record = JSON.parse(message);
+    if (!isDynamicRecord(record)) return false;
+    if (!("target" in record) || record.target !== "codex_otel::auth_storage") return false;
+    if (!("level" in record) || !["TRACE", "DEBUG", "INFO", "WARN"].includes(String(record.level))) return false;
+    if (!("fields" in record) || typeof record.fields !== "object" || record.fields === null) return false;
+    const fields = record.fields;
+    return (
+      "message" in fields &&
+      fields.message === "credential storage file fallback completed" &&
+      "secure_error" in fields &&
+      fields.secure_error === "none" &&
+      "outcome" in fields &&
+      (fields.outcome === "success" || fields.outcome === "not_found")
+    );
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Whether a provider diagnostic is about an MCP server rather than about the agent's work.
  *

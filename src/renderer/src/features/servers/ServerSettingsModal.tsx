@@ -27,8 +27,8 @@ import {
   Download,
   Globe2,
   HardDrive,
+  KeyRound,
   Monitor,
-  Plug,
   RefreshCw,
   Settings,
   ShieldCheck,
@@ -53,10 +53,10 @@ import { useText } from "@openbot/ui/text";
 import { createEffect, createSignal, onCleanup, Show, untrack } from "solid-js";
 import { actionToast } from "../../action-toast";
 import { type ServerBrowserProfilesOptions, ServerBrowserProfilesPanel } from "../browser/ServerBrowserProfilesPanel";
-import { ConnectorsPanel, type ConnectorsPanelDetail } from "../connectors/ConnectorsPanel";
-import type { ConnectorRegistry } from "../connectors/connector-registry";
 import { type ServerStorageOptions, ServerStoragePanel } from "../files/ServerStoragePanel";
 import { type HostProviderSettings, HostProviderSettingsPanel } from "../settings/ProviderSettingsSection";
+import type { HostPromptCacheTtlOptions, ProviderPromptCacheSource } from "../settings/provider-prompt-cache";
+import { type ServerVaultOptions, ServerVaultPanel } from "../vault/ServerVaultPanel";
 import type { McpServerConfig, McpTestResult } from "./mcp-servers";
 import { ServerDesktopPanel } from "./ServerDesktopPanel";
 import { createServerGeneralSection } from "./ServerGeneralSection";
@@ -69,7 +69,7 @@ import { type ServerRoutineFeedOptions, ServerRoutineFeedPanel } from "./ServerR
 import type { ServerTimezoneOptions } from "./ServerTimezoneSetting";
 import { type ServerTransferOptions, ServerTransferPanel } from "./ServerTransferPanel";
 import { type ServerUpdateOptions, ServerUpdatePanel } from "./ServerUpdatePanel";
-import { serverRoleCanAdminister } from "./server-capabilities";
+import { serverCanAdminister, serverRoleCanAdminister } from "./server-capabilities";
 import type { ServerSettingsSectionHost } from "./server-settings-section";
 
 export interface ServerSettingsModalProps {
@@ -143,6 +143,9 @@ export interface ServerSettingsModalProps {
   /** An MCP row to sign in to when the list holds it: the user pressed Sign in on an agent's card. */
   mcpSignInRequest?: string | null | undefined;
   onMcpSignInRequestHandled?: (() => void) | undefined;
+  /** Opens the MCP form for a new server once the section shows. */
+  mcpAddRequest?: boolean | undefined;
+  onMcpAddRequestHandled?: (() => void) | undefined;
   /**
    * Fired when the MCP section becomes visible. The list is read then, not when the dialog opens,
    * because most visits to this dialog never reach that section.
@@ -179,11 +182,6 @@ export interface ServerSettingsModalProps {
    */
   instanceTransfer?: ServerTransferOptions | undefined;
   /**
-   * The connectors of this server. The Connectors section appears only when the server can run one
-   * of them for this account.
-   */
-  connectors?: ConnectorRegistry | undefined;
-  /**
    * The Updates section appears only when a caller supplies this: a remote host with
    * `host-update-v1` that this member administers.
    */
@@ -199,6 +197,12 @@ export interface ServerSettingsModalProps {
    */
   hostMemoryLimit?: ServerMemoryLimitOptions | undefined;
   /**
+   * The Claude provider page shows how long Claude keeps the prompt cache only when a caller supplies
+   * this, and only for the local server or a remote host with `prompt-cache-ttl-v1` that this member
+   * administers.
+   */
+  hostPromptCacheTtl?: HostPromptCacheTtlOptions | undefined;
+  /**
    * The Roles section appears only when a caller supplies this, and only for the local server or a
    * remote host with `agent-access-v1` that this member administers.
    */
@@ -213,6 +217,8 @@ export interface ServerSettingsModalProps {
    * a host that serves `browser-profiles-v1` to an owner or admin.
    */
   browserProfiles?: ServerBrowserProfilesOptions | undefined;
+  /** The Vault section: this computer, or a joined server that serves `vault-v1` to an owner or admin. */
+  vault?: ServerVaultOptions | undefined;
   /** The section to show when the dialog opens. Updates shows General when the server has no Updates section. */
   initialSection?: ServerSettingsSection | null;
   /** Where the settings page shows, or nothing while the page is not on screen. */
@@ -229,6 +235,7 @@ export interface ServerHostedSitesOptions {
 
 export type ServerSettingsSection =
   | "general"
+  | "vault"
   | "members"
   | "roles"
   | "desktop"
@@ -240,12 +247,12 @@ export type ServerSettingsSection =
   | "import"
   | "transfer"
   | "routines"
-  | "browser-profiles"
-  | "connectors";
+  | "browser-profiles";
 type Section = ServerSettingsSection;
 
 const sections = {
   general: { title: "server.settings.generalTitle", description: "server.settings.generalDescription" },
+  vault: { title: "server.settings.vaultTitle", description: "server.settings.vaultDescription" },
   members: { title: "server.settings.membersTitle", description: "server.settings.membersDescription" },
   roles: { title: "server.settings.rolesTitle", description: "server.settings.rolesDescription" },
   desktop: { title: "server.settings.desktopTitle", description: "server.settings.desktopDescription" },
@@ -258,7 +265,6 @@ const sections = {
   transfer: { title: "server.settings.transferTitle", description: "server.settings.transferDescription" },
   routines: { title: "server.settings.routinesTitle", description: "server.settings.routinesDescription" },
   "browser-profiles": { title: "browser.profiles.title", description: "browser.profiles.subtitle" },
-  connectors: { title: "server.settings.connectorsTitle", description: "server.settings.connectorsDescription" },
 } as const satisfies Record<Section, { title: AppTextKey; description: AppTextKey }>;
 
 export function ServerSettingsModal(props: ServerSettingsModalProps) {
@@ -266,15 +272,12 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
   const [section, setSection] = createSignal<Section>("general");
   /** Set while the MCP panel shows a form, so the header reads `MCP › Connect to a custom MCP`. */
   const [mcpDetail, setMcpDetail] = createSignal<McpPanelDetail | null>(null);
-  /** Set while an integration page is open, so the header reads `Connectors › GitHub`. */
-  const [connectorDetail, setConnectorDetail] = createSignal<ConnectorsPanelDetail | null>(null);
   /** Set while a provider page is open, so the header reads `Providers › Codex`. */
   const [providerDetail, setProviderDetail] = createSignal<ProviderSettingsDetail | null>(null);
   /** Set while an import source is open, so the header reads `Import › Hermes Agent`. */
   const [importDetail, setImportDetail] = createSignal<ServerImportDetail | null>(null);
   const crumbDetail = () => {
     if (section() === "mcp") return mcpDetail();
-    if (section() === "connectors") return connectorDetail();
     if (section() === "import") return importDetail();
     if (section() === "roles") return roles.crumb();
     return section() === "providers" ? providerDetail() : null;
@@ -299,6 +302,11 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
    */
   const canManageMcp = () => serverRoleCanAdminister(props.server);
   const actionsAvailable = () => local() || props.server.state === "online";
+  function promptCacheSource(): ProviderPromptCacheSource | undefined {
+    const options = props.hostPromptCacheTtl;
+    if (!options || !actionsAvailable() || !serverCanAdminister(props.server, "prompt-cache-ttl-v1")) return undefined;
+    return { ...options, serverId: props.server.id };
+  }
   const availableInitialSection = (): Section | null =>
     props.initialSection === "updates" && !props.hostUpdate ? null : (props.initialSection ?? null);
   const published = () => (local() ? props.hostStatus?.phase === "online" : props.server.state === "online");
@@ -417,6 +425,14 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
     },
   );
 
+  /** A server with no Vault for this account has no Vault section. */
+  createEffect(
+    () => section() === "vault" && !props.vault,
+    (gone) => {
+      if (gone) setSection("general");
+    },
+  );
+
   /** An opener that names a section of the same server moves to it; the effect above covers a new server. */
   createEffect(
     () => (props.open ? availableInitialSection() : null),
@@ -452,6 +468,7 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
     onChange(value: string) {
       if (
         value === "general" ||
+        value === "vault" ||
         value === "members" ||
         value === "roles" ||
         value === "desktop" ||
@@ -463,8 +480,7 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
         value === "import" ||
         value === "transfer" ||
         value === "routines" ||
-        value === "browser-profiles" ||
-        value === "connectors"
+        value === "browser-profiles"
       )
         setSection(value);
     },
@@ -614,6 +630,12 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
               <Settings aria-hidden="true" />
               <span>{t(sections.general.title)}</span>
             </Tabs.Trigger>
+            <Show when={props.vault}>
+              <Tabs.Trigger class="settings-modal-nav-item" value="vault">
+                <KeyRound aria-hidden="true" />
+                <span>{t(sections.vault.title)}</span>
+              </Tabs.Trigger>
+            </Show>
             <Tabs.Trigger class="settings-modal-nav-item" value="members">
               <UsersRound aria-hidden="true" />
               <span>{t(sections.members.title)}</span>
@@ -684,18 +706,19 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
                 <span>{t(sections["browser-profiles"].title)}</span>
               </Tabs.Trigger>
             </Show>
-            <Show when={(props.connectors?.available().length ?? 0) > 0}>
-              <Tabs.Trigger class="settings-modal-nav-item" value="connectors">
-                <Plug aria-hidden="true" />
-                <span>{t(sections.connectors.title)}</span>
-              </Tabs.Trigger>
-            </Show>
           </Tabs.List>
         }
       >
         <Tabs.Content value="general" class="settings-modal-tab-panel server-settings-panel" data-tab="general">
           <general.Panel />
         </Tabs.Content>
+        <Show when={props.vault}>
+          {(vault) => (
+            <Tabs.Content value="vault" class="settings-modal-tab-panel server-settings-panel" data-tab="vault">
+              <ServerVaultPanel {...vault()} menuMount={modalElement()} />
+            </Tabs.Content>
+          )}
+        </Show>
         <Tabs.Content value="members" class="settings-modal-tab-panel server-settings-panel" data-tab="members">
           <members.Panel />
         </Tabs.Content>
@@ -730,6 +753,8 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
                 signIn={props.mcpSignIn}
                 signInRequest={props.mcpSignInRequest}
                 onSignInRequestHandled={props.onMcpSignInRequestHandled}
+                addRequest={props.mcpAddRequest}
+                onAddRequestHandled={props.onMcpAddRequestHandled}
               />
             </Tabs.Content>
           )}
@@ -782,6 +807,7 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
                   hostName={local() ? undefined : props.server.name}
                   selectMount={modalElement()}
                   onDetailChange={setProviderDetail}
+                  promptCache={promptCacheSource()}
                 />
               )}
             </Show>
@@ -848,21 +874,6 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
               data-tab="browser-profiles"
             >
               <ServerBrowserProfilesPanel {...browserProfiles()} menuMount={modalElement()} />
-            </Tabs.Content>
-          )}
-        </Show>
-        <Show when={props.connectors?.available().length ? props.connectors : undefined}>
-          {(connectors) => (
-            <Tabs.Content
-              value="connectors"
-              class="settings-modal-tab-panel server-settings-panel"
-              data-tab="connectors"
-            >
-              <ConnectorsPanel
-                connectors={connectors()}
-                hostName={local() ? undefined : props.server.name}
-                onDetailChange={setConnectorDetail}
-              />
             </Tabs.Content>
           )}
         </Show>

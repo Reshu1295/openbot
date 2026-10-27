@@ -35,6 +35,12 @@ export interface BrowserHostTab {
    */
   secretDocument?: boolean;
   /**
+   * `fill_card` typed a saved card into the current document. Its fields show the number and the
+   * security code, and page code can read them, so screenshots, previews, evaluation and recording
+   * stay blocked until a main-frame navigation replaces the document.
+   */
+  filledCard?: boolean;
+  /**
    * A session of this tab and its popups only, kept in memory: a sign-in page that the host opened
    * for someone else. Such a tab is not saved, and its cookies go when it closes.
    */

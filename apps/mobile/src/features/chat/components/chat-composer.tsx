@@ -46,6 +46,7 @@ import type { MobileAgent } from "@/features/workspace/model/workspace-types";
 import { haptics } from "@/shared/lib/haptics";
 import { useMotionPreference, useReducedMotion } from "@/shared/lib/motion";
 import { isAndroid } from "@/shared/lib/platform";
+import { selectionColorProps } from "@/shared/lib/selection-color";
 import { useText } from "@/shared/lib/text";
 import { editMentionDraft, insertMention, mentionDraft, mentionQuery } from "../model/chat-mentions";
 import { applyMarkdownListEdit, markdownListReturn } from "../model/composer-lists";
@@ -1072,7 +1073,7 @@ export const ChatComposer = memo(function ChatComposer({
                       scrollEnabled={wrap.lines > MAX_INPUT_LINES}
                       returnKeyType="default"
                       submitBehavior="newline"
-                      selectionColor={foreground}
+                      {...selectionColorProps(foreground)}
                       style={{
                         flex: 1,
                         minWidth: 0,

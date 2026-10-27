@@ -34,7 +34,7 @@ export type UpdateCheckOutcome = {
 
 /**
  * The subset of electron-updater this service drives. Four behaviours of the installed version are
- * load bearing here, none of them public API, all verified against 6.8.9. Verify them again when
+ * load bearing here, none of them public API, all verified against 6.8.11. Verify them again when
  * electron-updater changes:
  *
  * 1. `MacUpdater.updateDownloaded` only calls `nativeUpdater.checkForUpdates()` - the call that makes

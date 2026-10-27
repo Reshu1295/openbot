@@ -1,6 +1,5 @@
-import { AppLogo } from "@openbot/brand";
-import { Link } from "@tanstack/solid-router";
-import { EXTERNAL_LINK_REL, OPENBOT_LINKS } from "../../lib/landing-links";
+import { OPENBOT_LINKS } from "../../lib/landing-links";
+import { SiteLogoLink } from "../brand/SiteLogoLink";
 import { Button, ButtonLink } from "../ui/button";
 import { SiteMobileMenu } from "./SiteMobileMenu";
 import { SiteNavigationMenu } from "./SiteNavigationMenu";
@@ -22,17 +21,6 @@ export function SiteHeader(props: SiteHeaderProps) {
   // The mobile sheet repeats these actions. Only the header's own copy is the beam's source.
   const actions = (downloadRef?: (element: HTMLElement) => void) => (
     <>
-      <Button
-        href={OPENBOT_LINKS.discord}
-        target="_blank"
-        rel={EXTERNAL_LINK_REL}
-        variant="secondary"
-        size="sm"
-        icon="contact"
-        class="landing-button-glass site-header-secondary site-header-community"
-      >
-        Community
-      </Button>
       {props.page === "landing" ? (
         <Button ref={downloadRef} href={OPENBOT_LINKS.download} variant="primary" size="sm" icon="download">
           Download
@@ -59,10 +47,7 @@ export function SiteHeader(props: SiteHeaderProps) {
 
   return (
     <header class="landing-header" data-enter="header">
-      <Link class="landing-brand" to="/" aria-label="OpenBot home">
-        <AppLogo variant="production" class="landing-brand-logo" />
-        <span>OpenBot</span>
-      </Link>
+      <SiteLogoLink />
       <SiteNavigationMenu />
       <div class="site-header-actions">
         {actions(props.downloadRef)}

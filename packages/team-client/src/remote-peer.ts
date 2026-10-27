@@ -11,6 +11,7 @@ import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
 import {
   decodeTeamProtocolV2AuthFrame,
   decodeTeamProtocolV2EventFrame,
+  decodeTeamProtocolV2Json,
   decodeTeamProtocolV2RpcFrame,
   decodeTeamProtocolV8CurrentEvent,
   decodeTeamProtocolV8WebRtcHttpResponse,
@@ -111,8 +112,12 @@ export interface RemoteTeamCommandResult {
   reference?: string;
 }
 
-/** Carries every outstanding command across the native/DOM bridge, keyed by request ID. */
-export function createRemoteCommandMailbox(publish: (commands: RemoteTeamCommand[]) => void) {
+/**
+ * Keeps every outstanding command of the native/DOM bridge, keyed by request ID. `deliver` sends one
+ * new command to the page. A page that loads again does not have the commands of the page before it,
+ * so the consumer sends it `outstanding()` once it is ready, and the page skips an ID that it has.
+ */
+export function createRemoteCommandMailbox(deliver: (command: RemoteTeamCommand) => void) {
   const pending = new Map<string, { command: RemoteTeamCommand; resolve: (result: RemoteTeamCommandResult) => void }>();
   let target: { hostId: string; hostPublicKey: string } | null = null;
   const cancel = () => {
@@ -134,7 +139,7 @@ export function createRemoteCommandMailbox(publish: (commands: RemoteTeamCommand
       }
       return new Promise((resolve) => {
         pending.set(command.id, { command, resolve });
-        publish([...pending.values()].map((entry) => entry.command));
+        deliver(command);
       });
     },
     receive(result: RemoteTeamCommandResult) {
@@ -142,9 +147,64 @@ export function createRemoteCommandMailbox(publish: (commands: RemoteTeamCommand
       if (!entry) return;
       pending.delete(result.commandId);
       entry.resolve(result);
-      publish([...pending.values()].map((item) => item.command));
     },
+    /** The commands that have no result yet, in the order they were sent. */
+    outstanding: (): RemoteTeamCommand[] => [...pending.values()].map((entry) => entry.command),
     dispose: cancel,
+  };
+}
+
+function decodeRemoteFileUpload(value: unknown): RemoteFileUpload | null {
+  if (!isDynamicRecord(value) || !isString(value.name) || !isString(value.mimeType) || !isString(value.base64))
+    return null;
+  const maxBytes = value.maxBytes;
+  if (!(maxBytes === undefined || isNumber(maxBytes))) return null;
+  return {
+    name: value.name,
+    mimeType: value.mimeType,
+    base64: value.base64,
+    ...(maxBytes === undefined ? {} : { maxBytes }),
+  };
+}
+
+/**
+ * Reads a command that crossed the native/DOM bridge as JSON. `command` is null when the value is not
+ * a command; `commandId` is then its ID when it has one, so the page can still answer it.
+ */
+export function decodeRemoteTeamCommand(value: unknown): {
+  command: RemoteTeamCommand | null;
+  commandId: string | null;
+} {
+  if (!isDynamicRecord(value) || !isString(value.id)) return { command: null, commandId: null };
+  const id = value.id;
+  const invalid = { command: null, commandId: id };
+  if (value.type === "disconnect") return { command: { id, type: "disconnect" }, commandId: id };
+  if (value.type === "connect")
+    return isString(value.hostId) && isString(value.hostPublicKey)
+      ? { command: { id, type: "connect", hostId: value.hostId, hostPublicKey: value.hostPublicKey }, commandId: id }
+      : invalid;
+  if (value.type !== "request" || !isString(value.method) || !isString(value.path)) return invalid;
+  const timeoutMs = value.timeoutMs;
+  if (!(timeoutMs === undefined || isNumber(timeoutMs))) return invalid;
+  const upload = value.upload === undefined ? undefined : decodeRemoteFileUpload(value.upload);
+  if (upload === null) return invalid;
+  let body: TeamProtocolV2Json;
+  try {
+    body = decodeTeamProtocolV2Json(value.body);
+  } catch {
+    return invalid;
+  }
+  return {
+    command: {
+      id,
+      type: "request",
+      method: value.method,
+      path: value.path,
+      body,
+      ...(upload ? { upload } : {}),
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    },
+    commandId: id,
   };
 }
 
@@ -181,6 +241,8 @@ export interface RemoteTeamDiagnostic {
     | "signal-retry"
     | "host-waiting"
     | "path-check"
+    | "event-reset"
+    | "event-gap"
     | "peer-state"
     | "route"
     | "ice-recovery"
@@ -245,7 +307,6 @@ interface PeerState {
   connection: RTCPeerConnection | null;
   channels: Partial<Record<ChannelKind, RTCDataChannel>>;
   decoders: Partial<Record<ChannelKind, TeamWebRtcPayloadDecoder>>;
-  channelLocks: Partial<Record<ChannelKind, Semaphore.Semaphore>>;
   identity: Ed25519Identity;
   clientPublicKey: string;
   clientNonce: string;
@@ -745,7 +806,6 @@ export function createRemoteTeamPeer(
         connection: null,
         channels: {},
         decoders: {},
-        channelLocks: {},
         identity,
         clientPublicKey,
         clientNonce: randomBase64Url(32),
@@ -852,6 +912,23 @@ export function createRemoteTeamPeer(
       if (event?.code === 1008 && (refusal === null || refusal === "rate_limited"))
         signalRetryAt = Date.now() + SIGNAL_RATE_LIMIT_MS;
       diagnose(state, "signal-closed", `code ${event?.code ?? "unknown"}`);
+      // An attempt that is not authenticated has nothing to keep, and a new socket would wait 60 s. Its
+      // refusal, such as `host_unavailable`, is handled after the close and is lost. Fail the attempt now
+      // with that refusal, so the recovery owner retries it, and not the connect deadline 30 s later.
+      // A rate limit and a revoked session have no text here: they keep their own steps.
+      const refused = refusal === null ? sourceText("error.remote.signalClosed") : SIGNAL_ERROR_TEXT.get(refusal);
+      if (
+        refused !== undefined &&
+        !state.authenticated &&
+        state.connected &&
+        !state.waitingForHost &&
+        Date.now() >= signalRetryAt
+      ) {
+        const reference =
+          refusal === null ? referenceFrom("signal", "close", event?.code) : referenceFrom("signal", refusal);
+        failPeer(state, referenced(refused, reference), actions);
+        return;
+      }
       scheduleReconnect(state, actions);
     };
   }
@@ -1075,8 +1152,10 @@ export function createRemoteTeamPeer(
     channel.bufferedAmountLowThreshold = 1024 * 1024;
     state.channels[kind] = channel;
     state.decoders[kind] = new TeamWebRtcPayloadDecoder();
-    const lock = Semaphore.makeUnsafe(1);
-    state.channelLocks[kind] = lock;
+    // Frames run one at a time, in the order they arrive. A semaphore does not keep that order: a
+    // frame that arrives while the permit is free between two holders runs first, and the event
+    // stream then has a gap that disconnects the peer.
+    let handled = Promise.resolve();
     channel.onopen = () => {
       if (CHANNELS.every((name) => state.channels[name]?.readyState === "open") && !state.binding) {
         diagnose(state, "channels-open");
@@ -1085,22 +1164,24 @@ export function createRemoteTeamPeer(
     };
     channel.onmessage = (event) => {
       const data = event.data;
-      void runPeerEffect(
-        lock.withPermit(
-          Effect.gen(function* () {
-            const decoded = yield* Effect.try({
-              try: () => {
-                if (!isString(data) && !(data instanceof ArrayBuffer)) {
-                  throw new Error("The host sent unsupported binary data.");
-                }
-                return state.decoders[kind]?.push(data);
-              },
-              catch: peerError,
-            });
-            if (decoded !== undefined) yield* handleChannelData(state, kind, decoded, actions);
-          }),
-        ),
-      ).catch((error) => failPeer(state, error, actions));
+      handled = handled
+        .then(() =>
+          runPeerEffect(
+            Effect.gen(function* () {
+              const decoded = yield* Effect.try({
+                try: () => {
+                  if (!isString(data) && !(data instanceof ArrayBuffer)) {
+                    throw new Error("The host sent unsupported binary data.");
+                  }
+                  return state.decoders[kind]?.push(data);
+                },
+                catch: peerError,
+              });
+              if (decoded !== undefined) yield* handleChannelData(state, kind, decoded, actions);
+            }),
+          ),
+        )
+        .catch((error) => failPeer(state, error, actions));
     };
     channel.onerror = () =>
       failPeer(
@@ -1219,6 +1300,7 @@ export function createRemoteTeamPeer(
       if (kind !== "events") return;
       const frame = yield* peerDecode(() => decodeTeamProtocolV2EventFrame(data));
       if (frame.type === "event-reset") {
+        diagnose(state, "event-reset", `after ${state.lastEventSequence}, next ${frame.nextSequence}`);
         state.lastEventSequence = frame.nextSequence - 1;
         yield* RemotePeerIO.use((io) =>
           io.connectionUpdate({
@@ -1237,8 +1319,10 @@ export function createRemoteTeamPeer(
         yield* sendEventAckEffect(state);
         return;
       }
-      if (frame.sequence !== state.lastEventSequence + 1)
+      if (frame.sequence !== state.lastEventSequence + 1) {
+        diagnose(state, "event-gap", `expected ${state.lastEventSequence + 1}, got ${frame.sequence}`);
         return yield* new RemotePeerError({ message: sourceText("error.remote.eventStreamGap") });
+      }
       const channel = yield* peerDecode(() => optionalTeamEvent(frame.payload));
       const decoded = channel
         ? { status: "known" as const, event: optionalTeamEventToCurrent(channel) }
@@ -1770,7 +1854,6 @@ export function createRemoteTeamPeer(
       state.socket?.close();
       state.connection?.close();
       for (const decoder of Object.values(state.decoders)) decoder?.reset();
-      state.channelLocks = {};
       rejectRequests(new Error(sourceText("error.remote.serverDisconnected")));
       rejectConnection(state, new Error(sourceText("error.remote.serverDisconnected")));
       if (retainSession) {

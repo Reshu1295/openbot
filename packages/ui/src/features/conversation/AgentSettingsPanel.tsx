@@ -18,6 +18,7 @@ import {
   agentBrowserProfile,
   agentComputerUseEnabled,
   agentNewChatAllowed,
+  agentNextProviderAccountId,
   agentPermissionLevel,
   agentPermissionLevels,
   agentPermissionUpdate,
@@ -391,9 +392,11 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
     () => {
       const agent = props.agent;
       const runtimeSettings = props.runtimeSettings;
+      const browserProfile = browserProfileChoice(props.browserProfiles?.current ?? agentBrowserProfile(agent));
       return {
         agent,
         runtimeSettings,
+        browserProfile,
         signature: [
           agent.id,
           agent.name,
@@ -405,7 +408,7 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
           String(agentAutomationAllowed(agent, agentDefaults())),
           String(agentNewChatAllowed(agent, agentDefaults())),
           String(agentQuickAcknowledgementEnabled(agent, agentDefaults())),
-          browserProfileChoice(props.browserProfiles?.current ?? agentBrowserProfile(agent)),
+          browserProfile,
           agent.busyMessageMode ?? "default",
           String(agent.taskLimit ?? "default"),
           JSON.stringify(agent.backupModels ?? null),
@@ -417,7 +420,7 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
         ].join("\u0000"),
       };
     },
-    ({ agent, runtimeSettings, signature }) =>
+    ({ agent, runtimeSettings, browserProfile, signature }) =>
       untrack(() => {
         if (signature === lastSignature) return;
         const agentChanged = agent.id !== lastAgentId;
@@ -450,7 +453,7 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
           state.allowAutomation = agentAutomationAllowed(agent, agentDefaults());
           state.allowNewChat = agentNewChatAllowed(agent, agentDefaults());
           state.quickAcknowledgement = agentQuickAcknowledgementEnabled(agent, agentDefaults());
-          state.browserProfile = browserProfileChoice(props.browserProfiles?.current ?? agentBrowserProfile(agent));
+          state.browserProfile = browserProfile;
           state.busyMessage = agent.busyMessageMode ?? "default";
           state.taskLimit = taskLimitChoice(agent.taskLimit);
           state.backupModels = agent.backupModels ?? null;
@@ -1210,14 +1213,9 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
                   onConnectProvider={props.onConnectProvider}
                   canConnectProvider={props.canConnectProvider}
                   onManageProviders={props.onManageProviders}
-                  providerChangesDisabled={props.working}
-                  disabledReason={
-                    props.working
-                      ? t("agentSettings.runtime.providerBusy")
-                      : t("agentSettings.runtime.modelUnavailable")
-                  }
+                  disabledReason={t("agentSettings.runtime.modelUnavailable")}
                   accountChoice
-                  providerAccountId={props.agent.providerAccountId}
+                  providerAccountId={agentNextProviderAccountId(props.agent)}
                   onChange={(nextModel, provider, accountId) => void selectModel(nextModel, provider, accountId)}
                 />
                 <Select<AgentReasoningEffort>

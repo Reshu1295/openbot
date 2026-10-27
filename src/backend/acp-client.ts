@@ -154,6 +154,8 @@ interface AcpTurn {
   waitingOnUser: number;
   /** OpenBot ended the turn because the agent did not. Its open tool calls get no more updates. */
   abandoned: boolean;
+  /** The session's total cost in USD at this turn's last `usage_update`, when the agent sends one. */
+  reportedCost: number | null;
 }
 
 interface AcpThread {
@@ -289,6 +291,8 @@ export interface AcpProviderOptions {
   additionalModels?: () => Effect.Effect<AcpModel[]>;
   /** The name to show for a listed model, from its id and the name that the agent sent. */
   modelName?: (id: string, name: string) => string;
+  /** The name to show for the provider of a model, when it is not this agent's own (a custom endpoint). */
+  providerName?: (modelId: string | null) => string | null;
   /**
    * Values to mask in every diagnostic and error this client emits, read at each use: the custom
    * agent's environment values, which have no secret name that `redactText` could know them by.
@@ -352,10 +356,12 @@ export interface AcpProviderOptions {
   /**
    * Reads the account's plan usage. `privatePrompt` sends one prompt in a session that no thread
    * owns and returns the answer text, for an agent that reports usage through a slash command.
+   * `model` is the model whose limit the caller checks, or null for the account's own reading.
    */
   readRateLimits?(
     connection: ClientSideConnection,
     privatePrompt: (text: string) => Effect.Effect<string, ProviderClientOperationError>,
+    model: string | null,
   ): Effect.Effect<AccountRateLimitsReadResult, ProviderClientOperationError>;
   /**
    * Gives the running turn a message that the agent reads at its next step. ACP has no steer
@@ -686,6 +692,18 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     });
   }
 
+  /**
+   * The agent compacted the session by itself. The summary replaced the prompt that carried the
+   * instructions, and the channel messages that the session read, so the next turn sends both again.
+   */
+  #compacted(thread: AcpThread): void {
+    thread.instructionsSent = null;
+    this.emit("notification", {
+      method: "openbot/context-compaction",
+      params: { threadId: thread.id, status: "completed" },
+    });
+  }
+
   releaseIdleThreads(): Effect.Effect<void, ProviderClientOperationError> {
     return this.#threads.releaseIdle();
   }
@@ -732,13 +750,40 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     );
   });
 
+  /**
+   * The answer to a usage prompt that the user saved on a custom agent, such as `/usage`, read in the
+   * private session, so no thread or transcript sees it. Null while the agent is not signed in or
+   * gives no text. The values the agent was started with, and known secret shapes, are redacted.
+   */
+  readonly readUsageText = Effect.fn("AcpAgentClient.readUsageText")(function* (
+    this: AcpAgentClient,
+    _model: string,
+    prompt: string,
+  ): Effect.fn.Return<string | null, ProviderClientOperationError> {
+    if (!this.running) return yield* providerFailure(new Error("ACP client is not running."));
+    yield* this.#ensureInitializedEffect();
+    if (!this.#signedIn) return null;
+    // The time limit starts when the lock is held, so a prompt that waits for another one keeps its time.
+    const answer = yield* this.#privatePromptLock.withPermit(
+      this.#privatePromptOnce(prompt).pipe(
+        Effect.timeoutOrElse({
+          duration: this.#requestTimeoutMs,
+          orElse: () =>
+            Effect.fail(providerFailure(new TimeoutError(`${this.#label} request timed out: usage prompt`))),
+        }),
+      ),
+    );
+    return this.#redact(answer).trim() || null;
+  });
+
   #privatePrompt(text: string): Effect.Effect<string, ProviderClientOperationError> {
     return this.#privatePromptLock.withPermit(this.#privatePromptOnce(text));
   }
 
   /**
-   * A prompt that times out drops the session, because the agent may still be answering it. An error
-   * answer keeps it: a new session would leave one more conversation database on disk.
+   * A prompt that times out is cancelled and drops the session, because the agent may still be
+   * answering it. An error answer keeps it: a new session would leave one more conversation database
+   * on disk.
    */
   readonly #privatePromptOnce = Effect.fn("AcpAgentClient.privatePrompt")(function* (
     this: AcpAgentClient,
@@ -757,9 +802,12 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     return yield* providerCall(() => connection.prompt({ sessionId, prompt: [{ type: "text", text }] })).pipe(
       Effect.map(() => answer.join("")),
       Effect.onExit((exit) =>
-        Effect.sync(() => {
+        Effect.gen({ self: this }, function* () {
           this.#privateAnswer = null;
-          if (Exit.hasInterrupts(exit)) this.#privateSession = null;
+          if (!Exit.hasInterrupts(exit)) return;
+          this.#privateSession = null;
+          // `session/cancel` is a notification, so this does not wait for the agent.
+          yield* providerCall(() => connection.cancel({ sessionId })).pipe(Effect.ignore);
         }),
       ),
     );
@@ -830,7 +878,11 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         {
           const readRateLimits = this.options.readRateLimits;
           const response = readRateLimits
-            ? yield* readRateLimits(this.#requireConnection(), (text) => this.#privatePrompt(text)).pipe(
+            ? yield* readRateLimits(
+                this.#requireConnection(),
+                (text) => this.#privatePrompt(text),
+                getString(params, "model"),
+              ).pipe(
                 Effect.timeoutOrElse({
                   duration: timeoutMs ?? this.#requestTimeoutMs,
                   orElse: () =>
@@ -1052,7 +1104,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       connection.initialize({
         protocolVersion: 1,
         clientCapabilities: OPENBOT_ACP_CLIENT_CAPABILITIES,
-        clientInfo: OPENBOT_ACP_CLIENT_INFO,
+        clientInfo: this.#flavor.clientInfo ?? OPENBOT_ACP_CLIENT_INFO,
       }),
     ).pipe(
       Effect.timeoutOrElse({
@@ -1213,6 +1265,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
           dynamicTools,
           () => threadRef?.activeTurn?.id ?? null,
           (call, signal) => this.#callDynamicTool(call, signal),
+          this.#flavor.mcpServersPerDirectory ? cwd : undefined,
         )
         .pipe(toProviderClientOperationError),
       (mcp) =>
@@ -1671,7 +1724,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       if (available && option?.currentValue !== value) yield* this.#configuration.set(thread, configId, value);
     }
     this.#publishSessionSettings(thread);
-    const turnId = getString(params, "clientUserMessageId") ?? randomUUID();
+    const turnId = getString(params, "clientTurnId") ?? getString(params, "clientUserMessageId") ?? randomUUID();
     const blocks = yield* promptBlocksEffect(params);
     yield* providerSync(() => this.#requireServedModel(thread));
     // The session keeps the instructions in its context, so a prompt carries them only when the
@@ -1718,6 +1771,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       lastActivityAt: Date.now(),
       waitingOnUser: 0,
       abandoned: false,
+      reportedCost: null,
     };
     thread.activeTurn = turn;
     this.#threads.holdForTurn(thread);
@@ -1756,7 +1810,13 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       if (response.usage)
         this.emit("notification", {
           method: "openbot/usage",
-          params: { threadId: thread.id, turnId: turn.id, promptId: randomUUID(), usage: response.usage },
+          params: {
+            threadId: thread.id,
+            turnId: turn.id,
+            promptId: randomUUID(),
+            usage: response.usage,
+            ...(turn.reportedCost === null ? {} : { cost: turn.reportedCost }),
+          },
         });
       // A flavor can fail a turn that ended with no answer (OpenCode). A turn told not to answer ends
       // empty on purpose, and an error there costs no answer the user waits for.
@@ -1818,12 +1878,15 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     }
     // A compaction replaces the prompt that carried the instructions with a summary. The context
     // shrinks, so a large drop counts as one when the agent sends no compaction update.
-    // The update is also the context fill, not billing. Antigravity sends the last one after a turn
-    // that OpenBot already ended.
+    // The update is also the context fill. Its cost is the session's total, which OpenCode sends
+    // before the prompt result. Antigravity sends the last one after a turn that OpenBot already ended.
     if (update.sessionUpdate === "usage_update") {
       if (thread.contextUsed !== null && update.used < thread.contextUsed * ACP_COMPACTION_CONTEXT_RATIO)
-        thread.instructionsSent = null;
+        this.#compacted(thread);
       thread.contextUsed = update.used;
+      const cost = update.cost;
+      if (thread.activeTurn && cost?.currency === "USD" && Number.isFinite(cost.amount) && cost.amount >= 0)
+        thread.activeTurn.reportedCost = cost.amount;
       if (Number.isFinite(update.used) && update.used >= 0 && Number.isFinite(update.size) && update.size > 0)
         this.emit("notification", {
           method: "thread/tokenUsage/updated",
@@ -1835,12 +1898,14 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       return;
     }
     if (update.sessionUpdate === "compaction_update") {
-      if (update.status === "completed") thread.instructionsSent = null;
+      if (update.status === "completed") this.#compacted(thread);
       return;
     }
     const turn = thread.activeTurn;
     if (!turn || turn.completing) return;
     if (update.sessionUpdate === "agent_message_chunk" && update.content.type === "text") {
+      // The agent's own transport error sent as answer text (Cursor, #3334).
+      if (this.#flavor.noiseChunk?.test(update.content.text)) return;
       // An exhausted quota sent as answer text, and a turn then ended as a success (Antigravity).
       const quota = this.#flavor.sdkHarness?.quota(update.content.text) ?? null;
       if (quota !== null) {
@@ -1856,6 +1921,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         turn.receivedOutput = true;
         turn.interruptedAnswer = [turn.text.trim() || turn.interruptedAnswer, error].filter(Boolean).join("\n\n");
         this.#completeThought(thread, turn);
+        this.#completeMessage(thread, turn, "commentary");
         this.#appendThought(thread, turn, error);
         this.#completeThought(thread, turn);
         return;
@@ -1954,7 +2020,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
   }
 
   #appendThought(thread: AcpThread, turn: AcpTurn, text: string): void {
-    this.#completeMessage(thread, turn, "commentary");
+    if (!this.#flavor.thoughtsInsideAnswer) this.#completeMessage(thread, turn, "commentary");
     /* A delta carries no phase, so the item has to be opened as `commentary` first — otherwise the
        thought lands in an ordinary agentMessage and renders as a chat bubble. */
     if (!turn.thoughtStarted) {
@@ -2029,7 +2095,9 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         thread,
         turn,
         "failed",
-        sourceText("error.agent.turnStalled", { provider: this.#label }),
+        sourceText("error.agent.turnStalled", {
+          provider: this.options.providerName?.(thread.currentModelId) ?? this.#label,
+        }),
       );
     }
   });

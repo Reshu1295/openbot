@@ -1,9 +1,10 @@
-import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
+import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import {
   type AcknowledgeFailedTurnInput,
   type AgentIpcRequest,
   type AgentMemorySelectionChange,
   type AgentTaskInput,
+  agentThreadTitle,
   type CancelAgentWaitInput,
   type CancelMessageLinkInput,
   type CancelQueuedMessageInput,
@@ -43,7 +44,10 @@ import {
   type OpenSharedFileInput,
   type OpenWorkspaceFileInput,
   type PasteMessageLinkInput,
+  type PreviewSharedFileInput,
+  type PreviewWorkspaceFileInput,
   type ReadConversationPageInput,
+  type RenameAgentTaskInput,
   type ReorderQueueInput,
   type RespondToApprovalInput,
   type RespondToBrowserTakeoverInput,
@@ -457,6 +461,7 @@ export function parseSearchConversationMessages(value: unknown): SearchConversat
       : { agentId: requireString(value.agentId, "agentId", INPUT_LIMITS.identifier) }),
     ...(value.cursor === undefined ? {} : { cursor: requireString(value.cursor, "cursor", 2048) }),
     limit,
+    ...(value.includeSideThreads === true ? { includeSideThreads: true } : {}),
   };
 }
 
@@ -565,6 +570,14 @@ export function parseAgentTask(value: unknown): AgentTaskInput {
     agentId: requireString(value.agentId, "agentId"),
     taskId: requireString(value.taskId, "taskId"),
   };
+}
+
+export function parseRenameAgentTask(value: unknown): RenameAgentTaskInput {
+  const task = parseAgentTask(value);
+  if (!isObject(value)) throw new Error("Invalid task request.");
+  const title = agentThreadTitle(value.title);
+  if (title === null) throw new Error("Invalid title.");
+  return { ...task, title };
 }
 
 export function parseMessageReaction(value: unknown): SetMessageReactionInput {
@@ -734,6 +747,12 @@ export function parseImportAttachments(value: unknown): ImportAttachmentsInput {
   return { paths: value.paths, data };
 }
 
+/** A renderer can provide file bytes, but it cannot ask main to read a disk path. */
+export function parseAttachmentData(value: unknown): ImportAttachmentsInput["data"] {
+  if (!Array.isArray(value)) throw new Error("Invalid attachment data.");
+  return parseImportAttachments({ paths: [], data: value }).data;
+}
+
 export function parseChooseAttachments(value: unknown): ChooseAttachmentsInput {
   if (!isObject(value) || (value.filter !== "all" && value.filter !== "images")) {
     throw new Error("Invalid attachment picker filter.");
@@ -792,6 +811,23 @@ export function parseOpenWorkspaceFile(value: unknown): OpenWorkspaceFileInput {
     path: requireString(value.path, "path", INPUT_LIMITS.path),
     action: parseFileAction(value.action),
   };
+}
+
+export function parsePreviewSharedFile(value: unknown): PreviewSharedFileInput {
+  if (!isObject(value)) throw new Error("Invalid shared file request.");
+  return { ...parseOpenSharedFile(value), ...optionalPreviewByteLimit(value.maxBytes) };
+}
+
+export function parsePreviewWorkspaceFile(value: unknown): PreviewWorkspaceFileInput {
+  if (!isObject(value)) throw new Error("Invalid workspace file request.");
+  return { ...parseOpenWorkspaceFile(value), ...optionalPreviewByteLimit(value.maxBytes) };
+}
+
+function optionalPreviewByteLimit(value: unknown): { maxBytes?: number } {
+  if (value === undefined) return {};
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > ATTACHMENT_LIMITS.fileBytes)
+    throw new Error("Invalid preview size limit.");
+  return { maxBytes: value };
 }
 
 export function parseCancelQueuedMessage(value: unknown): CancelQueuedMessageInput {

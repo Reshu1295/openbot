@@ -157,10 +157,22 @@ export const messages = {
   "provider.geminiKey.description":
     "Сохраните ключ API Gemini на этом компьютере. Сохранённый ключ используется вместо аккаунта Google. Чтобы войти через Google, удалите ключ и нажмите «Подключить» в строке Gemini.",
   "provider.geminiKey.label": "Ключ API Gemini",
+  "provider.claudeKey.title": "Ключ API Anthropic",
+  "provider.claudeKey.description":
+    "Сохраните API-ключ Anthropic на хосте. Anthropic выставляет счёт за каждый запрос на ключ. Чтобы использовать его для агента, выберите аккаунт «API-ключ» в меню моделей агента. Если в Claude не выполнен вход, все агенты используют ключ.",
+  "provider.claudeKey.label": "Ключ API Anthropic",
   "provider.inceptionKey.title": "Ключ API Inception",
   "provider.inceptionKey.description":
     "Сохраните ключ API Inception на этом компьютере, чтобы использовать модели Mercury. OpenBot запускает их в загруженном Pi CLI.",
   "provider.inceptionKey.label": "Ключ API Inception",
+  "provider.deepseekKey.title": "Ключ API DeepSeek",
+  "provider.deepseekKey.description":
+    "Сохраните ключ API DeepSeek на этом компьютере, чтобы использовать модели DeepSeek. OpenBot запускает их в загруженном Pi CLI.",
+  "provider.deepseekKey.label": "Ключ API DeepSeek",
+  "provider.openrouterKey.title": "Ключ API OpenRouter",
+  "provider.openrouterKey.description":
+    "Сохраните ключ API OpenRouter на этом компьютере, чтобы использовать модели OpenRouter. OpenBot запускает их в загруженном Pi CLI.",
+  "provider.openrouterKey.label": "Ключ API OpenRouter",
 
   "provider.openCodeKey.title": "Вход в OpenCode Go",
   "provider.openCodeKey.description": "Бесплатным моделям аккаунт не нужен. Ключ открывает платные модели Go.",
@@ -183,6 +195,7 @@ export const messages = {
     other: "{count} аккаунта",
   },
   "provider.account.numbered": "Аккаунт {number}",
+  "provider.account.apiKey": "API-ключ",
   "provider.account.listLabel": "Аккаунты {name}",
   "provider.account.usedBy": "Используют: {agents}",
   "provider.account.failed": "Ошибка входа",
@@ -208,4 +221,30 @@ export const messages = {
   "provider.account.resetUsageNoCredit": "У {name} не осталось кредитов сброса использования.",
   "provider.account.resetUsageAlreadyRedeemed": "Этот кредит сброса {name} уже использован.",
   "provider.account.resetUsageFailed": "Не удалось сбросить использование {name}.",
+  "provider.settings.cache": "Кэш",
+  "provider.settings.promptCache": "Кэш промптов",
+  "provider.settings.promptCacheDescription": "Как долго Claude хранит контекст агента в кэше между ходами.",
+  "provider.settings.promptCacheHour": "1 час",
+  "provider.settings.promptCacheDefault": "По умолчанию Claude Code",
+  "provider.settings.promptCacheLoadFailed": "Не удалось загрузить время кэша промптов этого сервера.",
+  "provider.settings.download": "Загрузка",
+  "provider.settings.downloadedCli": "CLI {name}",
+  "provider.settings.downloadDetail": {
+    one: "{version} · {count} версия · {size}",
+    few: "{version} · {count} версии · {size}",
+    many: "{version} · {count} версий · {size}",
+    other: "{version} · {count} версии · {size}",
+  },
+  "provider.settings.downloadVersions": {
+    one: "{count} версия · {size}",
+    few: "{count} версии · {size}",
+    many: "{count} версий · {size}",
+    other: "{count} версии · {size}",
+  },
+  "provider.settings.downloadAgain": "Когда вы включите {name}, OpenBot снова загрузит CLI.",
+  "provider.settings.removeDownloadConfirm": "Удалить {size}?",
+  "provider.settings.removeDownloadKeeps": "Аккаунты, входы и агенты останутся.",
+  "provider.settings.removeDownload": "Удалить загрузку",
+  "provider.settings.removingDownload": "Удаление…",
+  "provider.settings.removeDownloadFailed": "Не удалось удалить загрузку.",
 } as const satisfies PartialTranslation<typeof source>;

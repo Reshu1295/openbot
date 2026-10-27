@@ -20,6 +20,7 @@
 @import "./styles/scroll-rail.css";
 @import "./styles/messages.css";
 @import "./styles/agent-steps.css";
+@import "./styles/trace-waterfall.css";
 @import "./styles/agent-chat-empty.css";
 @import "./styles/message-content.css";
 @import "./styles/math.css";
@@ -29,13 +30,14 @@
 @import "./styles/attachments.css";
 @import "./styles/image-lightbox.css";
 @import "./styles/queue.css";
-@import "./styles/agent-tasks.css";
+@import "./styles/agent-threads.css";
 @import "./styles/side-question.css";
 @import "./styles/voice.css";
 @import "./styles/panel-layout.css";
 @import "./styles/side-panel.css";
 @import "./styles/notices.css";
 @import "./styles/context-usage.css";
+@import "./styles/composer-stack.css";
 @import "./styles/interaction-cards.css";
 @import "./styles/browser-takeover.css";
 @import "./styles/ui-blocks.css";

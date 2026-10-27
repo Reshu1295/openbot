@@ -14,9 +14,10 @@
  * On a very wide screen the chat stops at a column and centers in the pane, so a reply and the
  * user's message stay near each other. A laptop window is narrower than the column and shows the
  * chat at full width. The scroll area and the composer keep the pane width, so the scroll bar stays
- * at the pane edge.
+ * at the pane edge. The live content under the messages, such as the working row and a pending
+ * question, stays in the same column.
  */
-.conversation-panel > .conversation-scroll > .virtual-chat-list {
+.conversation-panel > .conversation-scroll > :is(.virtual-chat-list, .conversation-live) {
   max-width: var(--conversation-column-width);
   margin-inline: auto;
 }
@@ -35,6 +36,31 @@
     var(--openbot-space-1-5),
     calc((100% - var(--settings-panel-width, 360px) - var(--conversation-column-width) - 12px) / 2)
   );
+}
+
+/*
+ * An open side thread covers the agent's own chat and its message box. They leave the layout but stay
+ * at the pane width, so their rows, scroll position and draft are there again on the way back. Their
+ * content is not rendered: a selected sliding tab, such as a code preview, sets its own visibility.
+ * The content keeps the size that the browser remembers from its last render, so the scroll area keeps
+ * its height and position. Without containment, the remembered size changes nothing.
+ */
+.conversation-panel > .conversation-covered {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+}
+
+.conversation-panel > :is(.conversation-scroll, .composer-wrap) > * {
+  contain-intrinsic-size: auto none;
+}
+
+.conversation-panel > .conversation-covered > * {
+  content-visibility: hidden;
+}
+
+.conversation-panel > .composer-wrap.conversation-covered {
+  top: auto;
 }
 
 /*
@@ -87,10 +113,6 @@
   width: 30px;
   height: 30px;
   border-radius: var(--openbot-radius-md);
-}
-
-.direct-conversation-person .person-avatar > i {
-  display: none;
 }
 
 .direct-conversation-person h1 {

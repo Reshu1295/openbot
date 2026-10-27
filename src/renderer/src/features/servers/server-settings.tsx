@@ -100,6 +100,8 @@ const ServerSettings = createSimpleContext({
     >({});
     /** The MCP row whose sign-in an agent's card asked for, until the MCP section starts it. */
     const [serverSettingsMcpSignInRequest, setServerSettingsMcpSignInRequest] = createSignal<string | null>(null);
+    /** Set when the Marketplace asked for the form that adds a server, until the MCP section opens it. */
+    const [serverSettingsMcpAddRequest, setServerSettingsMcpAddRequest] = createSignal(false);
     /** Bumped by every open and refresh, so a slower earlier load cannot paint over a newer one. */
     let serverSettingsRequest = 0;
     /**
@@ -224,6 +226,7 @@ const ServerSettings = createSimpleContext({
       setServerSettingsMcpError(null);
       setServerSettingsMcpSignIns({});
       setServerSettingsMcpSignInRequest(null);
+      setServerSettingsMcpAddRequest(false);
       setServerSettingsError(null);
       void refreshServerSettings(serverId);
     }
@@ -232,6 +235,12 @@ const ServerSettings = createSimpleContext({
     function openMcpSignIn(serverId: string, mcpServerId: string, trigger: HTMLElement | null): void {
       openServerSettings(serverId, trigger, "mcp");
       setServerSettingsMcpSignInRequest(mcpServerId);
+    }
+
+    /** Opens the MCP section of a server on the form that adds a server, as its Add button does. */
+    function openMcpAdd(serverId: string, trigger: HTMLElement | null): void {
+      openServerSettings(serverId, trigger, "mcp");
+      setServerSettingsMcpAddRequest(true);
     }
 
     async function saveServerIdentity(input: { serverName: string; logo?: AvatarImageInput | null }): Promise<void> {
@@ -289,8 +298,15 @@ const ServerSettings = createSimpleContext({
     }
 
     async function setServerPublished(published: boolean): Promise<void> {
-      const server = serverSettingsTarget();
-      if (server?.kind !== "local") throw new Error(currentText().t("server.settings.publicationLocalOnly"));
+      if (serverSettingsTarget()?.kind !== "local")
+        throw new Error(currentText().t("server.settings.publicationLocalOnly"));
+      await setLocalServerPublished(published);
+    }
+
+    /** Publishes or unpublishes this computer's server, whichever server the settings show. */
+    async function setLocalServerPublished(published: boolean): Promise<void> {
+      const server = servers().find((candidate) => candidate.kind === "local");
+      if (!server) throw new Error(currentText().t("server.settings.publicationLocalOnly"));
       const analytics = desktopAnalytics.scope();
       const action = published ? ("published" as const) : ("unpublished" as const);
       let operationSucceeded = false;
@@ -305,7 +321,7 @@ const ServerSettings = createSimpleContext({
         operationSucceeded = true;
         setHostStatus(status);
         setServers(await serversPort().servers.list());
-        await refreshServerSettings(server.id);
+        if (serverSettingsTargetId() === server.id) await refreshServerSettings(server.id);
       } catch (error) {
         if (!operationSucceeded) {
           analytics.track("team_action", {
@@ -720,6 +736,7 @@ const ServerSettings = createSimpleContext({
       recheckScreenRecording,
       rotateHostKey,
       setServerPublished,
+      publishLocalServer: () => setLocalServerPublished(true),
       createServerInvite,
       updateServerMember,
       removeServerMember,
@@ -742,6 +759,9 @@ const ServerSettings = createSimpleContext({
       serverSettingsMcpSignInRequest,
       clearMcpSignInRequest: () => setServerSettingsMcpSignInRequest(null),
       openMcpSignIn,
+      serverSettingsMcpAddRequest,
+      clearMcpAddRequest: () => setServerSettingsMcpAddRequest(false),
+      openMcpAdd,
       serverSettingsMcpSignInPages,
       serverSettingsMcpSignInRelays,
       openMcpSignInRelay,

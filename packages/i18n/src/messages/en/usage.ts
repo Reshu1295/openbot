@@ -62,6 +62,7 @@ export const messages = defineMessages("usage", {
   "usage.panel.label": "Agent usage",
   "usage.panel.title": "Usage",
   "usage.panel.allAgents": "All agents",
+  "usage.panel.workflows": "Workflows",
   "usage.panel.agents": "Usage agents",
   "usage.panel.metric": "Usage metric",
   "usage.panel.period": "Usage period",

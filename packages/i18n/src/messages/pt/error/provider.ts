@@ -6,6 +6,7 @@ export const messages = {
     "O OpenBot não conseguiu registrar os servidores MCP na configuração do Codex. Verifique se seu config.toml do Codex é válido e gravável, depois reinicie o OpenBot.",
   "error.provider.computerUseConfig":
     "O OpenBot não conseguiu registrar o Uso do computador na configuração do Codex. Verifique se seu config.toml do Codex é válido e gravável, depois reinicie o OpenBot. Você pode desativar o Uso do computador nas configurações do agente para continuar sem ele.",
+  "error.provider.codexUnresponsive": "O Codex parou de responder, então o OpenBot encerrou o processo dele.",
   "error.provider.endpointsReadOnly":
     "Os endpoints salvos foram gravados por uma versão mais recente do OpenBot, ou o arquivo não pode ser lido. Atualize o OpenBot para alterá-los.",
   "error.provider.endpointNoSecureStorage":
@@ -59,6 +60,9 @@ export const messages = {
   "error.provider.runtimesUnsupported":
     "Os ambientes de execução dos provedores não estão disponíveis nesta plataforma.",
   "error.provider.closing": "O OpenBot está fechando.",
+  "error.provider.removeWhileOn": "Desative o provedor antes de remover o download dele.",
+  "error.provider.removeWhileDownloading": "Aguarde o fim do download e depois remova.",
+  "error.provider.removeIncomplete": "Um programa usa arquivos desta CLI. Feche-o e tente de novo.",
   "error.provider.cliOverride": "Remova a substituição explícita do caminho da CLI antes de atualizar pelo OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "A atualização do ambiente de execução não foi concluída.",
   "error.provider.downloadHttp": "O download do ambiente de execução falhou com HTTP {status}.",
@@ -102,6 +106,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "O nome de um cabeçalho é muito longo.",
   "error.provider.headerNameDuplicate": "Dois cabeçalhos têm o mesmo nome.",
   "error.provider.headerValueInvalid": "O valor de um cabeçalho está ausente ou é muito longo.",
+  "error.provider.headerValueMissing": "Digite um valor para o cabeçalho {name}.",
   "error.provider.apiKeyTooLong": "A chave de API é muito longa.",
   "error.provider.localOnly": "Os provedores só podem ser alterados no computador que executa os agentes.",
   "error.provider.keyRequired": "É necessário informar uma chave de provedor.",
@@ -197,6 +202,8 @@ export const messages = {
     "O provedor de modelos do OpenCode reportou uma requisição de upload inválida. Escolha outro modelo e continue. Verifique as rotinas salvas antes de recriá-las.\n{detail}",
   "error.provider.opencodeUnreadableContent":
     "Este modelo não consegue ler um arquivo ou uma imagem neste chat. Escolha um modelo que leia arquivos e envie sua mensagem de novo.",
+  "error.provider.opencodeFreeLimit":
+    "Os modelos gratuitos do OpenCode atingiram o limite de uso. Todos os modelos gratuitos compartilham esse limite. Para continuar, cole uma chave do OpenCode Go nas configurações do OpenCode ou escolha um modelo de outro provedor.",
   "error.provider.opencodeProviderFailed":
     "Ocorreu uma falha no provedor do modelo. Sua conexão não é a causa. Tente novamente mais tarde ou escolha outro modelo.\n{detail}",
   "error.provider.opencodeNetwork":
@@ -267,11 +274,17 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Somente links de login HTTPS podem abrir no navegador.",
   "error.provider.geminiKeyRefused":
     "O Gemini recusou a chave de API salva. Substitua ou remova a chave nas Configurações e conecte novamente.",
+  "error.provider.keyProviderRefused":
+    "O {provider} recusou a chave de API salva. Substitua ou remova a chave nas Configurações e tente novamente.",
+  "error.provider.keyProviderNoBalance":
+    "A conta do {provider} da chave de API salva não tem saldo. Adicione crédito à conta e tente novamente.",
   "error.provider.messageTooLarge": "O OpenBot interrompeu {provider} porque enviou uma mensagem maior que {limit} MB.",
   "error.provider.customAgentIdInvalid":
     "Um ID de agente deve conter letras minúsculas, dígitos ou `-`, e não pode ser o ID de um provedor integrado.",
   "error.provider.customAgentEnvInvalid":
     "Um nome de variável deve conter letras, dígitos ou `_` e não pode começar com um dígito. Use cada nome uma única vez, com no máximo 16 nomes.",
+  "error.provider.customAgentUsagePromptInvalid":
+    "Um comando de uso deve ser uma única linha com no máximo 256 caracteres.",
   "error.provider.customAgentCommandInvalid":
     "O comando deve ser um caminho completo, um caminho que comece com ~/ ou um nome de comando sem espaços.",
   "error.provider.customAgentArgsInvalid":
@@ -310,6 +323,8 @@ export const messages = {
   "error.provider.accountNotFound": "Esta conta de {provider} não está neste computador. Atualize e tente novamente.",
   "error.provider.accountAlreadyAdded": "Esta conta de {provider} já está conectada.",
   "error.provider.accountDefault": "A primeira conta de {provider} não pode ser removida.",
+  "error.provider.accountUsesKey":
+    "Esta conta de {provider} usa a chave de API salva e não tem login. Altere a chave em Configurações do servidor → Provedores.",
   "error.provider.accountInUse":
     "Um agente que usa esta conta está trabalhando. Tente novamente quando o agente parar.",
   "error.provider.accountsReadOnly":
@@ -366,6 +381,8 @@ export const messages = {
     "A autenticação do Muse não está verificada. Conecte-se no computador anfitrião ou defina uma chave de API da Meta.",
   "error.provider.museSignIn": "Entre no Muse no computador anfitrião para continuar.",
   "error.provider.inceptionSignIn": "Adicione uma chave de API da Inception para continuar.",
+  "error.provider.deepseekSignIn": "Adicione uma chave de API da DeepSeek para continuar.",
+  "error.provider.openrouterSignIn": "Adicione uma chave de API do OpenRouter para continuar.",
   "error.provider.terminalLoginFailed":
     "O terminal de login não pôde abrir. Abra a CLI do provedor neste computador anfitrião e entre por lá, depois atualize os provedores.",
   "error.provider.nativeArchiveInvalid": "O download do provedor não contém uma instalação válida.",

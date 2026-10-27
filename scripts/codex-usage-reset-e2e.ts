@@ -3,7 +3,8 @@
 // `account/rateLimitResetCredit/consume`, as Codex 0.160.1 does. The first turn hits the plan limit, so
 // the usage limit gate holds the agent. Cases: the credits are read; a reset answers `reset`, spends one
 // credit with one idempotency key, and the held message runs; a second reset with no spent limit answers
-// `nothingToReset`, spends none, and ends a hold that a refused turn left; another provider is refused.
+// `nothingToReset`, spends none, and ends a hold that a refused turn left; a credential change, as when a
+// key is saved, ends a hold; another provider is refused.
 // `bun scripts/codex-usage-reset-e2e.ts`. Writes .openbot-build/codex-usage-reset-e2e/report.json.
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -20,6 +21,7 @@ const userData = join(root, "user-data");
 const home = join(root, "home");
 const fakeCodex = join(root, "codex");
 const consumeLog = join(root, "consumed.jsonl");
+const refusedLog = join(root, "refused.jsonl");
 
 // Before the service modules load: the Codex process and the stores read the home folder.
 process.env.HOME = home;
@@ -38,7 +40,7 @@ const { OpenBotDatabase } = await import("../src/backend/openbot-database");
  * plan, and while the plan is spent each turn fails as Codex fails it. A reset credit restores it.
  */
 const FAKE_CODEX = `#!/usr/bin/env node
-const { appendFileSync } = require("node:fs");
+const { appendFileSync, existsSync, readFileSync } = require("node:fs");
 if (process.argv.includes("--version")) {
   process.stdout.write("codex-cli 0.160.1\\n");
   process.exit(0);
@@ -50,7 +52,6 @@ let turns = 0;
 let credits = 2;
 let spent = false;
 let hit = false;
-let transientHit = false;
 const resetsAt = Math.floor(Date.now() / 1000) + 3600;
 process.stdout.on("error", (error) => {
   if (error.code === "EPIPE") process.exit(0);
@@ -85,11 +86,15 @@ const answer = (message) => {
     case "thread/items/list": return write({ id: message.id, result: { data: [], nextCursor: null } });
     case "thread/read": return write({ id: message.id, result: { thread: { id: params.threadId, turns: [] } } });
     case "turn/start": {
-      const turnId = "turn-" + (++turns);
+      // Unique across a restart, as Codex turn ids are: the service ignores the end of a turn id it saw end.
+      const turnId = "turn-" + process.pid + "-" + (++turns);
       if (!hit && JSON.stringify(params.input).includes("limit")) { hit = true; spent = true; }
-      // A refusal that the plan does not show, as when Codex counted a limit that ended since.
-      const transient = !transientHit && JSON.stringify(params.input).includes("transient");
-      if (transient) transientHit = true;
+      // A refusal that the plan does not show, as when Codex counted a limit that ended since. Once per
+      // message, also across a restart, so the retry of a released message runs.
+      const input = JSON.stringify(params.input);
+      const refused = existsSync(${JSON.stringify(refusedLog)}) ? readFileSync(${JSON.stringify(refusedLog)}, "utf8").split("\\n") : [];
+      const transient = input.includes("transient") && !refused.includes(input);
+      if (transient) appendFileSync(${JSON.stringify(refusedLog)}, input + "\\n");
       write({ id: message.id, result: { turn: { id: turnId, status: "inProgress", items: [] } } });
       write({ method: "turn/started", params: { threadId: params.threadId, turn: { id: turnId } } });
       setTimeout(() => {
@@ -260,6 +265,22 @@ try {
     details: { nothing, left },
     passed: true,
   });
+
+  // A new key serves the provider's own sign-in, so the old credential's limit no longer applies.
+  await runCauseEffect(agents.sendMessage({ agentId: agent.id, text: "Another transient refusal." }));
+  await waitFor("the refusal to hold the agent before the credential change", () =>
+    agents.getRuntimeSnapshot().usageLimits?.some((limit) => limit.agentId === agent.id),
+  );
+  await runCauseEffect(agents.changeProviderCredential("codex", () => Effect.void));
+  assert.ok(
+    !agents.getRuntimeSnapshot().usageLimits?.some((limit) => limit.agentId === agent.id),
+    "A credential change ends the hold.",
+  );
+  await waitFor("the message after the credential change to run", () =>
+    agents.listQueue(agent.id).deliveries.every((delivery) => delivery.status === "completed"),
+  );
+  assert.equal(consumed().length, 2, "A credential change spends no reset credit.");
+  report.cases.push({ name: "a credential change ends a hold", details: null, passed: true });
 
   const refused = await runCauseEffect(agents.resetProviderUsage("claude", DEFAULT_PROVIDER_ACCOUNT_ID)).then(
     () => null,

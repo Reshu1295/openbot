@@ -2,8 +2,8 @@
 // (`provider-fakes/agents/conformance.ts`): start and list models, one turn, a model switch, a cancel
 // and a turn after it, a resume in a new process, a missing session, and a sign-in that is necessary.
 // A driver that skips a case fails here. The fake differs per driver only where the real CLIs differ.
-// Codex, Claude, Pi, Inception and Muse speak other protocols and have no shared fake yet; the report
-// names them in `notCovered`.
+// Codex, Claude, Pi, Inception, DeepSeek, OpenRouter and Muse speak other protocols and have no shared
+// fake yet; the report names them in `notCovered`.
 // `bun run test:provider-conformance`. Writes .openbot-build/provider-conformance-e2e/report.json.
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -25,7 +25,7 @@ import { CustomAgentStore } from "../src/main/custom-agent-store";
 import { installFakeAgent, readJsonl, runTurn, startThread, stopClients, xorCipher } from "./provider-fakes/host";
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/provider-conformance-e2e");
-const NOT_COVERED = ["codex", "claude", "pi", "inception", "muse"] as const;
+const NOT_COVERED = ["codex", "claude", "pi", "inception", "deepseek", "openrouter", "muse"] as const;
 
 interface DriverCase {
   provider: AgentProviderId;
@@ -103,7 +103,9 @@ async function driverSetup(
   if (driver.provider === "acp") {
     const store = new CustomAgentStore({ path: join(root, name, "custom-agents.json"), cipher: xorCipher });
     await runCauseEffect(store.load());
-    await runCauseEffect(store.save({ id: name, name, command: executable, args: ["acp"], env: [] }));
+    await runCauseEffect(
+      store.save({ id: name, name, command: executable, args: ["acp"], env: [], usagePrompt: null }),
+    );
     context = { ...NO_PROVIDER_CREDENTIALS, customAgents: () => store.configs() };
     cli = await runCauseEffect(provider.resolveCli());
     agentModel = (raw) => `${name}/${raw}`;

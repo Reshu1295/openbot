@@ -33,7 +33,8 @@ import {
 import { SettingsLinkGroup } from "@openbot/ui/components/SettingsPanel";
 import { errorReference } from "@openbot/user-errors";
 import { createSignal, createUniqueId, For, Show } from "solid-js";
-import { useText } from "../../text";
+import { providerAccountName } from "../../components/provider-accounts";
+import { currentText, useText } from "../../text";
 import { formatUsageReset } from "./ComposerNotice";
 
 /** `limit`: a usage limit holds it now. `unavailable`: its provider or account cannot run it now. */
@@ -73,7 +74,7 @@ export function backupModelOption(choice: AgentModelChoice, source: BackupModelS
     key: `${choice.provider}\u0000${accountId}\u0000${choice.model}`,
     choice,
     model: model?.name ?? choice.model,
-    account: accounts && accounts.length > 1 ? (account?.label ?? account?.email ?? accountId) : null,
+    account: accounts && accounts.length > 1 ? providerAccountName(currentText().t, accounts, accountId) : null,
     state: !usable ? "unavailable" : source.limited?.(choice) ? "limit" : "ready",
   };
 }

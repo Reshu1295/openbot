@@ -141,7 +141,7 @@ It also records the topic and result of a contact form send, and whether a retur
 completed or was cancelled, for a plan, a license or the billing portal. The contact form message,
 name and email are not sent to analytics.
 The production desktop app records application, sign-in, onboarding, agent, message, turn, prompt,
-approval, queue, routine, team, browser, search, Remote Desktop, update, marketplace, memory,
+approval, queue, routine, workflow, team, browser, search, Remote Desktop, update, marketplace, memory,
 provider, voice transcription, Voice pane, spoken reply, voice model download, spoken reply setting,
 reaction, Hosted Site, hosted server offer, hosted server plans, plan and member limits, license,
 contact sales, provider usage limit, agent template, phone connection, connector, Computer Use
@@ -247,9 +247,12 @@ The local host also records how the agents are used:
 - **Routine runs.** The host sends the outcome of a routine run, whether it was scheduled or manual,
   and its schedule type (for example daily or weekly). The routine name and instruction are not
   sent.
-- **Setup.** At most once a day, the host sends counts of agents, enabled routines, custom MCP
-  servers, local skills and community skills; the slugs of enabled catalog plugins and of curated
-  skills and agents; the providers in use; and whether Computer Use is enabled.
+- **Workflow runs.** When a workflow run ends, the host sends its outcome, how it started (for
+  example manual, schedule or webhook), its duration, and the count of steps that ran, by kind
+  (agent, model, approval, output). The workflow name, the step text and the IDs are not sent.
+- **Setup.** At most once a day, the host sends counts of agents, enabled routines, workflows,
+  custom MCP servers, local skills and community skills; the slugs of enabled catalog plugins and of
+  curated skills and agents; the providers in use; and whether Computer Use is enabled.
 - **Resource use.** At most once a day, the host sends a summary of the previous day: the memory and
   CPU use of OpenBot's process groups (main, windows, browser tabs, GPU, the database and voice
   processes) and of each provider's CLI and its child processes, by provider id; the main process
@@ -306,11 +309,12 @@ The service stores:
 - the first website visit of an account, when a browser sends it: the source category, platform
   name, first website page, day, allowlisted campaign tags, whether it came from a sign-in or a
   checkout, and the save time. Deleting the account removes it.
-- webhook routes: for each webhook routine of a host, the opaque route ID, the host ID, the owner
-  account ID, the link time, and the revocation time. When the routine stops using a route, or the
-  host is deleted, the service sets the revocation time and the route stops working. The service
+- webhook routes: for each webhook routine and each workflow webhook trigger of a host, the opaque
+  route ID, the host ID, the owner account ID, the link time, and the revocation time. When the
+  routine or workflow stops using a route, or the host is deleted, the service sets the revocation
+  time and the route stops working. The service
   keeps the row with these fields permanently, so that the old public URL never belongs to another
-  host. It does not store the routine, the secret, or request bodies.
+  host. It does not store the routine, the workflow, the secret, or request bodies.
 - published agent templates: the agent name, title, instructions, avatar, routine names, schedules
   and instructions, marketplace skill references, the `SKILL.md` text of local skills, the local
   agent ID, a share card image made from these fields, and creation and update times. Anyone
@@ -431,8 +435,10 @@ does not record message text, files, request bodies or headers, and it masks tok
 addresses. The app never sends the log. **Settings → Support** shows it and lets you save the file or
 clear it.
 
-Mobile chat uses a local symbol beside links. It does not fetch website icons or Markdown images
-when displaying a conversation. Link destinations are contacted only when you choose to open them.
+Mobile chat, like desktop and web chat, shows the icon of the linked site beside a web link. To get
+it, the phone requests `/favicon.ico` from the site of the link when it shows the message. The request
+contains no conversation text. When the site has no icon, a local symbol shows. Mobile chat does not
+fetch Markdown images when displaying a conversation.
 
 Mobile chat can send selected files to the conversation's desktop host through the existing encrypted
 team connection. Text pasted into the input is processed only after the user pastes it. A text paste
@@ -547,7 +553,7 @@ is not included in analytics; provider output uses the application's secret reda
   choosing Sign out on it, deletes its record. These values are redacted from logs, exports and diagnostics.
   The port and secret of the local MCP sign-in server are kept in
   `~/Library/Application Support/OpenBot/openbot-mcp-oauth-proxy-v1.json`, encrypted in the same way.
-- The GitHub connection (Server settings > Connectors) is kept in
+- The GitHub connection (Marketplace › Apps › GitHub) is kept in
   `~/Library/Application Support/OpenBot/openbot-github-connector-v1.json`, encrypted by the operating
   system's secret storage. It holds the GitHub access and refresh tokens, the account name, ID and
   avatar address, and the port and secret of the local GitHub MCP server.
@@ -567,8 +573,8 @@ is not included in analytics; provider output uses the application's secret reda
   codes go through the main process to the browser page. This folder is an OpenBot access rule;
   the CLI session key can decrypt the wider vault. Use a separate Bitwarden account if you need
   the password manager itself to enforce that separation.
-  An owner or admin of a joined server can connect that server's Bitwarden or Vaultwarden in Server
-  settings › Connectors with the server address, the personal API key and the master password. They
+  An owner or admin of a joined server can connect that server's Bitwarden or Vaultwarden in
+  Marketplace › Apps › Bitwarden with the server address, the personal API key and the master password. They
   go once, over the encrypted connection, to the server, which keeps them in
   `openbot-bitwarden-connector-v1.json` in its application data folder, encrypted by its operating
   system's secret storage, so it can unlock again after a restart. Its CLI keeps its own encrypted
@@ -583,9 +589,37 @@ is not included in analytics; provider output uses the application's secret reda
   or a one-time code is read from 1Password when the browser fills it, goes only to that page, and
   is never sent to an agent, a provider, a log or a team member. The token and each filled value
   are redacted from logs, exports and diagnostics. An owner or admin of a joined server can paste a
-  service account token for that server in Server settings › Connectors. The token goes once, over the
+  service account token for that server in Marketplace › Apps › 1Password. The token goes once, over the
   encrypted connection, to the server, which keeps it in the same file on its own disk. The
   computer that sent it does not keep it, and no answer from the server carries it.
+- The Vault (Server settings › Vault) is kept in
+  `~/Library/Application Support/OpenBot/openbot-vault-v1.json`, encrypted by the operating system's
+  secret storage. It holds the logins, payment cards (number, expiry, security code, name) and
+  contact info that the user saves. On a computer with no secret storage, such as Linux with no
+  keyring, the Vault saves nothing. The file never leaves this computer. An owner or admin of a joined
+  server can open that server's Vault in Server settings, from the desktop app or the web app: the
+  list goes over the encrypted connection with no password, card number or security code, and one of
+  those goes to them only when they show or copy it. The iPhone app shows the same list and never
+  asks for a password, a card number or a security code: a new one that the owner or admin types on
+  the phone goes once to the server, and the phone does not keep it. Other team members cannot read it. An agent gets the login sites and usernames, the card names with their last
+  four digits and expiry, and the contact info; it never gets a password, a card number, a security
+  code or login notes. An agent can add and change contact info, change the username of a login (not
+  its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
+  chat shows each change, and an item that an agent adds keeps the agent's name. A password that the
+  user types into the secure sign-in card goes to the Vault only while Save to Vault is checked. On a
+  joined server, only an owner or admin can check it, the box starts unchecked, and the password goes
+  to that server's Vault, not to the Vault of the computer where it was typed. The
+  first card fill on a site waits for the server owner's approval; team members and messaging
+  services cannot give it. The card then keeps that site and the origins of its card frames, and
+  later fills there need no approval; the user can remove a site in the card. The
+  browser types those values into the page, where the page's own scripts can read them, as they read
+  what a person types. Until that page navigates, the agent cannot take a screenshot, evaluate
+  script or record in that tab, and its snapshots hide the card fields. Passwords and card numbers
+  are redacted from logs, exports and diagnostics, also in the desktop app of an admin who showed
+  or copied one. A CSV import is read on this computer, from its own file dialog or from the text of
+  a CSV export that an owner or admin picks in the iPhone app (`vault-import-v1`). That text goes once
+  over the encrypted connection; the answer carries only the counts, and the phone deletes its copy
+  of the file after it reads it.
 - `~/Library/Application Support/OpenBot/logs/trace.ndjson` is a local trace of IPC calls,
   provider turns, main-process failures, and the steps of each connection to a joined server. Each
   line holds a time, the IPC channel name, the turn origin, the failure origin (`uncaughtException`
@@ -752,8 +786,10 @@ Network traffic can also occur when:
   files. `html_preview` draws the page in a hidden window that has its own
   session in memory. The web client gets the page through the host connection and runs it in a
   sandboxed `srcdoc` frame with an opaque origin, so the page cannot read the web client's storage
-  or its host keys; the browser sends no referrer for its requests. The mobile app does not run the
-  page: it shows the page as its file;
+  or its host keys; the browser sends no referrer for its requests. The mobile app runs the
+  page in a web view, so the server gets the network address of the phone. On iPhone and iPad the
+  web view keeps cookies and storage in memory only; on Android it has no page storage and no
+  cookies for the files that the page loads. The page cannot call the app or read its files;
 - a user opens an explicitly labeled external support or setup link;
 - a Slack workspace is connected. See [Slack connections](#slack-connections);
 - a Discord server is connected. See [Discord connections](#discord-connections);
@@ -779,6 +815,39 @@ routine's model provider, as other routine input does.
 
 Change a routine to a schedule, or delete it, to stop its URL. Deleting a routine deletes its
 receipts.
+
+## Workflows
+
+A workflow is a graph of steps that the user draws on a canvas. The host stores each workflow, its
+graph, up to 50 earlier versions of the graph, its runs, and the input and output text of each step
+in its local SQLite database. A run also keeps a copy of the graph and, for a webhook run, the
+request body. Runs stay until the workflow is deleted. Nothing about a workflow goes to the account
+service, except the webhook route metadata above.
+
+When analytics is on, product analytics gets the kind of each workflow action (for example create,
+run, approve or restore), the kind of the step, the result, the duration and a coarse failure code,
+and the outcome, duration and step counts of each run. It never gets a workflow name, step text,
+graph, or ID.
+
+- **Agent steps** send their input to the agent as a routine message. The agent's model provider
+  gets it, as with other routine input.
+- **Model and condition steps** send their input to the provider and model that the step names,
+  without tools.
+- **Outputs to a messaging place** post the workflow name and the text through that messaging
+  connection.
+- **Notifications** show the workflow name and at most 200 characters of text, with secrets
+  removed, only when notification previews are on.
+- **Webhook triggers** work like webhook routines: the same route metadata, Signal path, encrypted
+  signing secret, and 7-day receipts without the request body. The host refuses a body of more than
+  64,000 characters. The body, marked as data, is the trigger's output and goes to the next steps.
+  Remove the trigger, or delete the workflow, to stop its URL.
+
+Members of a joined server can read, change, and run a workflow when they can see and use each
+agent in it (`workflows-v1`). The graph and the step text then go to their computer. Only owners
+and administrators see a webhook URL or make a new signing secret.
+
+Deleting an agent keeps the workflows and their step history without the agent. Deleting a
+workflow deletes its versions, runs, steps, and receipts.
 
 ## Slack connections
 
@@ -1094,6 +1163,32 @@ them with the key to `api.inceptionlabs.ai`. When OpenBot reads the Mercury mode
 contact Inception. Pi keeps its session files in its own folder, as for Pi agents. OpenBot does not
 copy or upload these files. Inception's terms apply: <https://www.inceptionlabs.ai/docs/terms-of-use>.
 Inception agents stay on this computer: OpenBot does not show them to team members.
+
+### DeepSeek
+
+DeepSeek agents run in the Pi CLI that OpenBot downloads for Pi. On this computer, Connect on the
+DeepSeek row saves a DeepSeek API key. OpenBot encrypts it in its existing provider credential
+store, gives it to the local Pi process in its environment, and redacts it from logs. Pi does not
+write the key to a file. Prompts, attachments, and tool results go to that process, and Pi sends
+them with this key to `api.deepseek.com`, also when Pi has its own DeepSeek key. When OpenBot reads
+the DeepSeek model list, Pi reads its built-in list and does not contact DeepSeek. Pi keeps its
+session files in its own folder, as for Pi agents. OpenBot does not copy or upload these files.
+DeepSeek's terms apply:
+<https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html>.
+DeepSeek agents stay on this computer: OpenBot does not show them to team members.
+
+### OpenRouter
+
+OpenRouter agents run in the Pi CLI that OpenBot downloads for Pi. On this computer, Connect on the
+OpenRouter row saves an OpenRouter API key. OpenBot encrypts it in its existing provider credential
+store, gives it to the local Pi process in its environment, and redacts it from logs. Pi does not
+write the key to a file. Prompts, attachments, and tool results go to that process, and Pi sends
+them with this key to `openrouter.ai`, also when Pi has its own OpenRouter key. OpenRouter sends the
+request to the company that serves the selected model, and that company's terms also apply. When
+OpenBot reads the OpenRouter model list, Pi reads its built-in list and does not contact OpenRouter.
+Pi keeps its session files in its own folder, as for Pi agents. OpenBot does not copy or upload these
+files. OpenRouter's terms apply: <https://openrouter.ai/terms>. OpenRouter agents stay on this
+computer: OpenBot does not show them to team members.
 
 ### Local model servers
 

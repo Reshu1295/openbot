@@ -1,5 +1,5 @@
 import type { AgentModelId } from "./ipc-agent-identity";
-import type { AgentAuthState } from "./ipc-agent-status";
+import type { AccountUsageLimit, AgentAuthState } from "./ipc-agent-status";
 import type { ExternalDestination } from "./ipc-app-auth";
 import { isOneOf, isString } from "./runtime-values";
 
@@ -30,6 +30,8 @@ export const AGENT_PROVIDERS = [
   "pi",
   "muse",
   "inception",
+  "deepseek",
+  "openrouter",
   "acp",
 ] as const;
 export type AgentProviderId = (typeof AGENT_PROVIDERS)[number];
@@ -126,6 +128,15 @@ export interface AgentProviderDescriptor {
    */
   readonly skillFolders: readonly [string, ...string[]];
   /**
+   * How the CLI gets the user's skills in `~/.agents/skills`. `native`: the CLI reads that folder by
+   * itself. `plugin`: OpenBot gives the folder to Claude as a session plugin
+   * (`claudeHomeSkillPlugin`). `instructions`: the CLI does not read it, so the developer instructions
+   * name each skill and its `SKILL.md`. Sources: the strings and docs of the installed Codex, Grok,
+   * OpenCode, Cursor, Cline and Pi CLIs; the Antigravity ACP server reads only `$GEMINI_HOME`; Muse
+   * and a custom ACP agent are not known to read it.
+   */
+  readonly homeSkills: "native" | "plugin" | "instructions";
+  /**
    * How a Workspace only agent is held to its folders. `tool-sandbox`: the client checks each tool
    * and asks before an edit. `command-sandbox`: the CLI runs each command in a sandbox.
    * `confined-process`: the CLI runs in a sandboxed process of its own (`process-confinement.ts`).
@@ -179,6 +190,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "command-sandbox",
     steer: "native",
     concurrentTurns: true,
@@ -199,6 +211,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "paste",
     signInPageEnd: "callback",
     skillFolders: [".claude/skills"],
+    homeSkills: "plugin",
     workspaceEnforcement: "tool-sandbox",
     steer: "native",
     concurrentTurns: true,
@@ -219,6 +232,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -241,6 +255,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".opencode/skills", ".agents/skills", ".claude/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -263,6 +278,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".gemini/skills", ".agents/skills"],
+    homeSkills: "instructions",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -285,6 +301,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".cursor/skills", ".claude/skills", ".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -307,6 +324,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "callback",
     skillFolders: [".cline/skills", ".clinerules/skills", ".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: true,
@@ -327,6 +345,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -347,6 +366,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: "device",
     signInPageEnd: "page",
     skillFolders: [".agents/skills"],
+    homeSkills: "instructions",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -369,6 +389,53 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "native",
+    workspaceEnforcement: "confined-process",
+    steer: "native",
+    concurrentTurns: true,
+    reportsUsage: false,
+    approvalsInFullAccess: true,
+  },
+  // DeepSeek's models run in the Pi CLI that OpenBot downloads for Pi, which has a built-in DeepSeek
+  // provider. The user saves the key here. Pi's own sign-in and models stay on the Pi row.
+  deepseek: {
+    id: "deepseek",
+    displayName: "DeepSeek",
+    cliName: "Pi CLI",
+    onboardingDescription: "DeepSeek models with a DeepSeek API key",
+    signInMessage: "Add a DeepSeek API key to continue.",
+    installGuideLink: null,
+    defaultModel: "deepseek-v4-pro",
+    legacyModelPrefix: null,
+    authKind: "deepseek",
+    pickerOrder: 10,
+    localCodeSignIn: null,
+    signInPageEnd: "callback",
+    skillFolders: [".agents/skills"],
+    homeSkills: "native",
+    workspaceEnforcement: "confined-process",
+    steer: "native",
+    concurrentTurns: true,
+    reportsUsage: false,
+    approvalsInFullAccess: true,
+  },
+  // OpenRouter's models run in the Pi CLI that OpenBot downloads for Pi, which has a built-in OpenRouter
+  // provider. The user saves the key here. Pi's own sign-in and models stay on the Pi row.
+  openrouter: {
+    id: "openrouter",
+    displayName: "OpenRouter",
+    cliName: "Pi CLI",
+    onboardingDescription: "Many models with an OpenRouter API key",
+    signInMessage: "Add an OpenRouter API key to continue.",
+    installGuideLink: null,
+    defaultModel: "anthropic/claude-sonnet-5.5",
+    legacyModelPrefix: null,
+    authKind: "openrouter",
+    pickerOrder: 11,
+    localCodeSignIn: null,
+    signInPageEnd: "callback",
+    skillFolders: [".agents/skills"],
+    homeSkills: "native",
     workspaceEnforcement: "confined-process",
     steer: "native",
     concurrentTurns: true,
@@ -392,6 +459,7 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     localCodeSignIn: null,
     signInPageEnd: "callback",
     skillFolders: [".agents/skills"],
+    homeSkills: "instructions",
     workspaceEnforcement: "confined-process",
     steer: "deferred",
     concurrentTurns: false,
@@ -453,7 +521,8 @@ export function isManagedRuntimeProvider(provider: AgentProviderId): provider is
 
 /**
  * The providers that only newer Team API protocols carry: Gemini and custom ACP agents from protocol
- * 5, Cursor and Cline from protocol 6, Pi and Muse from protocol 7. No protocol carries Inception yet.
+ * 5, Cursor and Cline from protocol 6, Pi and Muse from protocol 7, Inception, DeepSeek and OpenRouter
+ * from protocol 8.
  * A joined server's settings list one only when the host's status names it.
  */
 export const LOCAL_ONLY_PROVIDERS = [
@@ -463,11 +532,24 @@ export const LOCAL_ONLY_PROVIDERS = [
   "pi",
   "muse",
   "inception",
+  "deepseek",
+  "openrouter",
   "acp",
 ] as const satisfies readonly AgentProviderId[];
 
 export function isLocalOnlyProvider(provider: AgentProviderId): boolean {
   return isOneOf(LOCAL_ONLY_PROVIDERS, provider);
+}
+
+/**
+ * The providers that sign in only with an API key that the user saves in OpenBot. They run in the Pi
+ * CLI, so their Connect and Reconnect open the key dialog.
+ */
+export const KEY_ONLY_PROVIDERS = ["inception", "deepseek", "openrouter"] as const satisfies readonly AgentProviderId[];
+export type KeyOnlyProviderId = (typeof KEY_ONLY_PROVIDERS)[number];
+
+export function isKeyOnlyProvider(provider: AgentProviderRef): provider is KeyOnlyProviderId {
+  return isOneOf(KEY_ONLY_PROVIDERS, provider);
 }
 
 /**
@@ -567,11 +649,52 @@ export function isFreeOpencodeModel(id: string, name: string): boolean {
 /**
  * Whether the provider's account quota limits this model. OpenCode reports only the Go quota, and
  * OpenCode also runs free, custom and own-sign-in models that the Go quota does not limit.
- * Antigravity reports only the Gemini quota; its Claude and GPT models share another limit. Gemini
- * model ids can be code names, so only a Claude or GPT id is left out.
+ * Antigravity's own reading is a Gemini quota group; its Claude and GPT models share another group,
+ * which only the named groups (`usageGroupForModel`) show. Gemini model ids can be code names, so only
+ * a Claude or GPT id is left out.
  */
 export function accountUsageCoversModel(provider: AgentProviderId, model: string | null | undefined): boolean {
   if (provider === "opencode") return Boolean(model?.toLowerCase().startsWith("opencode-go/"));
   if (provider === "antigravity") return !/^(?:claude|gpt)/iu.test(model ?? "");
   return true;
+}
+
+/**
+ * The windows that limit the model: the quota group that lists it when the reading lists the models
+ * of its groups, or else the reading itself. Undefined when no group lists the model.
+ */
+export function usageQuotaForModel(
+  limit: AccountUsageLimit,
+  model: string | null | undefined,
+): Pick<AccountUsageLimit, "primary" | "secondary"> | undefined {
+  return model && limit.groups?.some((group) => group.models.length > 0)
+    ? usageGroupForModel(limit.groups, model)
+    : limit;
+}
+
+/**
+ * The quota group that lists the model. Antigravity lists families ("Gemini Flash", "Gemini 4 Argon")
+ * and the model ID adds a version and an effort (`gemini-3.8-flash-high`), so each word of a listed
+ * name must be a word of the ID. The longest such name wins: "Gemini Flash Lite" before "Gemini Flash".
+ */
+export function usageGroupForModel<Group extends { models: readonly string[] }>(
+  groups: readonly Group[],
+  model: string,
+): Group | undefined {
+  const id = new Set(modelWords(model));
+  let best: { group: Group; length: number } | undefined;
+  for (const group of groups)
+    for (const listed of group.models) {
+      const words = modelWords(listed);
+      if (words.length > (best?.length ?? 0) && words.every((word) => id.has(word)))
+        best = { group, length: words.length };
+    }
+  return best?.group;
+}
+
+function modelWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9.]+/u)
+    .filter(Boolean);
 }

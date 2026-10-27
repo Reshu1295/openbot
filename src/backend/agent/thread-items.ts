@@ -1,12 +1,20 @@
 import { RequestError } from "@agentclientprotocol/sdk";
+import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import { agentProviderName, COMPUTER_USE_MCP_SERVER_NAME, DEFAULT_PROVIDER_ACCOUNT_ID } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isString } from "@openbot/contracts/runtime-values";
 import { sourceText } from "@openbot/i18n/source";
-import { type AgentProvider, MissingClaudeSessionError, RequestTimeoutError } from "../agent-client";
+import {
+  type AgentProvider,
+  MissingClaudeSessionError,
+  MissingPiSessionError,
+  RequestTimeoutError,
+} from "../agent-client";
 import { AppServerError } from "../app-server-client";
 import {
   bridgedToolName,
   type DynamicToolCallParams,
+  getArray,
+  getRecord,
   getString,
   isRecord,
   reasoningText,
@@ -106,6 +114,8 @@ export function isMissingProviderSessionError(error: unknown, provider: AgentPro
   // Provider diagnostics can mention missing resources without proving that this session is gone.
   if (error instanceof RequestError) return false;
   if (provider === "claude") return error instanceof MissingClaudeSessionError;
+  // Pi and the key-only providers that run in the Pi CLI.
+  if (error instanceof MissingPiSessionError) return true;
   if (provider === "codex") return isCodexMissingThreadError(error);
   if (
     (provider !== "grok" &&
@@ -283,9 +293,46 @@ function openBotTool(item: ThreadItem): string | null {
   return item.type === "dynamicToolCall" || item.type === "mcpToolCall" ? getString(item, "tool") : null;
 }
 
+/**
+ * The agents that a `send_message` item went to. A bridge item holds the tool's arguments in its own
+ * arguments, and some providers send them as JSON text.
+ */
+function messageRecipients(item: ThreadItem): string[] {
+  let value = bridgedToolName(item) ? getRecord(item, "arguments")?.arguments : item.arguments;
+  if (isString(value)) {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  return getArray(value, "recipientAgentIds")
+    .filter(isString)
+    .filter((id) => id.length > 0 && id.length <= INPUT_LIMITS.identifier)
+    .slice(0, INPUT_LIMITS.messageRecipients);
+}
+
+/** What the trace keeps of a tool step: its shell command, and the agents that an OpenBot message went to. */
+export function toolTraceDetail(item: ThreadItem): { command: string | null; recipientAgentIds: string[] | null } {
+  const command = getString(item, "command");
+  const recipients = openBotTool(item) === "send_message" ? messageRecipients(item) : [];
+  return { command, recipientAgentIds: recipients.length > 0 ? recipients : null };
+}
+
+/** Whether a finished tool item failed: its status says so, or its command ended with an exit code other than 0. */
+export function toolFailed(item: ThreadItem): boolean {
+  const status = getString(item, "status");
+  const exitCode = item.exitCode;
+  return status === "failed" || status === "declined" || (typeof exitCode === "number" && exitCode !== 0);
+}
+
+/** Whether an item is a tool step: a tool call, a command, a file change, a web search or a computer action. */
+export function isToolItem(item: ThreadItem): boolean {
+  return /(tool.*call|commandexecution|filechange|websearch|computeraction)/u.test(item.type.toLowerCase());
+}
+
 export function toolProgressText(item: ThreadItem, completed: boolean): string | null {
-  const type = item.type.toLowerCase();
-  if (!/(tool.*call|commandexecution|filechange|websearch|computeraction)/u.test(type)) return null;
+  if (!isToolItem(item)) return null;
   if (completed && getString(item, "status") === "failed") {
     return "A tool step failed; reviewing the result and deciding what to try next…";
   }

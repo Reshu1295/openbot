@@ -457,6 +457,32 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Подставляет логины в браузере из Bitwarden. Настройте его в приложении для компьютера.",
+  "mobile.server.connectors.bitwarden.hostSummary": "Подставляет логины в браузере из Bitwarden или Vaultwarden",
+  "mobile.server.connectors.bitwarden.description":
+    "Заполнять логины в браузере на {host} из Bitwarden или Vaultwarden.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} входит через свой Bitwarden CLI. В хранилище создайте папку с именем Shared with OpenBot и положите в неё только логины, которые могут использовать агенты. В веб-хранилище откройте Настройки › Безопасность › Ключи и посмотрите ключ API.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Адрес сервера",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden или адрес вашего сервера Vaultwarden. {host} должен подключаться к нему по HTTPS.",
+  "mobile.server.connectors.bitwarden.clientId": "client_id ключа API",
+  "mobile.server.connectors.bitwarden.clientSecret": "client_secret ключа API",
+  "mobile.server.connectors.bitwarden.masterPassword": "Мастер-пароль",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} хранит ключ API и мастер-пароль в зашифрованном виде, чтобы снова разблокировать хранилище после перезапуска. Этот телефон их не хранит.",
+  "mobile.server.connectors.bitwarden.connect": "Подключить Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "Подключение…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} входит в Bitwarden. Первый вход может занять несколько минут.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Общая папка",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Папка в Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Переместите логин в эту папку в Bitwarden, чтобы агенты могли входить с его помощью. Уберите его оттуда, чтобы прекратить доступ.",
+  "mobile.server.connectors.bitwarden.disconnect": "Отключить Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Отключить Bitwarden?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} удалит ключ API и мастер-пароль. Агенты на {host} больше не смогут подставлять логины из Bitwarden.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Репозитории, задачи и пул-реквесты для каждого агента",
   "mobile.server.connectors.github.description":
@@ -693,6 +719,11 @@ export const messages = {
     other: "{count} подключено",
   },
   "mobile.server.providers.description": "ИИ-провайдеры компьютера, на котором работает этот сервер.",
+  "mobile.server.providers.connectedTitle": "Подключено",
+  "mobile.server.providers.otherTitle": "Не подключено",
+  "mobile.server.providers.defaultProvider": "Провайдер по умолчанию",
+  "mobile.server.providers.defaultProviderHint":
+    "Новый агент на этом сервере запускается с этим провайдером. Позже его можно изменить для каждого агента.",
   "mobile.server.providers.loading": "Загрузка провайдеров…",
   "mobile.server.providers.loadFailed": "Не удалось загрузить провайдеров этого сервера.",
   "mobile.server.providers.runtimesFailed": "Не удалось получить загрузки этого сервера.",
@@ -751,6 +782,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Не удалось изменить ключ. Повторите попытку.",
   "mobile.server.providers.newKey": "Ключ",
   "mobile.server.providers.replaceKey": "Новый ключ",
+  "mobile.server.providers.keyPlaceholder": "Вставьте ключ",
   "mobile.server.providers.saveKey": "Сохранить ключ",
   "mobile.server.providers.removeKey": "Удалить ключ",
   "mobile.server.providers.removeKeyTitle": "Удалить ключ с сервера?",

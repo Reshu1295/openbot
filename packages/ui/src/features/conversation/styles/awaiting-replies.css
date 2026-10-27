@@ -35,10 +35,6 @@
   color: var(--openbot-text-muted);
 }
 
-.composer-wrap:has(.composer-attachment) .awaiting-replies:last-child {
-  margin-bottom: 0;
-}
-
 .awaiting-replies-item {
   align-items: center;
 }
@@ -98,7 +94,8 @@
   color: var(--openbot-warning-text);
 }
 
-.awaiting-replies-open {
+.awaiting-replies-open,
+.awaiting-replies-steer {
   flex: 0 0 auto;
 }
 

@@ -31,6 +31,7 @@ import { runCauseEffect } from "../backend/effect-boundary";
 import { readAppVariant, resolveAppIconPath, resolveLogoColorIconPath } from "./app-icon";
 import { type ApplicationServices, createApplicationServices } from "./application-services";
 import { type BackgroundTray, createBackgroundTray } from "./background-tray";
+import { removeClaudeCodeSessionEnvironment } from "./claude-session-environment";
 import { type DeepLink, findDeepLink, parseDeepLink } from "./deep-link-router";
 import { requestNotificationPermission, showRetainedNotification } from "./desktop-notifications";
 import { guardDevelopmentOutput } from "./development-output";
@@ -42,6 +43,7 @@ import {
   readDevelopmentRemoteDebuggingPort,
   shouldAutoStartHost,
 } from "./development-profile";
+import { stopStuckExitAfterLimit } from "./exit-watchdog";
 import { filePreviewPages } from "./file-preview-pages";
 import { hostAllowsTenantLaunch } from "./host-update-coordinator";
 import { takeHostedServerEnvironment } from "./hosted-server-bootstrap";
@@ -91,8 +93,11 @@ import { skillIpcHandlers } from "./ipc/skill-handlers";
 import { storageIpcHandlers } from "./ipc/storage-handlers";
 import { teamIpcHandlers } from "./ipc/team-handlers";
 import { updateIpcHandlers } from "./ipc/update-handlers";
+import { vaultIpcHandlers } from "./ipc/vault-handlers";
 import { voiceIpcHandlers } from "./ipc/voice-handlers";
+import { workflowIpcHandlers } from "./ipc/workflow-handlers";
 import { KeepAwake } from "./keep-awake";
+import { stopAppImageCrashpadHandlerAtExit } from "./linux-appimage-crashpad";
 import { installLinuxDesktopEntry } from "./linux-desktop-entry";
 import { configureLinuxGpu } from "./linux-gpu-mode";
 import { configureLinuxPasswordStore } from "./linux-password-store";
@@ -101,6 +106,7 @@ import {
   configureApplicationMenu,
   createMainWindowController,
   createMainWindowHolder,
+  hideWindowsForQuit,
   showMainWindow,
 } from "./main-window";
 import { ensureMacApplicationPresence, secondLaunchResponse } from "./main-window-state";
@@ -166,6 +172,8 @@ const developmentRemoteRole =
     ? process.env.OPENBOT_DEV_REMOTE_ROLE
     : null;
 const developmentTestClientEnabled = !app.isPackaged && process.env.OPENBOT_DEV_TEST_CLIENT_ENABLED === "1";
+// Before any child process starts: agents must not run as part of a Claude Code session that started OpenBot.
+removeClaudeCodeSessionEnvironment(process.env);
 // Before any child process starts: this removes the single-use claim from the environment they inherit.
 const hostedServer = takeHostedServerEnvironment(process.env, app.isPackaged, process.platform);
 const hostingDeveloperKey = takeHostingDeveloperKey(process.env, app.isPackaged);
@@ -212,6 +220,10 @@ if (hasSingleInstanceLock) {
   // Crash dumps stay in `crashDumps` on this computer. Crashpad removes old reports itself. Without
   // them, a window that disappeared on Windows left nothing to tell a crash from a quit (#2675).
   crashReporter.start({ uploadToServer: false });
+  // Linux AppImage: the handler must stop before the AppImage unmounts (#3066).
+  stopAppImageCrashpadHandlerAtExit();
+  // A file request that never finishes must not keep the process and its lock after an exit.
+  stopStuckExitAfterLimit(join(app.getPath("userData"), "logs"));
 }
 // Linux: the GPU stays on until it fails on this computer (#992). `userData` has its final path here.
 configureLinuxGpu({
@@ -340,6 +352,7 @@ const windowHolder = createMainWindowHolder();
 // Destructured so every `service.on("event", forwardX)` registration below reads as it always has.
 const {
   forwardAgentEvent,
+  forwardWorkflowNotice,
   forwardBrowserDisplayState,
   forwardUpdateStatus,
   forwardUpdatePreference,
@@ -350,6 +363,7 @@ const {
   forwardGitHubConnectorStatus,
   forwardOnePasswordConnectorStatus,
   forwardBitwardenConnectorStatus,
+  forwardVaultState,
   forwardHostStatus,
   forwardRemoteDesktopSessions,
   forwardServers,
@@ -535,7 +549,11 @@ function registerIpcHandlers({
   agentAccess,
   teamStore,
   serverTimezone,
+  promptCacheTtl,
   remoteSessionReuse,
+  externalLinkPreference,
+  externalLinks,
+  openLink,
   remoteNetworkRoute,
   remoteSessionCache,
   appBehavior,
@@ -550,6 +568,7 @@ function registerIpcHandlers({
   githubConnector,
   onePasswordConnector,
   bitwardenConnector,
+  vault,
   billing,
   license,
   hostedServers,
@@ -575,6 +594,7 @@ function registerIpcHandlers({
   trace,
   resourceMonitor,
   routineFlows,
+  workflows,
   routineResults,
 }: ApplicationServices): void {
   // Every renderer-to-main endpoint is bound by one of these, one file per domain under ./ipc.
@@ -599,6 +619,9 @@ function registerIpcHandlers({
       agentDefaults,
       agentMemoryLimit,
       remoteSessionReuse,
+      externalLinkPreference,
+      externalLinks,
+      openLink,
       remoteNetworkRoute,
       applyRemoteNetworkRoute: () => runCauseEffect(host.applyNetworkRoute()),
       remoteSessionCache,
@@ -624,7 +647,7 @@ function registerIpcHandlers({
       openExternal: (url) => shell.openExternal(url),
       permissionHelp: computerUsePermissionHelp,
     }),
-    ...providerIpcHandlers({ service, providerRuntimes, credentials: providerCredentials }),
+    ...providerIpcHandlers({ service, providerRuntimes, credentials: providerCredentials, openLink }),
     ...voiceIpcHandlers({ voice, speech, service }),
     ...accountIpcHandlers({ centralAuth, host }),
     ...skillIpcHandlers({ skills, getMainWindow: getDialogParent, translate: language.translate }),
@@ -634,9 +657,10 @@ function registerIpcHandlers({
       getMainWindow: getDialogParent,
       translate: language.translate,
     }),
-    ...githubConnectorIpcHandlers({ githubConnector, remoteServers, openExternal: (url) => shell.openExternal(url) }),
+    ...githubConnectorIpcHandlers({ githubConnector, remoteServers, openExternal: openLink }),
     ...onePasswordConnectorIpcHandlers({ onePasswordConnector, remoteServers }),
     ...bitwardenConnectorIpcHandlers({ bitwardenConnector, remoteServers }),
+    ...vaultIpcHandlers({ vault, getMainWindow: getDialogParent, translate: language.translate, remoteServers }),
     ...billingIpcHandlers({ billing }),
     ...licenseIpcHandlers({ license }),
     ...routineFeedIpcHandlers({ routineFeed }),
@@ -687,6 +711,7 @@ function registerIpcHandlers({
     ...sharedTableIpcHandlers({ service, remoteServers }),
     ...routineIpcHandlers({ service, remoteServers }),
     ...routineFlowIpcHandlers({ routineFlows, remoteServers }),
+    ...workflowIpcHandlers({ workflows, events, remoteServers }),
     ...routineResultIpcHandlers({ routineResults }),
     ...channelMemoryIpcHandlers({ service, remoteServers }),
     ...channelRoutineIpcHandlers({ service, remoteServers }),
@@ -704,6 +729,7 @@ function registerIpcHandlers({
       remoteServers,
       serverTimezone,
       agentMemoryLimit,
+      promptCacheTtl,
       agentAccess,
       localServerId: () => teamStore.getIdentity()?.serverId,
       localAgentIds: () => service.listAgents().map((agent) => agent.id),
@@ -720,7 +746,7 @@ function registerIpcHandlers({
       messaging,
       remoteServers,
       relayedInstalls: relayedMessagingInstalls,
-      openExternal: (url) => shell.openExternal(url),
+      openExternal: openLink,
     }),
     ...mcpServerIpcHandlers({
       service,
@@ -758,9 +784,9 @@ function registerIpcHandlers({
       messageLinks: new MessageLinkRelay({
         remoteServers,
         relay: signInRelayClient,
-        openUrl: (url) => openHttpLink(url, (address) => shell.openExternal(address)),
+        openUrl: (url) => openHttpLink(url, openLink),
       }),
-      openExternal: (address) => shell.openExternal(address),
+      openExternal: openLink,
     }),
     ...browserIpcHandlers({ browserPictureInPicture, browser, remoteServers, browserView, localSignIn }),
   });
@@ -1025,6 +1051,9 @@ if (!hasSingleInstanceLock) {
     .then(async () => {
       // Startup marks for `dev:bench`, which reads them over the inspector. They change nothing.
       performance.mark("openbot:when-ready");
+      // Set the Dock icon before `dock.show()` below. A development build runs the stock Electron.app,
+      // so until this call its Dock tile shows the Electron logo.
+      if (process.platform === "darwin") app.dock?.setIcon(appIconPath);
       if (!(await Effect.runPromise(hostAllowsTenantLaunch()))) {
         app.quit();
         return;
@@ -1052,7 +1081,6 @@ if (!hasSingleInstanceLock) {
           logger.warn("Unable to register the openbot:// scheme. Invitation links will not open OpenBot.");
         }
       }
-      if (process.platform === "darwin") app.dock?.setIcon(appIconPath);
       configureContentSecurityPolicy();
       configureRendererPermissions();
       await Effect.runPromise(windows.restoreMainWindowBounds());
@@ -1077,6 +1105,7 @@ if (!hasSingleInstanceLock) {
         forwardVoiceModelStatus,
         forwardVoiceStreamTranscript,
         forwardSpeechModelStatus,
+        forwardWorkflowNotice,
         prepareForUpdateInstall,
         quitting: () => quitStarted,
       });
@@ -1126,6 +1155,8 @@ if (!hasSingleInstanceLock) {
         switch (event.type) {
           case "routines-changed":
           case "channel-routines-changed":
+          // A save or a delete can remove a webhook trigger, and a new secret can add a route.
+          case "workflows-changed":
             built.eventsRuntime.syncRoutes({ all: false });
             return;
           case "agents-changed": {
@@ -1169,6 +1200,7 @@ if (!hasSingleInstanceLock) {
       // Internal usage signals for analytics only. They are not agent events, so the renderer and
       // Team API clients never receive them.
       service.on("toolUsage", (usage) => built.analytics.handleToolUsage(usage));
+      service.on("workflowRun", (end) => built.analytics.handleWorkflowRun(end));
       built.browser.onSiteVisited((visit) => built.analytics.handleSiteVisit(visit));
       sidebarLayout.on("changed", (layout) => forwardAgentEvent("local", { type: "sidebar-layout-changed", layout }));
       built.approvalAutomation.subscribe((preference) => {
@@ -1189,6 +1221,7 @@ if (!hasSingleInstanceLock) {
       built.githubConnector.onChanged(forwardGitHubConnectorStatus);
       built.onePasswordConnector.onChanged(forwardOnePasswordConnectorStatus);
       built.bitwardenConnector.onChanged(forwardBitwardenConnectorStatus);
+      built.vault.onChanged(forwardVaultState);
       remoteServers.on("changed", forwardServers);
       remoteServers.on("agent", (serverId, event, bufferedLive) => {
         forwardAgentEvent(serverId, event, bufferedLive);
@@ -1466,11 +1499,11 @@ async function prepareForUpdateInstall(): Promise<void> {
 }
 
 /**
- * The four steps ahead of `teardown.runAll()` are pinned here rather than registered: the notch
- * windows and the haptic process have to disappear the moment the user asks to quit, not behind a
- * remote host that can take seconds to stop. The two service calls among them are registered as
- * well, for the case where the quit arrives before those services exist; both are idempotent, so
- * running twice costs nothing.
+ * The five steps ahead of `teardown.runAll()` are pinned here rather than registered: the windows,
+ * the notch windows and the haptic process have to disappear the moment the user asks to quit, not
+ * behind a remote host that can take seconds to stop. The two service calls among them are
+ * registered as well, for the case where the quit arrives before those services exist; both are
+ * idempotent, so running twice costs nothing.
  */
 async function prepareForShutdown(): Promise<void> {
   if (shutdownStarted) return;
@@ -1483,6 +1516,8 @@ async function prepareForShutdown(): Promise<void> {
   await runCauseEffect(windows.flushMainWindowBounds()).catch((error) =>
     logger.error("Unable to save the main window position:", toLogValue(error)),
   );
+  // After the bounds are saved.
+  hideWindowsForQuit();
   services?.dynamicIsland.destroy();
   macHapticFeedback.destroy();
   await teardown.runAll();

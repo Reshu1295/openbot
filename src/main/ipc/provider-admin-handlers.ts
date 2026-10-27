@@ -104,10 +104,17 @@ interface ProviderAdminRemoteServers {
 interface ProviderAdminIpcDependencies {
   service: Pick<
     AgentService,
-    "startProviderCodeLogin" | "submitProviderCodeLogin" | "cancelProviderCodeLogin" | "changeProviderCredential"
+    | "startProviderCodeLogin"
+    | "submitProviderCodeLogin"
+    | "cancelProviderCodeLogin"
+    | "changeProviderCredential"
+    | "clearProviderCredential"
   >;
   credentials: Pick<ProviderCredentialStore, "status" | "set" | "clear">;
-  runtimes: Pick<ProviderRuntimeManager, "getStatus" | "download" | "cancel" | "checkForUpdates">;
+  runtimes: Pick<
+    ProviderRuntimeManager,
+    "getStatus" | "download" | "cancel" | "checkForUpdates" | "ensureKeyProviderCli"
+  >;
   customProviders: PeerCustomProviderChanges;
   remoteServers: ProviderAdminRemoteServers;
   /** Opens the page of a joined server's sign-in in this computer's browser, and relays the callback. */
@@ -384,8 +391,9 @@ export function providerAdminIpcHandlers({
         }),
       }),
       setApiKey: scopedHandler(parseProviderApiKeyInput, {
-        local: ({ provider, key }) =>
-          runCauseEffect(
+        local: async ({ provider, key }) => {
+          await runCauseEffect(runtimes.ensureKeyProviderCli(provider));
+          return runCauseEffect(
             service.changeProviderCredential(provider, () =>
               credentials
                 .set(provider, key)
@@ -395,13 +403,14 @@ export function providerAdminIpcHandlers({
                   ),
                 ),
             ),
-          ),
+          );
+        },
         remote: (input, serverId) => remoteChange(serverId, keyRoutes(serverId).apiKeySet, input),
       }),
       clearApiKey: scopedHandler(parseProviderId, {
         local: (provider) =>
           runCauseEffect(
-            service.changeProviderCredential(provider, () =>
+            service.clearProviderCredential(provider, () =>
               credentials
                 .clear(provider)
                 .pipe(

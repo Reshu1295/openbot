@@ -1,11 +1,11 @@
-export type ExternalLinkTarget = "Default browser" | "OpenBot";
-
 import {
   type AgentDefaults,
   type AgentMemoryLimit,
   type BusyMessageMode,
   DEFAULT_AGENT_DEFAULTS,
   DEFAULT_AGENT_MEMORY_LIMIT,
+  DEFAULT_EXTERNAL_LINK_PREFERENCE,
+  type ExternalLinkTarget,
 } from "@openbot/contracts/ipc";
 /** Which chord sends a message. Re-exported here so settings state can name the same type. */
 import type { SendShortcutMode } from "../conversation/send-shortcut";
@@ -73,7 +73,7 @@ export const DEFAULT_GENERAL_SETTINGS: GeneralSettingsValue = {
   keepAwake: null,
   keepAwakeOnBattery: null,
   restoreLastWorkspace: true,
-  externalLinkTarget: "Default browser",
+  externalLinkTarget: DEFAULT_EXTERNAL_LINK_PREFERENCE.target,
   desktopNotifications: true,
   notificationPreview: true,
   macBookNotch: true,

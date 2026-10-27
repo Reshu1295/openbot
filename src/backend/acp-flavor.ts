@@ -8,6 +8,8 @@ import { isRecord } from "./protocol";
  * only for an observed agent version, and name that version where the hook is set.
  */
 export interface AcpFlavor {
+  /** The `clientInfo` that `initialize` sends. Absent: `OPENBOT_ACP_CLIENT_INFO`. */
+  clientInfo?: { name: string; title: string; version: string };
   /**
    * Whether an error names this missing session. `null` gives the decision to the protocol's
    * `-32002` rule. Another error code or another session must never replace a provider session.
@@ -51,12 +53,24 @@ export interface AcpFlavor {
   /** Answer text is shown at once, not only when `session/prompt` answers. */
   streamAnswerBeforePromptReturns?: true;
   /**
+   * A model can stream its reasoning between the tokens of one answer, so a thought does not end
+   * the answer text. A tool call or the end of the turn still does.
+   */
+  thoughtsInsideAnswer?: true;
+  /**
    * `session/prompt` stays open with no update while background tasks run, so a silent turn is not
    * stalled and OpenBot does not end it (`ACP_TURN_STALL_MS`).
    */
   promptOpenForBackgroundTasks?: true;
+  /**
+   * The agent keeps one MCP server of each name for a directory, and a session that opens there
+   * replaces the server that the others in it use. Their OpenBot servers then share one token.
+   */
+  mcpServersPerDirectory?: true;
   /** OpenBot compacts by replacing the session, for an agent that reports `usage_update` and has no compact request. */
   contextCompaction?: "handoff";
+  /** A whole answer chunk that is the agent's own transport error, not answer text. OpenBot drops it. */
+  noiseChunk?: RegExp;
 }
 
 /** The protocol's own behavior: Grok and Cline. */
@@ -69,6 +83,9 @@ export const DEFAULT_ACP_FLAVOR: AcpFlavor = {};
 export const CURSOR_ACP_FLAVOR: AcpFlavor = {
   sessionNotFound: (error, sessionId) =>
     error.code === -32602 ? isRecord(error.data) && error.data.message === `Session "${sessionId}" not found` : null,
+  // Cursor 2026.10.22-27dcf5f sends "\n\nError: RetriableError: WritableIterable is closed" as one
+  // chunk after a turn that succeeded, and then ends the turn (#3334). Only the full chunk matches.
+  noiseChunk: /^\s*Error: (?:[\w$]+: )?WritableIterable is closed\s*$/u,
 };
 
 /**

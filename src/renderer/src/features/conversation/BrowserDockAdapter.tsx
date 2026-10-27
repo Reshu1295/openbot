@@ -17,6 +17,7 @@ import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, Show, snapshot, untrack } from "solid-js";
 import { deviceSendShortcut } from "../../send-shortcut-preference";
 import { serverSupportsCapability } from "../servers/server-capabilities";
+import { browserSecretVault } from "./browser-secret-vault";
 import { conversationPort } from "./conversation-port";
 import { conversationRuntime } from "./conversation-runtime";
 import { useConversationViewScope } from "./conversation-scope";
@@ -285,7 +286,7 @@ export function BrowserDockAdapter(adapterProps: { tab: BrowserTab | undefined; 
       hold: hold(),
       editingDeliveryId: editingDeliveryId() ?? null,
       canSteer: Boolean(props.activeTurnId),
-      canRunAsTask: Boolean(props.tasks?.onRunQueuedMessage),
+      canRunAsTask: Boolean(props.threads?.onRunQueuedMessage),
       island: dockIsland(island()),
       handoffPending: handoffPending(),
       canHandoff: Boolean(onHandoff()),
@@ -322,7 +323,7 @@ export function BrowserDockAdapter(adapterProps: { tab: BrowserTab | undefined; 
         props.onSteerQueuedMessage(action.deliveryId);
         return;
       case "run-as-task":
-        props.tasks?.onRunQueuedMessage(action.deliveryId);
+        props.threads?.onRunQueuedMessage?.(action.deliveryId);
         return;
       case "cancel":
         props.onCancelQueuedMessage(action.deliveryId);
@@ -404,12 +405,13 @@ export function BrowserDockAdapter(adapterProps: { tab: BrowserTab | undefined; 
             onSend={send}
             onStop={props.onStop}
             onSteer={props.onSteerQueuedMessage}
-            onRunAsTask={props.tasks?.onRunQueuedMessage}
+            onRunAsTask={props.threads?.onRunQueuedMessage}
             onCancel={props.onCancelQueuedMessage}
             onEdit={(delivery) => void editQueuedMessage(delivery)}
             onCancelEdit={() => void cancelQueuedMessageEdit()}
             onReorder={reorderPresentedQueue}
             onHandoff={onHandoff()}
+            vault={browserSecretVault(props.server)}
             onRespondSecret={(input) => conversationRuntime(props).agent.respondToBrowserSecret(input)}
             onAnswerPrompt={answerPrompt}
             onRespondApproval={respondApproval}

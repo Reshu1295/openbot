@@ -32,6 +32,7 @@ import {
   useAgentBrowserTab,
   useAgentBrowserTabs,
   useBrowserRequests,
+  useBrowserTabsLoaded,
 } from "@/features/workspace/components/use-live-workspace";
 import { useMobileWorkspace } from "@/features/workspace/context/mobile-workspace-context";
 import type { MobileAgent, MobileBrowserViewSupport } from "@/features/workspace/model/workspace-types";
@@ -45,8 +46,9 @@ import { useLiquidGlass } from "@/shared/lib/use-liquid-glass";
 import { BrowserLiveStage, type BrowserLiveStageHandle } from "../components/browser-live-stage";
 import { useBrowserFeature } from "../components/use-browser-feature";
 import { useBrowserLiveView } from "../components/use-browser-live-view";
+import { useUnseenBrowserTabs } from "../components/use-unseen-browser-tabs";
 import { namedKeyInputs, pasteInput, selectAllInputs, textChangeInputs, typedTextInputs } from "../model/browser-keys";
-import type { MobileBrowserTab } from "../model/browser-tabs";
+import { useProvideBrowserSheetControls } from "../model/browser-sheet-bridge";
 import type { LiveViewMode } from "../model/live-view-gestures";
 
 /** The floating controls are 48 points, 8 points from the safe area, as in the chat. */
@@ -65,7 +67,13 @@ const FADE: CSSTransitionProperties = {
   transitionDuration: 200,
   transitionTimingFunction: cubicBezier(0.23, 1, 0.32, 1),
 };
-const NO_SUPPORT: MobileBrowserViewSupport = { view: false, clipboard: false, contextMenu: false, viewport: false };
+const NO_SUPPORT: MobileBrowserViewSupport = {
+  view: false,
+  clipboard: false,
+  contextMenu: false,
+  viewport: false,
+  navigation: false,
+};
 
 // Trackpad mode is the default. The mode lasts for the app session: a user who turned it off keeps
 // it off on the next tab.
@@ -167,6 +175,9 @@ function BrowserView({
   const [keyboardShown, setKeyboardShown] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [openingTab, setOpeningTab] = useState(false);
+  // A tab that opened behind this one, such as from a link, puts a dot on the tab button.
+  const tabsLoaded = useBrowserTabsLoaded(agent.serverId);
+  const unseenTabs = useUnseenBrowserTabs(tabs, tab?.id ?? null, tabsLoaded, openingTab);
   // Android shows the page's menu as a dropdown that opens from code, at the pointer.
   const [pageMenu, setPageMenu] = useState<{
     actions: MenuAction[];
@@ -272,6 +283,18 @@ function BrowserView({
     );
   };
 
+  /** Loads an address in the tab on screen. A host that cannot do that opens it in a new tab. */
+  const loadUrl = (url: string) => {
+    if (!tab || !support.navigation) {
+      void openTab(url);
+      return;
+    }
+    void haptics.impact("soft");
+    void controlBrowserTab(agent.serverId, { type: "load", tabId: tab.id, url }).catch(() =>
+      fail(t("mobile.browser.notice.navigateFailed")),
+    );
+  };
+
   /** A new tab of this agent, in the agent's thread so that the agent can use it too. */
   const openTab = async (url: string) => {
     const ownerThreadId = threadId ?? tabs.find((candidate) => candidate.ownerThreadId)?.ownerThreadId;
@@ -292,14 +315,13 @@ function BrowserView({
     }
   };
 
-  /** Closes the tab on screen, and shows the next one of the agent's tabs. */
-  const closeTab = async () => {
-    if (!tab) return;
-    const index = tabs.findIndex((candidate) => candidate.id === tab.id);
+  /** Closes one of the agent's tabs. When it is the tab on screen, the next one of the agent's tabs shows. */
+  const closeTab = async (closedId: string) => {
+    const index = tabs.findIndex((candidate) => candidate.id === closedId);
     const next = tabs[index + 1] ?? tabs[index - 1];
     try {
-      await controlBrowserTab(agent.serverId, { type: "close", tabId: tab.id });
-      onChooseTab(next?.id);
+      await controlBrowserTab(agent.serverId, { type: "close", tabId: closedId });
+      if (closedId === tab?.id) onChooseTab(next?.id);
     } catch {
       fail(t("mobile.browser.notice.closeTabFailed"));
     }
@@ -401,35 +423,6 @@ function BrowserView({
         ]
       : []),
   ];
-  const tabActions: MenuAction[] = [
-    ...(tabs.length > 0
-      ? [
-          {
-            id: "tabs",
-            title: "",
-            displayInline: true,
-            subactions: tabs.map(
-              (candidate): MenuAction => ({
-                id: `tab:${candidate.id}`,
-                title: tabTitle(candidate, t("mobile.browser.tabs.untitled")),
-                state: candidate.id === tab?.id ? "on" : "off",
-              }),
-            ),
-          } satisfies MenuAction,
-        ]
-      : []),
-    { id: "new-tab", title: t("mobile.browser.tabs.new"), image: "plus" },
-    ...(tab
-      ? [
-          {
-            id: "close-tab",
-            title: t("mobile.browser.tabs.close"),
-            image: "xmark",
-            attributes: { destructive: true },
-          } satisfies MenuAction,
-        ]
-      : []),
-  ];
   const clipboardActions: MenuAction[] = [
     { id: "paste", title: t("mobile.browser.pasteFromPhone"), image: "doc.on.clipboard" },
     ...(support.clipboard
@@ -458,6 +451,25 @@ function BrowserView({
   const showControls = allowed && support.view && tab !== null;
   const showNewTab = allowed && support.view && tab === null;
   const controlBottom = keyboardShown ? CONTROL_OFFSET : insets.bottom + CONTROL_OFFSET;
+
+  useProvideBrowserSheetControls(agent.serverId, agent.id, {
+    tabId: tab?.id ?? null,
+    unseenTabIds: unseenTabs,
+    canUseTab,
+    openingTab,
+    navigate,
+    reload,
+    loadUrl,
+    openTab: () => void openTab(NEW_TAB_URL),
+    closeTab: (closedId) => void closeTab(closedId),
+    chooseTab: onChooseTab,
+  });
+
+  const openSheet = () => {
+    void haptics.impact("soft");
+    keyboardField.current?.blur();
+    router.push({ pathname: "/browser-tabs/[agentId]", params: { agentId: agent.id, serverId: agent.serverId } });
+  };
 
   return (
     <View className="flex-1 bg-background">
@@ -579,39 +591,33 @@ function BrowserView({
               >
                 <Keyboard color={iconColor} size={22} strokeWidth={2} />
               </ChatGlassIconButton>
-              <HideableMenu hidden={!showControls}>
-                <MenuView
-                  actions={tabActions}
-                  onPressAction={({ nativeEvent }) => {
-                    const id = nativeEvent.event;
-                    if (id === "new-tab") void openTab(NEW_TAB_URL);
-                    else if (id === "close-tab") void closeTab();
-                    else if (id.startsWith("tab:")) {
-                      void haptics.selection();
-                      onChooseTab(id.slice("tab:".length));
-                    }
-                  }}
-                  style={{ height: CONTROL_SIZE, width: CONTROL_SIZE }}
+              <View>
+                <ChatGlassIconButton
+                  accessibilityLabel={t("mobile.browser.tabs.button", { count: tabs.length })}
+                  fallbackBackground={fieldBackground}
+                  liquidGlassAvailable={liquidGlass}
+                  hidden={!showControls}
+                  accessibilityValue={
+                    unseenTabs.size > 0 ? { text: t("mobile.browser.tabs.openedInBackground") } : undefined
+                  }
+                  onPress={openSheet}
                 >
-                  <GlassCircle liquidGlass={liquidGlass} fallbackBackground={fieldBackground} hidden={!showControls}>
-                    <View
-                      accessible
-                      accessibilityRole="button"
-                      accessibilityLabel={t("mobile.browser.tabs.button", { count: tabs.length })}
-                      className="flex-1 items-center justify-center"
-                    >
-                      <View
-                        className="items-center justify-center"
-                        style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: iconColor }}
-                      >
-                        <Typography.Paragraph type="body-xs" weight="semibold">
-                          {format.number(tabs.length)}
-                        </Typography.Paragraph>
-                      </View>
-                    </View>
-                  </GlassCircle>
-                </MenuView>
-              </HideableMenu>
+                  <View
+                    className="items-center justify-center"
+                    style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: iconColor }}
+                  >
+                    <Typography.Paragraph type="body-xs" weight="semibold">
+                      {format.number(tabs.length)}
+                    </Typography.Paragraph>
+                  </View>
+                </ChatGlassIconButton>
+                {showControls && unseenTabs.size > 0 ? (
+                  <View
+                    pointerEvents="none"
+                    className="absolute top-0 right-0 size-3 rounded-full border-2 border-background bg-accent"
+                  />
+                ) : null}
+              </View>
             </View>
             <View pointerEvents="box-none" className="absolute inset-0 items-center justify-center">
               <ChatGlassButton
@@ -783,16 +789,6 @@ function BrowserView({
 }
 
 function ignoreInput() {}
-
-/** A tab's title, or the site it shows when the page has no title yet. */
-function tabTitle(tab: MobileBrowserTab, untitled: string): string {
-  if (tab.title.trim()) return tab.title;
-  try {
-    return new URL(tab.url).host || untitled;
-  } catch {
-    return untitled;
-  }
-}
 
 /**
  * A glass circle of the control size, as the chat header draws one. The menu owns the touch. Hidden,

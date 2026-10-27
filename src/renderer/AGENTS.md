@@ -1,13 +1,12 @@
 # `src/renderer`
 
-The UI stack sits on prerelease channels your training data does not cover: `solid-js@2.0.0-rc.0`
+The UI stack sits on prerelease channels your training data does not cover: `solid-js@2.0.0-rc.18`
 with `@solidjs/signals` and `@solidjs/web` at the same RC, `@kobalte/core@2.0.0-alpha.0` (patched
-here), plus patched `lucide-solid` and `solid-sonner`. `@solidjs/signals` is patched to dispose the
-children of a memo run that a list-row removal interrupts, and so that `flatten` keeps a function child
-that comes before an array child (`[memo, <Tab />]`), which otherwise reaches `insertBefore` and halts
-the UI. Check that the patch still applies when you upgrade Solid. `@solidjs/web` has the rc.9 event delegation fix backported: a delegated event
-stops when its target leaves the DOM. Drop the patch when you upgrade to rc.9 or later. Do not
-trust your memory of these APIs —
+here), plus patched `lucide-solid` and `solid-sonner`. Read props in the compute function of a
+`createEffect`, not in its callback. The compiler makes a conditional prop (`a() && b`, `x.y ? a : b`)
+a getter that creates a memo, and a memo created in an effect callback throws
+`PRIMITIVE_IN_EFFECT_CALLBACK` and halts the UI. Use `untrack` in the compute function when the read
+must not run the effect again. Do not trust your memory of these APIs —
 check `package.json` for what is actually installed, and load the reference that matches the work:
 
 - `node_modules/solid-js/CHEATSHEET.md` — the source of truth for core Solid APIs. Read it before

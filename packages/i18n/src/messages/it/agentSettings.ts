@@ -74,7 +74,6 @@ export const messages = {
   "agentSettings.avatar.processFailed": "Impossibile elaborare l'avatar dell'agente.",
 
   "agentSettings.runtime.model": "Modello dell'agente",
-  "agentSettings.runtime.providerBusy": "Aspetta che il lavoro in corso finisca prima di cambiare provider o account.",
   "agentSettings.runtime.modelUnavailable": "I modelli sono disponibili dopo la connessione di una CLI dell'agente.",
   "agentSettings.runtime.reasoning": "Ragionamento",
   "agentSettings.runtime.reasoningLabel": "Livello di ragionamento dell'agente",
@@ -84,8 +83,8 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "Accesso dell'agente",
   "agentSettings.runtime.busyMessage": "Durante il lavoro",
   "agentSettings.runtime.busyMessageLabel": "Messaggi mentre l'agente lavora",
-  "agentSettings.runtime.taskLimit": "Attività parallele",
-  "agentSettings.runtime.taskLimitLabel": "Attività eseguite contemporaneamente",
+  "agentSettings.runtime.taskLimit": "Thread in parallelo",
+  "agentSettings.runtime.taskLimitLabel": "Thread eseguiti contemporaneamente",
   "agentSettings.runtime.workingDirectory": "Cartella di lavoro",
   "agentSettings.runtime.notAvailable": "Non ancora disponibile",
   "agentSettings.runtime.fullAccessNote":
@@ -105,7 +104,7 @@ export const messages = {
     "{provider} non può indirizzare un turno in corso. I messaggi inviati mentre lavora restano in coda.",
   "agentSettings.taskLimit.default": "Predefinito ({count})",
   "agentSettings.taskLimit.oneTurn":
-    "{provider} esegue un turno alla volta. Le attività e la chat di questo agente si aspettano a vicenda.",
+    "{provider} esegue un turno alla volta. I thread di questo agente si aspettano a vicenda.",
 
   "agentSettings.notifications.title": "Notifiche",
 

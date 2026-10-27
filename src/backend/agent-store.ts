@@ -25,6 +25,7 @@ import {
   type AgentBackupModels,
   type AgentDefaults,
   type AgentModelId,
+  type AgentPendingRuntime,
   type AgentProviderId,
   type AgentReasoningEffort,
   type AgentSessionSettingOverrides,
@@ -43,6 +44,7 @@ import {
   isAgentAccess,
   isAgentBackupModels,
   isAgentModel,
+  isAgentPendingRuntime,
   isAgentSessionSettingOverrides,
   isAgentSessionSettingResets,
   isAgentTaskLimit,
@@ -105,6 +107,8 @@ type PersistedStoredAgent = Omit<StoredAgent, "avatarUrl" | "provider" | "access
   backupModels?: AgentBackupModels;
   // Present only while the agent works on a backup model for a usage limit.
   usageLimitReturn?: AgentUsageLimitReturn;
+  // Present only while a turn or task still runs on the previous provider.
+  pendingRuntime?: AgentPendingRuntime;
   // Present only while a user hides the agent. Absent on every agent stored before hiding existed.
   hiddenAt?: string;
 };
@@ -662,6 +666,8 @@ export class AgentStore {
     input: UpdateAgentInput & {
       /** The model to go back to after a usage limit. `null` removes it. */
       usageLimitReturn?: AgentUsageLimitReturn | null;
+      /** The provider to use from the next turn. `null` removes it. */
+      pendingRuntime?: AgentPendingRuntime | null;
       /** The shared or the agent's own session. It replaces a named profile. */
       ownBrowserSession?: boolean;
       /** The named browser profile. `null` removes it. The caller checks that the profile exists. */
@@ -785,6 +791,14 @@ export class AgentStore {
         if (!isAgentUsageLimitReturn(input.usageLimitReturn)) throw new Error("Invalid usage limit model.");
         next.usageLimitReturn = { ...input.usageLimitReturn };
       }
+      if (input.pendingRuntime === null) delete next.pendingRuntime;
+      else if (input.pendingRuntime !== undefined) {
+        if (!isAgentPendingRuntime(input.pendingRuntime)) throw new Error("Invalid pending runtime.");
+        next.pendingRuntime = { ...input.pendingRuntime };
+      } else if (next.provider !== agent.provider || next.providerAccountId !== agent.providerAccountId) {
+        // A handover that landed ends the queued change.
+        delete next.pendingRuntime;
+      }
       next.updatedAt = new Date().toISOString();
       const previous = { ...agent };
       const modelChanged =
@@ -808,6 +822,7 @@ export class AgentStore {
       if (next.providerAccountId === undefined) delete agent.providerAccountId;
       if (next.backupModels === undefined) delete agent.backupModels;
       if (next.usageLimitReturn === undefined) delete agent.usageLimitReturn;
+      if (next.pendingRuntime === undefined) delete agent.pendingRuntime;
       if (next.browserProfileId === undefined) delete agent.browserProfileId;
       if (next.allowAutomation === undefined) delete agent.allowAutomation;
       if (next.allowNewChat === undefined) delete agent.allowNewChat;
@@ -821,6 +836,7 @@ export class AgentStore {
         if (previous.providerAccountId === undefined) delete agent.providerAccountId;
         if (previous.backupModels === undefined) delete agent.backupModels;
         if (previous.usageLimitReturn === undefined) delete agent.usageLimitReturn;
+        if (previous.pendingRuntime === undefined) delete agent.pendingRuntime;
         if (previous.browserProfileId === undefined) delete agent.browserProfileId;
         if (previous.allowAutomation === undefined) delete agent.allowAutomation;
         if (previous.allowNewChat === undefined) delete agent.allowNewChat;
@@ -1838,6 +1854,7 @@ function isStoredAgent(value: unknown): value is PersistedStoredAgent {
     (record.providerAccountId === undefined || isProviderAccountId(record.providerAccountId)) &&
     (record.backupModels === undefined || isAgentBackupModels(record.backupModels)) &&
     (record.usageLimitReturn === undefined || isAgentUsageLimitReturn(record.usageLimitReturn)) &&
+    (record.pendingRuntime === undefined || isAgentPendingRuntime(record.pendingRuntime)) &&
     (record.hiddenAt === undefined || isHiddenAt(record.hiddenAt)) &&
     isAvatarSeed(record.avatarSeed) &&
     (record.avatarHue === null || isAvatarHue(record.avatarHue)) &&
@@ -1937,6 +1954,10 @@ function readStoredAgent(value: unknown): ReadStoredAgent | UnreadableStoredAgen
     value.usageLimitReturn === undefined || isAgentUsageLimitReturn(value.usageLimitReturn)
       ? value.usageLimitReturn
       : reset("usageLimitReturn", undefined);
+  const pendingRuntime =
+    value.pendingRuntime === undefined || isAgentPendingRuntime(value.pendingRuntime)
+      ? value.pendingRuntime
+      : reset("pendingRuntime", undefined);
   // A time this build cannot read keeps the agent hidden, at the time of the read: a user hid it,
   // and showing it again would run its routines without a decision of the user.
   const hiddenAt =
@@ -1993,6 +2014,7 @@ function readStoredAgent(value: unknown): ReadStoredAgent | UnreadableStoredAgen
     ...(providerAccountId === undefined ? {} : { providerAccountId }),
     ...(backupModels === undefined ? {} : { backupModels }),
     ...(usageLimitReturn === undefined ? {} : { usageLimitReturn }),
+    ...(pendingRuntime === undefined ? {} : { pendingRuntime }),
     ...(hiddenAt === undefined ? {} : { hiddenAt }),
     ...(sessionSettingOverrides === undefined ? {} : { sessionSettingOverrides }),
     ...(sessionSettingResets === undefined ? {} : { sessionSettingResets }),

@@ -273,6 +273,7 @@ export const messages = defineMessages("mobile.agent", {
   "mobile.agent.runtime.provider": "Provider",
   "mobile.agent.runtime.account": "Account",
   "mobile.agent.runtime.accountNumbered": "Account {number}",
+  "mobile.agent.runtime.accountApiKey": "API key",
   "mobile.agent.runtime.accountUnsupported": "This host cannot change the agent account from a remote device.",
   "mobile.agent.runtime.model": "Model",
   "mobile.agent.runtime.reasoning": "Reasoning",

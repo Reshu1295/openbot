@@ -49,10 +49,19 @@ export const messages = {
   "settings.restoreWorkspace.title": "Restaurer le dernier espace de travail au lancement",
   "settings.restoreWorkspace.description": "Rouvrir l’espace de travail et les tâches de votre session précédente.",
   "settings.externalLinks.title": "Ouvrir les liens externes dans",
-  "settings.externalLinks.description": "Choisir où s’ouvrent les liens provenant des conversations.",
+  "settings.externalLinks.description":
+    "Les liens des discussions, des pages de connexion et de facturation s’ouvrent ici.",
   // The two link targets. The saved value stays in English; only the label is translated.
   "settings.externalLinks.defaultBrowser": "Navigateur par défaut",
   "settings.externalLinks.openbot": "OpenBot",
+  "settings.externalLinks.defaultBrowserNamed": "Navigateur par défaut ({name})",
+  "settings.externalLinks.otherApp": "Autre app…",
+  "settings.externalLinks.command": "Commande…",
+  "settings.externalLinks.commandLabel": "Commande du navigateur",
+  "settings.externalLinks.commandPlaceholder": "Chemin du programme ou commande",
+  "settings.externalLinks.useCommand": "Utiliser",
+  "settings.externalLinks.fallback.title": "Impossible d’ouvrir {name}",
+  "settings.externalLinks.fallback.description": "Le lien s’est ouvert dans le navigateur par défaut.",
   "settings.sendShortcut.title": "Raccourci d’envoi",
   "settings.sendShortcut.description":
     "Choisissez les touches qui envoient un message sur cet appareil et dans ce navigateur.",
@@ -136,7 +145,7 @@ export const messages = {
     "Dictée dans la zone de message. Les modèles locaux s’exécutent sur cet ordinateur ; ElevenLabs s’exécute dans le cloud.",
   "settings.tab.computerUse.title": "Computer Use",
   "settings.tab.computerUse.description":
-    "Autoriser OpenBot à voir et à interagir avec les applications de cet ordinateur.",
+    "Autoriser les agents de l'OpenBot de cet ordinateur à voir et utiliser ses apps. Les agents d'un autre serveur utilisent l'ordinateur de ce serveur.",
   "settings.tab.profile.title": "Profil",
   "settings.tab.profile.description": "Gérer votre apparence dans OpenBot.",
   "settings.tab.mobileConnect.title": "Appli mobile",
@@ -167,13 +176,12 @@ export const messages = {
   "settings.mobileConnect.app.copyLink": "Copier le lien",
   "settings.mobileConnect.app.linkCopied": "Lien copié",
   "settings.mobileConnect.iosApp.title": "OpenBot pour iPhone",
-  "settings.mobileConnect.iosApp.badge": "Bêta",
-  "settings.mobileConnect.iosApp.description": "Bêta publique sur TestFlight. Pour iOS 16.4 ou version ultérieure.",
-  "settings.mobileConnect.iosApp.qrLabel": "Code QR de l’invitation TestFlight",
-  "settings.mobileConnect.iosApp.step.testFlight": "Sur votre iPhone, installez TestFlight depuis l’App Store.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "Scannez ce code QR avec l’appareil photo de l’iPhone, ou copiez le lien d’invitation et ouvrez-le sur votre iPhone.",
-  "settings.mobileConnect.iosApp.step.install": "Dans TestFlight, touchez « Accepter », puis « Installer ».",
+  "settings.mobileConnect.iosApp.badge": "Disponible",
+  "settings.mobileConnect.iosApp.description": "Sur l’App Store. Pour iOS 16.4 ou version ultérieure.",
+  "settings.mobileConnect.iosApp.qrLabel": "Code QR de l’App Store",
+  "settings.mobileConnect.iosApp.step.scan":
+    "Scannez ce code QR avec l’appareil photo de l’iPhone, ou copiez le lien et ouvrez-le sur votre iPhone.",
+  "settings.mobileConnect.iosApp.step.install": "Dans l’App Store, touchez « Obtenir ».",
   "settings.mobileConnect.androidApp.title": "OpenBot pour Android",
   "settings.mobileConnect.androidApp.badge": "Disponible",
   "settings.mobileConnect.androidApp.description": "Sur Google Play. Pour Android 7.0 ou version ultérieure.",
@@ -286,7 +294,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "Mes six derniers mois avec OpenBot",
-  "settings.profile.activity.title": "Activité",
+  "settings.profile.activity.title": "Activité sur cet ordinateur",
   "settings.profile.activity.activeDays": {
     one: "{count} jour actif sur un an",
     other: "{count} jours actifs sur un an",

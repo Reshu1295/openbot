@@ -1,11 +1,12 @@
 // The provider accounts of this host for an administrator of a joined server (`provider-accounts-v1`).
 
 import { type AgentProviderId, DEFAULT_PROVIDER_ACCOUNT_ID } from "@openbot/contracts/ipc";
+import { CLAUDE_API_KEY_ACCOUNT_ID } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import { PROVIDER_ACCOUNTS_MESSAGE_LIMIT } from "@openbot/contracts/team-protocol/provider-accounts-v1";
 import { sourceText } from "@openbot/i18n/source";
 import { Cause, Effect, Exit, Option, Semaphore } from "effect";
 import { providerLabel } from "../backend/agent/thread-items";
-import type { AgentService } from "../backend/agent-service";
+import { AgentLifecycleFailed, type AgentService } from "../backend/agent-service";
 import type { BrowserHost } from "../backend/browser-host";
 import { type HostSignInPageMode, HostSignInPages } from "./host-sign-in-pages";
 
@@ -110,13 +111,29 @@ export class ProviderAccountsHost {
     return this.#dependencies.service.renameProviderAccount(provider, accountId, label).pipe(Effect.asVoid);
   }
 
+  /**
+   * A client without claude-api-key-v1 shows the key account as a signed-out account that it can
+   * remove. Only the key dialog removes it, with the key.
+   */
   remove(provider: AgentProviderId, accountId: string) {
+    if (provider === "claude" && accountId === CLAUDE_API_KEY_ACCOUNT_ID)
+      return Effect.fail(
+        new AgentLifecycleFailed({
+          operation: "removeProviderAccount",
+          cause: new Error(sourceText("error.provider.accountUsesKey", { provider: providerLabel(provider) })),
+        }),
+      );
     return this.#dependencies.service.removeProviderAccount(provider, accountId).pipe(Effect.asVoid);
   }
 
-  /** Moves the agent to an account of its provider; null is the provider's own sign-in. */
+  /**
+   * Moves the agent to an account of its provider; null is the provider's own sign-in. Only the
+   * Team API calls this, and its protocol has no `pendingRuntime`, so a change during work is refused.
+   */
   setAgentAccount(agentId: string, accountId: string | null) {
-    return this.#dependencies.service.updateAgent({ agentId, providerAccountId: accountId }).pipe(Effect.asVoid);
+    return this.#dependencies.service
+      .updateAgent({ agentId, providerAccountId: accountId }, undefined, false)
+      .pipe(Effect.asVoid);
   }
 
   close() {

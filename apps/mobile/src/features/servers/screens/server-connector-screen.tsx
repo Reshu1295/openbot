@@ -1,4 +1,5 @@
 import { Stack, useLocalSearchParams } from "expo-router";
+import { BitwardenConnectorPage } from "@/features/servers/components/bitwarden-connector-page";
 import { GitHubConnectorPage } from "@/features/servers/components/github-connector-page";
 import { MessagingConnectorPage } from "@/features/servers/components/messaging-connector-page";
 import { OnePasswordConnectorPage } from "@/features/servers/components/onepassword-connector-page";
@@ -11,12 +12,20 @@ import { useText } from "@/shared/lib/text";
 export function ServerConnectorScreen() {
   const { t } = useText();
   const { serverId, id } = useLocalSearchParams<{ serverId: string; id: string }>();
-  const { server, agents, connectors, onePasswordAvailable, messaging, github, onePassword } = useServerConnectors(
-    serverId,
-    isMobileConnectorId(id) ? id : null,
-  );
+  const {
+    server,
+    agents,
+    connectors,
+    onePasswordAvailable,
+    bitwardenAvailable,
+    messaging,
+    github,
+    onePassword,
+    bitwarden,
+  } = useServerConnectors(serverId, isMobileConnectorId(id) ? id : null);
   const reachable =
-    isMobileConnectorId(id) && (id === "onepassword" ? onePasswordAvailable : id !== "bitwarden" && connectors);
+    isMobileConnectorId(id) &&
+    (id === "onepassword" ? onePasswordAvailable : id === "bitwarden" ? bitwardenAvailable : connectors);
   if (!server || !reachable)
     return (
       <SettingsContent>
@@ -30,7 +39,9 @@ export function ServerConnectorScreen() {
         <GitHubConnectorPage server={server} query={github} />
       ) : id === "onepassword" ? (
         <OnePasswordConnectorPage server={server} query={onePassword} />
-      ) : id === "bitwarden" ? null : (
+      ) : id === "bitwarden" ? (
+        <BitwardenConnectorPage server={server} query={bitwarden} />
+      ) : (
         <MessagingConnectorPage server={server} platform={id} query={messaging[id]} agents={agents} />
       )}
     </>

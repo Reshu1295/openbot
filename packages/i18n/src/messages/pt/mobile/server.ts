@@ -409,6 +409,33 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Preenche logins do navegador a partir do Bitwarden. Configure no app para computador.",
+  "mobile.server.connectors.bitwarden.hostSummary":
+    "Preenche logins do navegador a partir do Bitwarden ou do Vaultwarden",
+  "mobile.server.connectors.bitwarden.description":
+    "Preencha logins do navegador em {host} a partir do Bitwarden ou do Vaultwarden.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} entra com a própria CLI do Bitwarden. No seu cofre, crie uma pasta chamada Shared with OpenBot e coloque nela apenas os logins que os agentes podem usar. No cofre web, abra Configurações › Segurança › Chaves e veja sua chave de API.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Endereço do servidor",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden, ou o endereço do seu servidor Vaultwarden. {host} precisa acessá-lo por HTTPS.",
+  "mobile.server.connectors.bitwarden.clientId": "client_id da chave de API",
+  "mobile.server.connectors.bitwarden.clientSecret": "client_secret da chave de API",
+  "mobile.server.connectors.bitwarden.masterPassword": "Senha mestra",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} guarda a chave de API e a senha mestra criptografadas, para desbloquear de novo depois de reiniciar. Este celular não as guarda.",
+  "mobile.server.connectors.bitwarden.connect": "Conectar Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "Conectando…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} está entrando no Bitwarden. A primeira entrada pode levar alguns minutos.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Pasta compartilhada",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Pasta no Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Mova um login para esta pasta no Bitwarden para que os agentes possam usá-lo. Remova-o para parar.",
+  "mobile.server.connectors.bitwarden.disconnect": "Desconectar Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Desconectar o Bitwarden?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} remove a chave de API e a senha mestra. Os agentes em {host} não podem mais preencher logins do Bitwarden.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Repositórios, issues e pull requests para todos os agentes",
   "mobile.server.connectors.github.description":
@@ -621,6 +648,11 @@ export const messages = {
   "mobile.server.settings.providers": "Provedores",
   "mobile.server.settings.providersConnected": { one: "{count} conectado", other: "{count} conectados" },
   "mobile.server.providers.description": "Os provedores de IA do computador que executa este servidor.",
+  "mobile.server.providers.connectedTitle": "Conectado",
+  "mobile.server.providers.otherTitle": "Não conectado",
+  "mobile.server.providers.defaultProvider": "Provedor padrão",
+  "mobile.server.providers.defaultProviderHint":
+    "Um novo agente neste servidor começa com este provedor. Você pode alterá-lo para cada agente depois.",
   "mobile.server.providers.loading": "Carregando provedores…",
   "mobile.server.providers.loadFailed": "Não foi possível carregar os provedores deste servidor.",
   "mobile.server.providers.runtimesFailed": "Não foi possível carregar os downloads deste servidor.",
@@ -679,6 +711,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "Não foi possível alterar a chave. Tente de novo.",
   "mobile.server.providers.newKey": "Chave",
   "mobile.server.providers.replaceKey": "Nova chave",
+  "mobile.server.providers.keyPlaceholder": "Cole sua chave",
   "mobile.server.providers.saveKey": "Salvar chave",
   "mobile.server.providers.removeKey": "Remover chave",
   "mobile.server.providers.removeKeyTitle": "Remover a chave do servidor?",

@@ -7,6 +7,7 @@ import type {
 } from "@openbot/contracts/ipc";
 import { decodeRegistryEntries, decodeRegistryInstallResult, decodeRegistryOperations } from "@openbot/contracts/ipc";
 import { ACP_REGISTRY_ROUTES } from "@openbot/contracts/team-protocol/acp-registry-v1";
+import { CLAUDE_API_KEY_CAPABILITY } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import {
   PROVIDER_ACCOUNT_RELAY_CAPABILITY,
   PROVIDER_ACCOUNT_RELAY_PROVIDERS,
@@ -278,9 +279,16 @@ export function createWebProviderSettings(options: WebProviderSettingsOptions) {
     void store.refreshCustomProviders().catch(() => undefined);
     return store;
   });
+  // A boolean, so that a server-list update that keeps the capability does not rebuild the keys.
+  const readsClaudeKey = createMemo(() => serverSupportsCapability(options.server(), CLAUDE_API_KEY_CAPABILITY));
   const providerKeys = createMemo(() => {
     const id = serverId();
-    return id ? hostProviderKeyApi(() => admin, id, openWebDestination) : undefined;
+    return id
+      ? {
+          ...hostProviderKeyApi(() => admin, id, openWebDestination),
+          readsClaudeKey: readsClaudeKey(),
+        }
+      : undefined;
   });
   // The released status and agent routes carry no account, so `provider-accounts-v1` adds them.
   const accountsServerId = createMemo(() => remoteAdminServer(options.server(), PROVIDER_ACCOUNTS_CAPABILITY)?.id);

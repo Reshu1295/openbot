@@ -6,6 +6,7 @@ export const messages = {
     "OpenBot konnte die MCP-Server nicht in der Codex-Konfiguration registrieren. Prüfe, ob deine Codex-Datei config.toml gültig und beschreibbar ist, und starte OpenBot neu.",
   "error.provider.computerUseConfig":
     "OpenBot konnte die Computersteuerung nicht in der Codex-Konfiguration registrieren. Prüfe, ob deine Codex-Datei config.toml gültig und beschreibbar ist, und starte OpenBot neu. Du kannst die Computersteuerung in den Agenteneinstellungen ausschalten, um ohne sie fortzufahren.",
+  "error.provider.codexUnresponsive": "Codex hat nicht mehr geantwortet, daher hat OpenBot den Prozess beendet.",
   "error.provider.endpointsReadOnly":
     "Die gespeicherten Endpunkte wurden mit einer neueren OpenBot-Version geschrieben oder die Datei kann nicht gelesen werden. Aktualisiere OpenBot, um sie zu ändern.",
   "error.provider.endpointNoSecureStorage":
@@ -57,6 +58,9 @@ export const messages = {
     "OpenBot konnte die Versionsquellen des Anbieters nicht erreichen. Prüfe die Verbindung und versuche es erneut.",
   "error.provider.runtimesUnsupported": "Anbieterlaufzeiten sind auf dieser Plattform nicht verfügbar.",
   "error.provider.closing": "OpenBot wird geschlossen.",
+  "error.provider.removeWhileOn": "Schalte den Anbieter aus, bevor du seinen Download entfernst.",
+  "error.provider.removeWhileDownloading": "Warte, bis der Download fertig ist, und entferne ihn dann.",
+  "error.provider.removeIncomplete": "Ein Programm verwendet Dateien dieser CLI. Schließe es und versuche es erneut.",
   "error.provider.cliOverride": "Entferne den ausdrücklich festgelegten CLI-Pfad, bevor du in OpenBot aktualisierst.",
   "error.provider.runtimeUpdateIncomplete": "Die Laufzeitaktualisierung wurde nicht abgeschlossen.",
   "error.provider.downloadHttp": "Der Laufzeitdownload ist mit HTTP {status} fehlgeschlagen.",
@@ -100,6 +104,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Ein Headername ist zu lang.",
   "error.provider.headerNameDuplicate": "Zwei Header haben denselben Namen.",
   "error.provider.headerValueInvalid": "Ein Headerwert fehlt oder ist zu lang.",
+  "error.provider.headerValueMissing": "Gib einen Wert für den Header {name} ein.",
   "error.provider.apiKeyTooLong": "Der API-Schlüssel ist zu lang.",
   "error.provider.localOnly": "Anbieter können nur auf dem Computer geändert werden, auf dem die Agenten laufen.",
   "error.provider.keyRequired": "Ein Anbieterschlüssel ist erforderlich.",
@@ -202,6 +207,8 @@ export const messages = {
     "Der Modellanbieter von OpenCode hat eine ungültige Upload-Anfrage gemeldet. Wähle ein anderes Modell und fahre fort. Prüfe gespeicherte Routinen, bevor du sie erneut erstellst.\n{detail}",
   "error.provider.opencodeUnreadableContent":
     "Dieses Modell kann eine Datei oder ein Bild in diesem Chat nicht lesen. Wähle ein Modell, das Dateien lesen kann, und sende deine Nachricht dann erneut.",
+  "error.provider.opencodeFreeLimit":
+    "Die kostenlosen OpenCode-Modelle haben ihr Nutzungslimit erreicht. Alle kostenlosen Modelle teilen sich dieses Limit. Um weiterzumachen, füge einen OpenCode-Go-Schlüssel in den OpenCode-Einstellungen ein oder wähle ein Modell eines anderen Anbieters.",
   "error.provider.opencodeProviderFailed":
     "Beim Modellanbieter ist ein Fehler aufgetreten. Deine Verbindung ist nicht die Ursache. Versuche es später erneut oder wähle ein anderes Modell.\n{detail}",
   "error.provider.opencodeNetwork":
@@ -276,12 +283,17 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Im Browser können nur HTTPS-Anmeldelinks geöffnet werden.",
   "error.provider.geminiKeyRefused":
     "Gemini hat den gespeicherten API-Schlüssel abgelehnt. Ersetze oder entferne den Schlüssel in den Einstellungen und verbinde dich dann erneut.",
+  "error.provider.keyProviderRefused":
+    "{provider} hat den gespeicherten API-Schlüssel abgelehnt. Ersetze oder entferne den Schlüssel in den Einstellungen und versuche es dann erneut.",
+  "error.provider.keyProviderNoBalance":
+    "Das {provider}-Konto des gespeicherten API-Schlüssels hat kein Guthaben. Lade Guthaben auf das Konto und versuche es dann erneut.",
   "error.provider.messageTooLarge":
     "OpenBot hat {provider} gestoppt, da eine Nachricht mit mehr als {limit} MB gesendet wurde.",
   "error.provider.customAgentIdInvalid":
     "Eine Agenten-ID darf nur Kleinbuchstaben, Ziffern oder `-` enthalten und darf nicht die ID eines integrierten Anbieters sein.",
   "error.provider.customAgentEnvInvalid":
     "Ein Variablenname darf nur Buchstaben, Ziffern oder `_` enthalten und nicht mit einer Ziffer beginnen. Verwende jeden Namen einmal und höchstens 16 Namen.",
+  "error.provider.customAgentUsagePromptInvalid": "Ein Nutzungsbefehl muss eine Zeile mit höchstens 256 Zeichen sein.",
   "error.provider.customAgentCommandInvalid":
     "Der Befehl muss ein vollständiger Pfad, ein mit ~/ beginnender Pfad oder ein Befehlsname ohne Leerzeichen sein.",
   "error.provider.customAgentArgsInvalid":
@@ -326,6 +338,8 @@ export const messages = {
     "Dieses {provider}-Konto ist nicht auf diesem Computer. Aktualisiere und versuche es erneut.",
   "error.provider.accountAlreadyAdded": "Dieses {provider}-Konto ist bereits verbunden.",
   "error.provider.accountDefault": "Das erste {provider}-Konto kann nicht entfernt werden.",
+  "error.provider.accountUsesKey":
+    "Dieses {provider}-Konto verwendet den gespeicherten API-Schlüssel und hat keine Anmeldung. Ändere den Schlüssel in Servereinstellungen → Anbieter.",
   "error.provider.accountInUse":
     "Ein Agent mit diesem Konto arbeitet gerade. Versuche es erneut, wenn der Agent anhält.",
   "error.provider.accountsReadOnly":
@@ -385,6 +399,8 @@ export const messages = {
     "Die Muse-Authentifizierung ist nicht bestätigt. Verbinde dich auf dem Host-Computer oder lege einen Meta-API-Schlüssel fest.",
   "error.provider.museSignIn": "Melde dich auf dem Host-Computer bei Muse an, um fortzufahren.",
   "error.provider.inceptionSignIn": "Füge einen Inception-API-Schlüssel hinzu, um fortzufahren.",
+  "error.provider.deepseekSignIn": "Füge einen DeepSeek-API-Schlüssel hinzu, um fortzufahren.",
+  "error.provider.openrouterSignIn": "Füge einen OpenRouter-API-Schlüssel hinzu, um fortzufahren.",
   "error.provider.terminalLoginFailed":
     "Das Anmeldeterminal konnte nicht geöffnet werden. Öffne die Anbieter-CLI auf diesem Host, melde dich dort an und aktualisiere dann die Anbieter.",
   "error.provider.nativeArchiveInvalid": "Der Anbieter-Download enthält keine gültige Installation.",

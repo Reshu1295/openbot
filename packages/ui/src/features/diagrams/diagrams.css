@@ -250,7 +250,6 @@
 .diagram-new-agent .provider-model-trigger-field:focus-visible {
   border-color: var(--openbot-border-focus);
   outline: none;
-  box-shadow: var(--openbot-focus-ring);
 }
 
 .diagram-new-agent-actions {

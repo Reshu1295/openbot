@@ -2,8 +2,11 @@ import {
   type AgentProviderId,
   type AgentStatus,
   agentProviderDescriptor,
+  isManagedRuntimeProvider,
   LOCAL_SERVER_ID,
+  type ProviderRuntimeDownload,
 } from "@openbot/contracts/ipc";
+import { CLAUDE_API_KEY_CAPABILITY } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import {
   PROVIDER_ACCOUNT_RELAY_CAPABILITY,
   PROVIDER_ACCOUNT_RELAY_PROVIDERS,
@@ -72,12 +75,15 @@ const Providers = createSimpleContext({
         managesRuntimes: () => activeServer()?.kind === "local" || providerAdminServerId() !== undefined,
       },
     );
+    // A boolean, so that a server-list update that keeps the capability does not rebuild the keys.
+    const hostReadsClaudeKey = createMemo(() => serverSupportsCapability(activeServer(), CLAUDE_API_KEY_CAPABILITY));
     /** The provider keys of the computer the providers run on. A saved key is recorded, never its value. */
     const providerKeys = createMemo(() => {
       const serverId = providerAdminServerId();
       const api = serverId ? hostProviderKeyApi(providerAdmin, serverId) : providerKeyApi;
       return {
         ...api,
+        readsClaudeKey: !serverId || hostReadsClaudeKey(),
         setProviderApiKey: async (input: { provider: AgentProviderId; key: string }) => {
           const analytics = desktopAnalytics.scope();
           const tracked = { provider: input.provider, action: "api_key_saved", method: "api_key" } as const;
@@ -246,6 +252,23 @@ const Providers = createSimpleContext({
       if (server?.kind !== "local") return;
       const status = await providersPort().setProviderOn({ provider, on });
       if (activeServer()?.id === server.id) flush(() => applyAgentStatus(status));
+    }
+
+    /**
+     * The downloaded CLI of a provider of this computer that is off. A joined host has no such call,
+     * so its providers offer no removal.
+     */
+    async function measureProviderDownload(provider: AgentProviderId): Promise<ProviderRuntimeDownload> {
+      if (activeServer()?.kind !== "local" || !isManagedRuntimeProvider(provider)) return { bytes: 0, versions: 0 };
+      return await providersPort().providerRuntimes.measureDownload(provider);
+    }
+
+    /** Removes the downloaded CLI of a provider of this computer that is off. */
+    async function removeProviderDownload(provider: AgentProviderId): Promise<void> {
+      const server = activeServer();
+      if (server?.kind !== "local" || !isManagedRuntimeProvider(provider)) return;
+      const snapshot = await providersPort().providerRuntimes.removeDownload(provider);
+      if (activeServer()?.id === server.id) flush(() => runtimes.applyProviderRuntimeSnapshot(snapshot));
     }
 
     /** The joined server whose host's provider accounts this window manages (`provider-accounts-v1`). */
@@ -465,6 +488,8 @@ const Providers = createSimpleContext({
       openProviderInstallGuide,
       refreshAgentProviders,
       setProviderOn,
+      measureProviderDownload,
+      removeProviderDownload,
       providerAccounts,
       restartProvider,
       cancelProviderRestart,

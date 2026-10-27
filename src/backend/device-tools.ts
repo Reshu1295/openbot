@@ -7,6 +7,7 @@ import {
   deviceToolEvent,
 } from "@openbot/contracts/team-protocol/device-tools-v1";
 import { z } from "zod";
+import { advertisedJsonSchema } from "./agent/advertised-json-schema";
 
 export const OPENBOT_DEVICE_NAMESPACE = "openbot_device";
 
@@ -93,7 +94,7 @@ export const DEVICE_DYNAMIC_TOOLS = [
       type: "function" as const,
       name: definition.name,
       description: definition.description,
-      inputSchema: z.toJSONSchema(definition.schema, { target: "draft-7", unrepresentable: "any" }),
+      inputSchema: advertisedJsonSchema(definition.schema),
     })),
   },
 ];

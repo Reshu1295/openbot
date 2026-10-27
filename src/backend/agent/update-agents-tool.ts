@@ -23,6 +23,8 @@ function agentSettings(agent: AgentSummary) {
     provider: agent.provider,
     model: agent.model,
     reasoningEffort: agent.reasoningEffort,
+    // A runtime change during work applies before the next turn.
+    ...(agent.pendingRuntime ? { pendingRuntime: agent.pendingRuntime } : {}),
     access: workspaceAccessEnforced(agent) ? "workspace" : "full",
     computerUse: agentComputerUseEnabled(agent),
     notifications: agent.notifications,

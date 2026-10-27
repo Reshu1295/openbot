@@ -401,6 +401,33 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Bitwarden のログイン情報をブラウザーに入力します。デスクトップアプリで設定してください。",
+  "mobile.server.connectors.bitwarden.hostSummary":
+    "Bitwarden または Vaultwarden のログイン情報をブラウザーに入力します",
+  "mobile.server.connectors.bitwarden.description":
+    "{host} のブラウザーのログインを Bitwarden または Vaultwarden から入力します。",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} は自分の Bitwarden CLI でサインインします。保管庫に Shared with OpenBot という名前のフォルダーを作成し、エージェントが使ってよいログインだけを入れてください。ウェブ保管庫で 設定 › セキュリティ › キー を開き、API キーを表示します。",
+  "mobile.server.connectors.bitwarden.serverUrl": "サーバーのアドレス",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden、または Vaultwarden サーバーのアドレスです。{host} は HTTPS でこのアドレスに接続できる必要があります。",
+  "mobile.server.connectors.bitwarden.clientId": "API キーの client_id",
+  "mobile.server.connectors.bitwarden.clientSecret": "API キーの client_secret",
+  "mobile.server.connectors.bitwarden.masterPassword": "マスターパスワード",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} は API キーとマスターパスワードを暗号化して保存し、再起動の後にもう一度ロックを解除できます。このスマートフォンには保存しません。",
+  "mobile.server.connectors.bitwarden.connect": "Bitwarden を接続",
+  "mobile.server.connectors.bitwarden.connecting": "接続中…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} が Bitwarden にサインインしています。最初のサインインには数分かかることがあります。",
+  "mobile.server.connectors.bitwarden.folderTitle": "共有フォルダ",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Bitwarden のフォルダー",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "エージェントにログイン情報でサインインさせるには、Bitwarden でそのログイン情報をこのフォルダに移動してください。やめるには削除してください。",
+  "mobile.server.connectors.bitwarden.disconnect": "Bitwarden を切断",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Bitwarden を切断しますか？",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} は API キーとマスターパスワードを削除します。{host} のエージェントは Bitwarden からログインを入力できなくなります。",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "すべてのエージェントにリポジトリ、Issue、プルリクエストを提供",
   "mobile.server.connectors.github.description":
@@ -576,6 +603,11 @@ export const messages = {
   "mobile.server.settings.providers": "プロバイダー",
   "mobile.server.settings.providersConnected": { other: "{count} 件接続済み" },
   "mobile.server.providers.description": "このサーバーを実行しているコンピューターの AI プロバイダーです。",
+  "mobile.server.providers.connectedTitle": "接続済み",
+  "mobile.server.providers.otherTitle": "未接続",
+  "mobile.server.providers.defaultProvider": "デフォルトのプロバイダー",
+  "mobile.server.providers.defaultProviderHint":
+    "このサーバーの新しいエージェントは、このプロバイダーで始まります。後からエージェントごとに変更できます。",
   "mobile.server.providers.loading": "プロバイダーを読み込み中…",
   "mobile.server.providers.loadFailed": "このサーバーのプロバイダーを読み込めませんでした。",
   "mobile.server.providers.runtimesFailed": "このサーバーのダウンロードを読み込めませんでした。",
@@ -639,6 +671,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "キーを変更できませんでした。もう一度お試しください。",
   "mobile.server.providers.newKey": "キー",
   "mobile.server.providers.replaceKey": "新しいキー",
+  "mobile.server.providers.keyPlaceholder": "キーを貼り付け",
   "mobile.server.providers.saveKey": "キーを保存",
   "mobile.server.providers.removeKey": "キーを削除",
   "mobile.server.providers.removeKeyTitle": "サーバーからキーを削除しますか？",

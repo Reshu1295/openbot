@@ -50,6 +50,13 @@ Do not start OpenBot with `--no-sandbox`. It is not a supported workaround. The 
 boundary between a web renderer and the rest of your computer, and OpenBot gives its agents full
 local access on the other side of it.
 
+## The Linux AppImage says that no fusermount binary was found
+
+The AppImage mounts itself with FUSE. It does not need libfuse2, but it needs the `fusermount3`
+program. Install the `fuse3` package (`sudo pacman -S fuse3` on Arch Linux and Omarchy,
+`sudo apt install fuse3` on Ubuntu and Debian), then start the AppImage again. With no FUSE, such
+as in a container, start it with `--appimage-extract-and-run`.
+
 ## Remote desktop is missing on Linux
 
 Remote desktop on Linux needs the x64 AppImage and an X11 session. Sunshine captures the X11 screen

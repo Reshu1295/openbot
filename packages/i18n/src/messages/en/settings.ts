@@ -46,10 +46,18 @@ export const messages = defineMessages("settings", {
   "settings.restoreWorkspace.title": "Restore the last workspace on launch",
   "settings.restoreWorkspace.description": "Open the workspace and tasks from your previous session.",
   "settings.externalLinks.title": "Open external links in",
-  "settings.externalLinks.description": "Choose where links from conversations open.",
+  "settings.externalLinks.description": "Links in chats, sign-in pages and billing pages open here.",
   // The two link targets. The saved value stays in English; only the label is translated.
   "settings.externalLinks.defaultBrowser": "Default browser",
   "settings.externalLinks.openbot": "OpenBot",
+  "settings.externalLinks.defaultBrowserNamed": "Default browser ({name})",
+  "settings.externalLinks.otherApp": "Other app…",
+  "settings.externalLinks.command": "Command…",
+  "settings.externalLinks.commandLabel": "Browser command",
+  "settings.externalLinks.commandPlaceholder": "Program path or command",
+  "settings.externalLinks.useCommand": "Use",
+  "settings.externalLinks.fallback.title": "Could not open {name}",
+  "settings.externalLinks.fallback.description": "The link opened in the default browser.",
   // The message send shortcut. The saved mode stays in English; only the labels are translated.
   "settings.sendShortcut.title": "Send shortcut",
   "settings.sendShortcut.description": "Choose the keys that send a message on this device and browser.",
@@ -148,7 +156,8 @@ export const messages = defineMessages("settings", {
   "settings.tab.voice.description":
     "Dictation in the message box. Local models run on this computer; ElevenLabs runs in the cloud.",
   "settings.tab.computerUse.title": "Computer Use",
-  "settings.tab.computerUse.description": "Allow OpenBot to see and interact with apps on this computer.",
+  "settings.tab.computerUse.description":
+    "Let agents on this computer's OpenBot see and use its apps. Agents on another server use that server's computer.",
   "settings.tab.profile.title": "Profile",
   "settings.tab.profile.description": "Manage how you appear in OpenBot.",
   "settings.tab.mobileConnect.title": "Mobile Connect",
@@ -181,13 +190,12 @@ export const messages = defineMessages("settings", {
   "settings.mobileConnect.app.copyLink": "Copy link",
   "settings.mobileConnect.app.linkCopied": "Link copied",
   "settings.mobileConnect.iosApp.title": "OpenBot for iPhone",
-  "settings.mobileConnect.iosApp.badge": "Beta",
-  "settings.mobileConnect.iosApp.description": "Public beta on TestFlight. For iOS 16.4 or later.",
-  "settings.mobileConnect.iosApp.qrLabel": "TestFlight invite QR code",
-  "settings.mobileConnect.iosApp.step.testFlight": "On your iPhone, install TestFlight from the App Store.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "Scan this QR code with the iPhone camera, or copy the invite link and open it on your iPhone.",
-  "settings.mobileConnect.iosApp.step.install": "In TestFlight, tap Accept, then Install.",
+  "settings.mobileConnect.iosApp.badge": "Available",
+  "settings.mobileConnect.iosApp.description": "On the App Store. For iOS 16.4 or later.",
+  "settings.mobileConnect.iosApp.qrLabel": "App Store QR code",
+  "settings.mobileConnect.iosApp.step.scan":
+    "Scan this QR code with the iPhone camera, or copy the link and open it on your iPhone.",
+  "settings.mobileConnect.iosApp.step.install": "On the App Store, tap Get.",
   "settings.mobileConnect.androidApp.title": "OpenBot for Android",
   "settings.mobileConnect.androidApp.badge": "Available",
   "settings.mobileConnect.androidApp.description": "On Google Play. For Android 7.0 or later.",
@@ -300,7 +308,7 @@ export const messages = defineMessages("settings", {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "My last six months with OpenBot",
-  "settings.profile.activity.title": "Activity",
+  "settings.profile.activity.title": "Activity on this computer",
   "settings.profile.activity.activeDays": {
     one: "{count} active day in the past year",
     other: "{count} active days in the past year",

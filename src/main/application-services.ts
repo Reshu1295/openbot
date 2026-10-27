@@ -16,6 +16,10 @@ import { RoutineFlowStore } from "../backend/routine-flows/routine-flow-store";
 import { createRoutineFlows, type RoutineFlowsHandle } from "../backend/routine-flows/routine-flows";
 import { RoutineResultStore } from "../backend/routine-results/routine-result-store";
 import { createRoutineResults, type RoutineResultsHandle } from "../backend/routine-results/routine-results";
+import { WorkflowRunStore } from "../backend/workflows/workflow-run-store";
+import { WorkflowStore } from "../backend/workflows/workflow-store";
+import { WorkflowTriggers, workflowScheduleDueAt } from "../backend/workflows/workflow-triggers";
+import { createWorkflows, type WorkflowNotice, type WorkflowsHandle } from "../backend/workflows/workflows";
 import { type AcpRegistry, createAcpRegistry } from "./acp-registry";
 import { type AgentAdminSettingsService, createAgentAdminSettings } from "./agent-admin-settings";
 import { spawnAgentDatabaseHost } from "./agent-database-host-process";
@@ -89,7 +93,7 @@ import { createOpenBotLogger, toLogValue } from "@openbot/logging";
 import { REMOTE_ACCOUNT_CHECK_INTERVAL_MS } from "@openbot/team-client";
 import {
   app,
-  type BrowserWindow,
+  BrowserWindow,
   clipboard,
   desktopCapturer,
   Notification,
@@ -178,6 +182,11 @@ import {
 } from "./development-remote-bootstrap";
 import { performDynamicIslandCriticalAction } from "./dynamic-island-actions";
 import { DynamicIslandFailed, DynamicIslandWindowController, toDynamicIslandFailed } from "./dynamic-island-window";
+import {
+  createExternalLinkPreferenceStore,
+  ExternalLinkOpener,
+  type ExternalLinkPreferenceStore,
+} from "./external-link-opener";
 import { githubAppConfig } from "./github-connector-config";
 import { GitHubConnectorService } from "./github-connector-service";
 import { GitHubConnectorStore } from "./github-connector-store";
@@ -230,7 +239,9 @@ import { MessagingCredentialStore } from "./messaging-credential-store";
 import { NotificationPreferenceStore } from "./notification-preference-store";
 import { OnePasswordConnectorService } from "./onepassword-connector-service";
 import { OnePasswordConnectorStore } from "./onepassword-connector-store";
+import { PromptCacheTtlPreferenceStore } from "./prompt-cache-ttl-preference-store";
 import { ProviderAccountsHost } from "./provider-accounts-host";
+import { createProviderCliAppVersionStore } from "./provider-cli-app-version-store";
 import { ProviderCredentialStore } from "./provider-credential-store";
 import { createProviderDetection, type ProviderDetection } from "./provider-detection";
 import { PROVIDER_DETECTION_SETTINGS_FILE, ProviderDetectionSettingsStore } from "./provider-detection-settings-store";
@@ -264,7 +275,7 @@ import { StatementTimings } from "./resource-summary";
 import { RoutineFeedServer } from "./routine-feed-server";
 import { clearRoutineHold, ROUTINE_HOLD_FILE, takeRoutineHold, writeRoutineHold } from "./routine-hold-file";
 import { ScreenCapturer } from "./screen-capture";
-import { ServerMemory } from "./server-memory";
+import { agentProcessEnvironment, ServerMemory } from "./server-memory";
 import { ServerMode, type ServerModeEnvironment } from "./server-mode";
 import { ServerTimezonePreferenceStore } from "./server-timezone-preference-store";
 import {
@@ -272,7 +283,7 @@ import {
   configureAttachmentProtocol,
   configureServerLogoProtocols,
 } from "./session-configuration";
-import { readSetupState } from "./setup-store";
+import { readSetupState, writeSetupState } from "./setup-store";
 import { SignInRelayClient } from "./sign-in-relay-client";
 import { agentPrintedLink, SignInRelayHost } from "./sign-in-relay-host";
 import { SignalIngress } from "./signal-ingress";
@@ -295,6 +306,8 @@ import {
   UpdateService,
 } from "./update-service";
 import { listSiblingOpenBotInstances } from "./update-sibling-instances";
+import { VaultService } from "./vault-service";
+import { VaultStore } from "./vault-store";
 import { VoiceApiKeyStore } from "./voice-api-key-store";
 import { openScribeSocket } from "./voice-cloud-stream";
 import {
@@ -327,10 +340,13 @@ const UPDATE_PREFERENCE_FILE = "openbot-update-preference-v1.json";
 const NOTIFICATION_PREFERENCE_FILE = "openbot-notification-preference-v1.json";
 const PUSH_NOTIFICATION_FILE = "openbot-push-notifications-v1.json";
 const BUSY_MESSAGE_MODE_PREFERENCE_FILE = "openbot-busy-message-mode-v1.json";
+const PROVIDER_CLI_APP_VERSION_FILE = "openbot-provider-cli-app-version-v1.json";
 const AGENT_DEFAULTS_PREFERENCE_FILE = "openbot-agent-defaults-v1.json";
 const AGENT_MEMORY_LIMIT_PREFERENCE_FILE = "openbot-agent-memory-limit-v1.json";
 const SERVER_TIMEZONE_PREFERENCE_FILE = "openbot-server-timezone-v1.json";
+const PROMPT_CACHE_TTL_PREFERENCE_FILE = "openbot-prompt-cache-ttl-v1.json";
 const REMOTE_SESSION_REUSE_PREFERENCE_FILE = "openbot-remote-session-reuse-preference-v1.json";
+const EXTERNAL_LINK_PREFERENCE_FILE = "openbot-external-link-preference-v1.json";
 const REMOTE_NETWORK_ROUTE_PREFERENCE_FILE = "openbot-remote-network-route-v1.json";
 const APP_BEHAVIOR_PREFERENCE_FILE = "openbot-app-behavior-preference-v1.json";
 const DYNAMIC_ISLAND_PREFERENCE_FILE = "openbot-dynamic-island-preference-v1.json";
@@ -357,6 +373,8 @@ const GITHUB_CONNECTOR_FILE = "openbot-github-connector-v1.json";
 const ONEPASSWORD_CONNECTOR_FILE = "openbot-onepassword-connector-v1.json";
 /** The Bitwarden API key and master password of a host connection (`bitwarden-connector-v1`), with the same cipher. */
 const BITWARDEN_CONNECTOR_FILE = "openbot-bitwarden-connector-v1.json";
+/** The logins, payment cards and contact info of the Vault in Server settings, with the same cipher. */
+const VAULT_FILE = "openbot-vault-v1.json";
 /** Which agent each imported Hermes profile made, so a second import updates that agent. */
 const HERMES_IMPORT_LINKS_FILE = "openbot-hermes-imports-v1.json";
 
@@ -418,6 +436,8 @@ const TEARDOWN_ORDER = {
   teamWebRtcBridge: 100,
   // Before the agent service, so no handoff is sent to an agent while the service stops.
   routineFlows: 103,
+  // Before the agent service, so no workflow step is sent to an agent while the service stops.
+  workflows: 103.5,
   // Before the agent service, so no calendar read finds it stopping.
   routineFeed: 104,
   mcpOAuthRedirect: 105,
@@ -474,6 +494,7 @@ export interface ApplicationServiceContext {
   forwardVoiceModelStatus: (status: VoiceModelStatus) => void;
   forwardVoiceStreamTranscript: (transcript: VoiceStreamTranscript) => void;
   forwardSpeechModelStatus: (status: SpeechModelStatus) => void;
+  forwardWorkflowNotice: (notice: WorkflowNotice) => void;
   prepareForUpdateInstall: () => Promise<void>;
   /** True once a quit starts, also before this function returns. See `CuaDriverRuntimeOptions.quitting`. */
   quitting: () => boolean;
@@ -483,6 +504,7 @@ export interface ApplicationServiceContext {
 export interface ApplicationServices {
   service: AgentService;
   routineFlows: RoutineFlowsHandle;
+  workflows: WorkflowsHandle;
   routineResults: RoutineResultsHandle;
   providerRuntimes: ProviderRuntimeManager;
   providerCredentials: ProviderCredentialStore;
@@ -497,6 +519,7 @@ export interface ApplicationServices {
   githubConnector: GitHubConnectorService;
   onePasswordConnector: OnePasswordConnectorService;
   bitwardenConnector: BitwardenConnectorService;
+  vault: VaultService;
   mailbox: MailboxStore;
   storageUsage: StorageUsageService;
   browser: BrowserHost;
@@ -529,7 +552,12 @@ export interface ApplicationServices {
   agentMemoryLimit: AgentMemoryLimitSetting;
   agentAccess: AgentAccessStore;
   serverTimezone: ServerTimezonePreferenceStore;
+  promptCacheTtl: PromptCacheTtlPreferenceStore;
   remoteSessionReuse: RemoteSessionReusePreferenceStore;
+  externalLinkPreference: ExternalLinkPreferenceStore;
+  externalLinks: ExternalLinkOpener;
+  /** Opens a web page in the program that the user chose in Settings. */
+  openLink: (url: string) => Promise<void>;
   remoteNetworkRoute: RemoteNetworkRoutePreferenceStore;
   remoteSessionCache: RemoteSessionCache;
   appBehavior: AppBehaviorService;
@@ -616,6 +644,7 @@ interface MessagingServicesContext {
   sidebarLayout: SidebarLayoutStore;
   /** Read on each call: the team store that names this host is built after messaging. */
   readHostId: () => string | null;
+  openLink: (url: string) => Promise<void>;
 }
 
 /**
@@ -629,6 +658,7 @@ async function createMessagingServices({
   service,
   sidebarLayout,
   readHostId,
+  openLink,
 }: MessagingServicesContext): Promise<{ messaging: MessagingService; signalIngress: SignalIngress }> {
   /*
    * The Slack workspaces, Discord guilds and Telegram chats where the agents answer. The tokens use the same cipher as every other
@@ -672,7 +702,8 @@ async function createMessagingServices({
     threads: service.messaging,
     agents: {
       listAgents: () => service.listAgents(),
-      respondToApproval: (input) => service.respondToApproval(input),
+      // A chat app user is not the owner, even when the owner links the chat.
+      respondToApproval: (input) => service.respondToApproval(input, { owner: false }),
       onEvent: (listener) => {
         service.on("event", listener);
         return () => service.off("event", listener);
@@ -726,7 +757,7 @@ async function createMessagingServices({
             ? centralAuth.unlinkSlackWorkspace(hostId, workspaceId).pipe(toSlackConnectFailed)
             : Effect.void;
         }),
-      openExternal: (url) => shell.openExternal(url),
+      openExternal: openLink,
     },
     discordApp: {
       authorize: (input) =>
@@ -753,7 +784,7 @@ async function createMessagingServices({
           const hostId = readHostId();
           return hostId ? centralAuth.unlinkDiscordGuild(hostId, guildId).pipe(toDiscordConnectFailed) : Effect.void;
         }),
-      openExternal: (url) => shell.openExternal(url),
+      openExternal: openLink,
     },
     telegramApp: {
       createLink: () =>
@@ -786,7 +817,7 @@ async function createMessagingServices({
                 .pipe(Effect.mapError((error) => new MessagingOperationFailed({ cause: error.cause })))
             : Effect.void;
         }),
-      openExternal: (url) => shell.openExternal(url),
+      openExternal: openLink,
     },
   });
   // Not awaited: a connection waits for Slack, and the app does not wait for it.
@@ -825,6 +856,7 @@ export async function createApplicationServices({
   forwardVoiceModelStatus,
   forwardVoiceStreamTranscript,
   forwardSpeechModelStatus,
+  forwardWorkflowNotice,
   prepareForUpdateInstall,
   quitting,
 }: ApplicationServiceContext): Promise<ApplicationServices> {
@@ -836,6 +868,23 @@ export async function createApplicationServices({
   );
   teardown.push(TEARDOWN_ORDER.agentLog, "the agent log", startAgentLog(join(app.getPath("userData"), "logs")));
   teardown.push(TEARDOWN_ORDER.accountLog, "the account log", startAccountLog(join(app.getPath("userData"), "logs")));
+  const externalLinkPreference = createExternalLinkPreferenceStore(
+    join(app.getPath("userData"), EXTERNAL_LINK_PREFERENCE_FILE),
+  );
+  // The store loads below with the other preferences. Until then, a page opens in the default browser.
+  const externalLinks = new ExternalLinkOpener({
+    preference: externalLinkPreference,
+    platform: process.platform,
+    openDefault: (url) => shell.openExternal(url),
+    // The user clicked the link in the focused window, which can be a chat window.
+    onFallback: (fallback) =>
+      sendToRenderer(
+        BrowserWindow.getFocusedWindow() ?? windows.getMainWindow(),
+        IPC_ENDPOINTS.app.externalLinkFallback,
+        fallback,
+      ),
+  });
+  const openLink = (url: string) => runCauseEffect(externalLinks.open(url));
   // The one forward reference left in this function: the controller is built at the top of
   // startup because its window must be able to appear immediately, but the two services its
   // critical actions drive are built hundreds of lines below. A single named local rather than
@@ -939,8 +988,9 @@ export async function createApplicationServices({
   performance.mark("openbot:services.pre-store");
   await runCauseEffect(store.initialize());
   performance.mark("openbot:services.store");
-  // Closing copies the write-ahead log into the database file and removes it.
-  teardown.push(TEARDOWN_ORDER.database, "the database", () => store.database.close());
+  // Closing copies the write-ahead log into the database file and removes it. A step that passed its
+  // limit, such as a slow agent stop, still writes, so the close waits a short time for it.
+  teardown.push(TEARDOWN_ORDER.database, "the database", () => store.database.close(), { afterAbandonedSteps: true });
   const managedSkills = new ManagedSkillService(
     app.isPackaged
       ? join(process.resourcesPath, "managed-skills", "openbot-site-hosting", "SKILL.md")
@@ -971,11 +1021,11 @@ export async function createApplicationServices({
     const hostId = teamStore.getIdentity()?.serverId;
     return hostId ? centralAuth.hostSiteCredential(hostId) : null;
   });
-  const billing = new BillingDesktopService(centralAuth, (url) => shell.openExternal(url));
-  const license = new LicenseDesktopService(centralAuth, (url) => shell.openExternal(url));
+  const billing = new BillingDesktopService(centralAuth, openLink);
+  const license = new LicenseDesktopService(centralAuth, openLink);
   const hostedServers = new HostedServerDesktopService(
     withHostingDeveloperKey(centralAuth, hostingDeveloperKey),
-    (url) => shell.openExternal(url),
+    openLink,
     Date.now,
     // A new server is running, but the joined list has no entry for it yet: read the list again.
     (serverId) => {
@@ -1005,8 +1055,18 @@ export async function createApplicationServices({
       ? new ServerMemory({
           hostedPlan: hostedServer !== null,
           onError: (message, error) => logger.warn(message, toLogValue(error)),
+          onAgentProcessStopped: (stopped) =>
+            logger.warn("Stopped a leftover agent process to free memory.", { ...stopped }),
         })
       : null;
+  // Every provider process on a server gets the marker of leftover agent processes and the CPU limit
+  // module for Node. The module must exist: Node does not start when a `--require` file is missing.
+  const cpuLimitModule = app.isPackaged
+    ? join(process.resourcesPath, "agent-runtime", "cpu-limit.cjs")
+    : resolve(__dirname, "../../resources/agent-runtime/cpu-limit.cjs");
+  const serverEnvironment = hostMemory
+    ? agentProcessEnvironment(existsSync(cpuLimitModule) ? cpuLimitModule : null)
+    : null;
   if (hostMemory) {
     hostMemory.start();
     teardown.push(TEARDOWN_ORDER.serverMemory, "the server memory reading", () => Effect.runPromise(hostMemory.stop()));
@@ -1099,10 +1159,15 @@ export async function createApplicationServices({
     join(app.getPath("userData"), SERVER_TIMEZONE_PREFERENCE_FILE),
   );
   await runCauseEffect(serverTimezone.load());
+  const promptCacheTtl = new PromptCacheTtlPreferenceStore(
+    join(app.getPath("userData"), PROMPT_CACHE_TTL_PREFERENCE_FILE),
+  );
+  await runCauseEffect(promptCacheTtl.load());
   const remoteSessionReuse = createRemoteSessionReusePreferenceStore(
     join(app.getPath("userData"), REMOTE_SESSION_REUSE_PREFERENCE_FILE),
   );
   await runCauseEffect(remoteSessionReuse.load());
+  await runCauseEffect(externalLinkPreference.load());
   const remoteNetworkRoute = createRemoteNetworkRoutePreferenceStore(
     join(app.getPath("userData"), REMOTE_NETWORK_ROUTE_PREFERENCE_FILE),
   );
@@ -1161,6 +1226,10 @@ export async function createApplicationServices({
     join(app.getPath("userData"), "provider-accounts"),
   );
   await runCauseEffect(providerAccounts.load());
+  const providerCliAppVersion = createProviderCliAppVersionStore(
+    join(app.getPath("userData"), PROVIDER_CLI_APP_VERSION_FILE),
+  );
+  await runCauseEffect(providerCliAppVersion.load());
   const providerRuntimes = new ProviderRuntimeManager({
     isProviderOn: (provider) => !providerUse.off().includes(provider),
     root: providerRuntimeRoot({
@@ -1277,7 +1346,7 @@ export async function createApplicationServices({
   // A joined server's sign-in can send its callback to this same port: the host's own listener
   // uses the same port number. A `state` that no local sign-in started goes to the relay.
   const signInRelayClient = new SignInRelayClient({
-    openExternal: (url) => shell.openExternal(url),
+    openExternal: openLink,
     language,
     ownListener: () =>
       mcpOAuthRedirect
@@ -1312,7 +1381,7 @@ export async function createApplicationServices({
   }
   const mcpOAuth = new McpOAuth({
     storage: mcpOAuthStore,
-    openExternal: (url) => shell.openExternal(url),
+    openExternal: openLink,
     redirectUrl: mcpOAuthRedirect?.redirectUrl ?? MCP_OAUTH_REDIRECT_URL,
     logger: createOpenBotLogger("mcp-oauth"),
   });
@@ -1328,7 +1397,7 @@ export async function createApplicationServices({
     store: new GitHubConnectorStore(join(app.getPath("userData"), GITHUB_CONNECTOR_FILE), secretCipher),
     toolDirectory: join(app.getPath("userData"), "provider-state", "github"),
     apiUrl: centralAuthApiUrl,
-    openExternal: (url) => shell.openExternal(url),
+    openExternal: openLink,
   });
   await runCauseEffect(githubConnector.load());
   teardown.push(TEARDOWN_ORDER.githubConnector, "the GitHub connection", () =>
@@ -1360,6 +1429,16 @@ export async function createApplicationServices({
   });
 
   /*
+   * The Vault in Server settings. Every agent fills its logins, cards and contact info; the file
+   * holds no resource, so nothing is torn down.
+   */
+  const vault = new VaultService({
+    store: new VaultStore(join(app.getPath("userData"), VAULT_FILE), secretCipher),
+    canPersist: secretCipher.canPersist,
+  });
+  await Effect.runPromise(vault.load());
+
+  /*
    * The 1Password connection. The browser fills logins from it, so the agent service reads it. The
    * login list is read from 1Password in the background; startup does not wait for it.
    */
@@ -1372,7 +1451,7 @@ export async function createApplicationServices({
     cliInstall: onePasswordCliTarget
       ? { directory: join(app.getPath("userData"), "provider-state", "1password-cli"), target: onePasswordCliTarget }
       : null,
-    openExternal: (url) => shell.openExternal(url),
+    openExternal: openLink,
   });
   await runCauseEffect(onePasswordConnector.load());
   performance.mark("openbot:services.connectors");
@@ -1533,6 +1612,8 @@ export async function createApplicationServices({
     createDeviceToolService({ transport: () => host.deviceToolTransport() }),
   );
   teardown.push(TEARDOWN_ORDER.deviceTools, "the device tools", () => Effect.runPromise(deviceTools.close()));
+  // The schedule triggers of workflows share the routine timer; built after the workflows below.
+  let workflowTriggers: WorkflowTriggers | null = null;
   const service: AgentService = new AgentService({
     store,
     mailbox,
@@ -1562,11 +1643,10 @@ export async function createApplicationServices({
     offProviders: providerUse.off(),
     providerAccounts,
     saveProviderUse: (provider, on) =>
-      providerUse
-        .set(provider, on)
-        .pipe(
-          Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
-        ),
+      providerUse.set(provider, on).pipe(
+        Effect.tap(() => providerRuntimes.providerUseChanged()),
+        Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
+      ),
     preferredProvider: setupState.preferredProvider ?? "codex",
     bundledExecutables: providerRuntimes.bundledExecutables(),
     prepareAgentWorkspace: (agent) =>
@@ -1588,6 +1668,8 @@ export async function createApplicationServices({
     developmentDefaults: appVariant === "dev",
     credentials: {
       apiKey: (provider) => providerCredentials.get(provider),
+      // Read at each Claude spawn, so a change from Server settings applies to the next process.
+      promptCacheTtl: () => promptCacheTtl.get().ttl,
       // `configs()`, not `list()`: this is the one path the API keys travel, and it ends at the
       // spawned provider process. The IPC handlers are given `list()`.
       customProviders: () => customProviders.configs(),
@@ -1606,6 +1688,7 @@ export async function createApplicationServices({
       mcpOAuthProxySettings,
       providerStateDirectory: join(app.getPath("userData"), "provider-state"),
       ...(process.platform === "win32" ? { providerTempDirectory } : {}),
+      ...(serverEnvironment ? { serverEnvironment } : {}),
       // The GitHub entries are paths only: `gh` and `git` read the token from the files the connection
       // keeps current. On a server with an agent display, `DISPLAY` names it, so a program an agent
       // starts opens where the driver sees it.
@@ -1622,7 +1705,12 @@ export async function createApplicationServices({
       mcpServer: () => githubConnector.mcpServer(),
       mcpAuthorization: () => githubConnector.mcpAuthorization().pipe(toMcpGatewayFailed),
     },
-    passwordVault: passwordVaultRouter(onePasswordConnector, bitwardenConnector),
+    passwordVault: passwordVaultRouter([
+      { prefix: "", vault: onePasswordConnector },
+      { prefix: "bitwarden:", vault: bitwardenConnector },
+      { prefix: "openbot:", vault: vault.logins },
+    ]),
+    vaultItems: vault.items,
     agentApiKeys,
     localSkillTools: () => localSkillTools(skills),
     routineFlowTools: () => routineFlowRuntime,
@@ -1633,11 +1721,25 @@ export async function createApplicationServices({
     busyMessageMode: () => busyMessageMode.get().mode,
     agentMemoryLimit: () => agentMemoryLimit.get().limit,
     timezone: () => serverTimezone.effective(),
+    // `workflowTriggers` is built later, after the workflows.
+    extraRoutineSources: () => (workflowTriggers ? [workflowTriggers] : []),
     // `host` is built later, after the agent service; a channel tool reads it when it runs.
     channelPersonAgentLevel: (personId, agentId) => host.channelPersonAgentLevel(personId, agentId),
     channelRemotePerson: (personId) => host.channelPersonIsRemote(personId),
+    // The delete also clears the agent from workflow nodes, so the editors of those workflows load
+    // the new graph. `workflowStore` is built later, after the agent service.
     deleteWithRevokedApproval: (agentId, remove) =>
-      approvalAutomation.deleteAgent(agentId, remove).pipe(toAgentRemovalFailed),
+      Effect.suspend(() => {
+        const workflowIds = workflowStore.workflowsOfAgent(agentId);
+        return approvalAutomation.deleteAgent(agentId, remove).pipe(
+          toAgentRemovalFailed,
+          Effect.tap(() =>
+            Effect.sync(() => {
+              for (const workflowId of workflowIds) service.notifyWorkflowsChanged(workflowId);
+            }),
+          ),
+        );
+      }),
     tables,
   });
   teardown.push(TEARDOWN_ORDER.service, "the agent service", () => runCauseEffect(service.stop()));
@@ -1687,6 +1789,55 @@ export async function createApplicationServices({
     }),
   );
   teardown.push(TEARDOWN_ORDER.routineFlows, "the routine flows", () => Effect.runPromise(routineFlowRuntime.close()));
+  // Graphs of steps drawn on a canvas; see `workflows.ts`.
+  const workflowStore = new WorkflowStore({
+    database: store.database,
+    nextDueAt: workflowScheduleDueAt(() => serverTimezone.effective()),
+  });
+  const workflowRuntime = await Effect.runPromise(
+    createWorkflows({
+      store: workflowStore,
+      runs: new WorkflowRunStore({ database: store.database }),
+      delivery: (deliveryId) => {
+        const found = mailbox.getDelivery(deliveryId)?.delivery;
+        return found ? { status: found.status, turnId: found.turnId, error: found.error } : null;
+      },
+      turnAnswer,
+      // A workflow step is a routine handoff whose routine is the workflow.
+      sendHandoff: (input) => service.enqueueRoutineHandoff(input),
+      stopDelivery: (agentId, deliveryId) => {
+        const found = mailbox.getDelivery(deliveryId)?.delivery;
+        if (!found) return Effect.void;
+        return found.status === "running" && found.turnId
+          ? service.interrupt(agentId, found.turnId)
+          : service.cancelQueuedMessage(agentId, deliveryId);
+      },
+      generateText: (request) =>
+        service.generateWorkflowText(request).pipe(
+          Effect.mapError((failure) => ({
+            message: failure.cause instanceof Error ? failure.cause.message : sourceText("error.workflow.modelFailed"),
+          })),
+        ),
+      notify: forwardWorkflowNotice,
+      connectionOn: (connectionId) => service.messaging.store.connection(connectionId)?.enabled === true,
+      post: (connectionId, placeId, markdown) => service.messaging.deliver(connectionId, placeId, markdown),
+      // An agent event, so this window, joined clients and the web app hear it the same way.
+      changed: (workflowId) => service.notifyWorkflowsChanged(workflowId),
+      rearm: () => service.armRoutines(),
+      timezone: () => serverTimezone.effective(),
+      runEnded: (end) => service.notifyWorkflowRunEnded(end),
+    }),
+  );
+  workflowTriggers = new WorkflowTriggers({
+    store: workflowStore,
+    timezone: () => serverTimezone.effective(),
+    start: (start) => workflowRuntime.startScheduled(start),
+    changed: (workflowId) => service.notifyWorkflowsChanged(workflowId),
+  });
+  service.armRoutines();
+  // An agent event too, so joined admins and the web app read the Vault again. It carries no item.
+  vault.onChanged(() => service.notifyVaultChanged());
+  teardown.push(TEARDOWN_ORDER.workflows, "the workflows", () => Effect.runPromise(workflowRuntime.close()));
   // An agent routine's answer sent on to a messaging place; see `routine-results.ts`.
   const routineResultRuntime = await Effect.runPromise(
     createRoutineResults({
@@ -1710,6 +1861,7 @@ export async function createApplicationServices({
   service.on("event", (event) => {
     Effect.runFork(routineFlowRuntime.notice(event));
     Effect.runFork(routineResultRuntime.notice(event));
+    Effect.runFork(workflowRuntime.notice(event));
   });
   teardown.push(TEARDOWN_ORDER.routineResults, "the routine results", () =>
     Effect.runPromise(routineResultRuntime.close()),
@@ -1733,6 +1885,7 @@ export async function createApplicationServices({
     service,
     sidebarLayout,
     readHostId: () => ingressHostId(),
+    openLink,
   });
   // A connect, a disconnect or an expiry changes the tools and the `gh` sign-in of every agent.
   githubConnector.onAgentAccessChanged(() => {
@@ -1819,7 +1972,12 @@ export async function createApplicationServices({
   });
   providerRuntimes.on("status", forwardProviderRuntimeStatus);
   // After the status forward, so the offer a check finds reaches the renderer.
-  providerRuntimes.startUpdateChecks();
+  const appUpgraded = providerCliAppVersion.get().appVersion !== app.getVersion();
+  providerRuntimes.startUpdateChecks({ updateInstalled: appUpgraded });
+  if (appUpgraded)
+    void runCauseEffect(providerCliAppVersion.set({ appVersion: app.getVersion() })).catch((error) =>
+      logger.warn("The provider CLI app version did not save.", toLogValue(error)),
+    );
   // A tool runtime that becomes ready changes what the MCP servers resolve to, for every
   // provider: sessions that dropped their stdio servers before it finished downloading are
   // marked for refresh, and the deferred mechanism spends the mark before each agent's next
@@ -1893,6 +2051,10 @@ export async function createApplicationServices({
   });
   const events = new HostEventsService({
     routines: service.routineRecords,
+    workflows: {
+      receive: (delivery) => workflowRuntime.receiveWebhook(delivery),
+      changed: (workflowId) => service.notifyWorkflowsChanged(workflowId),
+    },
     cipher: secretCipher,
     relay: webhookRelay,
     accountPrincipal: () => {
@@ -2113,6 +2275,8 @@ export async function createApplicationServices({
     // Present, so the host advertises `bitwarden-connector-v1`. An owner or admin connects it with an
     // API key and the master password: a session key from their computer cannot open this vault.
     bitwardenConnector,
+    // Present, so the host advertises `vault-v1`. The routes are admin-only.
+    vault,
     // Present on Linux, so the host advertises `provider-host-sign-in-v1`. The routes are admin-only.
     providerHostSignIns,
     // Present, so the host advertises `provider-accounts-v1`. The routes are admin-only.
@@ -2129,6 +2293,8 @@ export async function createApplicationServices({
     instanceTransfer,
     // Present, so the host advertises `routine-flows-v1`. Any member who can see the agents.
     routineFlows: routineFlowRuntime,
+    // Present, so the host advertises `workflows-v1`. Any member who can see and talk to the agents.
+    workflows: { ...workflowRuntime, rotateWorkflowSecret: (input) => events.rotateWorkflowSecret(input) },
     // Present, so the host advertises `agent-hidden-v1`. Any member can hide or restore an agent that they can see.
     hiddenAgents: service,
     // Present, so the host advertises `agent-access-v1`. Only owners and admins change the roles.
@@ -2170,6 +2336,30 @@ export async function createApplicationServices({
       },
       timezone: serverTimezone,
       memoryLimit: agentMemoryLimitSetting,
+      promptCacheTtl,
+      // The local Settings save does the same two steps (`saveSetup`).
+      defaultProvider: {
+        // The provider that a new agent starts on now, also before a setup choice: `preferredProvider` above.
+        get: () =>
+          readSetupState(setupFile).pipe(
+            Effect.map((state) => ({
+              provider: service.preferredProvider(),
+              model: state.preferredProvider === service.preferredProvider() ? state.preferredModel : null,
+            })),
+          ),
+        set: (input) =>
+          writeSetupState(setupFile, input).pipe(
+            Effect.tap(() => service.setPreferredProvider(input.preferredProvider, input.preferredModel)),
+            // The window read the setup once at start, so it gets the new choice.
+            Effect.tap((state) =>
+              Effect.sync(() => {
+                for (const window of BrowserWindow.getAllWindows())
+                  sendToRenderer(window, IPC_ENDPOINTS.app.setupState, state);
+              }),
+            ),
+            Effect.map((state) => ({ provider: state.preferredProvider, model: state.preferredModel })),
+          ),
+      },
       routineResults: routineResultRuntime,
     },
     // The host's Team API routes share the IPC handlers' runtime preparation: a first server
@@ -2385,6 +2575,7 @@ export async function createApplicationServices({
       collectAnalyticsInventory({
         agents: () => service.listAgents(),
         routines: (agentId) => service.listRoutines(agentId),
+        workflowCount: () => workflowStore.list().length,
         // The local read: `listInstalled` asks the marketplace for each skill's latest version.
         skills: (agentId) => skills.listInstalledForChatTags(agentId),
         mcpServers: () => service.listMcpServers(),
@@ -2643,13 +2834,16 @@ export async function createApplicationServices({
       yield* automation.sync();
       // Picks up the flows a restart stopped between one agent's answer and the next agent's message.
       yield* routineFlowRuntime.sweep();
+      // Ends the workflow steps a restart cut off, and moves the runs on.
+      yield* workflowRuntime.sweep();
       // Marks the posts a restart cut off, and sends the answers that ended while OpenBot was closed.
       yield* routineResultRuntime.recover();
     }),
   );
   const describeRestartReadiness = (): RestartReadiness =>
     checkRestartReadiness({
-      agentWork: service.hasActiveWork(),
+      // A workflow model step lives in this process only; agent steps are queued deliveries.
+      agentWork: [...service.hasActiveWork(), ...(workflowRuntime.working() ? ["routine-run"] : [])],
       hostBlockers: host.describeRestartBlockers(),
       activeBrowserControls: browser.getControlState().sessions.length,
       activeFileTransfers: remoteServers.hasActiveTransfers(),
@@ -2809,6 +3003,7 @@ export async function createApplicationServices({
   return {
     service,
     routineFlows: routineFlowRuntime,
+    workflows: workflowRuntime,
     routineResults: routineResultRuntime,
     providerRuntimes,
     providerCredentials,
@@ -2819,6 +3014,7 @@ export async function createApplicationServices({
     githubConnector,
     onePasswordConnector,
     bitwardenConnector,
+    vault,
     mailbox,
     storageUsage,
     browser,
@@ -2844,7 +3040,11 @@ export async function createApplicationServices({
     agentMemoryLimit: agentMemoryLimitSetting,
     agentAccess,
     serverTimezone,
+    promptCacheTtl,
     remoteSessionReuse,
+    externalLinkPreference,
+    externalLinks,
+    openLink,
     remoteNetworkRoute,
     remoteSessionCache,
     appBehavior,

@@ -63,6 +63,7 @@ export const messages = {
   "usage.panel.label": "エージェントの使用量",
   "usage.panel.title": "使用量",
   "usage.panel.allAgents": "すべてのエージェント",
+  "usage.panel.workflows": "ワークフロー",
   "usage.panel.agents": "使用量のエージェント",
   "usage.panel.metric": "使用量の指標",
   "usage.panel.period": "使用量の期間",

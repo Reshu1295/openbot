@@ -351,7 +351,11 @@ export function apiKeyPromptResult(blockId: string, saved: SavedApiKey | null): 
   return { success: true, contentItems: [{ type: "inputText", text: JSON.stringify(value) }] };
 }
 
-export function browserTakeoverResult(decision: RespondToBrowserTakeoverInput["decision"]): DynamicToolResult {
+/** `vault` says what happened to a password that the user asked to keep in the Vault. */
+export function browserTakeoverResult(
+  decision: RespondToBrowserTakeoverInput["decision"],
+  vault?: string,
+): DynamicToolResult {
   return {
     success: true,
     contentItems: [
@@ -359,6 +363,7 @@ export function browserTakeoverResult(decision: RespondToBrowserTakeoverInput["d
         type: "inputText",
         text: JSON.stringify({
           status: decision === "complete" ? "completed" : "cancelled",
+          ...(vault ? { vault } : {}),
           ...(decision === "complete" ? { next: "Take a fresh snapshot and continue the task." } : {}),
         }),
       },

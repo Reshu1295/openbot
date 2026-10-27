@@ -24,6 +24,7 @@ import { ChatMarkdown } from "@/features/chat/components/chat-markdown";
 import { CodeDocument } from "@/features/chat/components/code-document";
 import DiagramCanvas from "@/features/chat/components/diagram-canvas.dom";
 import { SpreadsheetFilePreview } from "@/features/chat/components/file-document-preview";
+import { HtmlPage } from "@/features/chat/components/html-page";
 import HtmlPreview from "@/features/chat/components/html-preview.dom";
 import { PdfPreview } from "@/features/chat/components/pdf-preview";
 import { PREVIEW_TEXT_LIMIT } from "@/features/chat/model/attachment-file-preview";
@@ -185,6 +186,14 @@ function PreviewContent({ entry }: { entry: CodePreviewEntry }) {
           <PdfPreview uri={file.uri} title={title} insets={{ top: headerBottom, bottom: insets.bottom }} />
         ) : entry.kind === "spreadsheet" && file ? (
           <SpreadsheetFilePreview uri={file.uri} title={title} insets={{ top: headerBottom, bottom: insets.bottom }} />
+        ) : entry.kind === "html" && file && HtmlPage ? (
+          // An HTML file runs its scripts, as on desktop; a ```html block from a reply does not.
+          <HtmlPage
+            source={entry.source}
+            title={title}
+            mode="screen"
+            insets={{ top: headerBottom, bottom: insets.bottom }}
+          />
         ) : entry.kind === "html" ? (
           <HtmlPreview
             source={entry.source}

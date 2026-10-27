@@ -45,12 +45,10 @@ export const messages = {
   "customProvider.error.baseUrlProtocol": "Use uma URL http:// ou https://.",
   "customProvider.error.baseUrlCredential": "Coloque a credencial em um cabeçalho, não na URL.",
   "customProvider.saved.restarted": "Salvo. O OpenBot está carregando os modelos.",
-  "customProvider.saved.skippedBusy":
-    "Salvo. O OpenCode lê a lista após a tarefa atual parar. Pressione Conectar nesse momento.",
+  "customProvider.saved.skippedBusy": "Salvo. O OpenCode lê a lista após a tarefa atual parar.",
   "customProvider.saved.notRunning": "Salvo. O OpenCode lê a lista na próxima vez que iniciar.",
   "customProvider.removed.restarted": "Removido. O OpenBot está carregando os modelos.",
-  "customProvider.removed.skippedBusy":
-    "Removido. O OpenCode lê a lista após a tarefa atual parar. Pressione Conectar nesse momento.",
+  "customProvider.removed.skippedBusy": "Removido. O OpenCode lê a lista após a tarefa atual parar.",
   "customProvider.removed.notRunning": "Removido. O OpenCode lê a lista na próxima vez que iniciar.",
   "customProvider.saveFailed": "O OpenBot não conseguiu salvar este endpoint.",
   "customProvider.removeFailed": "O OpenBot não conseguiu remover {name}.",
@@ -68,8 +66,7 @@ export const messages = {
   "customProvider.field.baseUrl": "URL base",
   "customProvider.field.apiKey": "Chave de API",
   "customProvider.field.apiKeyHint": "Opcional. Deixe em branco se você gerencia a autenticação por cabeçalhos.",
-  "customProvider.field.apiKeyKeptHint":
-    "Há uma chave salva. Deixe em branco para manter a chave e os cabeçalhos salvos.",
+  "customProvider.field.apiKeyKeptHint": "Há uma chave salva. Deixe em branco para mantê-la.",
   "customProvider.models": "Modelos",
   "customProvider.model.id": "ID do modelo {number}",
   "customProvider.model.name": "Nome de exibição do modelo {number}",
@@ -80,6 +77,7 @@ export const messages = {
   "customProvider.header.name": "Nome do cabeçalho {number}",
   "customProvider.header.value": "Valor do cabeçalho {number}",
   "customProvider.header.valuePlaceholder": "valor",
+  "customProvider.header.keptPlaceholder": "Salvo. Deixe em branco para manter.",
   "customProvider.header.remove": "Remover cabeçalho {number}",
   "customProvider.header.add": "Adicionar cabeçalho",
   "customProvider.submit": "Enviar",
@@ -153,6 +151,9 @@ export const messages = {
   "customProvider.acp.args": "Argumentos",
   "customProvider.acp.argsHint":
     "Separe os argumentos com espaços. Coloque entre aspas um argumento que contenha espaços.",
+  "customProvider.acp.usagePrompt": "Comando de uso",
+  "customProvider.acp.usagePromptHint":
+    "O OpenBot o envia no máximo a cada 5 minutos e mostra a última resposta. Use um comando que o agente responda sozinho, como /usage.",
   "customProvider.acp.env": "Variáveis de ambiente",
   "customProvider.acp.env.name": "Nome da variável {number}",
   "customProvider.acp.env.value": "Valor da variável {number}",
@@ -184,6 +185,7 @@ export const messages = {
   "customProvider.acp.error.envDuplicate": "Este agente já define {name}.",
   "customProvider.acp.error.envValueRequired": "Digite um valor para esta variável.",
   "customProvider.acp.error.envValueLength": "Use menos de {max} caracteres no valor.",
+  "customProvider.acp.error.usagePromptInvalid": "Use uma única linha com no máximo {max} caracteres.",
   "customProvider.acp.error.agentIdPattern":
     "Use letras minúsculas, números ou hífens, começando com uma letra ou um número. Use no máximo 40 caracteres.",
   "customProvider.agents.title": "Agentes personalizados",

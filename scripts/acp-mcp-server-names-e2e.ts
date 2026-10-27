@@ -61,7 +61,14 @@ try {
   const store = new CustomAgentStore({ path: join(root, "custom-agents.json"), cipher: xorCipher });
   await runCauseEffect(store.load());
   await runCauseEffect(
-    store.save({ id: "names", name: "names", command: executable, args: [], env: [{ name: "FAKE_LOG", value: log }] }),
+    store.save({
+      id: "names",
+      name: "names",
+      command: executable,
+      args: [],
+      env: [{ name: "FAKE_LOG", value: log }],
+      usagePrompt: null,
+    }),
   );
 
   const drops: McpServerDrop[] = [];

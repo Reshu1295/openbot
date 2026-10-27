@@ -18,14 +18,15 @@ Every event has these low-cardinality properties:
 
 - `surface`: `desktop`, `desktop_host`, `landing`, `web`, `mobile`, or `account_api`;
 - `environment`: currently `production` only;
-- `event_schema_version`: the integer schema generation of that surface: currently `11` on `desktop`,
-  `10` on `desktop_host`, `10` on `landing`, `11` on `account_api`, `4` on `mobile`, and `2` on `web`;
+- `event_schema_version`: the integer schema generation of that surface: currently `12` on `desktop`,
+  `11` on `desktop_host`, `10` on `landing`, `11` on `account_api`, `4` on `mobile`, and `2` on `web`;
 - `app_version` and `platform` on desktop surfaces;
 - `acquisition_source` on landing surfaces: `direct`, `search`, `social`, `github`, or `other`;
 - `source_platform` on landing surfaces: an allowlisted platform name, or `unknown`.
 
 Each surface counts its own generations, so a report filters by `surface` and that surface's current
-generation. Host generation 10 adds `provider_auth` on `system_turn_completed`. Desktop generation 11 adds `trigger` on the `interrupt` action of
+generation. Host generation 11 adds `system_workflow_run` and `workflow_count` on `system_inventory`.
+Desktop generation 12 adds `workflow_action`. Host generation 10 adds `provider_auth` on `system_turn_completed`. Desktop generation 11 adds `trigger` on the `interrupt` action of
 `voice_conversation_action`. Desktop generation 10 adds the billing, license and activation events
 (`hosted_server_plans_action`, `limit_reached`, `license_action`, `sales_contact_clicked`,
 `billing_return_viewed`, `onboarding_step`, `usage_limit_action`, `agent_template_action`,
@@ -117,11 +118,13 @@ off. Turning analytics off on any surface first sends one `analytics_preference_
 | `system_tool_used` | Which tools and plugins do agents use for their tasks? | One row per tool kind, plugin and tool in a completed turn, with call and failure counts (Claude reports no tool failures, so its `failed_count` is 0). `plugin` is a catalog slug, `builtin`, or `custom`; `tool` is sent only for `builtin` and catalog plugins. At most 32 rows per turn |
 | `system_site_visited` | Which websites do users and agents work on? | A browser tab reached a new registrable domain. `actor` is `user` or `agent`; only the eTLD+1 is sent, and IP addresses, single-label names and names with no public suffix are dropped. An intranet host under a public domain is sent as that domain |
 | `system_routine_run` | Do routine runs succeed, and which schedules are used? | A routine run that this host saw running reached `succeeded`, `failed`, `needs-attention`, `interrupted`, or `cancelled` |
-| `system_inventory` | What have accounts set up? | At most once per local day: counts of agents, enabled routines, custom MCP servers, local and community skills, and the slugs of catalog plugins, curated skills and curated agents |
+| `system_workflow_run` | Do workflow runs succeed, how do they start, and which steps do they use? | From host generation 11, a workflow run that started after this host process started ended. `status` is `done`, `failed` or `stopped`; `source` is `manual`, `schedule` or `webhook`; `duration_ms` (at most 30 days, else not sent); `step_count` of the nodes that ran, and `agent_step_count`, `model_step_count` (model and condition steps), `approval_step_count` and `output_step_count`. A retry can end a run again: each outcome of a run is sent once. Titles, texts, node IDs, agents, addresses and places are never sent |
+| `system_inventory` | What have accounts set up? | At most once per local day: counts of agents, enabled routines, workflows (from host generation 11, `workflow_count`), custom MCP servers, local and community skills, and the slugs of catalog plugins, curated skills and curated agents |
 | `system_resources` | How much CPU and memory does OpenBot use, by computer class and provider? | At most once per local day, the summary of the last closed local day that has samples. A sample is taken once a minute while the computer is awake. Memory in MB rounded to 50 and CPU percent as integers, as the 95th percentile of the samples (`_p95`) or the largest sample (`_max`), for all processes (`total_`), each process group (`main`, `window`, `browser_tab`, `gpu`, `database_host`, `voice_host`, `utility_other`) and the process tree of each provider id (`provider_<id>_`, `provider_other_` for any other child process). `main_loop_delay_ms_p95` is the 95th percentile of each minute's p99 main event-loop delay; `_max` is the longest delay. `db_request_ms_*`, `db_request_count` and `db_slow_request_count` (over 100 ms) time agent database statements. `renderer_gone_count`, `child_gone_count` and `gone_<reason>_count` count processes that ended for a reason other than a clean exit, except in the minute before a quit; A utility process that OpenBot stops itself, such as the voice host after idle time or a database host at a statement deadline, is not counted. The peak active turns, browser tabs and provider processes; `ram_class`, `cpu_class`, `arch`, `host_kind` (`desktop` or `server`), `provider_tree_supported` (false on Windows, or when `ps` failed), and `sample_count`. A day that closes while analytics is off is dropped, never sent later |
 | `agent_input_action` | Can users resolve prompts and approvals? | Response IPC completed |
 | `queue_action` | Can users control queued work? | Queue operation completed |
 | `routine_action` | Are routines adopted and reliable? | Routine operation completed; `duration_ms` measures execution time |
+| `workflow_action` | Are workflows adopted, and which canvas actions fail? | From desktop generation 12, a workflow operation that the user started completed. `action`: `create`, `rename`, `delete`, `run`, `run_step`, `stop_step`, `stop_run`, `retry_step`, `approve`, `reject`, `restore_version` or `rotate_webhook_secret`. `run_step` adds `node_kind` when the node is saved. `duration_ms` measures the call. Failures: `create_failed`, `update_failed`, `delete_failed`, `request_failed`, `cancel_failed`, `response_failed`. The workflow that the app makes when a server has none is not sent. Titles, texts, IDs and secrets are never sent |
 | `team_action` | Does team setup and invitation convert? | Requested team operation completed. From desktop generation 10, `invite_link_copied` and `invite_qr_shown` show how an invitation is shared |
 | `browser_action` | Are embedded browser controls reliable? | Browser IPC completed |
 | `search_action` | Is search useful and healthy? | Search returned a safe result count |
@@ -326,7 +329,8 @@ the OpenBot account ID. Filter each row by its `surface` and that surface's curr
 - A campaign link produces a session whose `utm_source`, `utm_medium`, and `utm_campaign` match the
   link, instead of `Direct / Not set`.
 - A duplicate host turn start produces one `system_turn_started` event.
-- A routine run or tool use replayed from history after a restart produces no event.
+- A routine run or tool use replayed from history after a restart produces no event. A workflow run
+  that started before a restart and ends after it produces no event.
 - A known stored turn origin wins over a completion payload whose origin is `unknown`.
 - `system_turn_completed` never exceeds starts for the same reporting window without a documented
   process restart boundary.

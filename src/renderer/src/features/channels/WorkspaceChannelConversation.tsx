@@ -45,7 +45,7 @@ function DesktopChannelConversation(props: { channelId: string; account: () => C
   const { teamPresence, currentTeamMember } = usePresence();
   const { activeServer, activeServerSupportsCapability, joinServerOpen } = useServers();
   const { serverSettingsOpen } = useServerSettings();
-  const { appSettingsOpen, skillsMarketplaceOpen } = useSettings();
+  const { appSettingsOpen, skillsMarketplaceOpen, generalSettings } = useSettings();
   const { agentStatus, agentList, updateAgent, setAgentAvatar } = useAgents();
   const { approvals, pendingPrompts } = useTurns();
   const {
@@ -113,6 +113,7 @@ function DesktopChannelConversation(props: { channelId: string; account: () => C
       currentUserEmail={props.account().email}
       isOwnSender={isOwnSender}
       browserEnabled={!platform.landingPreview && activeServerSupportsCapability("browser-control")}
+      openLinksInBrowser={generalSettings().externalLinkTarget.kind === "openbot"}
       remoteDesktopSessionActive={Boolean(activeRemoteDesktopSession())}
       remoteDesktopVisible={remoteDesktopWorkspaceVisible()}
       remoteDesktopEnabled={!platform.landingPreview && activeServerSupportsCapability("remote-desktop")}

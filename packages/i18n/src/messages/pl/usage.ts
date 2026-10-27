@@ -68,6 +68,7 @@ export const messages = {
   "usage.panel.label": "Użycie agentów",
   "usage.panel.title": "Użycie",
   "usage.panel.allAgents": "Wszyscy agenci",
+  "usage.panel.workflows": "Przepływy pracy",
   "usage.panel.agents": "Agenci (użycie)",
   "usage.panel.metric": "Miara użycia",
   "usage.panel.period": "Okres użycia",

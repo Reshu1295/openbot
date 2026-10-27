@@ -45,12 +45,10 @@ export const messages = {
   "customProvider.error.baseUrlProtocol": "Usa una URL http:// o https://.",
   "customProvider.error.baseUrlCredential": "Pon la credencial en una cabecera, no en la URL.",
   "customProvider.saved.restarted": "Guardado. OpenBot está cargando los modelos.",
-  "customProvider.saved.skippedBusy":
-    "Guardado. OpenCode lee la lista cuando termina la tarea actual. Pulsa Conectar entonces.",
+  "customProvider.saved.skippedBusy": "Guardado. OpenCode lee la lista cuando termina la tarea actual.",
   "customProvider.saved.notRunning": "Guardado. OpenCode lee la lista la próxima vez que se inicie.",
   "customProvider.removed.restarted": "Eliminado. OpenBot está cargando los modelos.",
-  "customProvider.removed.skippedBusy":
-    "Eliminado. OpenCode lee la lista cuando termina la tarea actual. Pulsa Conectar entonces.",
+  "customProvider.removed.skippedBusy": "Eliminado. OpenCode lee la lista cuando termina la tarea actual.",
   "customProvider.removed.notRunning": "Eliminado. OpenCode lee la lista la próxima vez que se inicie.",
   "customProvider.saveFailed": "OpenBot no pudo guardar este endpoint.",
   "customProvider.removeFailed": "OpenBot no pudo eliminar {name}.",
@@ -68,8 +66,7 @@ export const messages = {
   "customProvider.field.baseUrl": "URL base",
   "customProvider.field.apiKey": "Clave de API",
   "customProvider.field.apiKeyHint": "Opcional. Déjalo vacío si gestionas la autenticación mediante cabeceras.",
-  "customProvider.field.apiKeyKeptHint":
-    "Hay una clave guardada. Déjalo vacío para conservarla junto con las cabeceras guardadas.",
+  "customProvider.field.apiKeyKeptHint": "Hay una clave guardada. Déjalo vacío para conservarla.",
   "customProvider.models": "Modelos",
   "customProvider.model.id": "ID del modelo {number}",
   "customProvider.model.name": "Nombre para mostrar del modelo {number}",
@@ -80,6 +77,7 @@ export const messages = {
   "customProvider.header.name": "Nombre de la cabecera {number}",
   "customProvider.header.value": "Valor de la cabecera {number}",
   "customProvider.header.valuePlaceholder": "valor",
+  "customProvider.header.keptPlaceholder": "Guardado. Déjalo vacío para conservarlo.",
   "customProvider.header.remove": "Eliminar cabecera {number}",
   "customProvider.header.add": "Añadir cabecera",
   "customProvider.submit": "Enviar",
@@ -156,6 +154,9 @@ export const messages = {
   "customProvider.acp.args": "Argumentos",
   "customProvider.acp.argsHint":
     "Separa los argumentos con espacios. Pon entre comillas los argumentos que contengan espacios.",
+  "customProvider.acp.usagePrompt": "Comando de uso",
+  "customProvider.acp.usagePromptHint":
+    "OpenBot lo envía como máximo cada 5 minutos y muestra la última respuesta. Usa un comando que el agente responda por sí mismo, como /usage.",
   "customProvider.acp.env": "Variables de entorno",
   "customProvider.acp.env.name": "Nombre de la variable {number}",
   "customProvider.acp.env.value": "Valor de la variable {number}",
@@ -187,6 +188,7 @@ export const messages = {
   "customProvider.acp.error.envDuplicate": "Este agente ya establece {name}.",
   "customProvider.acp.error.envValueRequired": "Introduce un valor para esta variable.",
   "customProvider.acp.error.envValueLength": "El valor debe tener menos de {max} caracteres.",
+  "customProvider.acp.error.usagePromptInvalid": "Usa una sola línea de {max} caracteres como máximo.",
   "customProvider.acp.error.agentIdPattern":
     "Usa letras minúsculas, números o guiones, empezando por una letra o un número. Usa como máximo 40 caracteres.",
   "customProvider.agents.title": "Agentes personalizados",

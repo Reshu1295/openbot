@@ -58,7 +58,8 @@ function elapsedMs(subagent: ConversationSubagent, now: number): number {
   return timeOf(subagent.endedAt, now) - timeOf(subagent.startedAt, now);
 }
 
-function useDuration() {
+/** "12s" or "1m 05s": the time of a subagent, or of a turn in its steps row. */
+export function useDuration() {
   const { t } = useText();
   return (ms: number) => {
     const total = Math.max(0, Math.floor(ms / 1_000));
@@ -274,7 +275,7 @@ export function SubagentPanel(props: SubagentPanelProps) {
           type="button"
           variant="ghost"
           class="browser-toolbar-button side-panel-pane-close"
-          aria-label={t("conversation.tasks.panel.closePanel")}
+          aria-label={t("conversation.sidePanel.closePanel")}
           onClick={() => props.onClosePanel()}
         >
           <X class="browser-toolbar-icon" />

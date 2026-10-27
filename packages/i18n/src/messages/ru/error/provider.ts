@@ -6,6 +6,7 @@ export const messages = {
     "OpenBot не удалось зарегистрировать серверы MCP в конфигурации Codex. Проверьте, что файл config.toml Codex корректен и доступен для записи, затем перезапустите OpenBot.",
   "error.provider.computerUseConfig":
     "OpenBot не смог зарегистрировать управление компьютером в конфигурации Codex. Убедитесь, что ваш config.toml для Codex корректен и доступен для записи, затем перезапустите OpenBot. Чтобы продолжить без него, отключите управление компьютером в настройках агента.",
+  "error.provider.codexUnresponsive": "Codex перестал отвечать, поэтому OpenBot завершил его процесс.",
   "error.provider.endpointsReadOnly":
     "Сохранённые эндпоинты записаны более новой версией OpenBot, либо файл не читается. Чтобы изменить их, обновите OpenBot.",
   "error.provider.endpointNoSecureStorage":
@@ -56,6 +57,9 @@ export const messages = {
     "OpenBot не смог связаться с источниками релизов провайдеров. Проверьте соединение и повторите попытку.",
   "error.provider.runtimesUnsupported": "Среды выполнения провайдеров недоступны на этой платформе.",
   "error.provider.closing": "OpenBot закрывается.",
+  "error.provider.removeWhileOn": "Выключите провайдера, прежде чем удалять его загрузку.",
+  "error.provider.removeWhileDownloading": "Дождитесь окончания загрузки, затем удалите её.",
+  "error.provider.removeIncomplete": "Программа использует файлы этого CLI. Закройте её и повторите попытку.",
   "error.provider.cliOverride": "Удалите явно заданный путь к CLI, прежде чем обновлять в OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "Обновление среды выполнения не завершено.",
   "error.provider.downloadHttp": "Загрузка среды выполнения не удалась: HTTP {status}.",
@@ -98,6 +102,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Имя заголовка слишком длинное.",
   "error.provider.headerNameDuplicate": "У двух заголовков одинаковое имя.",
   "error.provider.headerValueInvalid": "Значение заголовка отсутствует или слишком длинное.",
+  "error.provider.headerValueMissing": "Введите значение заголовка {name}.",
   "error.provider.apiKeyTooLong": "API-ключ слишком длинный.",
   "error.provider.localOnly": "Провайдеров можно изменить только на компьютере, где работают агенты.",
   "error.provider.keyRequired": "Нужен ключ провайдера.",
@@ -194,6 +199,8 @@ export const messages = {
     "Провайдер моделей OpenCode сообщил о некорректном запросе на загрузку. Выберите другую модель и продолжайте. Проверьте сохранённые регулярные задачи, прежде чем создавать их заново.\n{detail}",
   "error.provider.opencodeUnreadableContent":
     "Эта модель не может прочитать файл или изображение в этом чате. Выберите модель, которая читает файлы, затем отправьте сообщение ещё раз.",
+  "error.provider.opencodeFreeLimit":
+    "Бесплатные модели OpenCode исчерпали лимит использования. Этот лимит общий для всех бесплатных моделей. Чтобы продолжить, вставьте ключ OpenCode Go в настройках OpenCode или выберите модель другого провайдера.",
   "error.provider.opencodeProviderFailed":
     "У провайдера моделей произошёл сбой на его стороне. Дело не в вашем соединении. Повторите попытку позже или выберите другую модель.\n{detail}",
   "error.provider.opencodeNetwork":
@@ -263,11 +270,17 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "В браузере можно открыть только ссылки для входа по HTTPS.",
   "error.provider.geminiKeyRefused":
     "Gemini отклонил сохранённый ключ API. Замените или удалите ключ в настройках, затем подключитесь снова.",
+  "error.provider.keyProviderRefused":
+    "{provider} отклонил сохранённый ключ API. Замените или удалите ключ в настройках, затем повторите попытку.",
+  "error.provider.keyProviderNoBalance":
+    "На аккаунте {provider} для сохранённого ключа API нет средств. Пополните баланс аккаунта, затем повторите попытку.",
   "error.provider.messageTooLarge": "OpenBot остановил {provider}, потому что он отправил сообщение больше {limit} МБ.",
   "error.provider.customAgentIdInvalid":
     "ID агента должен состоять из строчных букв, цифр или `-` и не может совпадать с ID встроенного провайдера.",
   "error.provider.customAgentEnvInvalid":
     "Имя переменной должно состоять из букв, цифр или `_` и не начинаться с цифры. Каждое имя используйте один раз, всего не более 16 имён.",
+  "error.provider.customAgentUsagePromptInvalid":
+    "Команда использования должна быть одной строкой не длиннее 256 символов.",
   "error.provider.customAgentCommandInvalid":
     "Команда должна быть полным путём, путём, начинающимся с ~/, или именем команды без пробелов.",
   "error.provider.customAgentArgsInvalid":
@@ -307,6 +320,8 @@ export const messages = {
     "Этого аккаунта {provider} нет на этом компьютере. Обновите список и повторите попытку.",
   "error.provider.accountAlreadyAdded": "Этот аккаунт {provider} уже подключён.",
   "error.provider.accountDefault": "Первый аккаунт {provider} нельзя удалить.",
+  "error.provider.accountUsesKey":
+    "Этот аккаунт {provider} использует сохранённый API-ключ и не имеет входа. Измените ключ в Настройки сервера → Провайдеры.",
   "error.provider.accountInUse": "Агент с этим аккаунтом сейчас работает. Попробуйте ещё раз, когда агент остановится.",
   "error.provider.accountsReadOnly":
     "Не удаётся прочитать сохранённые аккаунты провайдеров. Обновите OpenBot, прежде чем их менять.",
@@ -362,6 +377,8 @@ export const messages = {
     "Аутентификация Muse не подтверждена. Подключитесь на компьютере-хосте или задайте ключ API Meta.",
   "error.provider.museSignIn": "Чтобы продолжить, войдите в Muse на компьютере-хосте.",
   "error.provider.inceptionSignIn": "Чтобы продолжить, добавьте ключ API Inception.",
+  "error.provider.deepseekSignIn": "Добавьте ключ API DeepSeek, чтобы продолжить.",
+  "error.provider.openrouterSignIn": "Добавьте ключ API OpenRouter, чтобы продолжить.",
   "error.provider.terminalLoginFailed":
     "Не удалось открыть терминал для входа. Откройте CLI провайдера на этом хосте, войдите там, затем обновите список провайдеров.",
   "error.provider.nativeArchiveInvalid": "Загруженный файл провайдера не содержит корректной установки.",

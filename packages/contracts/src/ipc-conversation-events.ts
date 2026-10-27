@@ -342,6 +342,21 @@ export function isChannelChangeMarker(message: ConversationMessage): boolean {
 }
 
 /**
+ * The item type of the note that an agent added, changed or deleted a Vault item. The text is a
+ * readable sentence that names the item, never a secret.
+ */
+export const VAULT_CHANGE_ITEM_TYPE = "vault-change";
+
+export function isVaultChangeMarker(message: ConversationMessage): boolean {
+  return (
+    message.author === "system" &&
+    message.source === "system" &&
+    message.status === "completed" &&
+    message.itemType === VAULT_CHANGE_ITEM_TYPE
+  );
+}
+
+/**
  * The item type of a message that one agent sends to another, in the sender's thread and in the
  * recipient's thread. It is traffic between agents, not a message to the user.
  */

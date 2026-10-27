@@ -1,3 +1,4 @@
+import { fileReferenceName } from "@openbot/brand/file-reference";
 import { chatPreviewKind } from "@openbot/contracts/chat-preview";
 import type { AttachmentSummary, InstalledSkill, MessageReaction } from "@openbot/contracts/ipc";
 import { canPreviewAttachment, MESSAGE_REACTIONS, MORE_MESSAGE_REACTIONS } from "@openbot/contracts/ipc";
@@ -37,7 +38,13 @@ import { DataTable, type MessageContentBlock, messageContentBlocks, reuseUnchang
 import { messageFileReferences } from "./FileReference";
 import { ImageGeneration } from "./ImageGeneration";
 import { ImageGallery, ImageLightbox, type ImageLightboxOpening, isLightboxImage } from "./ImageLightbox";
-import { MarkdownInlineText, MarkdownMessageText, markdownImageName } from "./MarkdownMessageText";
+import {
+  MarkdownInlineText,
+  MarkdownMessageText,
+  type MessageImageFile,
+  markdownImageName,
+  messageImageFiles,
+} from "./MarkdownMessageText";
 import { ReplyQuote } from "./ReplyQuote";
 import {
   nextStreamingReveal,
@@ -254,6 +261,21 @@ const comparisonTableContent = (block: MessageContentBlock) => (block.type === "
 const dataTableContent = (block: MessageContentBlock) => (block.type === "table" ? block : undefined);
 const codeContent = (block: MessageContentBlock) => (block.type === "code" ? block : undefined);
 const textContent = (block: MessageContentBlock) => (block.type === "text" ? block : undefined);
+const imageFileKeys = (files: readonly MessageImageFile[]) =>
+  files.map((file) => `${file.kind}:${file.path}`).join("\n");
+
+/** A named image file in the shape of an image attachment, so the gallery and the viewer show it. */
+function fileImage(file: MessageImageFile, url: string): AttachmentSummary {
+  return {
+    id: `file:${file.kind}:${file.path}`,
+    name: fileReferenceName(file.path),
+    size: 0,
+    kind: "image",
+    mimeType: "image/*",
+    previewKind: "image",
+    previewUrl: url,
+  };
+}
 
 export function MessageBody(props: {
   animate?: boolean | undefined;
@@ -284,6 +306,11 @@ export function MessageBody(props: {
   onOpenQuote?: ((messageId: string, text: string) => void) | undefined;
   onDownload?: ((attachment: AttachmentSummary) => void) | undefined;
   mediaSource?: AttachmentMediaSource | undefined;
+  /**
+   * Reads an image file that an agent message names, for a preview under the text. Resolves the
+   * image as a `data:` URL, or `null` when it cannot show. Absent, a named file is only a chip.
+   */
+  loadImageFile?: ((file: MessageImageFile) => Promise<string | null>) | undefined;
 }) {
   const { t } = useText();
   const streamingBody = createStreamingBody(
@@ -319,6 +346,43 @@ export function MessageBody(props: {
       (attachment) => !referencedIds.has(attachment.id) && attachment.id !== generatedAttachmentId,
     );
   });
+  /* The image files that a finished agent message names show under it like attached images. A
+     file that the message also attaches shows once, as the attachment. */
+  const namedImageFiles = createMemo(
+    () => {
+      if (props.message.author !== "agent" || props.message.streaming || !props.loadImageFile) return [];
+      const attached = new Set((props.message.attachments ?? []).map((attachment) => attachment.name));
+      const texts = messageContentBlocks(props.message.body, false).flatMap((block) =>
+        block.type === "text" ? [block.text] : [],
+      );
+      return messageImageFiles(texts).filter((file) => !attached.has(fileReferenceName(file.path)));
+    },
+    { equals: (previous, next) => imageFileKeys(previous) === imageFileKeys(next) },
+  );
+  const [fileImages, setFileImages] = createSignal<AttachmentSummary[]>([]);
+  createEffect(
+    () => ({ files: namedImageFiles(), load: untrack(() => props.loadImageFile) }),
+    ({ files, load }) => {
+      let current = true;
+      if (!load || files.length === 0) {
+        setFileImages([]);
+        return;
+      }
+      void Promise.all(
+        files.map((file) =>
+          load(file).then(
+            (url) => (url ? fileImage(file, url) : null),
+            () => null,
+          ),
+        ),
+      ).then((images) => {
+        if (current) setFileImages(images.filter((image) => image !== null));
+      });
+      return () => {
+        current = false;
+      };
+    },
+  );
   const standaloneImageAttachments = createMemo(() =>
     props.message.author === "agent" ? standaloneAttachments().filter(isLightboxImage) : [],
   );
@@ -356,16 +420,23 @@ export function MessageBody(props: {
     content: () => messageContent,
     enabled: () => props.message.author === "agent" && streamingBody.smoothHeight(),
   });
-  // A markdown image is a web address, not an attachment, so the viewer has no download for it.
+  // A markdown image is a web address, and a named image file is not an attachment, so the viewer
+  // has no download for them.
   const [lightbox, setLightbox] = createSignal<(ImageLightboxOpening & { markdown?: boolean }) | null>(null);
   const lightboxImages = createMemo(() => (props.message.attachments ?? []).filter(isLightboxImage));
   /* An image opens in the viewer with the other images of its message. A quoted message's image
      is not one of them, so it opens alone. Other files open in the preview panel. */
   const openAttachment = (attachment: AttachmentSummary, origin?: HTMLElement) => {
     if (isLightboxImage(attachment)) {
-      const siblings = lightboxImages();
+      const named = fileImages().some((image) => image.id === attachment.id);
+      const siblings = named ? fileImages() : lightboxImages();
       const images = siblings.some((image) => image.id === attachment.id) ? siblings : [attachment];
-      setLightbox({ images, index: images.findIndex((image) => image.id === attachment.id), origin });
+      setLightbox({
+        images,
+        index: images.findIndex((image) => image.id === attachment.id),
+        origin,
+        markdown: named,
+      });
     } else if (canPreviewAttachment(attachment)) {
       props.onPreview(attachment);
     } else {
@@ -496,24 +567,29 @@ export function MessageBody(props: {
                     </Match>
                     <Match when={codeContent(block())}>
                       {(code) => (
-                        <Show
-                          when={chatPreviewKind(code().language)}
-                          fallback={
-                            <CodeBlock
-                              block={code()}
-                              streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
-                            />
-                          }
+                        // The id lets the selection actions open for text selected in the code.
+                        <div
+                          data-selection-message-id={props.message.streaming !== true ? props.message.id : undefined}
                         >
-                          {(preview) => (
-                            <CodePreview
-                              block={code()}
-                              kind={preview()}
-                              streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
-                              onOpenLink={props.onOpenLink}
-                            />
-                          )}
-                        </Show>
+                          <Show
+                            when={chatPreviewKind(code().language)}
+                            fallback={
+                              <CodeBlock
+                                block={code()}
+                                streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
+                              />
+                            }
+                          >
+                            {(preview) => (
+                              <CodePreview
+                                block={code()}
+                                kind={preview()}
+                                streaming={streamingBody.revealing() && index === contentBlocks().length - 1}
+                                onOpenLink={props.onOpenLink}
+                              />
+                            )}
+                          </Show>
+                        </div>
                       )}
                     </Match>
                     <Match when={textContent(block())}>
@@ -586,6 +662,25 @@ export function MessageBody(props: {
               )}
             </For>
           </div>
+        </Match>
+      </Switch>
+      <Switch>
+        <Match when={fileImages().length > 1}>
+          <ImageGallery images={fileImages()} onOpen={openAttachment} />
+        </Match>
+        <Match when={fileImages()[0]}>
+          {(image) => (
+            <div class="message-image-attachments">
+              <ImageGeneration
+                presentation="attachment"
+                status="completed"
+                prompt={image().name}
+                aspectRatio="square"
+                attachment={image()}
+                onPreview={openAttachment}
+              />
+            </div>
+          )}
         </Match>
       </Switch>
       <Show when={standaloneFileAttachments().length > 0}>

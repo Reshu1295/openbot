@@ -1,5 +1,5 @@
 import { OPENBOT_LINKS } from "../../lib/landing-links";
-import type { Comparison } from "./comparison";
+import { type Comparison, OPENBOT_TEXT } from "./comparison";
 
 // Every statement about Paperclip here is taken from paperclip.ing, its documentation, or
 // its repository (the README, the deployment and Tailscale guides, and the telemetry
@@ -32,8 +32,7 @@ export const PAPERCLIP_COMPARISON: Comparison = {
     {
       icon: "cpu",
       topic: "Models and plans",
-      openbot:
-        "Use the plans you already have: ChatGPT, Claude, Gemini, Grok, Cursor or Cline. Or run free models and your own model through OpenCode. Choose one for each agent, and change it later.",
+      openbot: OPENBOT_TEXT.models,
       rival:
         "Bring your own agent tools: Claude Code, Codex, Cursor, Gemini CLI, OpenCode, Pi, Hermes Agent, Grok Build, Kimi Code, OpenClaw, or a script or HTTP service. You install and sign in to each one.",
     },
@@ -56,8 +55,7 @@ export const PAPERCLIP_COMPARISON: Comparison = {
     {
       icon: "cloud",
       topic: "When your computer is off",
-      openbot:
-        "Agents keep working on the computer or server that runs OpenBot, and routines start them on a schedule. If you do not want to keep a computer on, use a hosted OpenBot server in the EU, from €20 or $25 a month.",
+      openbot: OPENBOT_TEXT.offline,
       rival:
         "The Paperclip server must stay on to start its agents. Paperclip Cloud has a waitlist only, with no date or price; until it opens, you set up and run your own server.",
       better: "openbot",
@@ -65,17 +63,39 @@ export const PAPERCLIP_COMPARISON: Comparison = {
     {
       icon: "phone",
       topic: "Phones and remote access",
-      openbot:
-        "Apps for iPhone and Android connect from anywhere, over an encrypted connection between your devices, with no VPN. No cloud stores your chats or files.",
+      openbot: OPENBOT_TEXT.remote,
       rival:
         "No app for iPhone or Android: you open the web UI in a browser. By default it listens only on the computer itself; to reach it from your phone, you set up Tailscale, a VPN, your local network or a public address.",
       better: "openbot",
     },
     {
+      icon: "refresh",
+      topic: "Backup models",
+      openbot: OPENBOT_TEXT.backupModels,
+      rival:
+        "You choose the agent tool and the model for each agent. When a Claude plan reaches its limit, the agent waits until the limit resets. It does not move to a different model or provider.",
+      better: "openbot",
+    },
+    {
+      icon: "key",
+      topic: "Logins and payments",
+      openbot: OPENBOT_TEXT.logins,
+      rival:
+        "Paperclip keeps API keys and tokens encrypted on the computer that runs it, and gives them to the agent when it starts. The agent can read each secret that it gets. Paperclip has no password manager and does not fill in logins or payment cards.",
+      better: "openbot",
+    },
+    {
+      icon: "mic",
+      topic: "Voice",
+      openbot: OPENBOT_TEXT.voice,
+      rival:
+        "The documentation states no voice mode. The code has an experimental voice connection through Speko, a hosted service that handles the audio.",
+      better: "openbot",
+    },
+    {
       icon: "users",
       topic: "Teams",
-      openbot:
-        "Each agent is a full coding agent with its own job. They give work to each other in shared channels, and coworkers can join one team host.",
+      openbot: OPENBOT_TEXT.teams,
       rival:
         "Agents have a boss, a title and a job in an org chart, with budgets and approval stages. People can join after you turn on sign-in from the server's shell.",
     },
@@ -116,15 +136,13 @@ export const PAPERCLIP_COMPARISON: Comparison = {
   sections: [
     {
       title: "Models and the plans you pay for",
-      openbot:
-        "OpenBot runs the provider tools you already use, with the plans you already pay for: Codex with your ChatGPT plan, Claude Code with your Claude plan, Gemini with your Google AI Pro or Ultra plan, Grok CLI with your Grok account or an xAI API key, Cursor CLI with your Cursor plan or a Cursor API key, and Cline with your Cline account. OpenCode runs free models, or your own model on any OpenAI-compatible server, also one on your computer. You choose the provider, the model and the reasoning effort for each agent. When you move an agent to a different provider, it keeps its role, workspace and conversation.",
+      openbot: OPENBOT_TEXT.plansSection,
       rival:
         "Paperclip does not run models itself: it runs agent tools through adapters. It lists Claude Code, Codex, Cursor and Cursor Cloud, Gemini CLI, OpenCode, Pi, Hermes Agent, Grok Build, Kimi Code and OpenClaw, and also runs your own processes, HTTP services and adapter packages. Paperclip installs no agent tools for you, unless you use its Docker or sandbox image: you install each one and sign in with its own account or API key. You choose the tool and the model for each agent.",
     },
     {
       title: "Where the work happens",
-      openbot:
-        "OpenBot runs on the computer that hosts it. Agent workspaces, conversations and app data stay on that computer, so it must stay on while its agents work. Run it on a desktop or a server that stays on, and your agents keep working while your laptop is closed. If you do not want to keep a computer on, use a hosted OpenBot server. It is a Linux server in the EU (Germany, Finland or France), from €20 or $25 a month, and it keeps the workspaces and chats of its agents. Local-first is not offline: an agent that uses a hosted provider still sends its requests to that provider.",
+      openbot: OPENBOT_TEXT.workSection,
       rival:
         "Paperclip runs as one Node.js process on the computer that you choose, with an embedded Postgres database and files on that computer. You can also use your own Postgres, run it in Docker, or deploy it to a server or a cloud host. Agents can also work in remote sandboxes, such as Daytona or e2b, but the server must stay on to start them. Agents wake on a schedule or when a task comes to them. Paperclip Cloud has a waitlist, with no published date or price.",
       better: "openbot",
@@ -139,8 +157,7 @@ export const PAPERCLIP_COMPARISON: Comparison = {
     },
     {
       title: "Phones and remote access",
-      openbot:
-        "The OpenBot apps for iPhone and Android connect to the computer that runs your agents. From anywhere, you chat with them, follow their progress, approve their actions and send files. The connection goes directly between your devices when it can, it is encrypted, and no cloud stores your chats or files. You set up no VPN or tunnel. Agents can also answer in Slack, Discord and Telegram. Remote access needs an OpenBot account.",
+      openbot: OPENBOT_TEXT.phonesSection,
       rival:
         "Paperclip says that you can manage your agents from your phone, in its web UI; it lists no app for iPhone or Android. To reach the server from another device, you switch it to authenticated mode and then use Tailscale, a VPN or your local network, or a public deployment with its own public URL.",
       better: "openbot",
@@ -148,7 +165,7 @@ export const PAPERCLIP_COMPARISON: Comparison = {
     {
       title: "How agents work as a team",
       openbot:
-        "In OpenBot, each agent is a full coding agent: Codex, Claude Code, Gemini, Grok CLI, Cursor CLI, Cline or OpenCode, each with its own job and workspace. A lead agent can give parts of a task to other agents in a shared channel. You chat with them, follow their work and step in when a decision needs you. For a team of people, one computer runs the host and the others join it; the chats and files stay on the host.",
+        "In OpenBot, each agent is a full coding agent: Codex, Claude Code, Gemini, Grok CLI, Cursor CLI, Cline, OpenCode, Pi, Muse Code or an agent of your own, each with its own job and workspace. A lead agent can give parts of a task to other agents in a shared channel. You chat with them, follow their work and step in when a decision needs you. For a team of people, one computer runs the host and the others join it; the chats and files stay on the host. Roles set which agents each member can view, chat with or manage.",
       rival:
         "Paperclip organises agents as a company. Each agent has a boss, a title and a job in an org chart, and work is in tickets that trace back to the company goals. Agents wake on a schedule or when a task comes to them, and give work up and down the org chart. You approve new agents and set a budget for each one; at the limit, Paperclip pauses the agent. One deployment can run several companies, each with its own agents and data. Agent Chat is experimental.",
     },
@@ -223,6 +240,8 @@ export const PAPERCLIP_COMPARISON: Comparison = {
       url: `${PAPERCLIP_REPO}/blob/master/packages/shared/src/telemetry/README.md`,
     },
     { label: "Paperclip Cloud waitlist", url: "https://paperclip.ing/waitlist/" },
+    { label: "Paperclip Claude adapter", url: "https://docs.paperclip.ing/adapters/claude-local" },
+    { label: "Paperclip secrets", url: "https://docs.paperclip.ing/deploy/secrets" },
     { label: "OpenBot privacy notes", url: OPENBOT_LINKS.privacy },
     { label: "OpenBot source code", url: OPENBOT_LINKS.repository },
   ],

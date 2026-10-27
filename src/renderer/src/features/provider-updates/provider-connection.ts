@@ -339,7 +339,9 @@ export function createProviderConnection(options: ProviderConnectionOptions): Pr
         status.page?.listening && codeLoginAccount === undefined && route(provider).alternative === "code"
           ? { ...status.page, pasteable: false }
           : status.page;
-      if (page && !samePage(shown, page)) setCodeLoginState({ phase: "relay", hostName: relay.hostName, page });
+      // The page went away before the result: the callback came back, and the host completes the sign-in.
+      if (!page && shown) setCodeLoginState({ phase: "verifying" });
+      else if (page && !samePage(shown, page)) setCodeLoginState({ phase: "relay", hostName: relay.hostName, page });
       await new Promise((resolve) => window.setTimeout(resolve, HOST_SIGN_IN_POLL_MS));
     }
   }

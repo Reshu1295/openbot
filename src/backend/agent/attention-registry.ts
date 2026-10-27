@@ -9,16 +9,12 @@ import type {
   BrowserTab,
   BrowserTakeoverRequest,
   ConversationMessageSender,
+  LocalBrowserSecretResponse,
   RespondToApprovalInput,
-  RespondToBrowserSecretInput,
   RespondToBrowserTakeoverInput,
   RespondToPromptInput,
 } from "@openbot/contracts/ipc";
-import {
-  AGENT_RUNTIME_ATTENTION_LIMIT,
-  BROWSER_TAKEOVER_REASONS,
-  COMPUTER_USE_MCP_SERVER_NAME,
-} from "@openbot/contracts/ipc";
+import { AGENT_RUNTIME_ATTENTION_LIMIT, BROWSER_TAKEOVER_REASONS } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isOneOf } from "@openbot/contracts/runtime-values";
 import {
   type ConversationUiBlock,
@@ -42,11 +38,12 @@ import { createOpenBotLogger, redactText, toLogValue } from "@openbot/logging";
 import { Deferred, Effect, Result, Schema } from "effect";
 import type { AgentApiKeys } from "../agent-api-keys";
 import type { AgentClient } from "../agent-client";
-import type { BrowserOperationError } from "../browser-effects";
+import { type BrowserOperationError, browserFailure } from "../browser-effects";
 import type { PreparedBrowserSecret } from "../browser-host";
-import { parseBrowserToolCall } from "../browser-tools";
+import type { BrowserCardVault } from "../browser-tool-actions";
+import { type BrowserToolArguments, parseBrowserToolCall } from "../browser-tools";
 import { causeHelpers } from "../effect-boundary";
-import type { PasswordVault } from "../password-vault";
+import type { PasswordVault, PasswordVaultError } from "../password-vault";
 import {
   type AppServerRequest,
   type DynamicToolCallParams,
@@ -55,6 +52,7 @@ import {
   getString,
   type RequestId,
 } from "../protocol";
+import type { VaultAgentChange, VaultAgentResult, VaultItems } from "../vault-items";
 import { type ApprovalAutomationPolicy, NO_APPROVAL_AUTOMATION, shouldAutoApprove } from "./approval-automation";
 import type { ConversationRuntime } from "./conversation-runtime";
 import type { HostedSiteOperationFailed } from "./hosted-site-coordinator";
@@ -132,6 +130,15 @@ export interface PromptResponder {
 
 const AUTOMATIC_RESPONDER: PromptResponder = { privileged: true, automatic: true };
 
+/**
+ * Who answers an approval. Absent means the person at this computer, who owns the server. A team
+ * member, a chat app user or a local script gives `owner: false`, and the Team API gives the owner's
+ * own clients `owner: true`.
+ */
+export interface ApprovalResponder {
+  owner: boolean;
+}
+
 interface PendingApproval {
   client: AgentClient;
   id: RequestId;
@@ -143,6 +150,8 @@ interface PendingApproval {
   decide?: (decision: ToolApprovalDecision) => void;
   /** The tool asks even when the agent has Full access, so a later grant does not answer it. */
   alwaysAsk?: boolean;
+  /** Only the owner can answer, because the approval lets agents use what is the owner's alone. */
+  ownerOnly?: boolean;
 }
 
 type ToolApprovalDecision = "accept" | "decline" | "cancel";
@@ -152,12 +161,79 @@ const TOOL_APPROVAL_METHOD = "openbot/tool-approval";
 const MESSAGING_QUESTION_REFUSED =
   "This conversation is in Slack, Discord or Telegram, where nobody can answer a question card. Ask the question in your answer: the person replies in the conversation.";
 
+/** The agent reads these, not the user. */
+const VAULT_UNAVAILABLE = "No Vault is available on this computer. Ask the user.";
+const VAULT_LOGIN_ADD_REFUSED =
+  "You cannot add a login: a password comes only from the user. Sign in with submit_secret, and the user can save the password from the card. Or ask the user to add the login in Server settings > Vault.";
+const VAULT_CARD_ADD_REFUSED =
+  "You cannot add a card: its number comes only from the user. Ask the user to add it in Server settings > Vault.";
+const VAULT_FIELDS: Record<BrowserToolArguments<"save_vault_item">["kind"], readonly string[]> = {
+  contact: ["label", "fullName", "address", "address2", "city", "region", "postalCode", "country", "phone", "email"],
+  login: ["username"],
+  card: ["label", "nameOnCard", "expMonth", "expYear", "billingContactId"],
+};
+
+/** The change that `save_vault_item` asks for, or the text that tells the agent what is wrong. */
+function vaultChange(args: BrowserToolArguments<"save_vault_item">): VaultAgentChange | string {
+  const allowed = VAULT_FIELDS[args.kind];
+  const misplaced = Object.entries(args).find(
+    ([key, value]) => value !== undefined && key !== "kind" && key !== "id" && !allowed.includes(key),
+  );
+  if (misplaced) return `${misplaced[0]} is not a field of a ${args.kind}. Its fields are: ${allowed.join(", ")}.`;
+  if (args.kind === "login")
+    return args.id ? { kind: "login", id: args.id, username: args.username } : VAULT_LOGIN_ADD_REFUSED;
+  if (args.kind === "card")
+    return args.id
+      ? {
+          kind: "card",
+          id: args.id,
+          label: args.label,
+          nameOnCard: args.nameOnCard,
+          expMonth: args.expMonth,
+          expYear: args.expYear,
+          billingContactId: args.billingContactId,
+        }
+      : VAULT_CARD_ADD_REFUSED;
+  const fields = {
+    label: args.label,
+    fullName: args.fullName,
+    address: args.address,
+    address2: args.address2,
+    city: args.city,
+    region: args.region,
+    postalCode: args.postalCode,
+    country: args.country,
+    phone: args.phone,
+    email: args.email,
+  };
+  if (!args.id && !Object.values(fields).some((value) => value?.trim())) return "Give at least one contact field.";
+  return { kind: "contact", id: args.id, fields };
+}
+
+/**
+ * A refused change tells the agent why: the Vault's own errors are user text with no secret in them.
+ * A file error is logged and the agent gets a fixed text.
+ */
+function vaultFailure(action: "save" | "delete", failure: PasswordVaultError): DynamicToolResult {
+  logger.warn(`Unable to ${action} a Vault item for an agent`, { error: toLogValue(failure.cause) });
+  const { cause } = failure;
+  return browserTakeoverError(
+    cause instanceof Error && !("code" in cause) ? cause.message : `The Vault item could not be ${action}d.`,
+  );
+}
+
+function vaultResult(value: { status: string } & VaultAgentResult): DynamicToolResult {
+  return { success: true, contentItems: [{ type: "inputText", text: JSON.stringify(value) }] };
+}
+
 interface PendingBrowserTakeover {
   client: AgentClient;
   /** The provider's request. `submit_secret` keys the entry by a new id, so it is kept here. */
   providerRequestId: RequestId;
   secret?: PreparedBrowserSecret | undefined;
   submitting?: boolean;
+  /** The saved login that OpenBot filled without the card, so the agent does not credit the user. */
+  vaultLoginId?: string;
   params: DynamicToolCallParams;
   request: BrowserTakeoverRequest;
   resolve: (result: DynamicToolResult) => void;
@@ -233,6 +309,12 @@ export interface AttentionRegistryOptions {
    * saved there is filled without a card: putting the login in the shared vault is the consent.
    */
   passwordVault?: PasswordVault | null | undefined;
+  /** The cards and contact info of the Vault, or null. `fill_card` types a card without the agent reading it. */
+  vaultItems?: VaultItems | null | undefined;
+  /** The name of an agent now. An item that an agent adds to the Vault keeps it. */
+  agentName?(agentId: string): string | undefined;
+  /** Adds a note to the chat that an agent changed the Vault. `text` is source text. */
+  noteVaultChange?(agentId: string, threadId: string, turnId: string, text: string): void;
   /** Where the answer of `request_api_key` is saved; null where nothing can save it. */
   apiKeys?: AgentApiKeys | null | undefined;
 }
@@ -270,6 +352,9 @@ export class AttentionRegistry {
   readonly #emitError: (code: string, error: unknown, agentId?: string) => void;
   readonly #emitRuntimeSnapshot: () => void;
   readonly #passwordVault: PasswordVault | null;
+  readonly #vaultItems: VaultItems | null;
+  readonly #agentName: (agentId: string) => string | undefined;
+  readonly #noteVaultChange: (agentId: string, threadId: string, turnId: string, text: string) => void;
   readonly #apiKeys: AgentApiKeys | null;
   readonly #prompts = new Map<RequestId, PendingPrompt>();
   readonly #approvals = new Map<RequestId, PendingApproval>();
@@ -287,6 +372,9 @@ export class AttentionRegistry {
     this.#emitError = options.emitError;
     this.#emitRuntimeSnapshot = options.emitRuntimeSnapshot;
     this.#passwordVault = options.passwordVault ?? null;
+    this.#vaultItems = options.vaultItems ?? null;
+    this.#agentName = options.agentName ?? (() => undefined);
+    this.#noteVaultChange = options.noteVaultChange ?? (() => undefined);
     this.#apiKeys = options.apiKeys ?? null;
   }
 
@@ -350,7 +438,8 @@ export class AttentionRegistry {
         throw new InactiveAttentionRequest(sourceText("error.backend.approvalInactive"));
       });
     }
-    return yield* this.respondToApproval({ requestId: pending.id, decision: input.decision });
+    // A local script is not the owner: an agent can run one.
+    return yield* this.respondToApproval({ requestId: pending.id, decision: input.decision }, { owner: false });
   }).bind(this);
 
   #localHandle(pending: PendingPrompt | PendingApproval | PendingBrowserTakeover): string {
@@ -483,10 +572,13 @@ export class AttentionRegistry {
   readonly respondToApproval = Effect.fn("AttentionRegistry.respondToApproval")(function* (
     this: AttentionRegistry,
     input: RespondToApprovalInput,
+    responder?: ApprovalResponder,
   ) {
     const pending = yield* attentionStep(() => {
       const value = this.#approvals.get(input.requestId);
       if (!value) throw new InactiveAttentionRequest(sourceText("error.backend.approvalInactive"));
+      if (value.ownerOnly && responder && !responder.owner)
+        throw new ForbiddenAttentionAnswer(sourceText("error.backend.approvalOwnerOnly"));
       return value;
     });
     this.#routines.markRunningForTurn(getString(pending.params, "turnId"));
@@ -537,7 +629,7 @@ export class AttentionRegistry {
 
   readonly respondToBrowserSecret = Effect.fnUntraced(function* (
     this: AttentionRegistry,
-    input: RespondToBrowserSecretInput,
+    input: LocalBrowserSecretResponse,
   ) {
     const { pending, secret } = yield* attentionStep(() => {
       const value = this.#takeovers.get(input.requestId);
@@ -564,12 +656,20 @@ export class AttentionRegistry {
       );
       if (this.#takeovers.get(input.requestId) !== pending) return;
       if (outcome === "submitted") {
-        this.#resolveBrowserTakeover(input.requestId, pending, "complete");
+        const vault = pending.vaultLoginId
+          ? `OpenBot filled saved login ${pending.vaultLoginId}; the user did not type it.`
+          : input.saveToVault && secret.request.method === "password"
+            ? yield* this.#saveTypedPassword(pending, secret.request.origin, input.secret)
+            : undefined;
+        if (this.#takeovers.get(input.requestId) !== pending) return;
+        this.#resolveBrowserTakeover(input.requestId, pending, "complete", vault);
         return;
       }
     }
     secret.cancel();
     delete pending.secret;
+    // The user finishes in the tab, so a later completion is theirs.
+    delete pending.vaultLoginId;
     if (input.decision === "submit" && pending.request.secret)
       pending.request.secret = { ...pending.request.secret, requiresReload: true };
     else delete pending.request.secret;
@@ -608,8 +708,8 @@ export class AttentionRegistry {
    * Answers what already waits for an agent that now has Full access. The grant is read when a request
    * arrives, so without this a card stays open after the user moves the agent to Full access, presses
    * Always allow on another of its cards, or an admin changes it from another computer. The rule is the
-   * one for a new request: a Workspace only agent, Computer Use and a tool that always asks keep their
-   * card, and a question is never answered.
+   * one for a new request: a Workspace only agent and a tool that always asks keep their card, and a
+   * question is never answered.
    */
   answerGrantedRequests(): void {
     const report = (agentId: string) => (error: unknown) =>
@@ -679,10 +779,11 @@ export class AttentionRegistry {
     client: AgentClient,
     request: AppServerRequest,
     approval: AgentApproval,
-    options: { readonly alwaysAsk?: boolean } = {},
+    options: { readonly alwaysAsk?: boolean; readonly ownerOnly?: boolean } = {},
   ) {
     if (request.signal?.aborted) return "cancel" as const;
-    if (!options.alwaysAsk && this.#answersForAgent(approval.agentId)) return "accept" as const;
+    const alwaysAsk = options.alwaysAsk || options.ownerOnly;
+    if (!alwaysAsk && this.#answersForAgent(approval.agentId)) return "accept" as const;
     const decision = Deferred.makeUnsafe<ToolApprovalDecision>();
     this.#approvals.set(request.id, {
       client,
@@ -691,7 +792,8 @@ export class AttentionRegistry {
       params: request.params,
       approval,
       decide: (value) => Deferred.doneUnsafe(decision, Effect.succeed(value)),
-      ...(options.alwaysAsk ? { alwaysAsk: true } : {}),
+      ...(alwaysAsk ? { alwaysAsk: true } : {}),
+      ...(options.ownerOnly ? { ownerOnly: true } : {}),
     });
     this.#routines.markNeedsAttention(approval.turnId);
     this.#emit({ type: "approval", approval });
@@ -864,6 +966,177 @@ export class AttentionRegistry {
         }),
       ),
     );
+  }).bind(this);
+
+  /**
+   * Answers `list_vault_items`: the saved cards without their number or security code, and the saved
+   * contact info in full, which the agent types itself.
+   */
+  readonly listVaultItems = Effect.fn("AttentionRegistry.listVaultItems")(function* (
+    this: AttentionRegistry,
+    params: DynamicToolCallParams,
+  ) {
+    const call = yield* attentionStep(() => parseBrowserToolCall("list_vault_items", params.arguments));
+    if (call.tool !== "list_vault_items")
+      return yield* new AttentionOperationFailed({ cause: new Error("Invalid Vault list request.") });
+    const listed = yield* Effect.result(attentionStep(() => this.#vaultItems?.listForAgent() ?? null));
+    if (Result.isFailure(listed)) {
+      logger.warn("Unable to list the Vault items", { error: toLogValue(listed.failure.cause) });
+      return browserTakeoverError("The Vault could not be read. Ask the user, or use request_takeover.");
+    }
+    const answer =
+      listed.success === null
+        ? {
+            available: false,
+            logins: [],
+            cards: [],
+            contacts: [],
+            next: "No Vault is available. Ask the user, or use request_takeover.",
+          }
+        : { available: true, ...listed.success };
+    const result: DynamicToolResult = {
+      success: true,
+      contentItems: [{ type: "inputText", text: JSON.stringify(answer) }],
+    };
+    return result;
+  }).bind(this);
+
+  /**
+   * The saved cards for one `fill_card` call. Their values go to the browser host only, never to the
+   * agent. A fill on a page that the owner did not approve for the card waits for the owner, with Full
+   * access too: a page or a team member can tell an agent to fill a card into a form that sends it away.
+   */
+  cardVault(
+    client: AgentClient,
+    request: AppServerRequest,
+    params: DynamicToolCallParams,
+  ): BrowserCardVault | undefined {
+    const vault = this.#vaultItems;
+    const agentId = params.ownerAgentId;
+    if (!vault || !agentId) return undefined;
+    return {
+      secret: (cardId) => vault.cardSecret(cardId),
+      approved: (cardId, page, frames) => vault.cardFillApproved(cardId, page, frames),
+      approve: (cardId, page, frames) =>
+        Effect.gen({ self: this }, function* () {
+          const card = vault.listForAgent().cards.find(({ id }) => id === cardId);
+          if (!card) return false;
+          const others = frames.filter((frame) => frame !== page);
+          const reason = [
+            sourceText("status.agent.vaultCardFill", { card: card.label || `•••• ${card.last4}`, site: page }),
+            ...(others.length > 0
+              ? [sourceText("status.agent.vaultCardFillFrames", { origins: others.join(", ") })]
+              : []),
+          ].join(" ");
+          const decision = yield* this.awaitToolApproval(
+            client,
+            request,
+            {
+              requestId: request.id,
+              agentId,
+              threadId: params.threadId,
+              turnId: params.turnId,
+              kind: "permissions",
+              command: null,
+              cwd: null,
+              reason,
+              grantRoot: null,
+              permissions: null,
+            },
+            { ownerOnly: true },
+          );
+          if (decision !== "accept") return false;
+          yield* vault.approveCardFill(cardId, page, frames).pipe(Effect.mapError(browserFailure));
+          return true;
+        }),
+    };
+  }
+
+  /**
+   * Answers `save_vault_item`: adds or changes contact info, or changes the fields of a login or a card
+   * that are not secret. The user does not approve it: the chat shows a note, and a new item keeps the
+   * agent's name.
+   */
+  readonly saveVaultItem = Effect.fn("AttentionRegistry.saveVaultItem")(function* (
+    this: AttentionRegistry,
+    params: DynamicToolCallParams,
+  ) {
+    const call = yield* attentionStep(() => parseBrowserToolCall("save_vault_item", params.arguments));
+    if (call.tool !== "save_vault_item")
+      return yield* new AttentionOperationFailed({ cause: new Error("Invalid Vault save request.") });
+    const vault = this.#vaultItems;
+    const agentId = params.ownerAgentId;
+    if (!vault || !agentId) return browserTakeoverError(VAULT_UNAVAILABLE);
+    const change = vaultChange(call.args);
+    if (typeof change === "string") return browserTakeoverError(change);
+    const saved = yield* Effect.result(vault.save(change, this.#agentName(agentId)));
+    if (Result.isFailure(saved)) return vaultFailure("save", saved.failure);
+    const { created, ...item } = saved.success;
+    this.#noteVaultChange(
+      agentId,
+      params.threadId,
+      params.turnId,
+      sourceText(created ? "status.agent.vaultAdded" : "status.agent.vaultUpdated", { name: item.name }),
+    );
+    return vaultResult({ status: created ? "added" : "updated", ...item });
+  }).bind(this);
+
+  /** Answers `delete_vault_item`. The chat shows a note, as for a save. */
+  readonly deleteVaultItem = Effect.fn("AttentionRegistry.deleteVaultItem")(function* (
+    this: AttentionRegistry,
+    params: DynamicToolCallParams,
+  ) {
+    const call = yield* attentionStep(() => parseBrowserToolCall("delete_vault_item", params.arguments));
+    if (call.tool !== "delete_vault_item")
+      return yield* new AttentionOperationFailed({ cause: new Error("Invalid Vault delete request.") });
+    const vault = this.#vaultItems;
+    const agentId = params.ownerAgentId;
+    if (!vault || !agentId) return browserTakeoverError(VAULT_UNAVAILABLE);
+    const deleted = yield* Effect.result(vault.delete(call.args.id));
+    if (Result.isFailure(deleted)) return vaultFailure("delete", deleted.failure);
+    if (deleted.success === null) return browserTakeoverError("No Vault item has this id. Call list_vault_items.");
+    this.#noteVaultChange(
+      agentId,
+      params.threadId,
+      params.turnId,
+      sourceText("status.agent.vaultDeleted", { name: deleted.success.name }),
+    );
+    return vaultResult({ status: "deleted", ...deleted.success });
+  }).bind(this);
+
+  /**
+   * Keeps a password that the user typed into the secure input and asked to save. The agent never
+   * sees it: the answer says only what was saved. A failed save does not stop the sign-in.
+   */
+  readonly #saveTypedPassword = Effect.fn("AttentionRegistry.saveTypedPassword")(function* (
+    this: AttentionRegistry,
+    pending: PendingBrowserTakeover,
+    origin: string,
+    password: string,
+  ) {
+    const vault = this.#vaultItems;
+    if (!vault) return "The password was not saved: no Vault is available.";
+    const { agentId, threadId, turnId } = pending.request;
+    const call = yield* Effect.result(
+      attentionStep(() => parseBrowserToolCall("submit_secret", pending.params.arguments)),
+    );
+    const username = Result.isSuccess(call) && call.success.tool === "submit_secret" ? call.success.args.username : "";
+    const saved = yield* Effect.result(
+      vault.saveLogin({ origin, username: username ?? "", password }, this.#agentName(agentId)),
+    );
+    if (Result.isFailure(saved)) {
+      logger.warn("Unable to save the typed password in the Vault", { error: toLogValue(saved.failure.cause) });
+      return "The password was not saved in the Vault.";
+    }
+    const { id, name, created, changed } = saved.success;
+    if (changed)
+      this.#noteVaultChange(
+        agentId,
+        threadId,
+        turnId,
+        sourceText(created ? "status.agent.vaultAdded" : "status.agent.vaultUpdated", { name }),
+      );
+    return `The user saved this password in the Vault as login ${id} (${name}).`;
   }).bind(this);
 
   /**
@@ -1088,15 +1361,11 @@ export class AttentionRegistry {
   /**
    * Only the consent that Codex marks is covered, a tool set to ask every time included. A form, a
    * hand-off, a sign-in and any request that OpenBot does not know still reach the user. A Workspace
-   * only agent and Computer Use keep their card: the first asks to go outside the limit the user
-   * chose, and the second has its own switch.
+   * only agent keeps its card: it asks to go outside the limit the user chose. Computer Use is
+   * covered too: its own switch already lets the agent control apps, and Full access means no card.
    */
   #answersMcpToolConsent(params: unknown, agentId: string): boolean {
-    return (
-      mcpToolCallConsent(params) &&
-      getString(params, "serverName") !== COMPUTER_USE_MCP_SERVER_NAME &&
-      this.#answersForAgent(agentId)
-    );
+    return mcpToolCallConsent(params) && this.#answersForAgent(agentId);
   }
 
   surfaceMcpElicitation(client: AgentClient, request: AppServerRequest): void {
@@ -1307,17 +1576,23 @@ export class AttentionRegistry {
               (login) => kind === "password" || login.hasOneTimePassword,
             );
         const chosen = loginId ?? (candidates.length === 1 ? candidates[0]?.id : undefined);
-        return chosen ? yield* vault.secretFor(chosen, request.origin, kind) : null;
+        return chosen ? { loginId: chosen, secret: yield* vault.secretFor(chosen, request.origin, kind) } : null;
       }),
     );
     if (Result.isFailure(found)) {
       logger.warn("Unable to fill from the shared vault", { error: toLogValue(found.failure.cause) });
       return false;
     }
-    const secret = found.success;
-    if (!secret || this.#takeovers.get(requestId) !== pending) return false;
+    const login = found.success;
+    if (!login?.secret || this.#takeovers.get(requestId) !== pending) return false;
+    pending.vaultLoginId = login.loginId;
     const submitted = yield* Effect.result(
-      this.respondToBrowserSecret({ requestId, agentId: pending.request.agentId, decision: "submit", secret }),
+      this.respondToBrowserSecret({
+        requestId,
+        agentId: pending.request.agentId,
+        decision: "submit",
+        secret: login.secret,
+      }),
     );
     if (Result.isFailure(submitted)) {
       // The tab could not be handed to the user. Answer the agent, so it does not wait forever.
@@ -1334,6 +1609,7 @@ export class AttentionRegistry {
     requestId: RequestId,
     pending: PendingBrowserTakeover,
     decision: RespondToBrowserTakeoverInput["decision"],
+    vault?: string,
   ): void {
     pending.secret?.cancel();
     this.#routines.markRunningForTurn(pending.request.turnId);
@@ -1349,7 +1625,7 @@ export class AttentionRegistry {
       agentId: pending.request.agentId,
     });
     this.#emitRuntimeSnapshot();
-    pending.resolve(browserTakeoverResult(decision));
+    pending.resolve(browserTakeoverResult(decision, vault));
   }
 
   #persistQuestionPrompt(

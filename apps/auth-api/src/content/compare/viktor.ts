@@ -1,5 +1,5 @@
 import { OPENBOT_LINKS } from "../../lib/landing-links";
-import type { Comparison } from "./comparison";
+import { type Comparison, OPENBOT_LANGUAGE_COUNT, OPENBOT_TEXT } from "./comparison";
 
 // Every statement about Viktor here is taken from viktor.com: its home page, pricing page,
 // security page, changelog, documentation, privacy policy and general terms (both last updated
@@ -12,7 +12,7 @@ export const VIKTOR_COMPARISON: Comparison = {
     "Choose OpenBot if you want a team of AI agents on your own computer, with your data in a database that you hold and the AI plans you already pay for: the app is free, and there are no credits to buy. Choose Viktor if you want one AI coworker in Slack or Microsoft Teams that runs in the cloud, connects to thousands of business apps, and comes with a SOC 2 report.",
   chooseOpenBot: [
     "Your chats, files and company data must stay on your own computer, not on a service's servers in the US.",
-    "You already pay for ChatGPT, Claude, Gemini, Grok, Cursor or Cline, and you do not want to pay for each task again in credits.",
+    "You already pay for ChatGPT, Claude, Gemini, Grok, Cursor, Cline or Muse Code, and you do not want to pay for each task again in credits.",
     "You want a team of agents, each with its own job and model, not one assistant for the whole company.",
     "You want a free app that you can download today, with source code that you can read.",
   ],
@@ -28,8 +28,7 @@ export const VIKTOR_COMPARISON: Comparison = {
     {
       icon: "cpu",
       topic: "Models and plans",
-      openbot:
-        "Use the plans you already have: ChatGPT, Claude, Gemini, Grok, Cursor or Cline. Or run free models and your own model through OpenCode. Choose one for each agent, and change it later.",
+      openbot: OPENBOT_TEXT.models,
       rival:
         "Models from OpenAI, Anthropic, Google and xAI, or your own OpenRouter key. You cannot use a ChatGPT or Claude plan that you already pay for, and Viktor bills each task in credits.",
       better: "openbot",
@@ -63,7 +62,7 @@ export const VIKTOR_COMPARISON: Comparison = {
       icon: "users",
       topic: "Teams",
       openbot:
-        "Each agent is a full coding agent with its own job, model and workspace. They give work to each other in shared channels, and coworkers can join one team host.",
+        "Each agent is a full coding agent with its own job, model and workspace. They give work to each other in shared channels, and coworkers can join one team host. Roles set which agents each member can view, chat with or manage.",
       rival: "One shared AI coworker for the whole workspace, with one pool of credits.",
       better: "openbot",
     },
@@ -90,10 +89,32 @@ export const VIKTOR_COMPARISON: Comparison = {
       rival: "In Slack, Microsoft Teams or Discord, or in the Viktor web app.",
     },
     {
+      icon: "refresh",
+      topic: "Backup models",
+      openbot: OPENBOT_TEXT.backupModels,
+      rival:
+        "An admin chooses the default, fast and deep models. Viktor states a backup only to a second cloud host for Claude Fable 5. When credits run out, Viktor pauses.",
+      better: "openbot",
+    },
+    {
+      icon: "key",
+      topic: "Logins and payments",
+      openbot: OPENBOT_TEXT.logins,
+      rival:
+        "Viktor keeps the OAuth tokens and API keys of your apps in encrypted vaults and adds them on its servers, so the model does not see them. It states no saved passwords, password manager or payment cards for its browser.",
+      better: "openbot",
+    },
+    {
+      icon: "mic",
+      topic: "Voice",
+      openbot: OPENBOT_TEXT.voice,
+      rival:
+        "You can talk to Viktor in a live voice call, and it speaks its replies. A setting stops it when you talk over it. ElevenLabs and Groq process the speech in the cloud.",
+    },
+    {
       icon: "globe",
       topic: "Who can use it",
-      openbot:
-        "Anyone, in any country: OpenBot has no region lock. Each AI provider sets the countries for its own plan. The desktop app is in 10 languages, and hosted servers run in the EU.",
+      openbot: `Anyone, in any country: OpenBot has no region lock. Each AI provider sets the countries for its own plan. The desktop app is in ${OPENBOT_LANGUAGE_COUNT} languages, and hosted servers run in the EU.`,
       rival: "Businesses only: its terms say that the service is not for consumers.",
       better: "openbot",
     },
@@ -110,16 +131,14 @@ export const VIKTOR_COMPARISON: Comparison = {
   sections: [
     {
       title: "Models and what you pay",
-      openbot:
-        "OpenBot runs the provider tools you already use, with the plans you already pay for: Codex with your ChatGPT plan, Claude Code with your Claude plan, Gemini with your Google AI Pro or Ultra plan, Grok CLI with your Grok account or an xAI API key, Cursor CLI with your Cursor plan or a Cursor API key, and Cline with your Cline account. OpenCode runs free models, or your own model on any OpenAI-compatible server, also one on your computer. You choose the provider, the model and the reasoning effort for each agent. OpenBot is free for noncommercial use, so a busy month does not cost more.",
+      openbot: `${OPENBOT_TEXT.plansList} OpenBot is free for noncommercial use, so a busy month does not cost more.`,
       rival:
         "Viktor offers models from OpenAI, Anthropic, Google and xAI, and an admin sets the default model for the workspace. You can also connect your own OpenRouter key; those models are billed to your OpenRouter account. You cannot use a ChatGPT or Claude plan that you already pay for. You pay in credits, shared by the whole workspace. You start with up to $100 in free credits. The Team plan starts at $50 a month for 20,000 credits and goes up to $50,000 a month for 20 million credits; Enterprise has custom prices. Viktor says that a quick Slack question uses about 50 to 100 credits, a deep research report 500 to 2,000, and a full project 2,000 to 5,000. Scheduled tasks use credits each time they run, and unused credits roll over for one month only.",
       better: "openbot",
     },
     {
       title: "Where the work happens",
-      openbot:
-        "OpenBot runs on the computer that hosts it. Agent workspaces, conversations and app data stay on that computer, so it must stay on while its agents work. Run it on a desktop or a server that stays on, and your agents keep working while your laptop is closed. If you do not want to keep a computer on, use a hosted OpenBot server. It is a Linux server in the EU (Germany, Finland or France), from €20 or $25 a month, and it keeps the workspaces and chats of its agents. Local-first is not offline: an agent that uses a hosted provider still sends its requests to that provider.",
+      openbot: OPENBOT_TEXT.workSection,
       rival:
         "Viktor has its own computer in the cloud, where it writes and runs code. Its security page says that it is hosted on AWS in us-east-1, and that each workspace runs in a sandbox. No computer of yours must stay on. Data is in the US by default; EU data residency is only on Enterprise contracts.",
       better: "openbot",
@@ -135,7 +154,7 @@ export const VIKTOR_COMPARISON: Comparison = {
     {
       title: "How agents work as a team",
       openbot:
-        "In OpenBot, each agent is a full coding agent: Codex, Claude Code, Gemini, Grok CLI, Cursor CLI, Cline or OpenCode, each with its own job, model and workspace. A lead agent can give parts of a task to other agents in a shared channel. You follow their work and step in when a decision needs you. When you move an agent to a different provider, it keeps its role, workspace and conversation. For a team of people, one computer runs the host and the others join it; the chats and files stay on the host.",
+        "In OpenBot, each agent is a full coding agent: Codex, Claude Code, Gemini, Grok CLI, Cursor CLI, Cline, OpenCode, Pi, Muse Code or an agent of your own, each with its own job, model and workspace. A lead agent can give parts of a task to other agents in a shared channel. You follow their work and step in when a decision needs you. When you move an agent to a different provider, it keeps its role, workspace and conversation. For a team of people, one computer runs the host and the others join it; the chats and files stay on the host. Roles set which agents each member can view, chat with or manage.",
       rival:
         "Viktor is one AI coworker for the whole workspace. Everyone on the team mentions the same Viktor, it keeps one shared memory of the team, and every request uses the same pool of credits.",
       better: "openbot",
@@ -170,7 +189,7 @@ export const VIKTOR_COMPARISON: Comparison = {
     {
       question: "Can I use my ChatGPT or Claude plan with Viktor?",
       answer:
-        "No. Viktor bills its models in credits, or you connect your own OpenRouter key. OpenBot runs Codex with your ChatGPT plan, Claude Code with your Claude plan, and Gemini, Grok, Cursor and Cline with your own accounts.",
+        "No. Viktor bills its models in credits, or you connect your own OpenRouter key. OpenBot runs Codex with your ChatGPT plan, Claude Code with your Claude plan, and Gemini, Grok, Cursor, Cline and Muse Code with your own accounts.",
     },
     {
       question: "Does Viktor read all my Slack messages?",
@@ -204,6 +223,9 @@ export const VIKTOR_COMPARISON: Comparison = {
     { label: "Viktor enterprise", url: "https://viktor.com/enterprise" },
     { label: "Viktor privacy policy", url: "https://viktor.com/legal/privacy" },
     { label: "Viktor general terms", url: "https://viktor.com/legal/general-terms" },
+    { label: "Viktor settings", url: "https://viktor.com/docs/settings-overview" },
+    { label: "Viktor: running out of credits", url: "https://viktor.com/docs/running-out-of-credits" },
+    { label: "Viktor: what Viktor can do", url: "https://viktor.com/docs/what-viktor-can-do" },
     { label: "OpenBot privacy notes", url: OPENBOT_LINKS.privacy },
     { label: "OpenBot source code", url: OPENBOT_LINKS.repository },
   ],

@@ -10,6 +10,7 @@ import {
   type ConversationSubagent,
   isConversationSubagents,
 } from "./ipc-conversation-subagents";
+import { type ConversationTurnTrace, isConversationTurnTrace } from "./ipc-conversation-trace";
 import { QUEUE_DELIVERY_STATUSES, type QueueDelivery } from "./ipc-queue";
 import { isBoolean, isDynamicRecord, isNumber, isOneOf, isString } from "./runtime-values";
 import { type ConversationUiBlock, isConversationUiBlock } from "./ui-blocks";
@@ -230,6 +231,11 @@ export interface ConversationMessage {
    * beside `questionPrompt`. Absent on a message from an older host.
    */
   uiBlock?: ConversationUiBlock | undefined;
+  /**
+   * The timing, tokens and cost of the turn, on one message of a finished turn (see
+   * `ipc-conversation-trace.ts`). It stays on this computer: the Team API projections drop it.
+   */
+  trace?: ConversationTurnTrace | undefined;
 }
 
 export function isConversationMessage(value: unknown): value is ConversationMessage {
@@ -276,7 +282,8 @@ export function isConversationMessage(value: unknown): value is ConversationMess
     (value.plan === undefined || isConversationPlan(value.plan)) &&
     (value.subagents === undefined || isConversationSubagents(value.subagents)) &&
     (value.memoryChanges === undefined || isConversationMemoryChanges(value.memoryChanges)) &&
-    (value.uiBlock === undefined || isConversationUiBlock(value.uiBlock))
+    (value.uiBlock === undefined || isConversationUiBlock(value.uiBlock)) &&
+    (value.trace === undefined || isConversationTurnTrace(value.trace))
   );
 }
 

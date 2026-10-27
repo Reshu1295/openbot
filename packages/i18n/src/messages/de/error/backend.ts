@@ -342,6 +342,15 @@ export const messages = {
   "error.backend.taskNotFound": "Diese Aufgabe ist nicht verfügbar.",
   "error.backend.taskClosed": "Diese Aufgabe ist geschlossen. Öffne sie wieder, um eine Nachricht zu senden.",
   "error.backend.taskStillRunning": "Diese Aufgabe läuft noch. Warte, bis sie stoppt, und schließe sie dann.",
+  "error.backend.threadNotFound": "Dieser Thread ist nicht verfügbar.",
+  "error.backend.threadStillRunning": "Dieser Thread läuft noch. Stoppe ihn und versuche es dann erneut.",
+  "error.backend.threadArchived": "Dieser Thread ist archiviert. Stelle ihn wieder her, um eine Nachricht zu senden.",
+  "error.backend.threadTitleRequired": "Gib dem Thread einen kurzen Titel.",
+  "error.backend.threadOpenLimitReached":
+    "Dieser Agent hat {count} offene Threads. Archiviere einen Thread und starte dann einen anderen oder stelle einen wieder her.",
+  "error.backend.threadRemoteUnsupported": "Threads sind nur für Agenten auf diesem Computer verfügbar.",
+  "error.backend.threadMoveRefused":
+    "Nur eine Nachricht, die du allein an diesen Agenten gesendet hast, kann in einem neuen Thread laufen.",
   "error.backend.taskTitleRequired": "Gib der Aufgabe einen kurzen Titel.",
   "error.backend.taskToolInvalid":
     "Gib der Aufgabe einen Titel mit höchstens 120 Zeichen und eine kurze Beschreibung, was zu tun ist.",

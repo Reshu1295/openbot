@@ -291,6 +291,7 @@ export const messages = {
   "mobile.agent.runtime.provider": "Sağlayıcı",
   "mobile.agent.runtime.account": "Hesap",
   "mobile.agent.runtime.accountNumbered": "Hesap {number}",
+  "mobile.agent.runtime.accountApiKey": "API anahtarı",
   "mobile.agent.runtime.accountUnsupported": "Bu ana makine uzak bir cihazdan ajan hesabını değiştiremez.",
   "mobile.agent.runtime.model": "Model",
   "mobile.agent.runtime.reasoning": "Akıl yürütme",

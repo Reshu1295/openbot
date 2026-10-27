@@ -90,6 +90,8 @@ export const messages = {
   "error.team.hostTimezoneUnsupported": "Esta conexión no admite la zona horaria del servidor.",
   "error.team.routineResultsUnsupported": "Esta conexión no admite destinos de rutinas.",
   "error.team.agentMemoryLimitUnsupported": "Esta conexión no admite el límite de recuerdos de los agentes.",
+  "error.team.promptCacheTtlUnsupported": "Esta conexión no admite la duración de la caché de prompts.",
+  "error.team.providerDefaultUnsupported": "Esta conexión no admite el proveedor predeterminado.",
   "error.team.attachmentNameRequired": "Se requiere un nombre seguro para el archivo adjunto.",
   "error.team.attachmentNotFound": "No se encontró el archivo adjunto.",
   "error.team.sharedFileTooLarge": "El archivo compartido supera el límite de 100 MB.",

@@ -77,10 +77,11 @@ export function WebAgentSettings(props: {
       if (draft.modelTouched && selected) return;
       // As in the desktop app. The web client does not know the host's saved setup choice, so
       // only the server's provider step names a provider.
-      const resolved = resolveCreationModel(props.preference ?? null, models);
+      const resolved = resolveCreationModel(props.preference ?? null, models, status);
       if (resolved) {
         draft.draft.provider = resolved.provider;
         draft.draft.model = resolved.model;
+        draft.draft.reasoningEffort = resolved.reasoningEffort;
       }
     });
   }
@@ -146,7 +147,11 @@ export function WebAgentSettings(props: {
         avatarSeed: value.avatarSeed,
         avatarHue: value.avatarHue,
         ...(supportsModelSelection() && selectedModel && isKnownAgentProvider(selectedModel.provider)
-          ? { provider: selectedModel.provider, model: selectedModel.id }
+          ? {
+              provider: selectedModel.provider,
+              model: selectedModel.id,
+              ...(value.reasoningEffort ? { reasoningEffort: value.reasoningEffort } : {}),
+            }
           : {}),
       });
       created = true;
@@ -180,7 +185,12 @@ export function WebAgentSettings(props: {
       onManageProviders={props.onManageProviders}
       onChange={(value) => {
         setState((draft) => {
-          if (value.provider !== draft.draft.provider || value.model !== draft.draft.model) draft.modelTouched = true;
+          if (
+            value.provider !== draft.draft.provider ||
+            value.model !== draft.draft.model ||
+            value.reasoningEffort !== draft.draft.reasoningEffort
+          )
+            draft.modelTouched = true;
           draft.draft = value;
         });
         props.onDraftChange?.(value);

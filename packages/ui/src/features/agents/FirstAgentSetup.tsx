@@ -3,6 +3,7 @@ import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type {
   AgentModelId,
   AgentProviderId,
+  AgentReasoningEffort,
   AgentStatus,
   AvatarHue,
   ClientAgentModelOption,
@@ -29,6 +30,8 @@ export interface FirstAgentDraft {
   suggestionId: string | null;
   provider: AgentProviderId;
   model: AgentModelId;
+  /** The reasoning level the user chose. Absent, the agent starts on the model's default level. */
+  reasoningEffort?: AgentReasoningEffort | undefined;
 }
 
 /**
@@ -229,7 +232,8 @@ export function FirstAgentSetup(props: FirstAgentSetupProps) {
     updateSuggestionFades();
     const observer = new ResizeObserver(updateSuggestionFades);
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || props.mode !== "additional" || props.submitting || !props.onCancel) return;
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (props.mode !== "additional" || props.submitting || !props.onCancel) return;
       event.preventDefault();
       props.onCancel();
     };
@@ -310,6 +314,24 @@ export function FirstAgentSetup(props: FirstAgentSetupProps) {
       suggestionId: suggestion.id,
       provider: props.value.provider,
       model: props.value.model,
+      reasoningEffort: props.value.reasoningEffort,
+    });
+  }
+
+  const modelOption = (provider: AgentProviderId, model: AgentModelId) =>
+    props.modelOptions?.find((option) => option.provider === provider && option.id === model);
+  /** The level the agent starts on: the user's choice, else the model's default. */
+  const reasoningEffort = () =>
+    props.value.reasoningEffort ?? modelOption(props.value.provider, props.value.model)?.defaultReasoningEffort;
+
+  /** A new model keeps the chosen level when it supports it, and else starts on its own default. */
+  function selectModel(model: AgentModelId, provider: AgentProviderId): void {
+    const kept = props.value.reasoningEffort;
+    updateDraft({
+      model,
+      provider,
+      reasoningEffort:
+        kept && modelOption(provider, model)?.supportedReasoningEfforts.includes(kept) ? kept : undefined,
     });
   }
 
@@ -468,7 +490,9 @@ export function FirstAgentSetup(props: FirstAgentSetupProps) {
                       onAddCustomProvider={props.onAddCustomProvider}
                       onManageProviders={props.onManageProviders}
                       disabled={props.submitting}
-                      onChange={(model, provider) => updateDraft({ model, provider })}
+                      reasoningEffort={reasoningEffort()}
+                      onReasoningEffortChange={(effort) => updateDraft({ reasoningEffort: effort })}
+                      onChange={selectModel}
                     />
                   )}
                 </Show>

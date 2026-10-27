@@ -72,8 +72,6 @@ export const messages = {
   "agentSettings.avatar.saveFailed": "Ajan avatarı kaydedilemedi.",
   "agentSettings.avatar.processFailed": "Ajan avatarı işlenemedi.",
   "agentSettings.runtime.model": "Ajan modeli",
-  "agentSettings.runtime.providerBusy":
-    "Sağlayıcıyı veya hesabı değiştirmeden önce mevcut çalışmanın bitmesini bekleyin.",
   "agentSettings.runtime.modelUnavailable": "Modeller bir ajan CLI'sı bağlandıktan sonra kullanılabilir.",
   "agentSettings.runtime.reasoning": "Akıl yürütme",
   "agentSettings.runtime.reasoningLabel": "Ajan akıl yürütme düzeyi",
@@ -83,8 +81,8 @@ export const messages = {
   "agentSettings.runtime.accessLabel": "Ajan erişimi",
   "agentSettings.runtime.busyMessage": "Çalışırken",
   "agentSettings.runtime.busyMessageLabel": "Ajan çalışırken gönderilen mesajlar",
-  "agentSettings.runtime.taskLimit": "Eş zamanlı görev",
-  "agentSettings.runtime.taskLimitLabel": "Aynı anda çalışan görevler",
+  "agentSettings.runtime.taskLimit": "Paralel mesaj dizileri",
+  "agentSettings.runtime.taskLimitLabel": "Aynı anda çalışan mesaj dizileri",
   "agentSettings.runtime.workingDirectory": "Çalışma dizini",
   "agentSettings.runtime.notAvailable": "Henüz kullanılamıyor",
   "agentSettings.runtime.fullAccessNote":
@@ -103,7 +101,7 @@ export const messages = {
     "{provider} çalışan bir turu yönlendiremez. Çalışırken gönderilen mesajlar kuyrukta bekler.",
   "agentSettings.taskLimit.default": "Varsayılan ({count})",
   "agentSettings.taskLimit.oneTurn":
-    "{provider} aynı anda bir tur çalıştırır. Bu ajanın görevleri ve sohbeti birbirini bekler.",
+    "{provider} aynı anda tek tur çalıştırır. Bu ajanın mesaj dizileri birbirini bekler.",
   "agentSettings.notifications.title": "Bildirimler",
   "agentSettings.newChat.title": "Yeni sohbet",
   "agentSettings.newChat.description": "Ajan bu sohbeti unutur. Yapılandırması kalır.",

@@ -288,6 +288,7 @@ export const messages = {
   "mobile.agent.runtime.provider": "Fournisseur",
   "mobile.agent.runtime.account": "Compte",
   "mobile.agent.runtime.accountNumbered": "Compte {number}",
+  "mobile.agent.runtime.accountApiKey": "Clé API",
   "mobile.agent.runtime.accountUnsupported":
     "Cet hôte ne permet pas de modifier le compte de l’agent depuis un appareil distant.",
   "mobile.agent.runtime.model": "Modèle",

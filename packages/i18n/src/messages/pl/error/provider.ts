@@ -6,6 +6,7 @@ export const messages = {
     "Nie udało się zarejestrować serwerów MCP w konfiguracji Codex. Sprawdź, czy plik config.toml Codex jest poprawny i zapisywalny, a potem uruchom ponownie OpenBot.",
   "error.provider.computerUseConfig":
     "Nie udało się zarejestrować Sterowania komputerem w konfiguracji Codex. Sprawdź, czy plik config.toml Codex jest poprawny i zapisywalny, a potem uruchom ponownie OpenBot. Aby kontynuować bez tej funkcji, wyłącz Sterowanie komputerem w ustawieniach członka zespołu.",
+  "error.provider.codexUnresponsive": "Codex przestał odpowiadać, więc OpenBot zakończył jego proces.",
   "error.provider.endpointsReadOnly":
     "Zapisane endpointy zapisała nowsza wersja OpenBot albo nie można odczytać pliku. Zaktualizuj OpenBot, aby je zmienić.",
   "error.provider.endpointNoSecureStorage":
@@ -56,6 +57,9 @@ export const messages = {
     "Nie udało się połączyć ze źródłami wydań dostawców. Sprawdź połączenie i spróbuj ponownie.",
   "error.provider.runtimesUnsupported": "Środowiska uruchomieniowe dostawców nie są dostępne na tej platformie.",
   "error.provider.closing": "OpenBot się zamyka.",
+  "error.provider.removeWhileOn": "Wyłącz dostawcę, zanim usuniesz jego pobrane pliki.",
+  "error.provider.removeWhileDownloading": "Poczekaj na koniec pobierania, a potem je usuń.",
+  "error.provider.removeIncomplete": "Program używa plików tego CLI. Zamknij go i spróbuj ponownie.",
   "error.provider.cliOverride": "Usuń jawnie ustawioną ścieżkę CLI, zanim zaktualizujesz CLI w OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "Aktualizacja środowiska uruchomieniowego nie została ukończona.",
   "error.provider.downloadHttp": "Pobieranie środowiska uruchomieniowego nie powiodło się (HTTP {status}).",
@@ -99,6 +103,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Nazwa nagłówka jest za długa.",
   "error.provider.headerNameDuplicate": "Dwa nagłówki mają tę samą nazwę.",
   "error.provider.headerValueInvalid": "Brak wartości nagłówka lub jest ona za długa.",
+  "error.provider.headerValueMissing": "Wpisz wartość nagłówka {name}.",
   "error.provider.apiKeyTooLong": "Klucz API jest za długi.",
   "error.provider.localOnly": "Dostawców można zmieniać tylko na komputerze, na którym działają agenci.",
   "error.provider.keyRequired": "Klucz dostawcy jest wymagany.",
@@ -195,6 +200,8 @@ export const messages = {
     "Dostawca modelu OpenCode zgłosił nieprawidłowe żądanie przesłania. Wybierz inny model i kontynuuj. Sprawdź zapisane rutyny, zanim utworzysz je ponownie.\n{detail}",
   "error.provider.opencodeUnreadableContent":
     "Ten model nie może odczytać pliku lub obrazu w tym czacie. Wybierz model, który odczytuje pliki, a potem wyślij wiadomość ponownie.",
+  "error.provider.opencodeFreeLimit":
+    "Darmowe modele OpenCode osiągnęły limit użycia. Wszystkie darmowe modele mają wspólny limit. Aby kontynuować, wklej klucz OpenCode Go w ustawieniach OpenCode albo wybierz model innego dostawcy.",
   "error.provider.opencodeProviderFailed":
     "Wystąpił błąd po stronie dostawcy modelu. Twoje połączenie nie jest przyczyną. Spróbuj ponownie później lub wybierz inny model.\n{detail}",
   "error.provider.opencodeNetwork":
@@ -265,12 +272,18 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "W przeglądarce można otworzyć tylko linki logowania HTTPS.",
   "error.provider.geminiKeyRefused":
     "Gemini odrzucił zapisany klucz API. Zastąp lub usuń klucz w Ustawieniach, a następnie połącz ponownie.",
+  "error.provider.keyProviderRefused":
+    "{provider} odrzucił zapisany klucz API. Zastąp lub usuń klucz w Ustawieniach, a następnie spróbuj ponownie.",
+  "error.provider.keyProviderNoBalance":
+    "Konto {provider} zapisanego klucza API nie ma środków. Doładuj konto, a następnie spróbuj ponownie.",
   "error.provider.messageTooLarge":
     "OpenBot zatrzymał {provider}, ponieważ wysłał on wiadomość większą niż {limit} MB.",
   "error.provider.customAgentIdInvalid":
     "ID agenta może zawierać tylko małe litery, cyfry lub `-` i nie może być ID wbudowanego dostawcy.",
   "error.provider.customAgentEnvInvalid":
     "Nazwa zmiennej może zawierać litery, cyfry lub `_` i nie może zaczynać się od cyfry. Użyj każdej nazwy raz, maksymalnie 16 nazw.",
+  "error.provider.customAgentUsagePromptInvalid":
+    "Polecenie użycia musi być jednym wierszem o długości maksymalnie 256 znaków.",
   "error.provider.customAgentCommandInvalid":
     "Polecenie musi być pełną ścieżką, ścieżką zaczynającą się od ~/ albo nazwą polecenia bez spacji.",
   "error.provider.customAgentArgsInvalid":
@@ -309,6 +322,8 @@ export const messages = {
   "error.provider.accountNotFound": "Tego konta {provider} nie ma na tym komputerze. Odśwież i spróbuj ponownie.",
   "error.provider.accountAlreadyAdded": "To konto {provider} jest już połączone.",
   "error.provider.accountDefault": "Nie można usunąć pierwszego konta {provider}.",
+  "error.provider.accountUsesKey":
+    "To konto {provider} używa zapisanego klucza API i nie ma logowania. Zmień klucz w Ustawienia serwera → Dostawcy.",
   "error.provider.accountInUse": "Agent korzystający z tego konta pracuje. Spróbuj ponownie, gdy agent się zatrzyma.",
   "error.provider.accountsReadOnly":
     "Nie można odczytać zapisanych kont dostawców. Zaktualizuj OpenBot, zanim je zmienisz.",
@@ -364,6 +379,8 @@ export const messages = {
     "Uwierzytelnienie Muse nie jest zweryfikowane. Połącz się na komputerze hosta lub ustaw klucz API Meta.",
   "error.provider.museSignIn": "Zaloguj się do Muse na komputerze hosta, aby kontynuować.",
   "error.provider.inceptionSignIn": "Dodaj klucz API Inception, aby kontynuować.",
+  "error.provider.deepseekSignIn": "Dodaj klucz API DeepSeek, aby kontynuować.",
+  "error.provider.openrouterSignIn": "Dodaj klucz API OpenRouter, aby kontynuować.",
   "error.provider.terminalLoginFailed":
     "Nie można otworzyć terminala logowania. Otwórz CLI dostawcy na tym hoście, zaloguj się tam, a potem odśwież dostawców.",
   "error.provider.nativeArchiveInvalid": "Pobrany plik dostawcy nie zawiera prawidłowej instalacji.",

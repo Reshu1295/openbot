@@ -25,25 +25,17 @@ const FROZEN_PROVIDERS: ReadonlyMap<number, readonly string[]> = (() => {
 })();
 
 /**
- * Providers that run only on this computer, so no peer sees them on any protocol. Inception
- * (`inception`) runs in the host's Pi CLI with the host's own key.
- */
-const LOCAL_ONLY_PROVIDERS: readonly string[] = ["inception"];
-
-/**
- * Tells if a peer on this protocol must not see the provider: a local-only provider, or a provider of
- * this host that the protocol's frozen list does not have. Protocol 8 and later see every other
- * provider.
+ * Tells if a peer on this protocol must not see the provider: a provider of this host that the
+ * protocol's frozen list does not have. Protocol 8 and later see every provider.
  */
 export function isPeerHiddenProvider(value: unknown, protocol: number): boolean {
-  if (typeof value === "string" && LOCAL_ONLY_PROVIDERS.includes(value)) return true;
   const known = FROZEN_PROVIDERS.get(Math.max(1, Math.min(protocol, 8)));
   return known !== undefined && isAgentProvider(value) && !known.includes(value);
 }
 
 /**
  * The same test for an object `id`. Only OpenCode and Gemini (`antigravity`) count for any object.
- * A later provider, and a local-only one, counts only for a provider status row, which has a `state`:
+ * A later provider counts only for a provider status row, which has a `state`:
  * a custom endpoint saved with that id before the provider existed is a peer-visible endpoint, also in
  * the `providers` list of a custom endpoint save or delete reply, and it must stay one.
  */

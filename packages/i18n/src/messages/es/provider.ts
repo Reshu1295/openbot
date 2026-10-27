@@ -144,10 +144,22 @@ export const messages = {
   "provider.geminiKey.description":
     "Guarda una clave de API de Gemini en este equipo. Una clave guardada se usa en lugar de tu cuenta de Google. Para iniciar sesión con Google, elimina la clave y selecciona Conectar en la fila de Gemini.",
   "provider.geminiKey.label": "Clave de API de Gemini",
+  "provider.claudeKey.title": "Clave de API de Anthropic",
+  "provider.claudeKey.description":
+    "Guarda una clave de API de Anthropic en el host. Anthropic factura cada solicitud a la clave. Para usarla en un agente, selecciona la cuenta «Clave de API» en el menú de modelos del agente. Si Claude no tiene sesión iniciada, todos los agentes usan la clave.",
+  "provider.claudeKey.label": "Clave de API de Anthropic",
   "provider.inceptionKey.title": "Clave de API de Inception",
   "provider.inceptionKey.description":
     "Guarda una clave de API de Inception en este equipo para usar los modelos Mercury. OpenBot los ejecuta en la CLI de Pi que descarga.",
   "provider.inceptionKey.label": "Clave de API de Inception",
+  "provider.deepseekKey.title": "Clave de API de DeepSeek",
+  "provider.deepseekKey.description":
+    "Guarda una clave de API de DeepSeek en este equipo para usar los modelos de DeepSeek. OpenBot los ejecuta en la CLI de Pi que descarga.",
+  "provider.deepseekKey.label": "Clave de API de DeepSeek",
+  "provider.openrouterKey.title": "Clave de API de OpenRouter",
+  "provider.openrouterKey.description":
+    "Guarda una clave de API de OpenRouter en este equipo para usar los modelos que ofrece OpenRouter. OpenBot los ejecuta en la CLI de Pi que descarga.",
+  "provider.openrouterKey.label": "Clave de API de OpenRouter",
   "provider.openCodeKey.title": "Iniciar sesión en OpenCode Go",
   "provider.openCodeKey.description":
     "Los modelos gratuitos no requieren una cuenta. Una clave permite usar los modelos Go de pago.",
@@ -165,6 +177,7 @@ export const messages = {
   "provider.account.addLabel": "Añadir otra cuenta de {name}",
   "provider.account.count": { one: "{count} cuenta", other: "{count} cuentas" },
   "provider.account.numbered": "Cuenta {number}",
+  "provider.account.apiKey": "Clave de API",
   "provider.account.listLabel": "Cuentas de {name}",
   "provider.account.usedBy": "Usada por {agents}",
   "provider.account.failed": "Error al iniciar sesión",
@@ -188,4 +201,24 @@ export const messages = {
   "provider.account.resetUsageNoCredit": "{name} no tiene más créditos de restablecimiento de uso.",
   "provider.account.resetUsageAlreadyRedeemed": "Este crédito de restablecimiento de {name} ya se usó.",
   "provider.account.resetUsageFailed": "No se pudo restablecer el uso de {name}.",
+  "provider.settings.cache": "Caché",
+  "provider.settings.promptCache": "Caché de prompts",
+  "provider.settings.promptCacheDescription":
+    "Cuánto tiempo guarda Claude el contexto de un agente en la caché entre turnos.",
+  "provider.settings.promptCacheHour": "1 hora",
+  "provider.settings.promptCacheDefault": "Predeterminado de Claude Code",
+  "provider.settings.promptCacheLoadFailed": "No se pudo cargar la duración de la caché de prompts de este servidor.",
+  "provider.settings.download": "Descarga",
+  "provider.settings.downloadedCli": "CLI de {name}",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 versión · {size}",
+    other: "{version} · {count} versiones · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 versión · {size}", other: "{count} versiones · {size}" },
+  "provider.settings.downloadAgain": "Al activar {name}, OpenBot descarga su CLI de nuevo.",
+  "provider.settings.removeDownloadConfirm": "¿Quitar {size}?",
+  "provider.settings.removeDownloadKeeps": "Las cuentas, los inicios de sesión y los agentes se mantienen.",
+  "provider.settings.removeDownload": "Quitar descarga",
+  "provider.settings.removingDownload": "Quitando…",
+  "provider.settings.removeDownloadFailed": "No se pudo quitar la descarga.",
 } as const satisfies PartialTranslation<typeof source>;

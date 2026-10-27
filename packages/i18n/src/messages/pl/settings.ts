@@ -43,9 +43,17 @@ export const messages = {
   "settings.restoreWorkspace.title": "Przywracaj ostatni obszar roboczy po uruchomieniu",
   "settings.restoreWorkspace.description": "Otwieraj obszar roboczy i zadania z poprzedniej sesji.",
   "settings.externalLinks.title": "Otwieraj linki zewnętrzne w",
-  "settings.externalLinks.description": "Wybierz, gdzie otwierają się linki z rozmów.",
+  "settings.externalLinks.description": "Tu otwierają się linki z czatów, stron logowania i płatności.",
   "settings.externalLinks.defaultBrowser": "Przeglądarka",
   "settings.externalLinks.openbot": "OpenBot",
+  "settings.externalLinks.defaultBrowserNamed": "Domyślna przeglądarka ({name})",
+  "settings.externalLinks.otherApp": "Inna aplikacja…",
+  "settings.externalLinks.command": "Polecenie…",
+  "settings.externalLinks.commandLabel": "Polecenie przeglądarki",
+  "settings.externalLinks.commandPlaceholder": "Ścieżka programu lub polecenie",
+  "settings.externalLinks.useCommand": "Użyj",
+  "settings.externalLinks.fallback.title": "Nie udało się otworzyć {name}",
+  "settings.externalLinks.fallback.description": "Link otworzył się w domyślnej przeglądarce.",
   "settings.sendShortcut.title": "Skrót wysyłania",
   "settings.sendShortcut.description":
     "Wybierz klawisze, które wysyłają wiadomość na tym urządzeniu i w tej przeglądarce.",
@@ -124,7 +132,8 @@ export const messages = {
   "settings.tab.voice.description":
     "Dyktowanie w polu wiadomości. Modele lokalne działają na tym komputerze, a ElevenLabs w chmurze.",
   "settings.tab.computerUse.title": "Sterowanie PC",
-  "settings.tab.computerUse.description": "Pozwól OpenBot widzieć aplikacje na tym komputerze i ich używać.",
+  "settings.tab.computerUse.description":
+    "Pozwól agentom OpenBot na tym komputerze widzieć jego aplikacje i ich używać. Agenci na innym serwerze używają komputera tego serwera.",
   "settings.tab.profile.title": "Profil",
   "settings.tab.profile.description": "Zarządzaj tym, jak wyglądasz w OpenBot.",
   "settings.tab.mobileConnect.title": "Mobile Connect",
@@ -153,13 +162,12 @@ export const messages = {
   "settings.mobileConnect.app.copyLink": "Kopiuj link",
   "settings.mobileConnect.app.linkCopied": "Skopiowano link",
   "settings.mobileConnect.iosApp.title": "OpenBot na iPhone’a",
-  "settings.mobileConnect.iosApp.badge": "Beta",
-  "settings.mobileConnect.iosApp.description": "Publiczna beta w TestFlight. Dla iOS 16.4 lub nowszego.",
-  "settings.mobileConnect.iosApp.qrLabel": "Kod QR zaproszenia do TestFlight",
-  "settings.mobileConnect.iosApp.step.testFlight": "Na iPhonie zainstaluj TestFlight z App Store.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "Zeskanuj ten kod QR aparatem iPhone’a albo skopiuj link z zaproszeniem i otwórz go na iPhonie.",
-  "settings.mobileConnect.iosApp.step.install": "W TestFlight stuknij Akceptuj, a potem Zainstaluj.",
+  "settings.mobileConnect.iosApp.badge": "Dostępna",
+  "settings.mobileConnect.iosApp.description": "W App Store. Dla iOS 16.4 lub nowszego.",
+  "settings.mobileConnect.iosApp.qrLabel": "Kod QR App Store",
+  "settings.mobileConnect.iosApp.step.scan":
+    "Zeskanuj ten kod QR aparatem iPhone’a albo skopiuj link i otwórz go na iPhonie.",
+  "settings.mobileConnect.iosApp.step.install": "W App Store stuknij Pobierz.",
   "settings.mobileConnect.androidApp.title": "OpenBot na Androida",
   "settings.mobileConnect.androidApp.badge": "Dostępna",
   "settings.mobileConnect.androidApp.description": "W Google Play. Dla Androida 7.0 lub nowszego.",
@@ -271,7 +279,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "Moje ostatnie pół roku z OpenBot",
-  "settings.profile.activity.title": "Aktywność",
+  "settings.profile.activity.title": "Aktywność na tym komputerze",
   "settings.profile.activity.activeDays": {
     one: "{count} aktywny dzień w ostatnim roku",
     few: "{count} aktywne dni w ostatnim roku",

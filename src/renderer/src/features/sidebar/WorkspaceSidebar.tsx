@@ -5,7 +5,7 @@ import { Sidebar } from "@openbot/ui/features/sidebar/Sidebar";
 import { SidebarCommunityCard } from "@openbot/ui/features/sidebar/SidebarCommunityCard";
 import { SidebarMobileAppCard } from "@openbot/ui/features/sidebar/SidebarMobileAppCard";
 import { SidebarStorageCard } from "@openbot/ui/features/sidebar/SidebarStorageCard";
-import { computeSidebarAgentStates } from "@openbot/ui/features/sidebar/sidebar-agent-states";
+import { computeSidebarAgentStates, sidebarChannelWaits } from "@openbot/ui/features/sidebar/sidebar-agent-states";
 import { teamMemberName } from "@openbot/ui/features/team/TeamPersonAvatar";
 import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, onSettled, Show } from "solid-js";
@@ -16,7 +16,10 @@ import { DirectConversation } from "../../lazy-views";
 import { useNavigation } from "../../navigation";
 import { usePlatform } from "../../platform";
 import { useTurns } from "../../turns";
+import { useAgentTasks } from "../agent-tasks/agent-tasks-context";
+import { useAgentThreads } from "../agent-threads/agent-threads-context";
 import { useAgentActions } from "../agents/agent-actions";
+import { attentionByAgent } from "../agents/agent-runtime-snapshot";
 import { agentThreadAttention } from "../agents/agent-thread-attention";
 import { useAgents } from "../agents/agents-context";
 import { useChannels } from "../channels/channels-context";
@@ -30,7 +33,6 @@ import { useServers } from "../servers/servers-context";
 import { useSettings } from "../settings/settings-context";
 import { usePresence } from "../team/team-context";
 import { SidebarUpdateIsland } from "../updates/SidebarUpdateIsland";
-import { useWindowPage } from "../window/window-page-context";
 import { createCommunityCardVisibility } from "./community-card";
 import { useSidebar } from "./sidebar-context";
 import { createStorageCard } from "./storage-card";
@@ -52,9 +54,6 @@ const MOBILE_APP_DISMISSED_STORAGE_KEY = "openbot:mobile-app-card-dismissed";
 export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
   const { t } = useText();
   const layout = useLayout();
-  const windowPage = useWindowPage();
-  /** The Tasks page shows beside the list. No row is open, so a click on a row opens its chat. */
-  const tasksOpen = () => windowPage.page() === "tasks";
   const platform = usePlatform();
   const channels = useChannels();
   const { activeServer, activeServerId, activeServerSupportsCapability } = useServers();
@@ -95,6 +94,18 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
   const { directPeople } = usePresence();
   const { activeDirectMember, activeDirectMemberId, directThreads } = useDirectMessages();
   const { selectAgent, selectDirectMember, setGlobalSearchVisibility, chatHistory } = useNavigation();
+  const agentTasks = useAgentTasks();
+  const agentThreads = useAgentThreads();
+  /**
+   * Opens the agent's chat with a new thread. A host without threads has no such item, and neither has a
+   * chat window: another agent opens in a window of its own, which does not get the new thread.
+   */
+  const newAgentThread = () =>
+    agentTasks.available() && !platform.chatWindow
+      ? (agentId: string) => {
+          if (selectAgent(agentId)) agentThreads.startNew(agentId);
+        }
+      : undefined;
   /** The name of a chat as its sidebar row shows it. */
   const chatName = (entry: ChatHistoryEntry | undefined): { name: string } | null => {
     if (!entry) return null;
@@ -158,6 +169,18 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
     }),
   );
 
+  /* A wait in a channel thread goes to the channel instead. Selecting the channel opens the view
+   * that answers it. */
+  const channelWaits = createMemo(() => {
+    const prompts = Object.values(pendingPrompts());
+    return sidebarChannelWaits({
+      channels: visibleChannels(),
+      prompts: prompts.flatMap((event) => (event?.type === "prompt" ? [event] : [])),
+      takeovers: prompts.flatMap((event) => (event?.type === "browser-takeover-requested" ? [event.request] : [])),
+      approvals: approvals(),
+    });
+  });
+
   /* The badge says what an agent is doing; the face says how it is going. `isAgentWorking` is
    * shared, and a routine mark only replaces the badge for that same agent. */
   const agentMoods = createMemo(() =>
@@ -166,7 +189,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
       activeTurns: activeTurns(),
       queues: queues(),
       failedTurns: failedTurns(),
-      pendingPrompts: pendingPrompts(),
+      pendingPrompts: attentionByAgent(pendingPrompts(), agentList()),
       pendingApprovals: pendingApprovals(),
       recentReplies: recentReplies(),
     }),
@@ -176,7 +199,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
     <Sidebar
       channels={visibleChannels()}
       deletedChannels={channelsListed() ? channels.state.channels.filter((channel) => channel.archived) : []}
-      activeChannelId={tasksOpen() ? null : channels.state.selectedId}
+      activeChannelId={channels.state.selectedId}
       onSelectChannel={(id) => void channels.open(id)}
       onEditChannel={(id) => void channels.editChannel(id)}
       onDeleteChannel={channels.deletionSupported() ? channels.remove : undefined}
@@ -224,12 +247,13 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
           : undefined
       }
       agents={agentList()}
-      activeAgentId={tasksOpen() || activeDirectMember() || channels.state.selectedId ? "" : (activeAgent()?.id ?? "")}
+      activeAgentId={activeDirectMember() || channels.state.selectedId ? "" : (activeAgent()?.id ?? "")}
       showPeople={props.peopleEnabled}
       people={directPeople()}
       directThreads={directThreads()}
-      activeDirectMemberId={tasksOpen() ? null : activeDirectMemberId()}
+      activeDirectMemberId={activeDirectMemberId()}
       agentStates={sidebarAgentStates()}
+      channelWaits={channelWaits()}
       agentMoods={agentMoods()}
       layout={sidebarLayout()}
       layoutMutable={activeServerSupportsCapability("sidebar-layout")}
@@ -262,6 +286,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
       userHiddenAgents={userHiddenAgents()}
       onHideAgent={hideAllowed() ? (agentId) => void setAgentHiddenByUser(agentId, true) : undefined}
       onRestoreAgent={hideAllowed() ? (agentId) => void setAgentHiddenByUser(agentId, false) : undefined}
+      onNewAgentThread={newAgentThread()}
       onOpenAgentWindow={
         platform.landingPreview
           ? undefined

@@ -162,6 +162,7 @@ export function BrowserDockSurface() {
             onCancelEdit={() => perform({ type: "cancel-edit" })}
             onReorder={(deliveryIds) => perform({ type: "reorder", deliveryIds })}
             onHandoff={dock().canHandoff ? () => perform({ type: "handoff" }) : undefined}
+            vault={{ server: null }}
             // The code goes to main from here and never through the main renderer.
             onRespondSecret={(input) => browserDockPort().agent.respondToBrowserSecret(input, LOCAL_SERVER_ID)}
             onAnswerPrompt={(requestId, answers) => send({ type: "answer-prompt", requestId, answers })}

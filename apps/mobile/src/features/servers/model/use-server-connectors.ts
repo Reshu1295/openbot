@@ -20,13 +20,16 @@ const POLL_MS = 3_000;
  * on screen reads them again.
  */
 export function useServerConnectors(serverId: string, poll: MobileConnectorId | "all" | null) {
-  const { servers, agents, canManageConnectors, canManageOnePasswordConnector } = useMobileWorkspace();
-  const { githubConnector, loadOnePasswordConnector, loadMessagingConnections } = useMobileWorkspaceActions();
+  const { servers, agents, canManageConnectors, canManageOnePasswordConnector, canManageBitwardenConnector } =
+    useMobileWorkspace();
+  const { githubConnector, loadOnePasswordConnector, loadBitwardenConnector, loadMessagingConnections } =
+    useMobileWorkspaceActions();
   const queryScope = useQueryScope();
   const focused = useIsFocused();
   const server = servers.find((candidate) => candidate.id === serverId);
   const connectors = canManageConnectors(serverId);
   const onePasswordAvailable = canManageOnePasswordConnector(serverId);
+  const bitwardenAvailable = canManageBitwardenConnector(serverId);
   /** Only the connector that the page on screen shows is read again. */
   const refetchInterval = (id: MobileConnectorId): number | false =>
     focused && (poll === "all" || poll === id) ? POLL_MS : false;
@@ -54,15 +57,25 @@ export function useServerConnectors(serverId: string, poll: MobileConnectorId | 
     refetchInterval: refetchInterval("onepassword"),
     queryFn: () => loadOnePasswordConnector(serverId),
   });
+  /** The host answers a connect with `connecting` and signs in after that, so the page reads it again. */
+  const bitwarden = useQuery({
+    queryKey: queryKeys.serverConnector(queryScope, serverId, "bitwarden"),
+    enabled: bitwardenAvailable,
+    retry: false,
+    refetchInterval: refetchInterval("bitwarden"),
+    queryFn: () => loadBitwardenConnector(serverId),
+  });
   return {
     server,
     /** The agents of this server, to find each orchestrator. */
     agents: agents.filter((agent) => agent.serverId === serverId),
     connectors,
     onePasswordAvailable,
+    bitwardenAvailable,
     messaging: { slack, discord, telegram },
     github,
     onePassword,
+    bitwarden,
   };
 }
 
