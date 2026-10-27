@@ -853,6 +853,34 @@ try {
     return owners;
   });
 
+  await step("v8 RPC: a DELETE over WebRTC reaches the Team API", async () => {
+    // A current client sends `{}` with a DELETE. No frozen codec has a body for it, so the host must
+    // forward it and let the route answer, not fail it as a host error.
+    const path = `/v1/agents/${source.id}/avatar`;
+    const requestId = randomUUID();
+    const from = v2.bridge.sent.length;
+    v2.bridge.emit(
+      "data",
+      "peer-v2",
+      "rpc",
+      encodeTeamProtocolV2Frame(
+        createTeamProtocolV2Request(requestId, "http.request", {
+          method: "DELETE",
+          path,
+          body: encodeTeamProtocolV8WebRtcHttpRequest("DELETE", path, {}),
+          capabilities: [...teamCapabilitiesForProtocol(8)],
+        }),
+      ),
+    );
+    const frame = await v2.bridge.rpcFrom(from, rpcResponse(requestId));
+    const status = "result" in frame ? record(frame.result, "RPC result").status : frame.error?.status;
+    assert.ok(
+      "result" in frame || frame.error?.code !== "host_error",
+      `The host failed the DELETE: ${JSON.stringify(frame)}.`,
+    );
+    return { status };
+  });
+
   await step("v2 handshake: a forged proof or an RPC before the proof gets no session", async () => {
     const before = team.listSessions().length;
     const results: Record<string, boolean> = {};
