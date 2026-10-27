@@ -347,8 +347,8 @@ export class ConversationRuntime {
       }
       return result;
     };
-    // A chat with a turn that runs and nothing left to trim, for example only mailbox messages, is
-    // passed over so that the budget can still evict other chats.
+    // A chat with a turn that runs and nothing left to trim, for example only messages that mailbox
+    // sync adds back, is passed over so that the budget can still evict other chats.
     const untrimmable = new Set<CachedSnapshot>();
     const trim = (cached: CachedSnapshot): void => {
       if (!this.#trimCompletedCache(cached)) {
@@ -421,7 +421,12 @@ export class ConversationRuntime {
   #trimCompletedCache(cached: CachedSnapshot): boolean {
     const activeTurnId = cached.snapshot.activeTurnId;
     const completed = cached.snapshot.messages.filter((message) => !isActiveMessage(message, activeTurnId));
-    const removed = oldestMessagesToRemove(completed, this.#cachedSnapshotBytes - CONVERSATION_CACHE_TOTAL_BYTES_LIMIT);
+    const active = cached.snapshot.messages.filter((message) => isActiveMessage(message, activeTurnId));
+    const removed = oldestMessagesToRemove(
+      completed,
+      active,
+      this.#cachedSnapshotBytes - CONVERSATION_CACHE_TOTAL_BYTES_LIMIT,
+    );
     if (removed.size === 0) return false;
     // In place, because a caller can hold this array.
     const messages = cached.snapshot.messages;
@@ -968,7 +973,11 @@ function boundedConversationSnapshot(snapshot: ConversationSnapshot): CachedSnap
   );
   let completedBytes = conversationSnapshotBytes({ ...snapshot, messages: completedMessages });
   if (completedBytes > CONVERSATION_CACHE_BYTES_LIMIT) {
-    const removed = oldestMessagesToRemove(completedMessages, completedBytes - CONVERSATION_CACHE_BYTES_LIMIT);
+    const removed = oldestMessagesToRemove(
+      completedMessages,
+      activeMessages,
+      completedBytes - CONVERSATION_CACHE_BYTES_LIMIT,
+    );
     completedMessages = completedMessages.filter((message) => !removed.has(message));
     completedBytes = conversationSnapshotBytes({ ...snapshot, messages: completedMessages });
   }
@@ -1081,21 +1090,24 @@ function conversationSnapshotBytes(snapshot: ConversationSnapshot): number {
 }
 
 /**
- * The oldest messages that free `excessBytes`. Mailbox messages stay: mailbox sync adds them back,
- * so removing one frees no memory and makes the next change write it again.
+ * The oldest messages that free `excessBytes`. The removal is one prefix in display order, so no old
+ * request stays without its answer. A message in the prefix that mailbox sync puts back stays (see
+ * `withMailboxMessages`): removing it frees no memory and makes the next change write it again.
  */
 function oldestMessagesToRemove(
   messages: readonly ConversationMessage[],
+  active: readonly ConversationMessage[],
   excessBytes: number,
 ): Set<ConversationMessage> {
-  const removed = new Set<ConversationMessage>();
-  let bytes = 0;
-  for (const message of messages) {
+  // With the comma between messages.
+  const sizes = new Map(messages.map((message) => [message, Buffer.byteLength(JSON.stringify(message), "utf8") + 1]));
+  let removed = new Set<ConversationMessage>();
+  for (let count = 1; count <= messages.length; count += 1) {
+    const kept = new Set(withMailboxMessages(messages, messages.slice(count), active));
+    removed = new Set(messages.slice(0, count).filter((message) => !kept.has(message)));
+    let bytes = 0;
+    for (const message of removed) bytes += sizes.get(message) ?? 0;
     if (bytes >= excessBytes) break;
-    if (isMailboxMessage(message)) continue;
-    // With the comma between messages.
-    bytes += Buffer.byteLength(JSON.stringify(message), "utf8") + 1;
-    removed.add(message);
   }
   return removed;
 }

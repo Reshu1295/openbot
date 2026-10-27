@@ -11,6 +11,8 @@
 // - `byte-limit`: the answers are larger than the 8 MiB that the runtime keeps of one chat.
 // - `provider-read`: each round, a provider read replaces the chat with one that has no mailbox
 //   messages, so the cache has no record of them.
+// - `request-turns`: each answer has the user's request before it, and the chat is over 8 MiB. The
+//   trim must remove each old request with its answer, so that no request stays without its answer.
 // - `total-budget`: the least recently used chat has a turn that runs and only a mailbox message to
 //   trim. Idle chats then go over the limit of all chats. The idle chats must still be removed.
 // No app, provider, account or network is started.
@@ -45,7 +47,7 @@ const SEEDED_TURNS = 120;
 const ROUNDS = 12;
 const TIMED_QUEUE_CHANGES = 50;
 
-type CaseName = "message-limit" | "byte-limit" | "provider-read" | "total-budget";
+type CaseName = "message-limit" | "byte-limit" | "provider-read" | "request-turns" | "total-budget";
 
 interface Round {
   round: number;
@@ -65,6 +67,8 @@ interface CaseReport {
   unchangedQueueChangeMs?: number;
   /** Warnings that a chat was sent again with no stored change. */
   loopWarnings?: number;
+  /** In `request-turns`, the turns that stay in memory. */
+  turnsKept?: string;
   /** In `total-budget`, the idle chats that stay in memory. */
   idleChatsKept?: string;
   error?: string;
@@ -331,6 +335,82 @@ async function runCase(name: CaseName, result: CaseReport): Promise<void> {
   }
 }
 
+/** Requests and answers, together 1.5 times the limit of one chat. */
+const REQUEST_TURNS = 40;
+
+/** The ISO time after `iso`, read from the clock. */
+async function nextTime(iso: string): Promise<string> {
+  while (new Date().toISOString() <= iso) await Promise.resolve();
+  return new Date().toISOString();
+}
+
+async function runRequestTurnsCase(result: CaseReport): Promise<void> {
+  const { store, mailbox, conversation, sync, close } = await startRuntime();
+  try {
+    const agent = await runCauseEffect(
+      store.createAgent({ name: "Answers", description: "Gets requests", avatarSeed: "turns", avatarHue: null }),
+    );
+    const text = "x".repeat(Math.ceil((CONVERSATION_CACHE_BYTES_LIMIT * 1.5) / REQUEST_TURNS));
+    const answers: ConversationMessage[] = [];
+    let last = new Date().toISOString();
+    for (let index = 0; index < REQUEST_TURNS; index += 1) {
+      const turn = `turn-${index}`;
+      const request = await runCauseEffect(
+        mailbox.enqueue({ sender: { kind: "user" }, recipientAgentIds: [agent.id], text: `Request ${index}` }),
+      );
+      const deliveryId = request.deliveries[0]?.id;
+      assert.ok(deliveryId);
+      await runCauseEffect(mailbox.markStarting(deliveryId));
+      await runCauseEffect(mailbox.markRunning(deliveryId, turn));
+      await runCauseEffect(mailbox.markTerminal(deliveryId, "completed"));
+      const requestAt = mailbox.conversationMessages(agent.id).find((message) => message.id === deliveryId)?.createdAt;
+      assert.ok(requestAt);
+      last = await nextTime(requestAt > last ? requestAt : last);
+      answers.push(assistantMessage(turn, last, text));
+      last = await nextTime(last);
+    }
+    // A full read of the chat, as when it loads: each request, then its answer.
+    const requests = mailbox.conversationMessages(agent.id);
+    assert.equal(requests.length, REQUEST_TURNS, "Each request is in the mailbox.");
+    conversation.emitConversation(
+      {
+        agentId: agent.id,
+        threadId: store.ensureThreadIdNow(agent.id),
+        activeTurnId: null,
+        revision: 0,
+        messages: [...requests, ...answers].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+      },
+      "e2e.chat-read",
+      {},
+    );
+    sync.emitQueue(agent.id);
+    const kept = conversation.loadedSnapshot(agent.id)?.messages ?? [];
+    const keptTurns = (author: ConversationMessage["author"]): number[] =>
+      kept.flatMap((message) =>
+        message.author === author && message.turnId ? [Number(message.turnId.slice("turn-".length))] : [],
+      );
+    const keptRequests = keptTurns("user");
+    const keptAnswers = keptTurns("assistant");
+    result.turnsKept = `${keptAnswers.length} answers and ${keptRequests.length} requests of ${REQUEST_TURNS}`;
+    assert.ok(keptAnswers.length < REQUEST_TURNS, "The 8 MiB limit removes old answers.");
+    assert.deepEqual(
+      keptRequests.filter((turn) => !keptAnswers.includes(turn)),
+      [],
+      "No request stays without its answer.",
+    );
+    const firstKept = REQUEST_TURNS - keptAnswers.length;
+    assert.deepEqual(
+      [...keptAnswers].sort((a, b) => a - b),
+      Array.from({ length: keptAnswers.length }, (_, index) => firstKept + index),
+      "The kept answers are the newest ones, with no gap.",
+    );
+    result.checks.push("the trim removes old requests with their answers; the kept turns have no gap");
+    result.passed = true;
+  } finally {
+    await close();
+  }
+}
+
 /** Idle chats of about 7.5 MiB each, together more than the limit of all chats. */
 const IDLE_CHATS = Math.ceil(CONVERSATION_CACHE_TOTAL_BYTES_LIMIT / (CONVERSATION_CACHE_BYTES_LIMIT * 0.9375)) + 1;
 
@@ -417,10 +497,16 @@ async function runBudgetCase(result: CaseReport): Promise<void> {
 }
 
 try {
-  for (const name of ["message-limit", "byte-limit", "provider-read", "total-budget"] as const) {
+  for (const name of ["message-limit", "byte-limit", "provider-read", "request-turns", "total-budget"] as const) {
     const result: CaseReport = { name, checks: [], rounds: [], passed: false };
     report.cases.push(result);
-    await (name === "total-budget" ? runBudgetCase(result) : runCase(name, result)).catch((error: unknown) => {
+    const run =
+      name === "request-turns"
+        ? runRequestTurnsCase(result)
+        : name === "total-budget"
+          ? runBudgetCase(result)
+          : runCase(name, result);
+    await run.catch((error: unknown) => {
       result.error = error instanceof Error ? error.message : String(error);
     });
     process.stdout.write(`${name}: ${result.passed ? "passed" : `FAILED: ${result.error}`}\n`);
