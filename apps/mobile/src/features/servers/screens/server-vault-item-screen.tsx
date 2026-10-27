@@ -5,11 +5,12 @@ import {
   type VaultContactSummary,
   type VaultItemKind,
   type VaultItemSummary,
+  type VaultState,
 } from "@openbot/contracts/ipc";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { Typography } from "heroui-native";
-import { Children, type ReactNode, useEffect, useState } from "react";
+import { Children, type ReactNode, useEffect, useRef, useState } from "react";
 import { Alert, View } from "react-native";
 import { useUniwind } from "uniwind";
 import { useServerVault } from "@/features/servers/model/use-server-vault";
@@ -122,8 +123,16 @@ function VaultItemForm({
   // Navigation runs a render later, once the guard below reads `leaving`.
   const [leaving, setLeaving] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  // The state without a deleted item. It is shown after this page goes, so the page does not say "gone".
+  const removedState = useRef<VaultState | null>(null);
+  const showState = useRef(setState);
+  showState.current = setState;
   useEffect(() => {
-    if (leaving) router.back();
+    if (!leaving) return;
+    router.back();
+    const state = removedState.current;
+    removedState.current = null;
+    if (state) void showState.current(state);
   }, [leaving]);
   const input = vaultSaveInput(kind, saved?.id ?? null, draft);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
@@ -166,7 +175,7 @@ function VaultItemForm({
         style: "destructive",
         onPress: () =>
           void perform(async () => {
-            await setState(await deleteVaultItem(saved.id, serverId));
+            removedState.current = await deleteVaultItem(saved.id, serverId);
           }).then((done) => {
             if (done) setLeaving(true);
           }),
