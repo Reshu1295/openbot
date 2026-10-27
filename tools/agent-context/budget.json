@@ -2,9 +2,9 @@
   "bytes": {
     "catalog.descriptions": 36014,
     "catalog.schemas": 75869,
-    "guidance": 21049,
-    "instructions.claude": 13701,
-    "instructions.codex": 13599,
+    "guidance": 21073,
+    "instructions.claude": 13940,
+    "instructions.codex": 13838,
     "list-models.fixture": 2430,
     "visible-tools": 12880
   }
