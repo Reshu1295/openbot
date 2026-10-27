@@ -136,7 +136,7 @@ export const PLUGIN_CATALOG_INDEX: PluginCatalogIndex = {
       slug: "render",
       version: "1.0.0",
       featured: false,
-      detailSha256: "ba9256fc15bbeeffd35b3a9edf8d1efa399f057fc03547ca652a6c3cede7845f",
+      detailSha256: "b9371c8854d1fb2391afd2171d455957b7d73d5b45fb09b4ef9cd8d3fd8446ee",
     },
     {
       slug: "context7",
@@ -947,7 +947,7 @@ export const PLUGIN_CATALOG_DETAILS: Record<string, PluginCatalogDetail> = {
               fields: [
                 {
                   id: "token",
-                  label: "Render API key",
+                  label: "API key",
                   header: "Authorization",
                   prefix: "Bearer ",
                   placeholder: "rnd_…",

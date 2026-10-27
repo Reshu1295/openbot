@@ -865,7 +865,7 @@ const RENDER: MarketplacePluginDetail = {
             fields: [
               {
                 id: "token",
-                label: "Render API key",
+                label: "API key",
                 header: "Authorization",
                 prefix: "Bearer ",
                 placeholder: "rnd_…",

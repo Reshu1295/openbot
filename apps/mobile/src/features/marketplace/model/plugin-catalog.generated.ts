@@ -752,7 +752,7 @@ export const MOBILE_PLUGINS: readonly MobilePlugin[] = [
               fields: [
                 {
                   id: "token",
-                  label: "Render API key",
+                  label: "API key",
                   header: "Authorization",
                   prefix: "Bearer ",
                   placeholder: "rnd_…",

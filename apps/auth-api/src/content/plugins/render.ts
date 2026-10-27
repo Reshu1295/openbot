@@ -37,7 +37,7 @@ export const RENDER_PLUGIN_GUIDE: PluginGuide = {
     {
       question: "What can the agent change in Render?",
       answer:
-        "The agent can create services, databases and Key Value instances, trigger deploys, and replace the environment variables of a service. The server cannot delete a resource, and it cannot change scaling or most service settings. Render warns that environment variables are a destructive operation, so check what the agent changes.",
+        "The agent can create services, databases and Key Value instances, trigger deploys, and replace the environment variables of a service. The server cannot delete a resource, and it cannot change scaling or most service settings. Render warns that a change to environment variables can be destructive, so check what the agent changes.",
     },
     {
       question: "What data does Render get?",
