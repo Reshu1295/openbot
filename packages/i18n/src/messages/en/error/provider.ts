@@ -57,6 +57,8 @@ export const messages = defineMessages("error.provider", {
     "OpenBot could not reach the provider release sources. Check the connection and try again.",
   "error.provider.runtimesUnsupported": "Provider runtimes are not available on this platform.",
   "error.provider.closing": "OpenBot is closing.",
+  "error.provider.removeWhileOn": "Turn the provider off before you remove its download.",
+  "error.provider.removeWhileDownloading": "Wait for the download to end, then remove it.",
   "error.provider.cliOverride": "Remove the explicit CLI path override before updating in OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "The runtime update did not complete.",
   "error.provider.downloadHttp": "Runtime download failed with HTTP {status}.",

@@ -31,6 +31,7 @@ export const messages = {
   "provider.status.unavailable": "사용 불가",
   "provider.status.checking": "확인 중",
   "provider.status.off": "꺼짐",
+  "provider.status.offNotDownloaded": "꺼짐 · 다운로드 안 됨",
   "provider.gemini.hostSignIn":
     "Gemini를 연결하려면 호스트에서 OpenBot을 열고 설정 > 제공자에서 연결을 선택하세요. Google 로그인에는 해당 호스트의 브라우저가 필요해요. 원격 로그인은 지원하지 않아요.",
 
@@ -251,6 +252,14 @@ export const messages = {
   "provider.settings.turnOnFirst": "먼저 {name}을(를) 켜세요.",
   "provider.settings.makeDefault": "기본으로 지정",
   "provider.settings.useTitle": "{name} 사용",
+  "provider.settings.downloadedCli": "다운로드한 CLI",
+  "provider.settings.downloadedCliSize": "이 컴퓨터의 {size}",
+  "provider.settings.removeDownload": "다운로드 삭제",
+  "provider.settings.removeDownloadTitle": "{name} 다운로드를 삭제할까요?",
+  "provider.settings.removeDownloadDescription":
+    "{size}를 확보해요. 계정, 로그인, 에이전트는 유지돼요. {name}을 켜면 OpenBot이 다시 다운로드해요.",
+  "provider.settings.removingDownload": "삭제 중…",
+  "provider.settings.removeDownloadFailed": "다운로드를 삭제하지 못했어요.",
   "provider.settings.endpoints": "엔드포인트",
   "provider.settings.noEndpoints": "엔드포인트가 없어요.",
   "provider.settings.endpointModels": { other: "{url} · 모델 {count}개" },

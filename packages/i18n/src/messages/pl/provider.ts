@@ -46,6 +46,7 @@ export const messages = {
   "provider.status.unavailable": "Niedostępny",
   "provider.status.checking": "Sprawdzanie",
   "provider.status.off": "Wyłączony",
+  "provider.status.offNotDownloaded": "Wyłączony · Nie pobrano",
   "provider.gemini.hostSignIn":
     "Aby połączyć Gemini, otwórz OpenBot na hoście i wybierz „Połącz” w sekcji Ustawienia > Dostawcy. Logowanie Google wymaga przeglądarki na tym hoście. Zdalne logowanie nie jest obsługiwane.",
 
@@ -229,4 +230,12 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 godzina",
   "provider.settings.promptCacheDefault": "Domyślne Claude Code",
   "provider.settings.promptCacheLoadFailed": "Nie udało się wczytać czasu pamięci podręcznej promptów tego serwera.",
+  "provider.settings.downloadedCli": "Pobrane CLI",
+  "provider.settings.downloadedCliSize": "{size} na tym komputerze",
+  "provider.settings.removeDownload": "Usuń pobrane",
+  "provider.settings.removeDownloadTitle": "Usunąć pobrane pliki {name}?",
+  "provider.settings.removeDownloadDescription":
+    "Zwalnia {size}. Konta, logowania i agenci zostają. Gdy włączysz {name}, OpenBot pobierze je ponownie.",
+  "provider.settings.removingDownload": "Usuwanie…",
+  "provider.settings.removeDownloadFailed": "Nie udało się usunąć pobranych plików.",
 } as const satisfies PartialTranslation<typeof source>;

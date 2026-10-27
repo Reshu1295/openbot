@@ -34,6 +34,7 @@ export const messages = {
   "provider.status.unavailable": "不可用",
   "provider.status.checking": "检查中",
   "provider.status.off": "已关闭",
+  "provider.status.offNotDownloaded": "已关闭 · 未下载",
   "provider.gemini.hostSignIn":
     "要连接 Gemini，请在主机上打开 OpenBot，然后在“设置 > 服务商”中选择“连接”。Google 登录需要该主机上有浏览器，不支持远程登录。",
 
@@ -259,6 +260,14 @@ export const messages = {
   "provider.settings.turnOnFirst": "请先开启 {name}。",
   "provider.settings.makeDefault": "设为默认",
   "provider.settings.useTitle": "使用 {name}",
+  "provider.settings.downloadedCli": "已下载的 CLI",
+  "provider.settings.downloadedCliSize": "此电脑上 {size}",
+  "provider.settings.removeDownload": "移除下载",
+  "provider.settings.removeDownloadTitle": "要移除 {name} 的下载吗？",
+  "provider.settings.removeDownloadDescription":
+    "将释放 {size}。账户、登录和智能体会保留。开启 {name} 时，OpenBot 会重新下载。",
+  "provider.settings.removingDownload": "正在移除…",
+  "provider.settings.removeDownloadFailed": "无法移除下载。",
   "provider.settings.endpoints": "端点",
   "provider.settings.noEndpoints": "没有端点。",
   "provider.settings.endpointModels": { other: "{url} · {count} 个模型" },

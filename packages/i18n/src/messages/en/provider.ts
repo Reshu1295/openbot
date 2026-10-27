@@ -33,6 +33,7 @@ export const messages = defineMessages("provider", {
   "provider.status.unavailable": "Unavailable",
   "provider.status.checking": "Checking",
   "provider.status.off": "Off",
+  "provider.status.offNotDownloaded": "Off · Not downloaded",
   "provider.gemini.hostSignIn":
     "To connect Gemini, open OpenBot on the host and select Connect in Settings > Providers. Google sign-in needs a browser on that host. Remote sign-in is not supported.",
 
@@ -272,6 +273,14 @@ export const messages = defineMessages("provider", {
   "provider.settings.turnOnFirst": "Turn {name} on first.",
   "provider.settings.makeDefault": "Make default",
   "provider.settings.useTitle": "Use {name}",
+  "provider.settings.downloadedCli": "Downloaded CLI",
+  "provider.settings.downloadedCliSize": "{size} on this computer",
+  "provider.settings.removeDownload": "Remove download",
+  "provider.settings.removeDownloadTitle": "Remove the {name} download?",
+  "provider.settings.removeDownloadDescription":
+    "This frees {size}. Accounts, sign-ins and agents stay. When you turn {name} on, OpenBot downloads it again.",
+  "provider.settings.removingDownload": "Removing…",
+  "provider.settings.removeDownloadFailed": "Could not remove the download.",
   "provider.settings.endpoints": "Endpoints",
   "provider.settings.noEndpoints": "No endpoints.",
   "provider.settings.endpointModels": { one: "{url} · 1 model", other: "{url} · {count} models" },

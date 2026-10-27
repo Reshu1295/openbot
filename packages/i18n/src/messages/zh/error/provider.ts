@@ -54,6 +54,8 @@ export const messages = {
   "error.provider.releaseSourcesUnreachable": "OpenBot 无法连接服务商的发布源。请检查网络连接后重试。",
   "error.provider.runtimesUnsupported": "该平台不支持服务商运行时。",
   "error.provider.closing": "OpenBot 正在关闭。",
+  "error.provider.removeWhileOn": "请先关闭服务商，再移除其下载。",
+  "error.provider.removeWhileDownloading": "请等待下载完成，然后再移除。",
   "error.provider.cliOverride": "请在 OpenBot 中更新之前，先移除显式指定的 CLI 路径。",
   "error.provider.runtimeUpdateIncomplete": "运行时更新未完成。",
   "error.provider.downloadHttp": "运行时下载失败，HTTP {status}。",

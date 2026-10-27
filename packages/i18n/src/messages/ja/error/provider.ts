@@ -58,6 +58,8 @@ export const messages = {
     "OpenBot はプロバイダーのリリース元に接続できませんでした。接続を確認して、もう一度お試しください。",
   "error.provider.runtimesUnsupported": "このプラットフォームではプロバイダーのランタイムを使用できません。",
   "error.provider.closing": "OpenBot を終了しています。",
+  "error.provider.removeWhileOn": "ダウンロードを削除する前に、プロバイダーをオフにしてください。",
+  "error.provider.removeWhileDownloading": "ダウンロードが終わってから削除してください。",
   "error.provider.cliOverride": "OpenBot で更新する前に、明示的な CLI パスの指定を削除してください。",
   "error.provider.runtimeUpdateIncomplete": "ランタイムの更新が完了しませんでした。",
   "error.provider.downloadHttp": "ランタイムのダウンロードが HTTP {status} で失敗しました。",

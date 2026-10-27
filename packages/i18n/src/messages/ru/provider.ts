@@ -46,6 +46,7 @@ export const messages = {
   "provider.status.unavailable": "Недоступно",
   "provider.status.checking": "Проверка",
   "provider.status.off": "Выключено",
+  "provider.status.offNotDownloaded": "Выключен · Не загружен",
   "provider.gemini.hostSignIn":
     "Чтобы подключить Gemini, откройте OpenBot на хосте и нажмите «Подключить» в разделе «Настройки» > «Провайдеры». Для входа в Google на этом хосте нужен браузер. Удалённый вход не поддерживается.",
 
@@ -227,4 +228,12 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 час",
   "provider.settings.promptCacheDefault": "По умолчанию Claude Code",
   "provider.settings.promptCacheLoadFailed": "Не удалось загрузить время кэша промптов этого сервера.",
+  "provider.settings.downloadedCli": "Загруженный CLI",
+  "provider.settings.downloadedCliSize": "{size} на этом компьютере",
+  "provider.settings.removeDownload": "Удалить загрузку",
+  "provider.settings.removeDownloadTitle": "Удалить загрузку {name}?",
+  "provider.settings.removeDownloadDescription":
+    "Освободит {size}. Аккаунты, входы и агенты останутся. Когда вы включите {name}, OpenBot загрузит его снова.",
+  "provider.settings.removingDownload": "Удаление…",
+  "provider.settings.removeDownloadFailed": "Не удалось удалить загрузку.",
 } as const satisfies PartialTranslation<typeof source>;

@@ -39,6 +39,7 @@ export const messages = {
   "provider.status.unavailable": "No disponible",
   "provider.status.checking": "Comprobando",
   "provider.status.off": "Desactivado",
+  "provider.status.offNotDownloaded": "Desactivado · No descargado",
   "provider.gemini.hostSignIn":
     "Para conectar Gemini, abre OpenBot en el host y selecciona Conectar en Ajustes > Proveedores. El inicio de sesión de Google necesita un navegador en ese host. No se admite el inicio de sesión remoto.",
   "provider.key.free": "Gratis",
@@ -208,4 +209,12 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 hora",
   "provider.settings.promptCacheDefault": "Predeterminado de Claude Code",
   "provider.settings.promptCacheLoadFailed": "No se pudo cargar la duración de la caché de prompts de este servidor.",
+  "provider.settings.downloadedCli": "CLI descargada",
+  "provider.settings.downloadedCliSize": "{size} en este equipo",
+  "provider.settings.removeDownload": "Quitar descarga",
+  "provider.settings.removeDownloadTitle": "¿Quitar la descarga de {name}?",
+  "provider.settings.removeDownloadDescription":
+    "Libera {size}. Las cuentas, los inicios de sesión y los agentes se mantienen. Al activar {name}, OpenBot la descarga de nuevo.",
+  "provider.settings.removingDownload": "Quitando…",
+  "provider.settings.removeDownloadFailed": "No se pudo quitar la descarga.",
 } as const satisfies PartialTranslation<typeof source>;

@@ -113,6 +113,10 @@ export interface ProviderSettingsPageProps extends ProviderRowHost {
   onCancelProviderRestart?: ((provider: AgentProviderId) => void | Promise<void>) | undefined;
   /** Turns a provider on or off. A provider that an agent uses stays on and names its agents. */
   onSetProviderOn?: ((provider: AgentProviderId, on: boolean) => void | Promise<void>) | undefined;
+  /** The bytes of the downloaded CLI of a provider that is off, which `onRemoveProviderDownload` frees. */
+  onMeasureProviderDownload?: ((provider: AgentProviderId) => Promise<number>) | undefined;
+  /** Removes the downloaded CLI of a provider that is off. This computer only. */
+  onRemoveProviderDownload?: ((provider: AgentProviderId) => Promise<void>) | undefined;
   /** The usage readings of each account. An account that is low shows a badge with its limits. */
   usage?: readonly AccountUsageProviderRow[] | undefined;
   /** The dialog element that the menus and the select portal into. */
@@ -194,7 +198,11 @@ function ProviderList(props: ProviderSettingsPageProps & { onOpen: (id: PageId) 
   const needle = () => query().trim().toLowerCase();
   /** The line under a provider's name. Problems come first, so the list shows what needs the user. */
   const summary = (option: ProviderPickerOption) => {
-    if (option.off) return t("provider.status.off");
+    if (option.off) {
+      return option.runtimeStatus?.phase === "not-downloaded"
+        ? t("provider.status.offNotDownloaded")
+        : t("provider.status.off");
+    }
     if (option.runtimeStatus?.phase === "not-downloaded") return t("provider.status.notDownloaded");
     if (option.connectionState === "connecting") return t("provider.status.connecting");
     if (option.state !== "available") return providerStatusLabel(t, format, option.state);
@@ -1442,8 +1450,103 @@ function UseSection(props: SectionProps) {
               </ItemActions>
             </Item>
           </Show>
+          <DownloadItem {...props} />
         </ItemGroup>
       </SettingsSection>
+    </Show>
+  );
+}
+
+/** The downloaded CLI of a provider that is off, with the action that removes it. */
+function DownloadItem(props: SectionProps) {
+  const { t, format, errorMessage } = useText();
+  const [download, setDownload] = createStore<{ bytes: number; confirming: boolean; error: string | null }>({
+    bytes: 0,
+    confirming: false,
+    error: null,
+  });
+  let reads = 0;
+  const measure = (provider: AgentProviderId, read: ProviderSettingsPageProps["onMeasureProviderDownload"]) => {
+    const serial = ++reads;
+    const apply = (bytes: number) => {
+      if (serial === reads)
+        setDownload((state) => {
+          state.bytes = bytes;
+        });
+    };
+    if (read) void read(provider).then(apply, () => apply(0));
+    else apply(0);
+  };
+  // Measured again when the provider is turned off or its download changes.
+  createEffect(
+    () => ({
+      provider: props.option.id,
+      read: props.row.off() && props.onRemoveProviderDownload ? props.onMeasureProviderDownload : undefined,
+      phase: props.option.runtimeStatus?.phase,
+    }),
+    ({ provider, read }) => measure(provider, read),
+  );
+  async function remove() {
+    setDownload((state) => {
+      state.error = null;
+    });
+    try {
+      await props.onRemoveProviderDownload?.(props.option.id);
+      setDownload((state) => {
+        state.confirming = false;
+      });
+    } catch (error) {
+      setDownload((state) => {
+        state.error = errorMessage(error, t("provider.settings.removeDownloadFailed"));
+      });
+    }
+    measure(props.option.id, props.onMeasureProviderDownload);
+  }
+  return (
+    <Show when={download.bytes > 0}>
+      <Item class="settings-modal-row">
+        <ItemContent>
+          <ItemTitle>{t("provider.settings.downloadedCli")}</ItemTitle>
+          <ItemDescription>
+            {t("provider.settings.downloadedCliSize", { size: format.fileSize(download.bytes) })}
+          </ItemDescription>
+        </ItemContent>
+        <ItemActions>
+          <Button
+            type="button"
+            variant="destructive-ghost"
+            size="sm"
+            disabled={props.disabled}
+            onClick={() =>
+              setDownload((state) => {
+                state.error = null;
+                state.confirming = true;
+              })
+            }
+          >
+            <Trash2 aria-hidden="true" />
+            {t("provider.settings.removeDownload")}
+          </Button>
+        </ItemActions>
+      </Item>
+      <ConfirmDialog
+        open={download.confirming}
+        tone="destructive"
+        title={t("provider.settings.removeDownloadTitle", { name: props.option.name })}
+        description={t("provider.settings.removeDownloadDescription", {
+          size: format.fileSize(download.bytes),
+          name: props.option.name,
+        })}
+        confirmLabel={t("provider.settings.removeDownload")}
+        pendingLabel={t("provider.settings.removingDownload")}
+        error={download.error ?? undefined}
+        onCancel={() =>
+          setDownload((state) => {
+            state.confirming = false;
+          })
+        }
+        onConfirm={remove}
+      />
     </Show>
   );
 }

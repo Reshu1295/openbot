@@ -32,6 +32,7 @@ export const messages = {
   "provider.status.unavailable": "利用できません",
   "provider.status.checking": "確認中",
   "provider.status.off": "オフ",
+  "provider.status.offNotDownloaded": "オフ · 未ダウンロード",
   "provider.gemini.hostSignIn":
     "Gemini を接続するには、ホストで OpenBot を開き、「設定」>「プロバイダー」で「接続」を選択してください。Google へのサインインには、そのホストのブラウザーが必要です。リモートでのサインインには対応していません。",
 
@@ -206,4 +207,12 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 時間",
   "provider.settings.promptCacheDefault": "Claude Code の既定",
   "provider.settings.promptCacheLoadFailed": "このサーバーのプロンプトキャッシュ時間を読み込めませんでした。",
+  "provider.settings.downloadedCli": "ダウンロード済みの CLI",
+  "provider.settings.downloadedCliSize": "このコンピューター上の {size}",
+  "provider.settings.removeDownload": "ダウンロードを削除",
+  "provider.settings.removeDownloadTitle": "{name} のダウンロードを削除しますか？",
+  "provider.settings.removeDownloadDescription":
+    "{size} を解放します。アカウント、サインイン、エージェントは残ります。{name} をオンにすると、OpenBot が再度ダウンロードします。",
+  "provider.settings.removingDownload": "削除中…",
+  "provider.settings.removeDownloadFailed": "ダウンロードを削除できませんでした。",
 } as const satisfies PartialTranslation<typeof source>;

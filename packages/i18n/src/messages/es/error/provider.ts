@@ -59,6 +59,8 @@ export const messages = {
   "error.provider.runtimesUnsupported":
     "Los entornos de ejecución de proveedores no están disponibles en esta plataforma.",
   "error.provider.closing": "OpenBot se está cerrando.",
+  "error.provider.removeWhileOn": "Desactiva el proveedor antes de quitar su descarga.",
+  "error.provider.removeWhileDownloading": "Espera a que termine la descarga y luego quítala.",
   "error.provider.cliOverride": "Elimina la ruta de CLI definida explícitamente antes de actualizar en OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "La actualización del entorno de ejecución no se completó.",
   "error.provider.downloadHttp": "La descarga del entorno de ejecución falló con HTTP {status}.",

@@ -32,6 +32,7 @@ export const messages = {
   "provider.status.checking": "Denetleniyor",
 
   "provider.status.off": "Kapalı",
+  "provider.status.offNotDownloaded": "Kapalı · İndirilmedi",
   "provider.gemini.hostSignIn":
     "Gemini'yi bağlamak için ana makinede OpenBot'u açın ve Ayarlar > Sağlayıcılar bölümünde Bağlan'ı seçin. Google ile oturum açmak için o ana makinede bir tarayıcı gerekir. Uzaktan oturum açma desteklenmez.",
   "provider.key.free": "Ücretsiz",
@@ -206,4 +207,12 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 saat",
   "provider.settings.promptCacheDefault": "Claude Code varsayılanı",
   "provider.settings.promptCacheLoadFailed": "Bu sunucunun istem önbelleği süresi yüklenemedi.",
+  "provider.settings.downloadedCli": "İndirilen CLI",
+  "provider.settings.downloadedCliSize": "Bu bilgisayarda {size}",
+  "provider.settings.removeDownload": "İndirmeyi kaldır",
+  "provider.settings.removeDownloadTitle": "{name} indirmesi kaldırılsın mı?",
+  "provider.settings.removeDownloadDescription":
+    "{size} boşaltır. Hesaplar, oturumlar ve ajanlar kalır. {name} açıldığında OpenBot yeniden indirir.",
+  "provider.settings.removingDownload": "Kaldırılıyor…",
+  "provider.settings.removeDownloadFailed": "İndirme kaldırılamadı.",
 } as const satisfies PartialTranslation<typeof source>;

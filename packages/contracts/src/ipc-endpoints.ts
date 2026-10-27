@@ -438,6 +438,7 @@ import type {
   OldRuntimeVersions,
   OpenStorageLocationInput,
   OpenStoredFileInput,
+  ProviderRuntimeDownload,
   StorageDisk,
   StorageUsage,
 } from "./ipc-storage";
@@ -754,6 +755,10 @@ export const IPC_ENDPOINTS = {
     getStatus: request<undefined, ProviderRuntimeSnapshot>()("provider-runtimes:get-status"),
     download: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:download"),
     cancel: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:cancel"),
+    /** The bytes `removeDownload` frees now. Zero while the provider is on. */
+    downloadedBytes: request<ManagedProviderId, ProviderRuntimeDownload>()("provider-runtimes:downloaded-bytes"),
+    /** Removes the downloaded CLI of a provider that is off. Rejects while it is on or downloading. */
+    removeDownload: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:remove-download"),
     /** Asks each provider's upstream for its latest release. Rejects when no source answered. */
     checkForUpdates: request<undefined, ProviderRuntimeSnapshot>()("provider-runtimes:check-for-updates"),
     event: event<ProviderRuntimeSnapshot>()("provider-runtimes:event"),

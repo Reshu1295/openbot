@@ -39,6 +39,7 @@ export const messages = {
   "provider.status.unavailable": "Nicht verfügbar",
   "provider.status.checking": "Wird geprüft",
   "provider.status.off": "Aus",
+  "provider.status.offNotDownloaded": "Aus · Nicht heruntergeladen",
   "provider.gemini.hostSignIn":
     "Um Gemini zu verbinden, öffne OpenBot auf dem Host und wähle „Verbinden“ unter Einstellungen > Anbieter. Die Google-Anmeldung benötigt einen Browser auf diesem Host. Eine Remote-Anmeldung wird nicht unterstützt.",
   "provider.key.free": "Kostenlos",
@@ -211,4 +212,12 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 Stunde",
   "provider.settings.promptCacheDefault": "Claude Code-Standard",
   "provider.settings.promptCacheLoadFailed": "Die Prompt-Cache-Dauer dieses Servers konnte nicht geladen werden.",
+  "provider.settings.downloadedCli": "Heruntergeladene CLI",
+  "provider.settings.downloadedCliSize": "{size} auf diesem Computer",
+  "provider.settings.removeDownload": "Download entfernen",
+  "provider.settings.removeDownloadTitle": "Download von {name} entfernen?",
+  "provider.settings.removeDownloadDescription":
+    "Gibt {size} frei. Konten, Anmeldungen und Agenten bleiben. Wenn du {name} einschaltest, lädt OpenBot die CLI erneut herunter.",
+  "provider.settings.removingDownload": "Wird entfernt…",
+  "provider.settings.removeDownloadFailed": "Der Download konnte nicht entfernt werden.",
 } as const satisfies PartialTranslation<typeof source>;

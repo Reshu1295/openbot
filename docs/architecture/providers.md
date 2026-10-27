@@ -222,6 +222,17 @@ only what was stamped within three hours. So a version another instance or anoth
 worktree's pin still runs is not removed; a collection that fails, as it does on Windows for an open
 binary, never stops startup.
 
+A provider that is off in this profile runs no CLI, so the manager does not stamp its versions. Pi
+counts as in use while a key-only provider that runs on it is on. Its
+provider page in Settings offers Remove download (#3321), which removes every version of that CLI and
+this profile's partial downloads of it, and leaves accounts and sign-ins alone. It is refused while
+the provider is on, while its download runs, and for a provider with an explicit CLI path. The same
+age rule keeps a version another instance stamped, with one change: the manager remembers its own
+last stamp of each directory, and a directory whose mtime is not later than that stamp counts as
+unstamped. Otherwise the stamps this instance wrote before the user turned the provider off would
+keep it for hours. A sibling stamp older than this instance's last one is hidden by it until the
+sibling's next check stamps again. Turning the provider on later downloads the CLI as on first use.
+
 ### Managed provider updates
 
 The main process offers the version that the section above selects. The lock pins each provider
