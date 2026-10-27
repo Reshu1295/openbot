@@ -299,7 +299,7 @@ export type TeamApiWorkflows = Pick<
   Pick<HostEventsService, "rotateWorkflowSecret">;
 
 /** The setup choice of this computer: the same file and the same service step as the local Settings save. */
-export interface TeamApiDefaultProvider {
+interface TeamApiDefaultProvider {
   get(): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
   set(input: SaveSetupInput): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
 }
