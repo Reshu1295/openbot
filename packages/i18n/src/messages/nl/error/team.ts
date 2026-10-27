@@ -128,6 +128,8 @@ export const messages = {
   "error.team.signInRelayUnsupported": "Deze server kan geen inlogs doorgeven. Werk OpenBot bij op de host.",
   "error.team.connectorsUnsupported":
     "Deze server kan de verbindingen niet vanaf hier beheren. Werk OpenBot bij op de host.",
+  "error.team.vaultUnsupported": "Deze server kan zijn kluis niet vanaf hier openen. Werk OpenBot bij op de host.",
+  "error.team.vaultResetReadable": "De kluis op deze server is leesbaar en is daarom niet gereset.",
   "error.team.discordAccessUnsupported": "Deze server kan geen Discord-rollen instellen. Werk OpenBot erop bij.",
   "error.team.connectorPageRefused": "De server stuurde een pagina die OpenBot niet opent.",
   "error.team.signInRelayUnknown": "Deze inlog is afgelopen of bestaat niet.",

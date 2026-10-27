@@ -341,6 +341,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Welke projecten en services staan er in mijn Railway-werkruimte?",
   "marketplace.plugin.railway.prompt.crash": "Waarom crasht mijn backendservice op Railway bij het deployen?",
   "marketplace.plugin.railway.prompt.redeploy": "Deploy de API-service in mijn Railway-project opnieuw.",
+  "marketplace.plugin.render.tagline": "Services, deploys en logs",
+  "marketplace.plugin.render.description":
+    "Met Render kunnen agents werkruimten en services tonen, logs, events en metrics lezen, de deploygeschiedenis bekijken, deploys starten en alleen-lezen-SQL uitvoeren op Render Postgres. Een Render-API-sleutel gaat in één Authorization-header. De sleutel geeft toegang tot elke werkruimte van het Render-account. Agents kunnen webservices, statische sites, cronjobs, Postgres-databases en Key Value-instanties maken, wat geld kan kosten, en ze kunnen de omgevingsvariabelen van een service vervangen. De server kan geen resource verwijderen.",
+  "marketplace.plugin.render.app":
+    "Services, deploys, logs en metrics, via de MCP-server van Render met een API-sleutel.",
+  "marketplace.plugin.render.prompt.services": "Welke services staan er in mijn Render-werkruimte?",
+  "marketplace.plugin.render.prompt.logs": "Welke fouten heeft mijn Render-webservice het afgelopen uur gelogd?",
+  "marketplace.plugin.render.prompt.deploy": "Waarom is de laatste deploy van mijn Render-service mislukt?",
   "marketplace.plugin.atlassian.tagline": "Jira-werkitems en Confluence-pagina’s",
   "marketplace.plugin.atlassian.description":
     "Met Atlassian kunnen agents Jira-werkitems, Confluence-pagina’s en Bitbucket-pull requests zoeken en lezen, en werkitems, pagina’s en opmerkingen maken of bijwerken. Elke gebruiker logt via de browser in met een eigen Atlassian-account en keurt de toegang goed op een toestemmingsscherm. Agents krijgen dezelfde rechten als de gebruiker: ze kunnen werkitems en pagina’s wijzigen, paginarechten wijzigen en pull requests mergen. Tools die Jira-data verwijderen blijven uit tot een organisatiebeheerder ze aanzet. Elke toolaanroep gebruikt Rovo-credits.",
@@ -359,6 +367,14 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.today": "Welke Todoist-taken moeten vandaag af?",
   "marketplace.plugin.todoist.prompt.capture": "Zet deze actiepunten in mijn Todoist-inbox.",
   "marketplace.plugin.todoist.prompt.overdue": "Verzet mijn achterstallige Todoist-taken naar morgen.",
+  "marketplace.plugin.trello.tagline": "Borden, lijsten en kaarten",
+  "marketplace.plugin.trello.description":
+    "Met Trello kunnen agents borden, lijsten, kaarten, checklists en opmerkingen zoeken en lezen, borden en kaarten maken, lijsten en kaarten verplaatsen, kaarten als klaar markeren, en checklists, opmerkingen en labels toevoegen. Agents kunnen ook kaarten in de Trello-inbox van de gebruiker lezen en toevoegen, en Planner-events lezen, die uit een gekoppelde Google- of Outlook-agenda kunnen komen. Elke gebruiker logt via de browser in met een eigen Trello-account en kiest de werkruimten op een toestemmingsscherm. Agents krijgen dezelfde rechten als de gebruiker in die werkruimten. Ze kunnen kaarten en lijsten archiveren, maar de server kan niets definitief verwijderen.",
+  "marketplace.plugin.trello.app":
+    "Borden, lijsten en kaarten, via de MCP-server van Trello met inloggen in de browser.",
+  "marketplace.plugin.trello.prompt.myCards": "Welke Trello-kaarten zijn aan mij toegewezen?",
+  "marketplace.plugin.trello.prompt.board": "Vat samen wat er onderhanden is op mijn Trello-bord.",
+  "marketplace.plugin.trello.prompt.newCards": "Zet deze actiepunten als kaarten op mijn Trello-bord.",
   "marketplace.plugin.huggingface.tagline": "Modellen, datasets en papers op de Hub",
   "marketplace.plugin.huggingface.description":
     "Met Hugging Face kunnen agents modellen, datasets, Spaces, collecties en papers op de Hugging Face Hub zoeken, modelkaarten en repositorybestanden lezen, datasets bekijken en de Hugging Face-documentatie doorzoeken. Het gebruikt openbare Hub-data en heeft geen account en geen sleutel nodig. De tools lezen alleen: agents kunnen geen repository’s maken of jobs uitvoeren.",

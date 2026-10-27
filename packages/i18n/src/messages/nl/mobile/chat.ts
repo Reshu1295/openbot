@@ -120,7 +120,7 @@ export const messages = {
   "mobile.chat.attachment.addFailed": "Kan bijlage niet toevoegen",
   "mobile.chat.attachment.limit": "Je kunt maximaal {limit} bestanden bijvoegen.",
   "mobile.chat.attachment.unsupported":
-    "{name}: kies afbeeldingen, MP3-audio, MOV-video, ZIP-archieven, PDF, Office-documenten, EML, tekst, Markdown, data of bronbestanden.",
+    "{name}: kies afbeeldingen, MP3-audio, MOV- of MP4-video, ZIP-archieven, PDF, Office-documenten, EML, tekst, Markdown, data of bronbestanden.",
   "mobile.chat.attachment.hostRejectsType":
     "{name}: de hostcomputer accepteert geen {type}-bestanden. Werk OpenBot daar bij om ze bij te voegen.",
   "mobile.chat.attachment.hostRejects":
