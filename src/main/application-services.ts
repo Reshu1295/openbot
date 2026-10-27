@@ -2954,7 +2954,8 @@ export async function createApplicationServices({
   } else if (!serverModeEnvironment) {
     // A server that was published at the last quit is published again at launch, once (`index.ts`).
     // That start can fail when the network is not ready yet, such as at login after an update, and
-    // the server then stayed private until the user published it again.
+    // the server then stayed private until the user published it again. A published server that a
+    // Signal failure puts in the error phase later is published again in the same way.
     const launchPublishRetry = new HostedServerStartRetry({
       hostPhase: () => host.getStatus().phase,
       startHost: () =>
