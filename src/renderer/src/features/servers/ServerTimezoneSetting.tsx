@@ -1,16 +1,5 @@
 import type { HostTimezoneSettings, OpenBotDesktopApi } from "@openbot/contracts/ipc";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemTitle,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@openbot/ui";
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle, SearchSelect } from "@openbot/ui";
 import { useText } from "@openbot/ui/text";
 import { createEffect, createSignal, Show, untrack } from "solid-js";
 
@@ -37,7 +26,7 @@ export function ServerTimezoneSetting(
     run: (key: string, action: () => Promise<void>) => Promise<boolean>;
   },
 ) {
-  const { t, errorMessage } = useText();
+  const { t, errorMessage, locale } = useText();
   const calls = (): HostTimezoneCalls => props.calls ?? window.openbot.hostAdmin;
   const [settings, setSettings] = createSignal<HostTimezoneSettings | null>(null);
   const [loadError, setLoadError] = createSignal<string | null>(null);
@@ -73,6 +62,28 @@ export function ServerTimezoneSetting(
     zone === AUTOMATIC
       ? t("server.settings.timezoneAutomatic", { zone: settings()?.systemTimezone ?? "" })
       : zone.replaceAll("_", " ");
+  const zoneNames = new Map<string, string>();
+  /** What the search reads: the zone, its label, and its name, such as "Eastern Time". */
+  const searchText = (zone: string) => {
+    if (zone === AUTOMATIC) return label(zone);
+    const key = `${locale()} ${zone}`;
+    let text = zoneNames.get(key);
+    if (text === undefined) {
+      const names = [...new Set([locale(), "en"])].map((language) => {
+        try {
+          return new Intl.DateTimeFormat(language, { timeZone: zone, timeZoneName: "longGeneric" })
+            .formatToParts()
+            .find((part) => part.type === "timeZoneName")?.value;
+        } catch {
+          // A zone that this runtime does not know, kept from an earlier choice.
+          return undefined;
+        }
+      });
+      text = [zone, label(zone), ...names].join(" ");
+      zoneNames.set(key, text);
+    }
+    return text;
+  };
 
   function choose(zone: string | null): void {
     const current = settings();
@@ -94,19 +105,18 @@ export function ServerTimezoneSetting(
       <Show when={settings()}>
         {(current) => (
           <ItemActions>
-            <Select<string>
+            <SearchSelect<string>
               options={zones()}
               value={current().timezone ?? AUTOMATIC}
+              label={label}
+              optionTextValue={searchText}
               disabled={props.disabled}
               placement="bottom-end"
+              mount={props.menuMount}
+              size="sm"
+              aria-labelledby="server-settings-timezone-label"
               onChange={choose}
-              itemComponent={(item) => <SelectItem item={item.item}>{label(item.item.rawValue)}</SelectItem>}
-            >
-              <SelectTrigger size="sm" aria-labelledby="server-settings-timezone-label">
-                <SelectValue<string>>{(state) => label(state.selectedOption())}</SelectValue>
-              </SelectTrigger>
-              <SelectContent mount={props.menuMount} />
-            </Select>
+            />
           </ItemActions>
         )}
       </Show>

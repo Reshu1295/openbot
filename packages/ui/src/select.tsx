@@ -1,9 +1,14 @@
 import type { PolymorphicProps } from "@kobalte/core/polymorphic";
+import type { PopoverRootProps } from "@kobalte/core/popover";
 import * as SelectPrimitive from "@kobalte/core/select";
 import type { ComponentProps, JSX, ValidComponent } from "@solidjs/web";
 import Check from "lucide-solid/icons/check";
 import ChevronsUpDown from "lucide-solid/icons/chevrons-up-down";
-import { children, omit, Show } from "solid-js";
+import Search from "lucide-solid/icons/search";
+import { children, createMemo, createSignal, createUniqueId, omit, Show } from "solid-js";
+import { Combobox, Popover } from "./complex";
+import { Input } from "./form";
+import { useText } from "./text";
 import { createPressedPopupCue, cx } from "./utils";
 
 export type SelectProps<Option, OptGroup = never, T extends ValidComponent = "div"> = PolymorphicProps<
@@ -114,5 +119,170 @@ export function SelectItem(props: SelectItemProps): JSX.Element {
         <Check aria-hidden="true" />
       </SelectPrimitive.ItemIndicator>
     </SelectPrimitive.Item>
+  );
+}
+
+/** "new_york", "new york" and "America/New-York" match each other. */
+const searchText = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[\s_/-]+/g, " ")
+    .trim();
+
+export interface SearchSelectProps<Option> {
+  options: Option[];
+  value: Option;
+  onChange: (option: Option) => void;
+  /** The text of the trigger and of a row. */
+  label: (option: Option) => string;
+  /** A key that is unique in the list. The default is `String(option)`. */
+  optionValue?: (option: Option) => string;
+  /** The text that the search reads. The default is `label`. */
+  optionTextValue?: (option: Option) => string;
+  disabled?: boolean | undefined;
+  placement?: PopoverRootProps["placement"];
+  mount?: Element | undefined;
+  size?: "sm" | "md" | undefined;
+  /** The id of the setting's label. The trigger adds its value to the name. */
+  "aria-labelledby"?: string | undefined;
+}
+
+/**
+ * A select for a long list, such as the timezones: the open list has a search field at the top.
+ * Typing filters the rows, the arrows move through them, Enter takes the active row or the first
+ * match, and Escape closes the list. The trigger looks as `SelectTrigger` does.
+ */
+export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Element {
+  const { t } = useText();
+  const [open, setOpen] = createSignal(false);
+  const [query, setQuery] = createSignal("");
+  const valueId = `ui-search-select-value-${createUniqueId()}`;
+  let content: HTMLElement | undefined;
+  let input: HTMLInputElement | undefined;
+  let opening = false;
+  const key = (option: Option) => props.optionValue?.(option) ?? String(option);
+  const matches = createMemo(() => {
+    const text = searchText(query());
+    if (!text) return props.options;
+    const read = props.optionTextValue ?? props.label;
+    return props.options.filter((option) => searchText(read(option)).includes(text));
+  });
+  const choose = (option: Option) => {
+    setOpen(false);
+    props.onChange(option);
+  };
+  return (
+    <Popover.Root
+      open={open()}
+      onOpenChange={(next) => {
+        if (next) {
+          setQuery("");
+          opening = true;
+        }
+        setOpen(next);
+      }}
+      placement={props.placement ?? "bottom"}
+      gutter={4}
+      modal
+    >
+      <div class="ui-select">
+        <Popover.Trigger
+          class="ui-select-trigger"
+          data-size={props.size ?? "md"}
+          data-slot="select-trigger"
+          aria-haspopup="listbox"
+          aria-labelledby={[props["aria-labelledby"], valueId].filter(Boolean).join(" ")}
+          disabled={props.disabled}
+        >
+          <span id={valueId} class="ui-select-value" data-slot="select-value">
+            {props.label(props.value)}
+          </span>
+          <span class="ui-select-trigger-icon">
+            <ChevronsUpDown aria-hidden="true" />
+          </span>
+        </Popover.Trigger>
+      </div>
+      <Popover.Portal mount={props.mount ?? document.body}>
+        <Popover.Content
+          ref={(element: HTMLElement) => {
+            content = element;
+          }}
+          class="ui-select-content ui-search-select-content"
+          data-slot="select-content"
+          onFocusIn={() => {
+            // The popover focuses the search field once it opens. Then the chosen row scrolls into view.
+            if (!opening) return;
+            opening = false;
+            content?.querySelector("[data-checked]")?.scrollIntoView({ block: "nearest" });
+          }}
+        >
+          <Combobox.Root<Option>
+            options={matches()}
+            optionValue={key}
+            optionTextValue={props.label}
+            optionLabel={props.label}
+            open={true}
+            modal={false}
+            triggerMode="manual"
+            allowsEmptyCollection={true}
+            shouldFocusWrap={true}
+            defaultFilter={() => true}
+            onInputChange={setQuery}
+            onOpenChange={(next) => {
+              if (!next) setOpen(false);
+            }}
+            onChange={(option) => {
+              if (option !== null) choose(option);
+            }}
+            itemComponent={(item) => (
+              <Combobox.Item
+                item={item.item}
+                class="ui-select-item"
+                data-slot="select-item"
+                data-checked={key(item.item.rawValue) === key(props.value) ? "" : undefined}
+              >
+                <Combobox.ItemLabel class="ui-select-item-label">{props.label(item.item.rawValue)}</Combobox.ItemLabel>
+                <Show when={key(item.item.rawValue) === key(props.value)}>
+                  <span class="ui-select-item-indicator">
+                    <Check aria-hidden="true" />
+                  </span>
+                </Show>
+              </Combobox.Item>
+            )}
+          >
+            <Combobox.Control class="ui-search-select-search">
+              <Search aria-hidden="true" />
+              <Combobox.Input
+                as={Input}
+                ref={(element: HTMLInputElement) => {
+                  input = element;
+                }}
+                class="ui-search-select-input"
+                aria-label={t("common.search")}
+                placeholder={t("common.search")}
+                autocomplete="off"
+                autocapitalize="none"
+                spellcheck={false}
+                onKeyDown={(event: KeyboardEvent) => {
+                  // With no active row, Enter takes the first match.
+                  if (event.key !== "Enter" || event.isComposing || input?.getAttribute("aria-activedescendant"))
+                    return;
+                  const [first] = matches();
+                  if (first === undefined) return;
+                  event.preventDefault();
+                  choose(first);
+                }}
+              />
+            </Combobox.Control>
+            <Combobox.Listbox class="ui-select-listbox" aria-labelledby={props["aria-labelledby"]} />
+            <Show when={matches().length === 0}>
+              <p class="ui-search-select-empty" role="status">
+                {t("common.noMatches")}
+              </p>
+            </Show>
+          </Combobox.Root>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
