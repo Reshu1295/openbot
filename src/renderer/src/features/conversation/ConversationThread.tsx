@@ -21,6 +21,9 @@ export function ConversationThread() {
     previewAttachment,
     attachmentAction,
     browserTakeoverResolution,
+    installedSkills,
+    installedSkillsLoadFailed,
+    mcpServers,
     threadComposer,
   } = useConversationViewScope();
   const [picker, setPicker] = createSignal<HTMLInputElement>();
@@ -71,6 +74,9 @@ export function ConversationThread() {
             agent={current().agent}
             agents={props.agents}
             messages={messages}
+            skills={installedSkills()}
+            skillsLoadFailed={installedSkillsLoadFailed()}
+            mcpServers={mcpServers()}
             draft={draft()?.text ?? ""}
             draftAttachments={draft()?.attachments}
             onDraftChange={(text) => threadComposer.setText(threadComposer.openDraftKey(), text)}
