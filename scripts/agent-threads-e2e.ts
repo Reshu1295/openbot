@@ -300,10 +300,11 @@ try {
     .click({ timeout: UI_WAIT_MS * 2 });
   const afterReload = (await unsentComposer.innerText()).trim();
   report.unsentDraft = { typedDuringTurn, afterTurn, afterSwitch, afterReload };
+  // The text is stored in the profile, so it is removed before the checks can stop the script.
+  await unsentComposer.fill("");
   assert.equal(afterTurn, unsent, "The text stays when the own chat's turn ends.");
   assert.equal(afterSwitch, unsent, "The text stays after the agent's own chat opens.");
   assert.equal(afterReload, unsent, "The text stays after a reload.");
-  await unsentComposer.fill("");
 
   // 12. A reload during the Undo time does not lose the delete: the next start finishes it.
   const second = await page.evaluate(
