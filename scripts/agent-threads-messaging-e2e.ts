@@ -23,8 +23,9 @@
 // 9. A Claude subagent in a side thread shows in that thread only.
 // 10. A background Claude subagent in a side thread ends after its turn. Its answer comes back to that
 //    side thread, not to the agent's own chat.
-// 11. B's answer waits in A's running side thread, and A stops the thread. The answer goes to A's own
-//    chat; the Stop does not cancel it.
+// 11. B's answer waits in A's running side thread, and A stops the thread. The Stop does not cancel
+//    the answer: it runs next in the side thread, and A's own chat does not get it.
+// 12. The same, but A archives the side thread. The answer goes to A's own chat.
 // At the end it stops and deletes each thread that it started.
 // Writes .openbot-build/agent-threads-messaging-e2e/report.json.
 import assert from "node:assert/strict";
@@ -574,6 +575,7 @@ try {
   await step("stop keeps a waiting answer", async (details) => {
     const word = `M11${run}`;
     const answer = (m: ConversationMessage) => m.senderAgentId === to && m.text.includes("12");
+    const got = `GOT${run}`;
     const answersBefore = count(await bridge.main(from), answer);
     // Claude Code refuses a standalone foreground `sleep`, so the turn waits with Python.
     const side = await bridge.startTask(
@@ -582,6 +584,7 @@ try {
         `Use openbot.send_message to send ${toAgentInfo.name} (agent id "${to}") this message, with expectsReply true:`,
         `"${word}: What is 9+3? Answer with only the number."`,
         `Then run the shell command python3 -c "import time; time.sleep(120)" in the foreground, and then reply DONE.`,
+        `When the answer comes, reply with ${got} and the number.`,
       ].join("\n"),
     );
     details.taskId = side.id;
@@ -596,19 +599,57 @@ try {
     await bridge.stop(from, side.id);
     const lane = await waitFor(
       page,
-      "A gets the answer",
+      "A reads the answer",
       async () => {
         const [main, thread] = [await bridge.main(from), await bridge.side(from, side.id)];
-        return count(main, answer) > answersBefore ? "main" : has(thread, answer) ? "side" : null;
+        return count(main, answer) > answersBefore
+          ? "main"
+          : idle(thread) && has(thread, answerWith(got))
+            ? "side"
+            : null;
       },
       (value) => value !== null,
       TURN_MS,
     );
     details.answerLane = lane;
-    await waitFor(page, "A's own chat reads it", () => bridge.main(from), idle, TURN_MS);
     details.threadQueued = (await task(from, side.id))?.queuedMessages.length ?? null;
-    assert.equal(lane, "main", "The stopped side thread lost B's answer.");
+    assert.equal(lane, "side", "The answer did not run in the stopped side thread.");
     assert.equal(details.threadQueued, 0, "The stopped side thread still holds the answer.");
+  });
+
+  // 12. An archive of the side thread moves a teammate's waiting answer to the own chat.
+  await step("archive moves a waiting answer to the own chat", async (details) => {
+    const word = `M12${run}`;
+    const answer = (m: ConversationMessage) => m.senderAgentId === to && m.text.includes("13");
+    const answersBefore = count(await bridge.main(from), answer);
+    const side = await bridge.startTask(
+      from,
+      [
+        `Use openbot.send_message to send ${toAgentInfo.name} (agent id "${to}") this message, with expectsReply true:`,
+        `"${word}: What is 9+4? Answer with only the number."`,
+        `Then run the shell command python3 -c "import time; time.sleep(120)" in the foreground, and then reply DONE.`,
+      ].join("\n"),
+    );
+    details.taskId = side.id;
+    const waiting = await waitFor(
+      page,
+      "B's answer waits in the running side thread",
+      () => task(from, side.id),
+      (e) => e?.state === "running" && e.queuedMessages.length > 0,
+      TURN_MS,
+    );
+    details.queuedAtArchive = waiting?.queuedMessages.length ?? 0;
+    await bridge.close(from, side.id);
+    await waitFor(
+      page,
+      "A's own chat reads the answer",
+      () => bridge.main(from),
+      (s) => idle(s) && count(s, answer) > answersBefore,
+      TURN_MS,
+    );
+    details.answerLane = "main";
+    details.threadHasAnswer = has(await bridge.side(from, side.id), answer);
+    assert.equal(details.threadHasAnswer, false, "The archived side thread also shows the answer.");
   });
   report.passed = report.steps.every((entry) => entry.passed);
 } finally {

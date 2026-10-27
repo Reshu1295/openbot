@@ -829,13 +829,21 @@ export class MailboxStore {
     return [...ids];
   }
 
-  /** The messages of one task that wait to start, in queue order, for the task's panel. */
-  queuedTaskMessages(agentId: string, taskId: string): Array<{ deliveryId: string; text: string; createdAt: string }> {
+  /**
+   * The messages of one task that wait to start, in queue order, for the task's panel. Without
+   * `teammateAnswers`, the answers of other agents are left out.
+   */
+  queuedTaskMessages(
+    agentId: string,
+    taskId: string,
+    options: { teammateAnswers?: boolean } = {},
+  ): Array<{ deliveryId: string; text: string; createdAt: string }> {
     return this.#queuedFor(agentId).flatMap((delivery) => {
       const message = this.#requireMessage(delivery.messageId);
-      return message.taskId === taskId
-        ? [{ deliveryId: delivery.id, text: message.text, createdAt: message.createdAt }]
-        : [];
+      if (message.taskId !== taskId) return [];
+      if (options.teammateAnswers === false && message.sender.kind === "agent" && message.sender.agentId !== agentId)
+        return [];
+      return [{ deliveryId: delivery.id, text: message.text, createdAt: message.createdAt }];
     });
   }
 
@@ -991,8 +999,8 @@ export class MailboxStore {
   }, Effect.uninterruptible).bind(this);
 
   /**
-   * Moves the queued answers of teammates to a side thread into the agent's own chat, so a Stop,
-   * archive or delete of the thread does not cancel them. Returns how many moved.
+   * Moves the queued answers of teammates to a side thread into the agent's own chat, so an archive
+   * or delete of the thread does not cancel them. Returns how many moved.
    */
   returnTaskAnswers = Effect.fn("MailboxStore.returnTaskAnswers")(function* (
     this: MailboxStore,

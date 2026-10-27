@@ -4069,7 +4069,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     return this.#tasks.publicTask(task);
   }).bind(this);
 
-  /** A teammate's answer that waits in the thread goes to the agent's own chat, so the thread does not cancel it. */
+  /** A teammate's answer that waits in a closing thread goes to the agent's own chat, so it is not cancelled. */
   #returnTaskAnswers(task: { agentId: string; taskId: string }): Effect.Effect<void, AgentLifecycleFailed> {
     return this.#mailbox.returnTaskAnswers(task.agentId, task.taskId).pipe(
       Effect.mapError((failure) => new AgentLifecycleFailed({ operation: "return answers", cause: failure.cause })),
@@ -4084,14 +4084,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     );
   }
 
-  /** Stops the task's running turn and cancels its queued messages. The task stays open. */
+  /** Stops the task's running turn and cancels its queued messages, except teammates' answers. The task stays open. */
   readonly stopTask = Effect.fn("AgentService.stopTask")(function* (
     this: AgentService,
     input: AgentTaskInput,
   ): Effect.fn.Return<void, AgentLifecycleFailed> {
     const task = yield* lifecycleStep("find task", () => this.#tasks.require(input.agentId, input.taskId));
-    yield* this.#returnTaskAnswers(task);
-    for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId))
+    // A teammate's answer stays in the open thread, so it runs with the other answers to the same request.
+    for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId, { teammateAnswers: false }))
       yield* this.cancelQueuedMessage(task.agentId, message.deliveryId);
     const turnId = this.#conversation.loadedExecutionSnapshot(task.threadId)?.activeTurnId;
     if (turnId) {
@@ -4113,8 +4113,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         ? this.#tasks.turnEnd(found.taskId)
         : null;
     });
+    // Answers move out before the Stop, so none starts in the thread, and again after the wait.
+    yield* this.#returnTaskAnswers(input);
     yield* this.stopTask(input);
     if (running) yield* running.pipe(Effect.timeoutOption(TASK_STOP_WAIT_MS));
+    yield* this.#returnTaskAnswers(input);
     const task = yield* lifecycleStep("find task", () => {
       const found = this.#tasks.require(input.agentId, input.taskId);
       // A turn that starts or ends after the Stop still counts toward the limits of its open task.
