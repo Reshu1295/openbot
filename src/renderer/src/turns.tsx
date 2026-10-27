@@ -231,9 +231,14 @@ const Turns = createSimpleContext({
       },
     );
 
-    async function answerPrompt(answers: Record<string, string[]>, options?: PromptAnswerOptions): Promise<boolean> {
+    /** Answers the prompt of the agent's chat, or of its side thread `threadId`. */
+    async function answerPrompt(
+      answers: Record<string, string[]>,
+      options?: PromptAnswerOptions,
+      threadId?: string,
+    ): Promise<boolean> {
       const agent = activeAgent();
-      const prompt = agent ? pendingPrompts()[attentionKey(agent.id, agent.threadId)] : undefined;
+      const prompt = agent ? pendingPrompts()[attentionKey(agent.id, threadId ?? agent.threadId)] : undefined;
       if (!agent || prompt?.type !== "prompt") return false;
       return submitPromptAnswers(agent.id, prompt, answers, options);
     }

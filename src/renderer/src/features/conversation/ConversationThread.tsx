@@ -7,6 +7,7 @@ import { AgentThreadView } from "@openbot/ui/features/conversation/threads/Agent
 import { createProjection, createSignal, Show } from "solid-js";
 import { toAgentMessages } from "../../app-message-projection";
 import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
+import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
 import { useConversationViewScope } from "./conversation-scope";
 
 /** A thread takes files only from this computer, which reads every supported type. */
@@ -32,7 +33,9 @@ export function ConversationThread() {
   const messages = createProjection<AgentMessage[]>(
     () => {
       const conversation = props.threads?.conversation;
-      return conversation ? toAgentMessages(conversation.messages, props.agent?.id) : [];
+      // The card draws a question that waits, so its message is left out, as in the agent's chat.
+      const messages = conversation?.messages.filter((message) => message.questionPrompt?.resolution !== null);
+      return messages ? toAgentMessages(messages, props.agent?.id) : [];
     },
     [],
     { key: "id" },
@@ -98,7 +101,12 @@ export function ConversationThread() {
             context={contextUsageView(current().threads.contextState)}
             onCompactContext={current().threads.onCompactContext}
             attention={
-              props.browserTakeover || browserTakeoverResolution() ? <ConversationBrowserTakeover /> : undefined
+              props.prompt || props.browserTakeover || browserTakeoverResolution() ? (
+                <>
+                  <ConversationQuestionPrompt />
+                  <ConversationBrowserTakeover />
+                </>
+              ) : undefined
             }
           />
         </>
