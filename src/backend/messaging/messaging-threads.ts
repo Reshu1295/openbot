@@ -500,6 +500,11 @@ export class MessagingThreads {
     const memoryKey = JSON.stringify(memories.map((memory) => [memory.id, memory.text]));
     const guided = this.#guided.get(link.linkId);
     const sessionId = this.#hooks.contextSession(link.agentId, link.threadId);
+    // A link runs one turn at a time. An entry that no settle removed, such as a turn that started
+    // after its `turn/start` timed out, goes here.
+    for (const [deliveryId, prepared] of this.#prepared) {
+      if (prepared.linkId === link.linkId) this.#prepared.delete(deliveryId);
+    }
     this.#prepared.set(context.delivery.id, {
       linkId: link.linkId,
       memories: memoryKey,

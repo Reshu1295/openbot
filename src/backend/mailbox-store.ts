@@ -1386,7 +1386,8 @@ export class MailboxStore {
       const message = this.#requireMessage(candidate.messageId, messages);
       if (
         !this.#mayStart(candidate) ||
-        candidate.resumeAfterUsageLimit ||
+        // The messages of a turn that a usage limit stopped continue together, as they started.
+        candidate.resumeAfterUsageLimit?.turnId !== next.resumeAfterUsageLimit?.turnId ||
         !isChatMessageFromPerson(message) ||
         message.senderMember?.id !== first.senderMember?.id
       )

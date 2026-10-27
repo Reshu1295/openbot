@@ -640,19 +640,22 @@ export class DrainScheduler {
               ? yield* channels.prepare(context).pipe(toDeliveryStartFailed)
               : null;
       if ((channelDelivery || messagingDelivery || taskId !== null) && !execution) {
-        const current = this.#mailbox.getDelivery(delivery.id)?.delivery;
-        if (current?.status === "starting")
-          yield* this.#mailbox
-            .markTerminal(
-              delivery.id,
-              "interrupted",
-              taskId !== null
-                ? sourceText("error.backend.threadArchived")
-                : channelDelivery
-                  ? "The channel was deleted before starting."
-                  : "The messaging thread was removed before starting.",
-            )
-            .pipe(toDeliveryStartFailed);
+        // Every delivery of the batch, so no later message stays `starting` in a removed lane.
+        for (const item of batch) {
+          const current = this.#mailbox.getDelivery(item.delivery.id)?.delivery;
+          if (current?.status === "starting")
+            yield* this.#mailbox
+              .markTerminal(
+                item.delivery.id,
+                "interrupted",
+                taskId !== null
+                  ? sourceText("error.backend.threadArchived")
+                  : channelDelivery
+                    ? "The channel was deleted before starting."
+                    : "The messaging thread was removed before starting.",
+              )
+              .pipe(toDeliveryStartFailed);
+        }
         this.#mailboxSync.emitQueue(agent.id);
         return;
       }

@@ -1558,9 +1558,10 @@ export class OpenBotToolRouter {
       if (!isRecord(args) || !isMessageReaction(args.emoji)) {
         throw new Error("emoji must be exactly one complete Unicode emoji.");
       }
+      // The newest one when the turn started with several of the person's messages.
       const delivery = this.#mailbox
         .findDeliveriesByTurn(senderAgentId, params.turnId)
-        .find((candidate) => candidate.delivery.sender.kind === "user");
+        .findLast((candidate) => candidate.delivery.sender.kind === "user");
       if (!delivery) throw new Error("Only the current user message can receive an agent reaction.");
       const emoji = args.emoji;
       yield* this.#mailbox
