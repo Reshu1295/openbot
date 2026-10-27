@@ -67,7 +67,7 @@ export interface AgentThreadViewProps {
   /** The agent's skills, for the `$` picker and the skill tags in messages. */
   skills?: InstalledSkill[] | undefined;
   /** The last skill list request failed, so an empty picker says so instead of "no skills". */
-  skillsLoadFailed?: boolean;
+  skillsLoadFailed?: boolean | undefined;
   /** The host's MCP servers, offered by the same `$` the skills answer. */
   mcpServers?: ComposerMcpServer[] | undefined;
   /** The unsent text of this thread's message box. The host keeps it for each thread. */
