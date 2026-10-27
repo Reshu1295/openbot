@@ -12,6 +12,7 @@ import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import type { AgentClient } from "../agent-client";
 import type { AgentStore } from "../agent-store";
+import { MAILBOX_CONVERSATION_MESSAGE_LIMIT } from "../mailbox-store";
 import type { OpenBotDatabase } from "../openbot-database";
 import { conversationContentSignature } from "./delivery-content";
 
@@ -1010,7 +1011,8 @@ function boundedConversationSnapshot(snapshot: ConversationSnapshot): CachedSnap
 
 /**
  * Adds the older messages that mailbox sync puts back: each message with a queued or running
- * delivery, and each mailbox message from the oldest kept message on. Sync reads from the first
+ * delivery, and the newest completed mailbox messages from the oldest kept message on, as many as
+ * one mailbox read returns. Sync reads from the first
  * message's `createdAt`, but the display order groups a turn by its earliest message, so the last
  * 100 in that order do not end at one time. When the bound dropped these, each sync added them
  * again, and each change wrote the same rows and sent the whole chat again.
@@ -1029,10 +1031,20 @@ function withMailboxMessages(
     if (oldest === undefined || message.createdAt < oldest) oldest = message.createdAt;
   const from = oldest;
   if (from === undefined) return recent;
-  return [
-    ...older.filter((message) => queued.has(message) || (isMailboxMessage(message) && message.createdAt >= from)),
-    ...recent,
-  ];
+  // An old queued message moves `from` far back, so without this limit each later request stays.
+  let completedLeft =
+    MAILBOX_CONVERSATION_MESSAGE_LIMIT -
+    [...recent, ...active].filter((message) => isMailboxMessage(message) && !hasActiveDelivery(message)).length;
+  const sent = older
+    .filter((message) => !queued.has(message) && isMailboxMessage(message) && message.createdAt >= from)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const kept = new Set(queued);
+  for (const message of sent) {
+    if (completedLeft <= 0) break;
+    kept.add(message);
+    completedLeft -= 1;
+  }
+  return [...older.filter((message) => kept.has(message)), ...recent];
 }
 
 function isMailboxMessage(message: ConversationMessage): boolean {

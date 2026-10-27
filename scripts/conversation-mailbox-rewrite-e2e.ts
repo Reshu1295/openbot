@@ -13,6 +13,8 @@
 //   messages, so the cache has no record of them.
 // - `request-turns`: each answer has the user's request before it, and the chat is over 8 MiB. The
 //   trim must remove each old request with its answer, so that no request stays without its answer.
+// - `mailbox-limit`: a request still shows running, and more than 100 requests come after it. The
+//   chat must keep only the newest 100 completed requests, as many as mailbox sync reads.
 // - `total-budget`: the least recently used chat has a turn that runs and only a mailbox message to
 //   trim. Idle chats then go over the limit of all chats. The idle chats must still be removed.
 // No app, provider, account or network is started.
@@ -37,7 +39,7 @@ import { AgentStore } from "../src/backend/agent-store";
 import { AgentWaitStore } from "../src/backend/agent-waits/agent-wait-store";
 import { AgentWaits } from "../src/backend/agent-waits/agent-waits";
 import { runCauseEffect } from "../src/backend/effect-boundary";
-import { MailboxStore } from "../src/backend/mailbox-store";
+import { MAILBOX_CONVERSATION_MESSAGE_LIMIT, MailboxStore } from "../src/backend/mailbox-store";
 import { OpenBotDatabase } from "../src/backend/openbot-database";
 import { RoutineTimer } from "../src/backend/routine-timer";
 
@@ -47,7 +49,7 @@ const SEEDED_TURNS = 120;
 const ROUNDS = 12;
 const TIMED_QUEUE_CHANGES = 50;
 
-type CaseName = "message-limit" | "byte-limit" | "provider-read" | "request-turns" | "total-budget";
+type CaseName = "message-limit" | "byte-limit" | "provider-read" | "request-turns" | "mailbox-limit" | "total-budget";
 
 interface Round {
   round: number;
@@ -69,6 +71,8 @@ interface CaseReport {
   loopWarnings?: number;
   /** In `request-turns`, the turns that stay in memory. */
   turnsKept?: string;
+  /** In `mailbox-limit`, the requests that stay in memory. */
+  requestsKept?: string;
   /** In `total-budget`, the idle chats that stay in memory. */
   idleChatsKept?: string;
   error?: string;
@@ -411,6 +415,68 @@ async function runRequestTurnsCase(result: CaseReport): Promise<void> {
   }
 }
 
+/** More completed requests than one mailbox read returns. */
+const LATER_REQUESTS = 130;
+
+async function runMailboxLimitCase(result: CaseReport): Promise<void> {
+  const { store, mailbox, conversation, sync, events, writes, close } = await startRuntime();
+  try {
+    const agent = await runCauseEffect(
+      store.createAgent({ name: "Requests", description: "Gets requests", avatarSeed: "limit", avatarHue: null }),
+    );
+    conversation.emitConversation(
+      { agentId: agent.id, threadId: store.ensureThreadIdNow(agent.id), activeTurnId: null, revision: 0, messages: [] },
+      "e2e.chat-start",
+      {},
+    );
+    // The provider finished this turn, but the delivery still shows running.
+    const running = await runCauseEffect(
+      mailbox.enqueue({ sender: { kind: "user" }, recipientAgentIds: [agent.id], text: "Old request" }),
+    );
+    const runningId = running.deliveries[0]?.id;
+    assert.ok(runningId);
+    await runCauseEffect(mailbox.markStarting(runningId));
+    await runCauseEffect(mailbox.markRunning(runningId, "turn-old"));
+    sync.emitQueue(agent.id);
+    const requestIds: string[] = [];
+    for (let index = 0; index < LATER_REQUESTS; index += 1) {
+      const request = await runCauseEffect(
+        mailbox.enqueue({ sender: { kind: "user" }, recipientAgentIds: [agent.id], text: `Request ${index}` }),
+      );
+      const deliveryId = request.deliveries[0]?.id;
+      assert.ok(deliveryId);
+      requestIds.push(deliveryId);
+      await runCauseEffect(mailbox.markStarting(deliveryId));
+      await runCauseEffect(mailbox.markRunning(deliveryId, `turn-${index}`));
+      await runCauseEffect(mailbox.markTerminal(deliveryId, "completed"));
+      sync.emitQueue(agent.id);
+    }
+    const keptIds = new Set(conversation.loadedSnapshot(agent.id)?.messages.map((message) => message.id));
+    const keptRequests = requestIds.filter((id) => keptIds.has(id));
+    result.requestsKept = `${keptRequests.length} of ${LATER_REQUESTS}`;
+    assert.ok(keptIds.has(runningId), "The chat keeps the request that still shows running.");
+    assert.deepEqual(
+      keptRequests,
+      requestIds.slice(-MAILBOX_CONVERSATION_MESSAGE_LIMIT),
+      "The chat keeps only the newest completed requests that mailbox sync reads.",
+    );
+    result.checks.push("the chat keeps the running request and the newest 100 completed requests");
+    const firstWrite = writes.length;
+    const firstEvent = events.length;
+    sync.emitQueue(agent.id);
+    assert.deepEqual(writes.slice(firstWrite).flat(), [], "A queue change writes no unchanged rows.");
+    assert.equal(
+      events.slice(firstEvent).filter((event) => event.type === "conversation").length,
+      0,
+      "A queue change sends no chat.",
+    );
+    result.checks.push("a queue change writes no rows and sends no chat");
+    result.passed = true;
+  } finally {
+    await close();
+  }
+}
+
 /** Idle chats of about 7.5 MiB each, together more than the limit of all chats. */
 const IDLE_CHATS = Math.ceil(CONVERSATION_CACHE_TOTAL_BYTES_LIMIT / (CONVERSATION_CACHE_BYTES_LIMIT * 0.9375)) + 1;
 
@@ -497,15 +563,24 @@ async function runBudgetCase(result: CaseReport): Promise<void> {
 }
 
 try {
-  for (const name of ["message-limit", "byte-limit", "provider-read", "request-turns", "total-budget"] as const) {
+  for (const name of [
+    "message-limit",
+    "byte-limit",
+    "provider-read",
+    "request-turns",
+    "mailbox-limit",
+    "total-budget",
+  ] as const) {
     const result: CaseReport = { name, checks: [], rounds: [], passed: false };
     report.cases.push(result);
     const run =
       name === "request-turns"
         ? runRequestTurnsCase(result)
-        : name === "total-budget"
-          ? runBudgetCase(result)
-          : runCase(name, result);
+        : name === "mailbox-limit"
+          ? runMailboxLimitCase(result)
+          : name === "total-budget"
+            ? runBudgetCase(result)
+            : runCase(name, result);
     await run.catch((error: unknown) => {
       result.error = error instanceof Error ? error.message : String(error);
     });

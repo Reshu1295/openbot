@@ -224,6 +224,9 @@ export interface CommittedChannelAttachments {
   revert: Effect.Effect<void, StoredStateFailure>;
 }
 
+/** The most completed messages that one `conversationMessages` read returns. */
+export const MAILBOX_CONVERSATION_MESSAGE_LIMIT = 100;
+
 export class MailboxStore {
   readonly #statePath: string;
   readonly #files: AttachmentFiles;
@@ -921,7 +924,10 @@ export class MailboxStore {
     agentId: string,
     options: { fromCreatedAt?: string; limit?: number } = {},
   ): ConversationMessage[] {
-    const limit = Math.max(1, Math.min(options.limit ?? 100, 100));
+    const limit = Math.max(
+      1,
+      Math.min(options.limit ?? MAILBOX_CONVERSATION_MESSAGE_LIMIT, MAILBOX_CONVERSATION_MESSAGE_LIMIT),
+    );
     const deliveriesByMessage = new Map<string, StoredDelivery[]>();
     for (const delivery of this.#state.deliveries) {
       const deliveries = deliveriesByMessage.get(delivery.messageId) ?? [];
