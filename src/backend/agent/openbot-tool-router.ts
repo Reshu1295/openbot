@@ -1627,8 +1627,13 @@ export class OpenBotToolRouter {
       const senderTaskId = turnDeliveries
         .map(({ delivery }) => this.#mailbox.taskIdForDelivery(delivery.id))
         .find((taskId) => taskId !== null);
-      // An agent can send "" for no reply. Every reader rejects an empty id.
-      const replyTo = replyToMessageId?.trim() || null;
+      // An agent can send "" for no reply. Every reader rejects an empty id. A model can also copy the
+      // quotes around the id in the delivery prompt; such an id refers to no message.
+      const replyTo =
+        replyToMessageId
+          ?.trim()
+          .replace(/^"(.*)"$/s, "$1")
+          .trim() || null;
       // An answer to a request from a side thread runs in that thread. When the thread is archived, the
       // answer goes to the recipient's own chat, so it is not lost.
       const answerTaskId = replyTo ? this.#mailbox.answerTaskId(senderAgentId, replyTo, recipientValues) : null;
