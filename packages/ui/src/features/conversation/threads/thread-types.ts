@@ -10,12 +10,12 @@ export type ThreadStatus =
   | { kind: "failed" };
 
 /**
- * One thread of an agent. `main` is the agent's own chat: it has no rename, archive or delete. `draft`
- * is a new thread that has no message yet: its first message starts it.
+ * One side thread of an agent. `draft` is a new thread that has no message yet: its first message
+ * starts it. The agent's own chat is not a thread item: the agent's name in the header opens it.
  */
 export interface ThreadItem {
   id: string;
-  kind: "main" | "side" | "draft";
+  kind: "side" | "draft";
   title: string;
   updatedAt: string;
   status: ThreadStatus;
@@ -34,9 +34,9 @@ export function threadBusy(status: ThreadStatus): boolean {
  * when the host cannot rename or delete threads; the actions then do not show.
  */
 export interface ThreadHeaderProps {
-  /** Every thread that is not archived, with the agent's own chat. */
+  /** Every side thread that is not archived. The agent's name in the header opens the agent's own chat. */
   threads: readonly ThreadItem[];
-  /** The threads that have a tab, in tab order. The agent's own chat is always one of them. */
+  /** The side threads that have a tab, and the new thread, in tab order. */
   tabs: readonly ThreadItem[];
   archived: readonly ThreadItem[];
   activeId: string;

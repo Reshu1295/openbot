@@ -352,6 +352,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.crash":
     "Railway のバックエンドサービスがデプロイ時にクラッシュするのはなぜですか？",
   "marketplace.plugin.railway.prompt.redeploy": "自分の Railway プロジェクトの API サービスを再デプロイしてください。",
+  "marketplace.plugin.render.tagline": "サービス、デプロイ、ログ",
+  "marketplace.plugin.render.description":
+    "Render を使うと、エージェントはワークスペースとサービスを一覧表示し、ログ、イベント、メトリクスを読み、デプロイ履歴を確認し、デプロイを開始し、Render Postgres で読み取り専用の SQL を実行できます。Render の API キーは 1 つの Authorization ヘッダーに入ります。このキーは Render アカウントのすべてのワークスペースに届きます。エージェントは Web サービス、静的サイト、cron ジョブ、Postgres データベース、Key Value インスタンスを作成でき、これには費用がかかる場合があります。また、サービスの環境変数を置き換えることもできます。サーバーはリソースを削除できません。",
+  "marketplace.plugin.render.app":
+    "サービス、デプロイ、ログ、メトリクスを、API キーを使う Render の MCP サーバーで提供します。",
+  "marketplace.plugin.render.prompt.services": "自分の Render ワークスペースにはどのサービスがありますか？",
+  "marketplace.plugin.render.prompt.logs": "Render の Web サービスが直近 1 時間に記録したエラーは何ですか？",
+  "marketplace.plugin.render.prompt.deploy": "Render サービスの最後のデプロイが失敗したのはなぜですか？",
   "marketplace.plugin.atlassian.tagline": "Jira の作業項目と Confluence のページ",
   "marketplace.plugin.atlassian.description":
     "Atlassian を使うと、エージェントは Jira の作業項目、Confluence のページ、Bitbucket のプルリクエストを検索して読み、作業項目、ページ、コメントを作成または更新できます。各ユーザーはブラウザーで自分の Atlassian アカウントにサインインし、同意画面でアクセスを承認します。エージェントはユーザーと同じ権限を持ちます。作業項目とページの変更、ページの権限の変更、プルリクエストのマージができます。Jira のデータを削除するツールは、組織の管理者がオンにするまでオフのままです。ツールを呼び出すたびに Rovo クレジットを使います。",

@@ -72,7 +72,6 @@ import { createBillingStore } from "@openbot/ui/features/billing/billing-store";
 import { LicenseSection } from "@openbot/ui/features/billing/LicenseSection";
 import { createLicenseStore } from "@openbot/ui/features/billing/license-store";
 import { unloadedHistory } from "@openbot/ui/features/conversation/ChatScrollRail";
-import type { ThreadStatus } from "@openbot/ui/features/conversation/threads/thread-types";
 import type { DiagramModelChoice } from "@openbot/ui/features/diagrams/DiagramNewAgentCard";
 import { LeaveServerDialog } from "@openbot/ui/features/servers/LeaveServerDialog";
 import { RestartServerDialog } from "@openbot/ui/features/servers/RestartServerDialog";
@@ -1345,21 +1344,13 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     onCleanup(root.dispose);
     return root.threads;
   });
-  /** What the selected agent does in its own chat, for its tab. */
-  function mainThreadStatus(): ThreadStatus {
-    if (view.approval()) return { kind: "waiting", reason: "approval" };
-    if (browserTakeover()) return { kind: "waiting", reason: "takeover" };
-    if (view.prompt()) return { kind: "waiting", reason: "question" };
-    return workspace.conversation()?.page?.activeTurnId ? { kind: "working" } : { kind: "idle" };
-  }
   /** The selected agent's threads. A host without side threads shows only the agent's own chat. */
   const threads = createMemo((): ConversationThreads | undefined => {
     const agent = workspace.selected();
     const current = agentThreads();
     if (!agent || !current?.tasks.available()) return undefined;
     return conversationThreads({
-      agent: { id: agent.id, name: agent.name, updatedAt: agent.updatedAt ?? agent.time },
-      mainStatus: mainThreadStatus(),
+      agent: { id: agent.id, updatedAt: agent.updatedAt ?? agent.time },
       tasks: current.tasks,
       tabs: current.tabs,
       approvals: workspace.state.approvals,
@@ -1695,7 +1686,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                         calls={marketplaceCalls}
                         connectors={connectors}
                         server={server()}
-                        agents={workspace.state.agents}
+                        agents={workspace.shownAgents()}
                         activeAgentId={workspace.state.selectedId ?? ""}
                         composerAvailable={status().phase === "ready" && !agentFormOpen()}
                         onOpenAgent={(agentId) => {

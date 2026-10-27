@@ -37,14 +37,14 @@ function NewThreadButton(props: { disabled: boolean; onNew: () => void }) {
  * The tabs, "+" and the thread list. In a narrow header the tabs and the list button become one
  * button with the open thread, and "+" follows it. The heading group takes the free width of the
  * header whatever it holds, so its width decides the mode and the mode does not change it again.
- * When only the agent's own chat has a tab, the header already shows the agent's name, so no tab
- * shows: only "+" and the thread list.
+ * The agent's own chat has no tab: the agent's name before the row opens it. With no side thread
+ * tab, only "+" and the thread list show.
  */
 function ThreadRow(props: ThreadHeaderProps) {
   let row: HTMLDivElement | undefined;
   const [measured, setMode] = createSignal<ThreadRowMode>("tabs");
   // With no tab to show, the compact button would only repeat the agent's name.
-  const mode = (): ThreadRowMode => (props.tabs.length < 2 && measured() === "compact" ? "tabs" : measured());
+  const mode = (): ThreadRowMode => (props.tabs.length === 0 && measured() === "compact" ? "tabs" : measured());
   onSettled(() => {
     const group = row?.parentElement;
     if (!row || !group) return;
@@ -64,7 +64,7 @@ function ThreadRow(props: ThreadHeaderProps) {
   return (
     <div ref={row} class="agent-threads-header" data-mode={mode()}>
       <Show when={mode() === "tabs"}>
-        <Show when={props.tabs.length > 1}>
+        <Show when={props.tabs.length > 0}>
           <ThreadTabs {...props} />
         </Show>
         <NewThreadButton disabled={!props.canStartNew} onNew={props.onNew} />
@@ -79,11 +79,11 @@ function ThreadRow(props: ThreadHeaderProps) {
 
 /**
  * The threads of an agent, in the chat header. An agent with only its own chat shows only a "New
- * thread" button, so its header stays almost the same. From two threads, a menu of all threads
- * shows, and the open threads show as tabs when a side thread has one.
+ * thread" button, so its header stays almost the same. With a side thread, a menu of the side
+ * threads shows, and the side threads with a tab show as tabs.
  */
 export function ThreadHeader(props: ThreadHeaderProps) {
-  const single = () => props.tabs.length < 2 && props.threads.length < 2 && props.archived.length === 0;
+  const single = () => props.tabs.length === 0 && props.threads.length === 0 && props.archived.length === 0;
   return (
     <Show when={!single()} fallback={<NewThreadButton disabled={!props.canStartNew} onNew={props.onNew} />}>
       <ThreadRow {...props} />

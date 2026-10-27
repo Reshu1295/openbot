@@ -10,8 +10,8 @@ export function agentTaskThreadStatus(task: AgentTask, waitsForApproval: boolean
 }
 
 export interface ThreadListsInput {
-  /** The agent's own chat. */
-  main: ThreadItem;
+  /** When the agent's own chat changed last. The new thread tab shows this time. */
+  mainUpdatedAt: string;
   /** The side threads of the agent: open ones and archived (`closed`) ones. */
   tasks: readonly AgentTask[];
   /** The side threads that have a tab on this device, in tab order. */
@@ -31,9 +31,9 @@ export interface ThreadLists {
 }
 
 /**
- * The thread lists of the header. The menu lists the agent's own chat first, then the side threads
- * that changed last. A tab of a thread that is archived or deleted, also on another device, does not
- * show.
+ * The thread lists of the header. The agent's own chat is in neither list: the agent's name in the
+ * header opens it. The menu lists the side threads that changed last first. A tab of a thread that is
+ * archived or deleted, also on another device, does not show.
  */
 export function threadLists(input: ThreadListsInput): ThreadLists {
   const items = new Map<string, ThreadItem>();
@@ -56,7 +56,7 @@ export function threadLists(input: ThreadListsInput): ThreadLists {
   }
   open.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   archived.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
-  const tabs = [input.main];
+  const tabs: ThreadItem[] = [];
   for (const id of input.open) {
     const item = items.get(id);
     if (item) tabs.push(item);
@@ -66,13 +66,13 @@ export function threadLists(input: ThreadListsInput): ThreadLists {
       id: DRAFT_THREAD_ID,
       kind: "draft",
       title: input.draftTitle,
-      updatedAt: input.main.updatedAt,
+      updatedAt: input.mainUpdatedAt,
       status: { kind: "idle" },
     });
-  return { threads: [input.main, ...open], tabs, archived };
+  return { threads: open, tabs, archived };
 }
 
-/** The open tab, or the agent's own chat when the open tab no longer shows. */
+/** The open tab, or the agent's own chat when it is open or the open tab no longer shows. */
 export function activeThreadId(tabs: readonly ThreadItem[], active: string | null): string {
   return active !== null && tabs.some((tab) => tab.id === active) ? active : MAIN_THREAD_ID;
 }

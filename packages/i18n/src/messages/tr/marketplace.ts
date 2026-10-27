@@ -368,6 +368,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Railway çalışma alanımda hangi projeler ve servisler var?",
   "marketplace.plugin.railway.prompt.crash": "Railway'deki backend servisim dağıtımda neden çöküyor?",
   "marketplace.plugin.railway.prompt.redeploy": "Railway projemdeki API servisini yeniden dağıt.",
+  "marketplace.plugin.render.tagline": "Servisler, dağıtımlar ve günlükler",
+  "marketplace.plugin.render.description":
+    "Render, ajanların çalışma alanlarını ve servisleri listelemesine, günlükleri, olayları ve metrikleri okumasına, dağıtım geçmişini görmesine, dağıtım başlatmasına ve Render Postgres üzerinde salt okunur SQL çalıştırmasına olanak tanır. Bir Render API anahtarı tek bir Authorization başlığına girer. Anahtar, Render hesabının tüm çalışma alanlarına erişir. Ajanlar web servisleri, statik siteler, cron işleri, Postgres veritabanları ve Key Value örnekleri oluşturabilir; bunlar ücretli olabilir. Ayrıca bir servisin ortam değişkenlerini değiştirebilirler. Sunucu hiçbir kaynağı silemez.",
+  "marketplace.plugin.render.app":
+    "Servisler, dağıtımlar, günlükler ve metrikler, API anahtarıyla Render'ın MCP sunucusu üzerinden.",
+  "marketplace.plugin.render.prompt.services": "Render çalışma alanımda hangi servisler var?",
+  "marketplace.plugin.render.prompt.logs": "Render web servisim son bir saatte hangi hataları günlüğe yazdı?",
+  "marketplace.plugin.render.prompt.deploy": "Render servisimin son dağıtımı neden başarısız oldu?",
   "marketplace.plugin.atlassian.tagline": "Jira iş öğeleri ve Confluence sayfaları",
   "marketplace.plugin.atlassian.description":
     "Atlassian, ajanların Jira iş öğelerini, Confluence sayfalarını ve Bitbucket çekme isteklerini aramasına ve okumasına, iş öğeleri, sayfalar ve yorumlar oluşturmasına veya güncellemesine olanak tanır. Her kullanıcı tarayıcı üzerinden kendi Atlassian hesabında oturum açar ve erişimi bir onay ekranında onaylar. Ajanlar kullanıcıyla aynı yetkilere sahiptir: iş öğelerini ve sayfaları değiştirebilir, sayfa izinlerini değiştirebilir ve çekme isteklerini birleştirebilirler. Jira verilerini silen araçlar, bir kuruluş yöneticisi açana kadar kapalı kalır. Her araç çağrısı Rovo kredisi kullanır.",

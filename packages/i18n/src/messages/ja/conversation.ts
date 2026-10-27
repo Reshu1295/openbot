@@ -42,6 +42,7 @@ export const messages = {
   "conversation.direct.input": "{name} にメッセージを送る",
   "conversation.direct.send": "ダイレクトメッセージを送信",
   "conversation.header.settings": "エージェントの設定を表示",
+  "conversation.header.mainChat": "メインチャットを開く",
   "conversation.header.resumeRemote": "リモート操作を再開",
   "conversation.header.openRemote": "リモート操作を開く",
   "conversation.header.publish": "エージェントを公開",

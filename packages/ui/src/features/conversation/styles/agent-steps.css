@@ -1,8 +1,16 @@
 /* The steps of an agent's turn: under the activity line while it runs, above the answer after. */
 
+/* The working rings reach about 10px past a face, and the channel's faces sit 2px from the edge.
+   The clip margin keeps the rings whole. It goes when the line leaves, so open steps do not show
+   below the closing row. */
 .agent-activity-body {
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: var(--openbot-space-3);
+}
+
+.agent-activity-entry[data-state="exiting"] .agent-activity-body {
+  overflow-clip-margin: 0;
 }
 
 /* The entry ignores the pointer so the chat scrolls under it; its controls take it back. */

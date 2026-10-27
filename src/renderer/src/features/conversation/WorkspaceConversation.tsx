@@ -18,7 +18,6 @@ import {
   usageLimitAskOptions,
 } from "@openbot/ui/features/conversation/BackupModels";
 import { unloadedHistory } from "@openbot/ui/features/conversation/ChatScrollRail";
-import type { ThreadStatus } from "@openbot/ui/features/conversation/threads/thread-types";
 import { sidebarAgentWaits } from "@openbot/ui/features/sidebar/sidebar-agent-states";
 import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo } from "solid-js";
@@ -359,20 +358,12 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
   const { t } = useText();
   const agentTasks = useAgentTasks();
   const agentThreads = useAgentThreads();
-  /** What the agent does in its own chat, for its tab. */
-  const mainThreadStatus = (agentId: string): ThreadStatus => {
-    if (activeApproval()) return { kind: "waiting", reason: "approval" };
-    if (activeBrowserTakeover()) return { kind: "waiting", reason: "takeover" };
-    if (activePrompt()) return { kind: "waiting", reason: "question" };
-    return activeTurns()[agentId] ? { kind: "working" } : { kind: "idle" };
-  };
   /** The active agent's threads. A host without side threads shows only the agent's own chat. */
   const threads = createMemo((): ConversationThreads | undefined => {
     const agent = activeAgent();
     if (!agent || !agentTasks.available()) return undefined;
     return conversationThreads({
-      agent: { id: agent.id, name: agent.name, updatedAt: agent.updatedAt ?? agent.time },
-      mainStatus: mainThreadStatus(agent.id),
+      agent: { id: agent.id, updatedAt: agent.updatedAt ?? agent.time },
       tasks: agentTasks,
       tabs: agentThreads,
       approvals: approvals(),

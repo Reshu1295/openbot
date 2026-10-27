@@ -214,12 +214,17 @@ export function ConversationPanels(panelProps: { onOpenUsage?: ((trigger: HTMLBu
   createEffect(browserSidebarOpen, (open, previous) => {
     if (open && previous === false) onSettled(() => browserPreviewTrigger?.focus());
   });
+  /**
+   * A plain accessor, not a conditional in the prop: the compiler makes that a memo, and the tabs read
+   * it first in an effect callback when the last tab closes, which halts the reactive system.
+   */
+  const selectedPane = () => (activeRightPanel() === "side-panel" ? null : sidePanel().selected);
   return (
     <>
       <Show when={sidePanelOpen()}>
         <SidePanelHeader
           panes={sidePanel().panes}
-          selected={activeRightPanel() === "side-panel" ? null : sidePanel().selected}
+          selected={selectedPane()}
           available={sidePanelPanes()}
           maximized={sidePanel().maximized}
           settingsLabel={channel ? t("channel.settings.title") : undefined}
