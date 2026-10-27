@@ -2839,6 +2839,18 @@ textarea {
 /* Narrow panel: name and badge win over time and date. The time element keeps
    no reserved width, so long names get the space instead of truncating to a
    few characters beside a date. */
+/* At the default width and below, the wait chip keeps only its icon so that a long name keeps its
+   space. The row's label and tooltip still name the action. */
+@container (max-width: 300px) {
+  .agent-row-wait-chip:has(.agent-row-wait-chip-label) {
+    padding: 1px 5px;
+  }
+
+  .agent-row-wait-chip-label {
+    display: none;
+  }
+}
+
 @container (max-width: 210px) {
   .agent-row-time,
   .person-row .agent-row-heading > span,
