@@ -869,6 +869,9 @@ export class MailboxStore {
     taskId: string,
   ): Effect.fn.Return<void, StoredStateFailure> {
     try {
+      // A teammate's answer to the thread is also in the teammate's own chat, so it stays.
+      const teammateAnswer = (message: StoredMessage) =>
+        message.sender.kind === "agent" && message.sender.agentId !== agentId;
       const found = () => {
         const lane = this.#state.messages.filter((message) => message.taskId === taskId);
         const laneIds = new Set(lane.map((message) => message.id));
@@ -880,8 +883,7 @@ export class MailboxStore {
           )
         )
           throw new Error(sourceText("error.backend.threadStillRunning"));
-        // A teammate's answer to the thread is also in the teammate's own chat, so it stays.
-        const ids = new Set(lane.filter((message) => message.sender.kind !== "agent").map((message) => message.id));
+        const ids = new Set(lane.filter((message) => !teammateAnswer(message)).map((message) => message.id));
         const deliveries = this.#state.deliveries.filter((delivery) => ids.has(delivery.messageId));
         return { ids, deliveries };
       };
@@ -889,7 +891,7 @@ export class MailboxStore {
       // The path checks wait, so they run before the state changes, as in `deleteStoredFile`.
       const managedPaths = new Map<string, string | null>();
       for (const message of this.#state.messages) {
-        if (message.taskId !== taskId || message.sender.kind === "agent") continue;
+        if (message.taskId !== taskId || teammateAnswer(message)) continue;
         for (const file of messageFiles(message)) {
           if (file.deletedAt || managedPaths.has(file.path)) continue;
           managedPaths.set(file.path, yield* this.#files.managedTransferFile(file.path).pipe(toStoredStateFailure));
@@ -988,6 +990,44 @@ export class MailboxStore {
     }
   }, Effect.uninterruptible).bind(this);
 
+  /**
+   * Moves the queued answers of teammates to a side thread into the agent's own chat, so a Stop,
+   * archive or delete of the thread does not cancel them. Returns how many moved.
+   */
+  returnTaskAnswers = Effect.fn("MailboxStore.returnTaskAnswers")(function* (
+    this: MailboxStore,
+    agentId: string,
+    taskId: string,
+  ): Effect.fn.Return<number, StoredStateFailure> {
+    try {
+      const ids = new Set(
+        this.#queuedFor(agentId).flatMap((delivery) => {
+          const message = this.#requireMessage(delivery.messageId);
+          return message.taskId === taskId && message.sender.kind === "agent" && message.sender.agentId !== agentId
+            ? [message.id]
+            : [];
+        }),
+      );
+      if (ids.size === 0) return 0;
+      const previous = this.#state.messages;
+      this.#state.messages = previous.map((message) => {
+        if (!ids.has(message.id)) return message;
+        const { taskId: _taskId, ...answer } = message;
+        return answer;
+      });
+      for (const id of ids) this.#changes.messageIds.add(id);
+      try {
+        this.#persist("mailbox.task-answers-returned", `mailbox:task-answers-returned:${taskId}:${randomUUID()}`);
+      } catch (error) {
+        this.#state.messages = previous;
+        throw error;
+      }
+      return ids.size;
+    } catch (cause) {
+      return yield* new StoredStateFailure({ cause });
+    }
+  }, Effect.uninterruptible).bind(this);
+
   listRuntimeWork(agentIds: readonly string[], failedTurns: ReadonlyMap<string, string>): AgentRuntimeWorkItem[] {
     const targetAgentIds = new Set(agentIds);
     const working: StoredDelivery[] = [];
@@ -1048,8 +1088,12 @@ export class MailboxStore {
       if (!message || message.channelId || message.messaging) continue;
       const ownMessage = message.sender.kind === "agent" && message.sender.agentId === agentId;
       // A task message runs in a side thread of its recipient. A teammate's answer to that thread
-      // still shows in the teammate's own chat.
-      if (message.taskId && !ownMessage) continue;
+      // still shows in the teammate's own chat; the brief of a thread the agent started does not.
+      if (
+        message.taskId &&
+        (!ownMessage || !deliveriesByMessage.get(message.id)?.some((delivery) => delivery.recipientAgentId !== agentId))
+      )
+        continue;
       // A request the agent sent from a Slack thread or a side thread belongs to that thread, not to
       // its own chat. The teammate it went to still sees it.
       if ((message.messagingReturn || message.senderTaskId) && ownMessage) continue;

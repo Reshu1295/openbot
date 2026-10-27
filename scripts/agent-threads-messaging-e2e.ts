@@ -11,7 +11,7 @@
 // 3. B runs a long turn in a side thread when A asks it. B answers in its own chat while the side
 //    thread still runs, and neither conversation gets the other's messages.
 // 4. A starts a thread with `start_task` from its own chat. The thread runs the brief; the own chat
-//    does not get the thread's answer.
+//    gets neither the brief nor the thread's answer, also after the thread is deleted.
 // 5. In a side thread, `start_task` and `start_new_chat` are refused: no thread starts and the own
 //    chat keeps its messages.
 // 6. A's side thread is archived while B is busy. B's answer then comes to A's own chat, and the
@@ -23,6 +23,8 @@
 // 9. A Claude subagent in a side thread shows in that thread only.
 // 10. A background Claude subagent in a side thread ends after its turn. Its answer comes back to that
 //    side thread, not to the agent's own chat.
+// 11. B's answer waits in A's running side thread, and A stops the thread. The answer goes to A's own
+//    chat; the Stop does not cancel it.
 // At the end it stops and deletes each thread that it started.
 // Writes .openbot-build/agent-threads-messaging-e2e/report.json.
 import assert from "node:assert/strict";
@@ -85,6 +87,8 @@ const bridge = {
       agentId,
       text,
     }),
+  stop: (agentId: string, taskId: string) =>
+    page.evaluate((input) => window.openbot.agent.stopTask(input), { agentId, taskId }),
   close: (agentId: string, taskId: string) =>
     page.evaluate((input) => window.openbot.agent.closeTask(input), { agentId, taskId }),
   reopen: (agentId: string, taskId: string) =>
@@ -319,8 +323,18 @@ try {
       (s) => idle(s) && has(s, answerWith("STARTED")),
       TURN_MS,
     );
+    const brief = (m: ConversationMessage) => m.text.startsWith(`Reply with the single word ${pong}`);
     details.mainHasThreadAnswer = has(main, answerWith(pong));
+    details.mainHasBrief = has(main, brief);
+    await page.evaluate((input) => window.openbot.agent.deleteTask(input), { agentId: from, taskId: created.id });
+    started.splice(
+      started.findIndex((entry) => entry.taskId === created.id),
+      1,
+    );
+    details.mainHasBriefAfterDelete = has(await bridge.main(from), brief);
     assert.equal(details.mainHasThreadAnswer, false, "The own chat got the thread's answer.");
+    assert.equal(details.mainHasBrief, false, "The own chat shows the thread's brief.");
+    assert.equal(details.mainHasBriefAfterDelete, false, "The thread delete moved the brief to the own chat.");
   });
 
   // 5. Refusals in a side thread.
@@ -554,7 +568,48 @@ try {
       details.finalState = "idle";
       assert.equal(lane, "side", "The background subagent's answer went to the own chat.");
     });
-  }
+  } else stepNumber += 2;
+
+  // 11. A Stop of the side thread does not cancel a teammate's answer that waits in it.
+  await step("stop keeps a waiting answer", async (details) => {
+    const word = `M11${run}`;
+    const answer = (m: ConversationMessage) => m.senderAgentId === to && m.text.includes("12");
+    const answersBefore = count(await bridge.main(from), answer);
+    // Claude Code refuses a standalone foreground `sleep`, so the turn waits with Python.
+    const side = await bridge.startTask(
+      from,
+      [
+        `Use openbot.send_message to send ${toAgentInfo.name} (agent id "${to}") this message, with expectsReply true:`,
+        `"${word}: What is 9+3? Answer with only the number."`,
+        `Then run the shell command python3 -c "import time; time.sleep(120)" in the foreground, and then reply DONE.`,
+      ].join("\n"),
+    );
+    details.taskId = side.id;
+    const waiting = await waitFor(
+      page,
+      "B's answer waits in the running side thread",
+      () => task(from, side.id),
+      (e) => e?.state === "running" && e.queuedMessages.length > 0,
+      TURN_MS,
+    );
+    details.queuedAtStop = waiting?.queuedMessages.length ?? 0;
+    await bridge.stop(from, side.id);
+    const lane = await waitFor(
+      page,
+      "A gets the answer",
+      async () => {
+        const [main, thread] = [await bridge.main(from), await bridge.side(from, side.id)];
+        return count(main, answer) > answersBefore ? "main" : has(thread, answer) ? "side" : null;
+      },
+      (value) => value !== null,
+      TURN_MS,
+    );
+    details.answerLane = lane;
+    await waitFor(page, "A's own chat reads it", () => bridge.main(from), idle, TURN_MS);
+    details.threadQueued = (await task(from, side.id))?.queuedMessages.length ?? null;
+    assert.equal(lane, "main", "The stopped side thread lost B's answer.");
+    assert.equal(details.threadQueued, 0, "The stopped side thread still holds the answer.");
+  });
   report.passed = report.steps.every((entry) => entry.passed);
 } finally {
   for (const { agentId, taskId } of started.reverse()) {

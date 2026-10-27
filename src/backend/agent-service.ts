@@ -4069,12 +4069,28 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     return this.#tasks.publicTask(task);
   }).bind(this);
 
+  /** A teammate's answer that waits in the thread goes to the agent's own chat, so the thread does not cancel it. */
+  #returnTaskAnswers(task: { agentId: string; taskId: string }): Effect.Effect<void, AgentLifecycleFailed> {
+    return this.#mailbox.returnTaskAnswers(task.agentId, task.taskId).pipe(
+      Effect.mapError((failure) => new AgentLifecycleFailed({ operation: "return answers", cause: failure.cause })),
+      Effect.flatMap((moved) =>
+        moved === 0
+          ? Effect.void
+          : Effect.sync(() => {
+              this.#mailboxSync.emitQueue(task.agentId);
+              this.#drain.scheduleDrain(task.agentId);
+            }),
+      ),
+    );
+  }
+
   /** Stops the task's running turn and cancels its queued messages. The task stays open. */
   readonly stopTask = Effect.fn("AgentService.stopTask")(function* (
     this: AgentService,
     input: AgentTaskInput,
   ): Effect.fn.Return<void, AgentLifecycleFailed> {
     const task = yield* lifecycleStep("find task", () => this.#tasks.require(input.agentId, input.taskId));
+    yield* this.#returnTaskAnswers(task);
     for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId))
       yield* this.cancelQueuedMessage(task.agentId, message.deliveryId);
     const turnId = this.#conversation.loadedExecutionSnapshot(task.threadId)?.activeTurnId;
@@ -4139,6 +4155,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       if (wasOpen) this.#tasks.close(found);
       return { task: found, wasOpen };
     });
+    yield* this.#returnTaskAnswers(task);
     for (const message of this.#mailbox.queuedTaskMessages(task.agentId, task.taskId))
       yield* this.cancelQueuedMessage(task.agentId, message.deliveryId);
     yield* lifecycleStep("check task", () => {
