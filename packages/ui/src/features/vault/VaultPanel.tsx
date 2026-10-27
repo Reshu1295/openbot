@@ -1242,7 +1242,14 @@ function ItemDialog(props: {
                 spellcheck={false}
                 maxlength={64}
                 value={apiKey().name}
-                onValueChange={(name) => set(apiKey(), { name: name.toUpperCase() })}
+                onInput={(event) => {
+                  // The field shows the capitals that it keeps, so the binding has no other text to restore.
+                  const input = event.currentTarget;
+                  const { selectionStart, selectionEnd } = input;
+                  input.value = input.value.toUpperCase();
+                  input.setSelectionRange(selectionStart, selectionEnd);
+                  set(apiKey(), { name: input.value });
+                }}
               />
             </Field>
             <Field label={t("vault.field.apiKey")} class="vault-wide">
