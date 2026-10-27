@@ -371,7 +371,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       newThreadTitle: t("conversation.threads.new"),
       onRespondApproval: (approval, decision) =>
         respondToApprovalRequest(approval.agentId, approval.requestId, decision),
-      contextStates: threadContextStates(),
+      contextStates: threadContextStates,
       onCompactContext: compactTaskContext(),
     });
   });

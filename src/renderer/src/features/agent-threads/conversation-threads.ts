@@ -14,8 +14,11 @@ export interface ConversationThreadsInput {
   approvals: readonly AgentApproval[];
   newThreadTitle: string;
   onRespondApproval: (approval: AgentApproval, decision: "accept" | "decline") => Promise<boolean>;
-  /** The context of each side thread that reported it, by thread id. Only this computer reports it. */
-  contextStates?: Readonly<Record<string, AgentContextState>> | undefined;
+  /**
+   * The context of each side thread that reported it, by thread id. Only this computer reports it.
+   * Read only by `contextState`, so a new runtime snapshot does not build the threads again.
+   */
+  contextStates?: (() => Readonly<Record<string, AgentContextState>>) | undefined;
   /** Missing when the host cannot compact a side thread. */
   onCompactContext?: ((taskId: string) => Promise<void>) | undefined;
 }
@@ -70,7 +73,9 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
       if (open) tasks.stopTask(agentId, open.id);
     },
     onRespondApproval: (decision) => (approval ? input.onRespondApproval(approval, decision) : Promise.resolve(false)),
-    contextState: open ? input.contextStates?.[open.threadId] : undefined,
+    get contextState() {
+      return open ? input.contextStates?.()[open.threadId] : undefined;
+    },
     onCompactContext: open && onCompactContext ? () => onCompactContext(open.id) : undefined,
     // Only this computer moves a queued message to a new thread.
     onRunQueuedMessage: tasks.local() ? (deliveryId) => void tabs.runQueuedMessage(agentId, deliveryId) : undefined,

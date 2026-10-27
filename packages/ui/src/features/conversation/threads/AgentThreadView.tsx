@@ -252,8 +252,13 @@ export function AgentThreadView(props: AgentThreadViewProps) {
           </div>
           <div class="composer-toolbar">
             <div class="composer-primary-actions">
-              <Show when={props.context}>
-                {(usage) => <ContextUsageMeter usage={usage()} compact={props.onCompactContext} />}
+              {/* One meter for each thread: a pending Compact or an open popover stays with its thread. */}
+              <Show when={props.task?.id} keyed>
+                {(_taskId) => (
+                  <Show when={props.context}>
+                    {(usage) => <ContextUsageMeter usage={usage()} compact={props.onCompactContext} />}
+                  </Show>
+                )}
               </Show>
               <Show when={active()}>
                 <Button

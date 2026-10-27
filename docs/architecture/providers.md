@@ -942,6 +942,11 @@ The snapshot includes only active personal provider sessions. Reset, session rep
 provider changes remove the old indication. A provider change publishes a runtime snapshot before
 the next turn, so retired counts do not remain on screen. Execution-thread data does not enter
 personal chat.
+
+Optional `threadContextStates` carries the same state for the active provider session of each open
+side thread, keyed by its `threadId`. The side thread's message box shows it. It is local only, as
+`contextStates` is, and `fitRuntimeSnapshot` drops it first. A `handoff` provider cannot replace the
+session of a side thread, so its `autoCompactAt` is null there.
 Codex uses `tokenUsage.last.totalTokens` and its reported `modelContextWindow`. Claude reads the
 SDK `getContextUsage({ detail: "summary" })` result after a turn. This uses the previous response
 and local estimates; it avoids full per-category token-count requests. The read runs outside the
@@ -965,3 +970,5 @@ summary is not copied into this state.
 when `autoCompactAt` is set, which means that OpenBot compacts the thread (`events`, `request` or
 `handoff`). It refuses while a turn, a queued message or a session start needs the session. It is
 local only: the Team API has no route, and a joined server's agent shows no ring.
+`agent:tasks:compact-context` does the same for one open side thread. It refuses while the thread
+has an active turn or delivery, or while its session compacts or waits after a refused start.

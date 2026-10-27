@@ -130,18 +130,18 @@ export class ContextCompaction {
 
   /** The side threads of `threads` (`id` is the agent) that reported their context, keyed by thread id. */
   threadSnapshot(threads: Array<{ id: string; threadId: string }>): AgentContextState[] {
+    if (this.#display.size === 0) return [];
     const agents = new Map(this.#store.list().map((agent) => [agent.id, agent]));
     return threads
       .flatMap(({ id: agentId, threadId }) => {
         const agent = agents.get(agentId);
         const session = agent ? this.#store.database.activeProviderSession(threadId, agent.provider) : null;
         const display = session ? this.#display.get(session.externalSessionId) : null;
-        if (!agent || !session || !display) return [];
-        // A `handoff` provider compacts only a session it can replace, which a side thread never is.
-        const compacts =
-          this.#providers.clientForAgent(agent)?.contextCompaction !== "handoff" ||
-          this.#rotatesSession(agentId, session.externalSessionId);
-        const usage = display.usage && !compacts ? { ...display.usage, autoCompactAt: null } : display.usage;
+        if (!agent || !display) return [];
+        // A `handoff` provider compacts only a session it can replace, which a side thread never is, so
+        // nothing compacts the thread on its own.
+        const handoff = this.#providers.clientForAgent(agent)?.contextCompaction === "handoff";
+        const usage = display.usage && handoff ? { ...display.usage, autoCompactAt: null } : display.usage;
         return [{ agentId, threadId, usage, compaction: display.compaction }];
       })
       .slice(0, INPUT_LIMITS.agents * INPUT_LIMITS.agentTasks);
