@@ -218,7 +218,7 @@ export function MachineResources(props: MachineResourcesProps) {
                 options={recipients()}
                 optionValue="id"
                 optionTextValue={memberName}
-                value={responsible()}
+                value={responsible() ?? null}
                 placement="bottom-end"
                 onChange={(member) => {
                   if (member) void save({ responsibleMemberId: member.id });
