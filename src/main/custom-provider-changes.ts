@@ -21,7 +21,7 @@ export interface CustomProviderChangeDependencies {
   // backend.
   service: Pick<
     AgentService,
-    "saveCustomProvider" | "updateCustomProvider" | "removeCustomProvider" | "reloadOpenCodeConfig"
+    "saveCustomProvider" | "updateCustomProvider" | "removeCustomProvider" | "reloadCustomEndpoints"
   >;
   customProviders: Pick<CustomProviderStore, "list" | "save" | "checkUpdate" | "update" | "remove">;
 }
@@ -82,7 +82,7 @@ export function createCustomProviderChanges({
             .pipe(toProviderRuntimeFailure);
           return {
             providers,
-            restart: yield* service.reloadOpenCodeConfig().pipe(toProviderRuntimeFailure),
+            restart: yield* service.reloadCustomEndpoints().pipe(toProviderRuntimeFailure),
           };
         })().pipe(Effect.uninterruptible),
       ),
@@ -110,7 +110,7 @@ export function createCustomProviderChanges({
             .pipe(toProviderRuntimeFailure);
           return {
             providers,
-            restart: yield* service.reloadOpenCodeConfig().pipe(toProviderRuntimeFailure),
+            restart: yield* service.reloadCustomEndpoints().pipe(toProviderRuntimeFailure),
           };
         })().pipe(Effect.uninterruptible),
       ),
@@ -137,7 +137,7 @@ export function createCustomProviderChanges({
             .pipe(toProviderRuntimeFailure);
           return {
             providers,
-            restart: yield* service.reloadOpenCodeConfig().pipe(toProviderRuntimeFailure),
+            restart: yield* service.reloadCustomEndpoints().pipe(toProviderRuntimeFailure),
           };
         })().pipe(Effect.uninterruptible),
       ),

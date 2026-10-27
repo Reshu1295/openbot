@@ -5,10 +5,10 @@ import { createCustomProvidersStore } from "./stores/custom-providers-store";
 
 /**
  * The user's own model endpoints. Mounted above `ServerScopeBoundary`, unlike `ProvidersProvider`:
- * an endpoint is merged into the OpenCode process on *this* computer, so the list is machine-local
+ * an endpoint runs in the endpoint provider on *this* computer, so the list is machine-local
  * and a server switch must not discard and reload it.
  *
- * Ungated. Nothing waits on the list: the model picker shows OpenCode's own models meanwhile, and
+ * Ungated. Nothing waits on the list: the model picker shows the other providers' models meanwhile, and
  * Server settings shows an empty provider list until it arrives.
  */
 const CustomProviders = createSimpleContext({

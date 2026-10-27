@@ -39,10 +39,11 @@ interface InitialSetupProps extends SetupProviderProps {
 
 type SetupRoute = "local" | "remote";
 
-// A custom agent is added in Settings after setup, so it is not a first provider.
-const PROVIDERS: Array<{ id: AgentProviderId; name: string }> = AGENT_PROVIDERS.filter((id) => id !== "acp").map(
-  (id) => ({ id, name: agentProviderName(id) }),
-);
+// A custom agent is added in Settings after setup, so it is not a first provider. Custom endpoints are
+// the Custom row, not a provider of the list.
+const PROVIDERS: Array<{ id: AgentProviderId; name: string }> = AGENT_PROVIDERS.filter(
+  (id) => id !== "acp" && id !== "endpoint",
+).map((id) => ({ id, name: agentProviderName(id) }));
 
 const TEXT_MARKER = "\u0000";
 

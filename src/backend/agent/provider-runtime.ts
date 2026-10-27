@@ -38,7 +38,6 @@ import { readCursorUsage } from "./../cursor-usage";
 import { causeHelpers } from "../effect-boundary";
 import { McpHandoffLog } from "./../mcp-handoff-log";
 import { providerMcpServerName } from "./../mcp-provider-shapes";
-import { openCodeSignInMessage } from "./../opencode-config";
 import { readOpenCodeGoUsage } from "./../opencode-usage";
 import type { ProcessConfinement } from "../process-confinement";
 import {
@@ -406,6 +405,8 @@ export class ProviderRuntime implements ProviderPort {
   readonly #updatesWhenIdle = new Set<AgentProvider>();
   /** A custom agent change that a turn delayed. The idle check applies it when the turn stops. */
   #customAgentsReloadPending = false;
+  /** A custom endpoint change that a turn delayed. The idle check applies it when the turn stops. */
+  #customEndpointsReloadPending = false;
   /** Providers that a turn kept on the old agent environment. The idle check restarts each after its turn. */
   readonly #environmentReloadPending = new Set<AgentProvider>();
   readonly #lastUsed = new Map<AgentProvider, number>();
@@ -799,6 +800,8 @@ export class ProviderRuntime implements ProviderPort {
   readonly #releaseIdleProviders = Effect.fn("ProviderRuntime.releaseIdleProviders")(function* (this: ProviderRuntime) {
     if (this.#hooks.isStopping() || this.#status.phase !== "ready") return;
     if (this.#customAgentsReloadPending && !this.#hooks.isProviderBusy("acp")) yield* this.reloadCustomAgents();
+    if (this.#customEndpointsReloadPending && !this.#hooks.isProviderBusy("endpoint"))
+      yield* this.reloadCustomEndpoints();
     for (const provider of this.#environmentReloadPending) {
       if (!this.#hooks.isProviderBusy(provider)) yield* this.#reloadAgentEnvironment(provider);
     }
@@ -1691,51 +1694,56 @@ export class ProviderRuntime implements ProviderPort {
   }).bind(this);
 
   /**
-   * The custom-endpoint wording, when there is a custom endpoint to talk about.
+   * Replaces the endpoint provider's Pi client so a changed custom endpoint reaches it.
    *
-   * OpenCode answers "not signed in" for a refused key or an unreachable base URL exactly as it does
-   * for a missing account, so once an endpoint exists the default advice - run `opencode auth login`
-   * - sends the user to the wrong fix. Returns null when the usual message is still right, so every
-   * caller keeps its own default.
-   */
-  #customProviderSignInMessage(provider: AgentProvider): string | null {
-    const count = provider === "opencode" ? this.#credentials.customProviders().length : 0;
-    return count > 0 ? openCodeSignInMessage(count) : null;
-  }
-
-  /**
-   * Replaces the OpenCode process so a changed custom-provider config reaches it.
+   * `connectProvider` cannot do this: it returns early for a provider that is already connected. This
+   * reuses the rest of that path - re-resolve the CLI, build a fresh client, swap it in, refresh the
+   * model catalogue - and threads survive it, because a provider session id lives in
+   * `projection_provider_sessions` and is resumed. A Pi thread reads the endpoints when its process
+   * starts, so a thread that stays open keeps the old address and key until the client is replaced.
    *
-   * `connectProvider` cannot do this: it returns early for a provider that is already connected, so
-   * it never respawns a running OpenCode. This reuses the rest of that path unchanged - re-resolve
-   * the CLI, build a fresh client, swap it in, refresh the model catalogue - and threads survive it,
-   * because a provider session id lives in `projection_provider_sessions` and is resumed.
+   * The first saved endpoint starts the provider. A turn in progress wins, and the idle check applies
+   * the change when the turn stops. With the last endpoint removed, the provider stops.
    *
-   * One `opencode acp` process serves every OpenCode agent, so a respawn is felt account-wide. That
-   * is why a turn in progress wins: the config is only read at spawn, so skipping costs nothing
-   * durable, and the next connect or app start picks the endpoint up.
-   *
-   * It reports how the respawn went and never throws, because the caller has already written the
-   * endpoint to disk: a throw here would read to the user as a save that failed. A respawn that
-   * fails - an endpoint OpenCode refuses at spawn - is reported the way every other connection
-   * failure is, as an error state and a message on the provider's own status.
+   * It reports how the restart went and never throws, because the caller has already written the
+   * endpoint to disk: a throw here would read to the user as a save that failed. A restart that fails
+   * is reported the way every other connection failure is, on the provider's own status.
    */
 
-  readonly reloadOpenCodeConfig = Effect.fn("ProviderRuntime.reloadOpenCodeConfig")(function* (
+  readonly reloadCustomEndpoints = Effect.fn("ProviderRuntime.reloadCustomEndpoints")(function* (
     this: ProviderRuntime,
   ): Effect.fn.Return<CustomProviderRestart> {
-    if (!this.#clients.has("opencode")) return "not-running";
-    if (this.#hooks.isProviderBusy("opencode")) return "skipped-busy";
-    const result = yield* Effect.result(
-      this.#runProviderConnectionCommand("opencode", () => this.#reprobeProvider("opencode")),
+    this.#customEndpointsReloadPending = false;
+    const result = yield* this.#reloadCustomEndpoints().pipe(
+      Effect.catch(() => Effect.succeed<CustomProviderRestart>("not-running")),
     );
-    if (Result.isFailure(result) && this.#hooks.isProviderBusy("opencode")) return "skipped-busy";
-    return "restarted";
+    if (result === "skipped-busy") this.#customEndpointsReloadPending = true;
+    return result;
   }, Effect.uninterruptible).bind(this);
+
+  readonly #reloadCustomEndpoints = Effect.fn("ProviderRuntime.reloadCustomEndpointClient")(function* (
+    this: ProviderRuntime,
+  ): Effect.fn.Return<CustomProviderRestart, ProviderOperationFailed> {
+    const saved = this.#credentials.customProviders().length > 0;
+    if (!this.#clients.has("endpoint")) {
+      if (this.#off.has("endpoint") || this.#released.has("endpoint") || !saved) return "not-running";
+      yield* this.refreshProvider("endpoint").pipe(toProviderOperationFailed);
+      return this.#clients.has("endpoint") ? "restarted" : "not-running";
+    }
+    if (this.#hooks.isProviderBusy("endpoint")) return "skipped-busy";
+    const result = yield* Effect.result(
+      this.#runProviderConnectionCommand("endpoint", () => this.#reprobeProvider("endpoint")),
+    );
+    if (Result.isFailure(result)) {
+      if (this.#hooks.isProviderBusy("endpoint")) return "skipped-busy";
+      if (!saved) yield* this.#stopProviderClient("endpoint");
+    }
+    return "restarted";
+  }, Effect.uninterruptible);
 
   /**
    * Restarts each running process that read the agent environment when it started, so the next
-   * turn gets the new one. The rules of `reloadOpenCodeConfig` apply, and a restart that a turn
+   * turn gets the new one. The rules of `reloadCustomEndpoints` apply, and a restart that a turn
    * delays is applied by the idle check after the turn stops. A Workspace only process is replaced
    * at its next turn, because its key names the activation.
    */
@@ -1768,7 +1776,7 @@ export class ProviderRuntime implements ProviderPort {
 
   /**
    * Replaces the router of the custom agents, so a saved, changed or removed agent reaches it. The
-   * same rules as `reloadOpenCodeConfig` apply: a turn in progress wins, and it never throws. The
+   * same rules as `reloadCustomEndpoints` apply: a turn in progress wins, and it never throws. The
    * first saved agent starts the provider; with the last one removed, the provider stops. A change
    * that a turn delays is applied by the idle check after the turn stops, as the saved message says.
    */
@@ -2797,26 +2805,25 @@ export class ProviderRuntime implements ProviderPort {
 
   /** What an account check that finds no account reports. */
   #noAccountMessage(provider: AgentProvider): string {
-    return (
-      this.#customProviderSignInMessage(provider) ??
-      sourceText("error.provider.noAuthenticatedAccount", { provider: providerLabel(provider) })
-    );
+    // The endpoint provider has no account: it lists no model while no endpoint is saved.
+    return provider === "endpoint"
+      ? sourceText("error.provider.endpointSignIn")
+      : sourceText("error.provider.noAuthenticatedAccount", { provider: providerLabel(provider) });
   }
 
   /** What a provider with no account says, as the start reports it. */
   #signInRequiredMessage(provider: AgentProvider): string {
-    return (
-      this.#customProviderSignInMessage(provider) ??
-      (provider === "pi"
-        ? sourceText("error.provider.piSignIn")
-        : provider === "muse"
-          ? sourceText("error.provider.museSignIn")
-          : provider === "inception"
-            ? sourceText("error.provider.inceptionSignIn")
-            : provider === "deepseek"
-              ? sourceText("error.provider.deepseekSignIn")
-              : agentProviderDescriptor(provider).signInMessage)
-    );
+    return provider === "pi"
+      ? sourceText("error.provider.piSignIn")
+      : provider === "muse"
+        ? sourceText("error.provider.museSignIn")
+        : provider === "inception"
+          ? sourceText("error.provider.inceptionSignIn")
+          : provider === "deepseek"
+            ? sourceText("error.provider.deepseekSignIn")
+            : provider === "endpoint"
+              ? sourceText("error.provider.endpointSignIn")
+              : agentProviderDescriptor(provider).signInMessage;
   }
 
   #clearProviderConnectionState(provider: AgentProvider): void {

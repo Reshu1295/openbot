@@ -46,13 +46,11 @@ export const messages = {
   "customProvider.error.baseUrlCredential": "認証情報は URL ではなくヘッダーに入れてください。",
 
   "customProvider.saved.restarted": "保存しました。OpenBot がモデルを読み込んでいます。",
-  "customProvider.saved.skippedBusy":
-    "保存しました。OpenCode は現在のタスクが止まったあとで一覧を読み込みます。そのあとで「接続」を押してください。",
-  "customProvider.saved.notRunning": "保存しました。OpenCode は次回の起動時に一覧を読み込みます。",
+  "customProvider.saved.skippedBusy": "保存しました。OpenBot は現在のタスクが止まったあとでモデルを読み込みます。",
+  "customProvider.saved.notRunning": "保存しました。OpenBot は次回の起動時にモデルを読み込みます。",
   "customProvider.removed.restarted": "削除しました。OpenBot がモデルを読み込んでいます。",
-  "customProvider.removed.skippedBusy":
-    "削除しました。OpenCode は現在のタスクが止まったあとで一覧を読み込みます。そのあとで「接続」を押してください。",
-  "customProvider.removed.notRunning": "削除しました。OpenCode は次回の起動時に一覧を読み込みます。",
+  "customProvider.removed.skippedBusy": "削除しました。OpenBot は現在のタスクが止まったあとでモデルを読み込みます。",
+  "customProvider.removed.notRunning": "削除しました。OpenBot は次回の起動時にモデルを読み込みます。",
   "customProvider.saveFailed": "OpenBot はこのエンドポイントを保存できませんでした。",
   "customProvider.removeFailed": "OpenBot は {name} を削除できませんでした。",
   "customProvider.saveUnavailable": "このビルドではエンドポイントを保存できません。",
@@ -98,7 +96,7 @@ export const messages = {
   "customProvider.preset.description":
     "ローカルのモデルサーバー、エンドポイント、または ACP エージェントを選んでください。",
   "customProvider.preset.heading": "カスタムを追加",
-  "customProvider.preset.subtitle": "OpenCode で使うモデル、または独立したエージェントです。",
+  "customProvider.preset.subtitle": "自分のエンドポイントのモデル、または独立したエージェントです。",
   "customProvider.preset.models": "モデル",
   "customProvider.preset.agents": "エージェント",
   "customProvider.preset.ollama": "Ollama",

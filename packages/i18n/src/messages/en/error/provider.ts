@@ -361,6 +361,7 @@ export const messages = defineMessages("error.provider", {
   "error.provider.museSignIn": "Sign in to Muse on the host computer to continue.",
   "error.provider.inceptionSignIn": "Add an Inception API key to continue.",
   "error.provider.deepseekSignIn": "Add a DeepSeek API key to continue.",
+  "error.provider.endpointSignIn": "Add a custom endpoint to continue.",
   "error.provider.terminalLoginFailed":
     "The sign-in terminal could not open. Open the provider CLI on this host and sign in there, then refresh providers.",
   "error.provider.nativeArchiveInvalid": "The provider download does not contain a valid installation.",

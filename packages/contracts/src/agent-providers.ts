@@ -31,6 +31,7 @@ export const AGENT_PROVIDERS = [
   "muse",
   "inception",
   "deepseek",
+  "endpoint",
   "acp",
 ] as const;
 export type AgentProviderId = (typeof AGENT_PROVIDERS)[number];
@@ -398,6 +399,29 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     reportsUsage: false,
     approvalsInFullAccess: true,
   },
+  // The user's own model endpoints (OpenAI compatible, or Anthropic's API), which run in the Pi CLI
+  // that OpenBot downloads for Pi. A model id is `<endpointId>/<modelId>`, so one provider row serves
+  // every endpoint. The endpoints are saved on this computer; OpenCode does not take part.
+  endpoint: {
+    id: "endpoint",
+    displayName: "Custom endpoint",
+    cliName: "Pi CLI",
+    onboardingDescription: "Your own OpenAI-compatible or Anthropic endpoints",
+    signInMessage: "Add a custom endpoint to continue.",
+    installGuideLink: null,
+    defaultModel: "",
+    legacyModelPrefix: null,
+    authKind: "endpoint",
+    pickerOrder: 11,
+    localCodeSignIn: null,
+    signInPageEnd: "callback",
+    skillFolders: [".agents/skills"],
+    workspaceEnforcement: "confined-process",
+    steer: "native",
+    concurrentTurns: true,
+    reportsUsage: false,
+    approvalsInFullAccess: true,
+  },
   // One provider for every Agent Client Protocol agent the user adds by command. The model id names
   // the agent (`<customAgentId>/<agentModel>`), so one provider row serves them all and the shipped
   // provider CHECK lists grow by one word only once.
@@ -442,11 +466,11 @@ export function agentProviderCliName(provider: AgentProviderId): string {
 }
 
 /**
- * Picker and onboarding order, which is not `AGENT_PROVIDERS` order. `acp` is not in it: a custom
- * agent is the user's own command, listed in the picker's Custom tab and never offered as a default.
+ * Picker and onboarding order, which is not `AGENT_PROVIDERS` order. `acp` and `endpoint` are not in
+ * it: a custom agent and a custom endpoint are the user's own, listed in the picker's Custom tab.
  */
 export const PICKER_PROVIDERS: readonly AgentProviderId[] = AGENT_PROVIDER_DESCRIPTORS.filter(
-  (descriptor) => descriptor.id !== "acp",
+  (descriptor) => descriptor.id !== "acp" && descriptor.id !== "endpoint",
 )
   .sort((left, right) => left.pickerOrder - right.pickerOrder)
   .map((descriptor) => descriptor.id);
@@ -476,8 +500,8 @@ export function isManagedRuntimeProvider(provider: AgentProviderId): provider is
 
 /**
  * The providers that only newer Team API protocols carry: Gemini and custom ACP agents from protocol
- * 5, Cursor and Cline from protocol 6, Pi and Muse from protocol 7. No protocol carries Inception or
- * DeepSeek yet.
+ * 5, Cursor and Cline from protocol 6, Pi and Muse from protocol 7, custom endpoints from protocol 8.
+ * No protocol carries Inception or DeepSeek.
  * A joined server's settings list one only when the host's status names it.
  */
 export const LOCAL_ONLY_PROVIDERS = [
@@ -488,6 +512,7 @@ export const LOCAL_ONLY_PROVIDERS = [
   "muse",
   "inception",
   "deepseek",
+  "endpoint",
   "acp",
 ] as const satisfies readonly AgentProviderId[];
 

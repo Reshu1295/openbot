@@ -34,6 +34,10 @@ const ACP_PROMPT_PATH =
 
 const ACP_CURSOR_PATH = "M12 17a1 1 0 0 1 1-1h7a1 1 0 1 1 0 2h-7a1 1 0 0 1-1-1Z";
 
+// OpenBot's own mark for a custom endpoint: two server units. No third-party mark stands for all of them.
+const ENDPOINT_PATH =
+  "M4 3h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm3 3.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM4 13h16a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Zm3 3.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z";
+
 // A neutral ring for a provider that this build does not know. It is no provider's mark.
 const UNKNOWN_PATH = "M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Z";
 
@@ -56,6 +60,7 @@ export type ProviderLogoVariant =
   | "muse"
   | "inception"
   | "deepseek"
+  | "endpoint"
   | "unknown";
 
 export interface ProviderLogoPath {
@@ -94,6 +99,8 @@ export function providerLogoShape(provider: ProviderLogoVariant): ProviderLogoSh
       return { viewBox: GRID_24, paths: [{ d: CLINE_PATH }] };
     case "deepseek":
       return { viewBox: GRID_24, paths: [{ d: DEEPSEEK_PATH, evenOdd: true }] };
+    case "endpoint":
+      return { viewBox: GRID_24, paths: [{ d: ENDPOINT_PATH, evenOdd: true }] };
     // Native CLI providers use the neutral terminal mark.
     case "acp":
     case "pi":

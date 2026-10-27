@@ -211,7 +211,9 @@ export function ProviderModelPicker(props: ProviderModelPickerProps) {
   );
   /** The tab the current selection lives on: the Custom one for the user's endpoints and agents. */
   const activeProvider = (): RailId =>
-    props.provider === "acp" || (props.provider === "opencode" && isCustomProviderModelId(props.value, customIds()))
+    props.provider === "acp" ||
+    props.provider === "endpoint" ||
+    (props.provider === "opencode" && isCustomProviderModelId(props.value, customIds()))
       ? CUSTOM_RAIL
       : props.provider;
   const activeKey = (): RailKey => {
@@ -260,12 +262,21 @@ export function ProviderModelPicker(props: ProviderModelPickerProps) {
     });
   };
   /**
-   * One provider status per tab. The Custom tab stands for OpenCode, which serves the endpoints, and
+   * The provider that serves the endpoints: `endpoint`, or OpenCode on a host from before it, which
+   * reports no `endpoint` row.
+   */
+  const endpointProvider = (): AgentProviderId =>
+    props.agentStatus.providers?.some((item) => item.id === "endpoint") ||
+    props.modelOptions.some((option) => option.provider === "endpoint")
+      ? "endpoint"
+      : "opencode";
+  /**
+   * One provider status per tab. The Custom tab stands for the provider that serves the endpoints and
    * for `acp`, which runs the agents: it is available when either of the saved kinds is.
    */
   const railStatus = (rail: RailId): AgentProviderStatus => {
     if (rail !== CUSTOM_RAIL) return providerAvailability(props.agentStatus, props.modelOptions, rail, t);
-    const endpoints = providerAvailability(props.agentStatus, props.modelOptions, "opencode", t);
+    const endpoints = providerAvailability(props.agentStatus, props.modelOptions, endpointProvider(), t);
     if (agentCount() === 0) return endpoints;
     const agents = providerAvailability(props.agentStatus, props.modelOptions, "acp", t);
     if (!props.customProviders?.length) return agents;
@@ -665,7 +676,8 @@ export function ProviderModelPicker(props: ProviderModelPickerProps) {
                   const model = selected();
                   return model ? pickerModelKey(model) : props.value;
                 };
-                // OpenCode and Custom share the `opencode` wire id; the tab whose list holds it owns it.
+                // On a host from before the `endpoint` provider, OpenCode and Custom share the `opencode`
+                // wire id; the tab whose list holds it owns it.
                 const ownsSelection = () =>
                   provider === CUSTOM_RAIL
                     ? selected()?.provider === props.provider
@@ -983,7 +995,7 @@ function railOf(key: RailKey): RailId {
 }
 
 function wireProvider(rail: RailId): AgentProviderId {
-  return rail === CUSTOM_RAIL ? "opencode" : rail;
+  return rail === CUSTOM_RAIL ? "endpoint" : rail;
 }
 
 function railName(rail: RailId, t: AppTranslate): string {

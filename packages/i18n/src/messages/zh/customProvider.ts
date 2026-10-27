@@ -41,13 +41,13 @@ export const messages = {
   "customProvider.error.baseUrlProtocol": "请使用 http:// 或 https:// 开头的 URL。",
   "customProvider.error.baseUrlCredential": "请把凭据放在请求头中，不要放在 URL 里。",
 
-  // The note after a save or a removal. It tells the user when OpenCode reads the new list.
+  // The note after a save or a removal. It tells the user when OpenBot loads the new list.
   "customProvider.saved.restarted": "已保存，OpenBot 正在加载模型。",
-  "customProvider.saved.skippedBusy": "已保存。当前任务结束后 OpenCode 会读取该列表，届时请点“连接”。",
-  "customProvider.saved.notRunning": "已保存。OpenCode 下次启动时会读取该列表。",
+  "customProvider.saved.skippedBusy": "已保存。当前任务结束后 OpenBot 会加载模型。",
+  "customProvider.saved.notRunning": "已保存。OpenBot 下次启动时会加载模型。",
   "customProvider.removed.restarted": "已移除，OpenBot 正在加载模型。",
-  "customProvider.removed.skippedBusy": "已移除。当前任务结束后 OpenCode 会读取该列表，届时请点“连接”。",
-  "customProvider.removed.notRunning": "已移除。OpenCode 下次启动时会读取该列表。",
+  "customProvider.removed.skippedBusy": "已移除。当前任务结束后 OpenBot 会加载模型。",
+  "customProvider.removed.notRunning": "已移除。OpenBot 下次启动时会加载模型。",
   "customProvider.saveFailed": "OpenBot 无法保存该端点。",
   "customProvider.removeFailed": "OpenBot 无法移除 {name}。",
   "customProvider.saveUnavailable": "当前版本无法保存端点。",
@@ -96,7 +96,7 @@ export const messages = {
   "customProvider.preset.title": "添加服务商或助手",
   "customProvider.preset.description": "选择本地模型服务器、端点或 ACP 助手。",
   "customProvider.preset.heading": "添加自定义项",
-  "customProvider.preset.subtitle": "供 OpenCode 使用的模型，或独立的助手。",
+  "customProvider.preset.subtitle": "来自你自己端点的模型，或独立的助手。",
   "customProvider.preset.models": "模型",
   "customProvider.preset.agents": "助手",
   "customProvider.preset.ollama": "Ollama",

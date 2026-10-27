@@ -149,7 +149,7 @@ export function validateCustomProvider(
       errors.modelRows[index] = t("customProvider.error.displayNameLength", { max: INPUT_LIMITS.modelName });
       return;
     }
-    // OpenCode reports this model as `<provider id>/<model id>`, and both the IPC and Team API list
+    // The endpoint provider reports this model as `<provider id>/<model id>`, and both the IPC and Team API list
     // decoders fail closed on the whole array when one id is malformed - which empties the picker
     // rather than hiding one row. So the composed id is checked here, where the user can still fix it.
     if (!errors.providerId && !isAgentModel(composedCustomModelId(providerId, id))) {
@@ -199,7 +199,7 @@ function baseUrlError(baseUrl: string, t: AppTranslate): string | undefined {
   if (!parsed) return t("customProvider.error.baseUrlInvalid", { example: "http://127.0.0.1:11434/v1" });
   // `http:` is the main case, not the exception: a custom provider is usually a model server on this
   // computer, which has no certificate. Anything else - `file:`, `ws:`, `javascript:` - is not an
-  // endpoint OpenCode can call.
+  // endpoint Pi can call.
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return t("customProvider.error.baseUrlProtocol");
   // A credential in the URL is stored and listed as plain text, because only the key and the headers
   // are encrypted. The user is told where it belongs instead.
@@ -229,7 +229,7 @@ export function customProviderValue(draft: CustomProviderDraft): SaveCustomProvi
     name: draft.displayName.trim(),
     baseUrl: draft.baseUrl.trim(),
     // An empty key is not an empty string downstream: it means "this endpoint needs no key", and a
-    // blank `apiKey` in the OpenCode config would be sent as an empty Authorization header.
+    // blank key would be sent as an empty Authorization header.
     apiKey: draft.apiKey.trim() || null,
     models,
     headers: draft.headers

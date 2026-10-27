@@ -47,13 +47,11 @@ export const messages = {
 
   // Kaydetme veya kaldırma işleminden sonraki not. OpenCode'un yeni listeyi ne zaman okuduğunu belirtir.
   "customProvider.saved.restarted": "Kaydedildi. OpenBot modelleri yüklüyor.",
-  "customProvider.saved.skippedBusy":
-    "Kaydedildi. OpenCode listeyi geçerli görev durduktan sonra okur. Ardından Bağlan'a basın.",
-  "customProvider.saved.notRunning": "Kaydedildi. OpenCode bir sonraki başlatılışında listeyi okur.",
+  "customProvider.saved.skippedBusy": "Kaydedildi. OpenBot modelleri geçerli görev durduktan sonra yükler.",
+  "customProvider.saved.notRunning": "Kaydedildi. OpenBot modelleri bir sonraki başlatmada yükler.",
   "customProvider.removed.restarted": "Kaldırıldı. OpenBot modelleri yüklüyor.",
-  "customProvider.removed.skippedBusy":
-    "Kaldırıldı. OpenCode listeyi geçerli görev durduktan sonra okur. Ardından Bağlan'a basın.",
-  "customProvider.removed.notRunning": "Kaldırıldı. OpenCode bir sonraki başlatılışında listeyi okur.",
+  "customProvider.removed.skippedBusy": "Kaldırıldı. OpenBot modelleri geçerli görev durduktan sonra yükler.",
+  "customProvider.removed.notRunning": "Kaldırıldı. OpenBot modelleri bir sonraki başlatmada yükler.",
   "customProvider.saveFailed": "OpenBot bu uç noktayı kaydedemedi.",
   "customProvider.removeFailed": "OpenBot {name} öğesini kaldıramadı.",
   "customProvider.saveUnavailable": "Bu derleme bir uç noktayı kaydedemez.",
@@ -103,7 +101,7 @@ export const messages = {
   "customProvider.preset.title": "Sağlayıcı veya ajan ekle",
   "customProvider.preset.description": "Yerel bir model sunucusu, bir uç nokta veya bir ACP ajanı seçin.",
   "customProvider.preset.heading": "Özel ekle",
-  "customProvider.preset.subtitle": "OpenCode için modeller veya kendine ait bir ajan.",
+  "customProvider.preset.subtitle": "Kendi uç noktanızdan modeller veya kendine ait bir ajan.",
   "customProvider.preset.models": "Modeller",
   "customProvider.preset.agents": "Ajanlar",
   "customProvider.preset.ollama": "Ollama",

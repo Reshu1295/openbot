@@ -18,6 +18,9 @@ import { stopWindowsProcessTree } from "./windows-process-tree";
 
 const PI_RECORD_LIMIT_BYTES = 256 * 1024 * 1024;
 
+/** The providers that run in the Pi CLI: Pi itself, the key-only providers and custom endpoints. */
+export type PiProviderId = "pi" | KeyOnlyProviderId | "endpoint";
+
 /** Owns one Pi RPC process and its correlated requests. Session policy belongs to the client. */
 export class PiRpc extends EventEmitter<{ record: [DynamicRecord]; diagnostic: [string]; exit: [Error] }> {
   readonly #pending = new Map<string, (result: Effect.Effect<DynamicRecord, ProviderClientOperationError>) => void>();
@@ -25,7 +28,7 @@ export class PiRpc extends EventEmitter<{ record: [DynamicRecord]; diagnostic: [
   #stopping = false;
   constructor(
     private readonly redact: (text: string) => string,
-    private readonly provider: "pi" | KeyOnlyProviderId = "pi",
+    private readonly provider: PiProviderId = "pi",
   ) {
     super();
   }

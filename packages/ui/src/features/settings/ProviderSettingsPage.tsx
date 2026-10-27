@@ -66,6 +66,7 @@ import type { ProviderPickerOption } from "../../components/ProviderPicker";
 import { isApiKeyAccount, type ProviderPickerAccount, providerAccountName } from "../../components/provider-accounts";
 import {
   createProviderRow,
+  customEngine,
   PROVIDER_ACTION_LABEL,
   PROVIDER_ACTION_TEXT,
   type ProviderRow,
@@ -209,14 +210,17 @@ function ProviderList(props: ProviderSettingsPageProps & { onOpen: (id: PageId) 
   /** A query matches the name, the line under it, and the names and emails of the accounts. */
   const matches = (...texts: (string | null | undefined)[]) =>
     needle() === "" || texts.some((text) => text?.toLowerCase().includes(needle()));
+  // The endpoint provider has the Custom page, not a row of its own.
   const shown = createMemo(() =>
-    props.options.filter((option) =>
-      matches(
-        option.name,
-        summary(option),
-        option.email,
-        ...(option.accounts ?? []).flatMap((account) => [account.label, account.email]),
-      ),
+    props.options.filter(
+      (option) =>
+        option.id !== "endpoint" &&
+        matches(
+          option.name,
+          summary(option),
+          option.email,
+          ...(option.accounts ?? []).flatMap((account) => [account.label, account.email]),
+        ),
     ),
   );
   const connectedRows = () => shown().filter(isConnected);
@@ -389,14 +393,16 @@ interface DefaultChoice {
 /** The default provider as one select, so the rows need no radio. */
 function DefaultProviderRow(props: ProviderSettingsPageProps) {
   const { t } = useText();
-  const openCode = () => props.options.find((option) => option.id === "opencode");
+  const engine = () => customEngine(props.options);
   const choices = (): DefaultChoice[] => {
     const value = props.defaultProvider?.value ?? null;
+    // The endpoint provider is the Custom choice, not a row of its own.
     const providers = props.options
+      .filter((option) => option.id !== "endpoint")
       .filter((option) => (option.state === "available" && !option.off) || option.id === value)
       .map((option) => ({ id: option.id, name: option.name }));
     const custom =
-      (props.customProviders?.length ?? 0) > 0 && servesCustomProvider(openCode()) && props.onAddCustomProvider;
+      (props.customProviders?.length ?? 0) > 0 && servesCustomProvider(engine()) && props.onAddCustomProvider;
     return custom || value === "custom" ? [...providers, { id: "custom", name: t("provider.custom.name") }] : providers;
   };
   const selected = () => choices().find((choice) => choice.id === props.defaultProvider?.value) ?? null;
@@ -1453,7 +1459,7 @@ function UseSection(props: SectionProps) {
 function CustomEndpointsPage(props: ProviderSettingsPageProps) {
   const { t, format } = useText();
   const endpoints = () => props.customProviders ?? [];
-  const engine = () => props.options.find((option) => option.id === "opencode");
+  const engine = () => customEngine(props.options);
   const ready = () => servesCustomProvider(engine());
   const [confirming, setConfirming] = createSignal<CustomProviderSummary | null>(null);
   return (

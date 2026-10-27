@@ -7,7 +7,6 @@ import {
   type AgentModelOption,
   type AgentProviderId,
   DEFAULT_PROMPT_CACHE_TTL,
-  type KeyOnlyProviderId,
   type PromptCacheTtl,
 } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
@@ -45,20 +44,21 @@ import {
 import { clineFreeModels } from "./cline-free-models";
 import { readCursorUsage } from "./cursor-usage";
 import { CustomAcpAgentsClient, type CustomAgentConfig, type CustomAgentSource } from "./custom-acp-agents-client";
+import type { CustomProviderSource } from "./custom-provider-config";
 import { GrokAgentClient } from "./grok-client";
 import type { McpOAuthAuthority } from "./mcp-oauth-provider";
 import type { McpOAuthProxySettingsStore } from "./mcp-oauth-proxy";
 import type { McpDropReporter, McpEndpointSource, McpServerSource, McpToolRuntimeSource } from "./mcp-provider-shapes";
 import { MuseAgentClient } from "./muse-client";
 import {
-  type CustomProviderSource,
   OPENCODE_PROFILE_CONFIG,
+  OPENCODE_SIGN_IN_MESSAGE,
   openCodeConfigEnv,
   openCodeModelName,
-  openCodeSignInMessage,
 } from "./opencode-config";
 import { readOpenCodeGoUsage } from "./opencode-usage";
 import { PiAgentClient } from "./pi-client";
+import type { PiProviderId } from "./pi-rpc";
 import {
   antigravityStatePaths,
   clineStatePaths,
@@ -484,9 +484,12 @@ export interface BuiltInProviderDriver {
   validateAccount(account: NonNullable<AccountReadResult["account"]>): void;
 }
 
-/** Pi and the key-only providers run the same Pi client. A key-only provider adds its key extension. */
+/**
+ * Pi, the key-only providers and custom endpoints run the same Pi client. A key-only provider adds its
+ * key extension, and the endpoint provider an extension that registers the saved endpoints.
+ */
 function piClient(
-  provider: "pi" | KeyOnlyProviderId,
+  provider: PiProviderId,
   cli: AgentCliInfo,
   timeout: number,
   context: ProviderClientContext,
@@ -515,12 +518,18 @@ function piClient(
   });
 }
 
-function piKeyProvider(provider: "pi" | KeyOnlyProviderId, context: ProviderClientContext) {
-  return provider === "pi" ? {} : { keyProvider: { id: provider, apiKey: () => context.apiKey(provider) } };
+function piKeyProvider(provider: PiProviderId, context: ProviderClientContext) {
+  if (provider === "pi") return {};
+  if (provider === "endpoint")
+    return {
+      endpoints: context.customProviders,
+      ...(context.servesModel ? { servesModel: context.servesModel } : {}),
+    };
+  return { keyProvider: { id: provider, apiKey: () => context.apiKey(provider) } };
 }
 
 function piProfileClient(
-  provider: "pi" | KeyOnlyProviderId,
+  provider: PiProviderId,
   cli: AgentCliInfo,
   timeout: number,
   context: ProviderClientContext,
@@ -564,6 +573,17 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
     createClient: (cli, timeout, context, confinement) => piClient("deepseek", cli, timeout, context, confinement),
     createProfileClient: (cli, timeout, context) => piProfileClient("deepseek", cli, timeout, context),
     authState: (account) => ({ kind: "deepseek", email: account?.email ?? null }),
+    validateAccount: () => undefined,
+  },
+  {
+    id: "endpoint",
+    // The endpoints are saved in OpenBot's Custom settings. Pi's own sign-in stays on the Pi row.
+    signIn: { kind: "external" },
+    cliProvider: "pi",
+    resolveCli: resolvePiCli,
+    createClient: (cli, timeout, context, confinement) => piClient("endpoint", cli, timeout, context, confinement),
+    createProfileClient: (cli, timeout, context) => piProfileClient("endpoint", cli, timeout, context),
+    authState: (account) => ({ kind: "endpoint", email: account?.email ?? null }),
     validateAccount: () => undefined,
   },
   {
@@ -729,9 +749,8 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
       fallback: modelsAfterOpenCodeDiscoveryFailure,
     },
     resolveCli: resolveOpencodeCli,
-    // Both clients read the key and the custom providers at spawn, and the profile client merges the
-    // endpoints *into* the profile permission layer rather than beside it: the two share one
-    // environment variable, so the layer would be lost if a custom provider config replaced it.
+    // Both clients read the key at spawn, and the profile client merges the key *into* the profile
+    // permission layer rather than beside it: the two share one environment variable.
     createClient: (cli, timeout, context, confinement) =>
       new AcpAgentClient(cli, timeout, {
         provider: "opencode",
@@ -742,12 +761,11 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         extraEnv: () => ({
           ...context.agentEnvironment?.(),
           ...opencodeEnv(cli, context),
-          ...openCodeConfigEnv({}, context.customProviders, context.apiKey("opencode")),
+          ...openCodeConfigEnv({}, context.apiKey("opencode")),
           ...(confinement ? OPENCODE_CONFINED_ENV : {}),
         }),
-        signInMessage: openCodeSignInMessage(context.customProviders().length),
-        modelName: (id, name) => openCodeModelName(id, name, context.customProviders),
-        servesModel: context.servesModel,
+        signInMessage: OPENCODE_SIGN_IN_MESSAGE,
+        modelName: openCodeModelName,
         mcpServers: context.mcpServers,
         reportMcpDrops: context.reportMcpDrops,
         mcpToolRuntimes: context.mcpToolRuntimes,
@@ -767,11 +785,10 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         env: {},
         extraEnv: () => ({
           ...opencodeEnv(cli, context),
-          ...openCodeConfigEnv(OPENCODE_PROFILE_CONFIG, context.customProviders, context.apiKey("opencode")),
+          ...openCodeConfigEnv(OPENCODE_PROFILE_CONFIG, context.apiKey("opencode")),
         }),
-        signInMessage: openCodeSignInMessage(context.customProviders().length),
-        modelName: (id, name) => openCodeModelName(id, name, context.customProviders),
-        servesModel: context.servesModel,
+        signInMessage: OPENCODE_SIGN_IN_MESSAGE,
+        modelName: openCodeModelName,
       }),
     authState: (account) => ({ kind: "opencode", email: account?.email ?? null }),
     validateAccount: () => undefined,

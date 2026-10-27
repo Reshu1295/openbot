@@ -44,15 +44,13 @@ export const messages = {
   "customProvider.error.baseUrlProtocol": "http:// 또는 https:// URL을 사용해 주세요.",
   "customProvider.error.baseUrlCredential": "자격 증명은 URL이 아닌 헤더에 넣어 주세요.",
 
-  // The note after a save or a removal. It tells the user when OpenCode reads the new list.
+  // The note after a save or a removal. It tells the user when OpenBot loads the new list.
   "customProvider.saved.restarted": "저장했어요. OpenBot이 모델을 불러오는 중이에요.",
-  "customProvider.saved.skippedBusy":
-    "저장했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요. 그때 연결을 눌러 주세요.",
-  "customProvider.saved.notRunning": "저장했어요. OpenCode는 다음에 시작할 때 목록을 읽어요.",
+  "customProvider.saved.skippedBusy": "저장했어요. OpenBot이 현재 작업이 끝난 후 모델을 불러와요.",
+  "customProvider.saved.notRunning": "저장했어요. OpenBot이 다음에 시작할 때 모델을 불러와요.",
   "customProvider.removed.restarted": "제거했어요. OpenBot이 모델을 불러오는 중이에요.",
-  "customProvider.removed.skippedBusy":
-    "제거했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요. 그때 연결을 눌러 주세요.",
-  "customProvider.removed.notRunning": "제거했어요. OpenCode는 다음에 시작할 때 목록을 읽어요.",
+  "customProvider.removed.skippedBusy": "제거했어요. OpenBot이 현재 작업이 끝난 후 모델을 불러와요.",
+  "customProvider.removed.notRunning": "제거했어요. OpenBot이 다음에 시작할 때 모델을 불러와요.",
   "customProvider.saveFailed": "OpenBot이 이 엔드포인트를 저장하지 못했어요.",
   "customProvider.removeFailed": "OpenBot이 {name}을(를) 제거하지 못했어요.",
   "customProvider.saveUnavailable": "이 빌드에서는 엔드포인트를 저장할 수 없어요.",
@@ -100,7 +98,7 @@ export const messages = {
   "customProvider.preset.title": "제공자 또는 에이전트 추가",
   "customProvider.preset.description": "로컬 모델 서버, 엔드포인트, 또는 ACP 에이전트를 선택하세요.",
   "customProvider.preset.heading": "사용자 지정 추가",
-  "customProvider.preset.subtitle": "OpenCode용 모델 또는 독립 에이전트.",
+  "customProvider.preset.subtitle": "내 엔드포인트의 모델 또는 독립 에이전트.",
   "customProvider.preset.models": "모델",
   "customProvider.preset.agents": "에이전트",
   "customProvider.preset.ollama": "Ollama",

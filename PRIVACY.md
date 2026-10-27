@@ -1175,7 +1175,10 @@ server is only listed; OpenBot saves nothing until you select Add.
 
 When you add or edit an endpoint, Load models sends the key and headers you typed to that address.
 For a saved endpoint, OpenBot sends the stored key and headers only to the same origin as the saved
-address. Local detection can be turned off in Settings. Its switch, addresses, folders and hidden
+address. Agents on a saved endpoint run in the Pi CLI that OpenBot downloads for Pi, not in
+OpenCode. OpenBot gives the endpoint addresses, keys and headers to the local Pi process in its
+environment, and Pi does not write them to a file. Prompts, attachments, and tool results go to that
+process, and Pi sends them with the stored key and headers to the endpoint's address. Local detection can be turned off in Settings. Its switch, addresses, folders and hidden
 rows are in `openbot-provider-detection-v1.json` in the app profile.
 
 ### Custom agents

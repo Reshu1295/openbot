@@ -173,9 +173,10 @@ export function ConversationComposer() {
   const signInRequired = createMemo(() => {
     const provider = props.agent?.provider;
     if (!provider || !props.onSignInProvider) return null;
-    // OpenCode is signed in by pasting a key in settings, not by a login this button can start, so
-    // its notice would carry a button that does nothing. Every other provider opens its own OAuth.
-    if (provider === "opencode") return null;
+    // OpenCode is signed in by pasting a key in settings, and the endpoint provider by saving an
+    // endpoint there, not by a login this button can start, so their notice would carry a button
+    // that does nothing. Every other provider opens its own OAuth.
+    if (provider === "opencode" || provider === "endpoint") return null;
     const status = props.agentStatus.providers?.find((item) => item.id === provider);
     return status?.state === "sign-in-required" ? status : null;
   });

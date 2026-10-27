@@ -810,6 +810,31 @@ models, with bare ids such as `deepseek-v4-pro`. The Pi client loads no key exte
 the user's own `deepseek` models, for example from `DEEPSEEK_API_KEY` in Pi's environment.
 DeepSeek is local-only, as Inception is.
 
+## Custom endpoints
+
+The `endpoint` provider runs the saved custom endpoints (`custom-provider-store.ts`) on Pi's managed
+CLI (`cliProvider: "pi"`). OpenCode does not get the endpoints. `pi-endpoints.ts` writes a key-free
+extension that calls `pi.registerProvider(<endpointId>, …)` for each endpoint that has models. The
+endpoints, with keys and headers, are in `OPENBOT_PI_ENDPOINTS`; the extension reads the variable
+into a `globalThis` slot and deletes it. Pi reads a leading `$` or `!` in a key or header as a
+variable or a command, so these values are escaped. An endpoint on `https://api.anthropic.com` uses
+`anthropic-messages`, and all others use `openai-completions`. A keyless endpoint gets the key
+`openbot-no-key`, because Pi lists a provider only when it has a key. The saved key is also an
+`Authorization` (or `x-api-key`) header, because Pi prefers a key in its own `auth.json`. Models get
+no reasoning, text input, a 128,000-token context and 16,384 output tokens.
+
+Model ids stay `<endpointId>/<modelId>`, as they were on OpenCode. The client lists only the
+endpoints' models, named `<endpoint>/<model>`. `ProviderRuntime.reloadCustomEndpoints` starts the
+client on the first saved endpoint, stops it after the last is removed, and waits for idle when a
+turn runs. When the provider activates, `CustomEndpoints.adoptOpenCodeEndpointAgents` moves each
+idle OpenCode agent on a saved endpoint model to `endpoint` with the same model, and
+`endpointSetupState` moves a saved OpenCode default on such a model. A joined host of an older
+build still serves endpoints through `opencode`, so the UI accepts both (`customEngine`).
+
+Team API v1–v7 do not know `endpoint`; v8 and later carry it. A peer on v4–v7 no longer sees
+endpoint agents after the host moves them. `scripts/custom-endpoint-pi-e2e.ts` covers the
+extension and the model list.
+
 ## Muse
 
 Muse uses the official `@muse-code/sdk` to run `muse serve` over MSP. The SDK is pinned to `1.4.2`;

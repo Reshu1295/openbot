@@ -55,8 +55,11 @@ export function providerAuthKind(agent: AgentSummary, facts: ProviderAuthFacts):
       return facts.account("cursor") ? "subscription" : "unknown";
     case "cline":
       return model.startsWith("cline-free/") ? "free" : "unknown";
+    case "endpoint":
+      return "custom";
     case "opencode": {
       const prefix = model.slice(0, Math.max(0, model.indexOf("/")));
+      // An OpenCode agent that an earlier release ran on an endpoint, until it moves to `endpoint`.
       if (prefix && facts.customProviderIds().includes(prefix)) return "custom";
       if (isFreeOpencodeModel(model, model)) return "free";
       // The stored key is an OpenCode Go key, and Go is a plan: the key and the user's own OpenCode

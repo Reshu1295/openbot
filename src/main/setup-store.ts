@@ -4,6 +4,7 @@ import {
   type AppSetupState,
   isAgentModel,
   isAgentProvider,
+  isCustomProviderModelId,
   type SaveSetupInput,
 } from "@openbot/contracts/ipc";
 import { isDynamicRecord, isNumber, isString } from "@openbot/contracts/runtime-values";
@@ -66,4 +67,15 @@ export function writeSetupState(
     yield* writePreferenceFile(path, stored);
     return { completed: true, ...input };
   });
+}
+
+/**
+ * The saved default on the `endpoint` provider, or null when it needs no change. Before the
+ * `endpoint` provider, OpenCode served the custom endpoints, so a default custom model was saved as
+ * OpenCode with `<endpointId>/<modelId>`. The model id stays the same.
+ */
+export function endpointSetupState(state: AppSetupState, endpointIds: ReadonlySet<string>): SaveSetupInput | null {
+  const model = state.preferredModel;
+  if (!state.completed || state.preferredProvider !== "opencode" || !model) return null;
+  return isCustomProviderModelId(model, endpointIds) ? { preferredProvider: "endpoint", preferredModel: model } : null;
 }

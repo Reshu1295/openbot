@@ -21,7 +21,7 @@ import {
 } from "@openbot/contracts/ipc";
 import { Context, Effect, Exit, Fiber, Layer, ManagedRuntime, Scope } from "effect";
 import { scanAcpAgents } from "../backend/acp-agent-scan";
-import type { CustomProviderConfig } from "../backend/opencode-config";
+import type { CustomProviderConfig } from "../backend/custom-provider-config";
 import { ModelServerProbe, type ProbeError } from "./model-server-probe";
 
 /** A server on this computer answers at once, so a slow address is not held for long. */

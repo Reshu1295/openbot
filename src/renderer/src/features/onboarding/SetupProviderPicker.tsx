@@ -15,7 +15,7 @@ import {
   ProviderPicker,
   type ProviderPickerOption,
 } from "@openbot/ui/components/ProviderPicker";
-import { freeModelsReady } from "@openbot/ui/components/provider-row";
+import { customEngine, freeModelsReady, servesCustomProvider } from "@openbot/ui/components/provider-row";
 import { CustomProviderDialog } from "@openbot/ui/features/custom-providers/CustomProviderDialog";
 import { CustomProviderListDialog } from "@openbot/ui/features/custom-providers/CustomProviderListDialog";
 import { DetectedProviders } from "@openbot/ui/features/custom-providers/DetectedProviders";
@@ -141,7 +141,8 @@ export function savedCustomModel(
   model: AgentModelId | null,
   customProviders: readonly CustomProviderSummary[] | undefined,
 ): AgentModelId | null {
-  if (provider !== FREE_PROVIDER || !model) return null;
+  // A joined host from before the `endpoint` provider saved the custom choice as OpenCode.
+  if ((provider !== "endpoint" && provider !== FREE_PROVIDER) || !model) return null;
   return (customProviders ?? []).some((endpoint) => model.startsWith(`${endpoint.id}/`)) ? model : null;
 }
 
@@ -206,7 +207,8 @@ export function createSetupProviders(
         props.agentStatus.providers?.some((candidate) => candidate.id === provider.id) === true,
     ).map((provider) => {
       const status = props.agentStatus.providers?.find((candidate) => candidate.id === provider.id);
-      const runtime = props.providerRuntimeStatuses?.[provider.id];
+      // The endpoint provider runs in the Pi CLI, so its download is Pi's.
+      const runtime = props.providerRuntimeStatuses?.[provider.id === "endpoint" ? "pi" : provider.id];
       const descriptionKey = provider.description ? PROVIDER_DESCRIPTION_KEYS[provider.description] : undefined;
       return {
         ...provider,
@@ -269,12 +271,11 @@ export function createSetupProviders(
     setCustomSelected(false);
   }
 
-  /** OpenCode runs the custom endpoints, so the form opens only when OpenCode can run one. */
+  /** The engine runs the custom endpoints, so the form opens only when it can run one. */
   function chooseMoreCustom(): void {
     keepProviderRows();
     setCustomRevealed(true);
-    const openCode = providerOptions().find((option) => option.id === FREE_PROVIDER);
-    if (openCode?.state === "available" || openCode?.state === "sign-in-required") host.openForm();
+    if (servesCustomProvider(customEngine(providerOptions()))) host.openForm();
   }
 
   /**
@@ -301,9 +302,9 @@ export function createSetupProviders(
    *
    * Without it the custom choice would reach setup with no model, and a new agent would start on the
    * first model the catalog lists - a hosted one, because free models come first. The endpoint the
-   * user selected would then be unused, which is the opposite of what the row says. OpenCode names a
-   * custom model `<endpoint id>/<model id>`, so the id is composed rather than looked up in a list
-   * the CLI has not published yet.
+   * user selected would then be unused, which is the opposite of what the row says. A custom model is
+   * named `<endpoint id>/<model id>`, so the id is composed rather than looked up in a list the CLI
+   * has not published yet.
    */
   function firstSavedCustomModel(): AgentModelId | null {
     for (const provider of props.customProviders ?? []) {
@@ -316,8 +317,8 @@ export function createSetupProviders(
   /**
    * The endpoint the user just described is what they came here to use, so the step selects the
    * custom row rather than leaving the choice on whichever provider connected first, and its first
-   * model becomes the one a new agent starts on. OpenCode names a custom model by its endpoint, so
-   * the id is composed here rather than looked up in a catalog it has yet to list.
+   * model becomes the one a new agent starts on. A custom model is named by its endpoint, so the id
+   * is composed here rather than looked up in a catalog the CLI has yet to list.
    */
   function selectSavedEndpoint(value: SaveCustomProviderInput): void {
     selectCustomProvider();
@@ -339,12 +340,12 @@ export function createSetupProviders(
     };
   });
 
-  /** OpenCode runs every custom endpoint, so choosing them chooses that provider along with them. */
+  /** The engine runs every custom endpoint, so choosing them chooses that provider along with them. */
   function selectCustomProvider(): void {
     keepProviderRows();
     choiceChanged = true;
     setProviderSelectedByUser(true);
-    setSelectedProvider("opencode");
+    setSelectedProvider(customEngine(providerOptions())?.id ?? "endpoint");
     setCustomSelected(true);
   }
 
@@ -373,8 +374,10 @@ export function createSetupProviders(
     }),
     ({ options: allOptions, selected, selectedByUser, withFree }) => {
       if (selectedByUser && selected && allOptions.some((provider) => provider.id === selected)) return;
-      // A step without the free row does not choose the free provider by itself.
-      const options = withFree ? allOptions : allOptions.filter((provider) => provider.id !== FREE_PROVIDER);
+      // A step without the free row does not choose the free provider by itself, and only the Custom
+      // row chooses the endpoint provider.
+      const choices = allOptions.filter((provider) => provider.id !== "endpoint");
+      const options = withFree ? choices : choices.filter((provider) => provider.id !== FREE_PROVIDER);
       if (selected && options.some((provider) => provider.id === selected && providerReady(provider))) return;
       // A signed-in provider comes first, then one whose CLI is on the computer. Free models are the
       // way in when the user has neither.
@@ -679,7 +682,7 @@ export function SetupProviderPicker(props: SetupProviderPickerProps) {
         onManageCustomProviders={source().onAddCustomProvider ? props.providers.host.openList : undefined}
         moreProviders={props.providers.rows().hidden}
         customInMore={props.providers.customInMore()}
-        customEngine={props.providers.options().find((option) => option.id === FREE_PROVIDER)}
+        customEngine={customEngine(props.providers.options())}
         versionInDetail
         moreCallout={{
           title: t("onboarding.provider.moreTitle"),

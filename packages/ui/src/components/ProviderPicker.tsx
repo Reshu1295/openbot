@@ -33,6 +33,7 @@ import { ProviderAccountList } from "./ProviderAccountList";
 import type { ProviderAccountActions, ProviderPickerAccount } from "./provider-accounts";
 import {
   createProviderRow,
+  customEngine,
   PROVIDER_ACTION_LABEL,
   PROVIDER_ACTION_TEXT,
   type ProviderAction,
@@ -211,8 +212,10 @@ export function ProviderPicker(props: ProviderPickerProps) {
   const pickerId = createUniqueId();
   const addCustomId = `${pickerId}-custom`;
   const customRadioId = `${pickerId}-custom-radio`;
-  const openCode = () => props.customEngine ?? props.options.find((option) => option.id === "opencode");
+  const openCode = () => props.customEngine ?? customEngine(props.options);
   const customReady = () => servesCustomProvider(openCode());
+  /** The runtime to download for the engine: the endpoint provider runs in Pi. */
+  const engineRuntime = (): AgentProviderId => (openCode()?.id === "endpoint" ? "pi" : "opencode");
   const endpointCount = () => props.customProviders?.length ?? 0;
   const endpointCountLabel = () => t("provider.endpointCount", { count: endpointCount() });
   /** The count answers a click only where the list can be opened. Elsewhere it stays a badge. */
@@ -354,9 +357,9 @@ export function ProviderPicker(props: ProviderPickerProps) {
               disabled={props.disabled || (props.refreshingProviders && !runtimeStoreAction(action()))}
               onClick={() => {
                 if (action() === "cancel") {
-                  void props.onCancelProviderDownload?.("opencode");
+                  void props.onCancelProviderDownload?.(engineRuntime());
                 } else {
-                  void props.onDownloadProvider?.("opencode");
+                  void props.onDownloadProvider?.(engineRuntime());
                 }
               }}
             >
@@ -368,7 +371,7 @@ export function ProviderPicker(props: ProviderPickerProps) {
           when={
             !engine().runtimeStatus &&
             engine().state === "not-installed" &&
-            agentProviderDescriptor("opencode").installGuideLink !== null &&
+            agentProviderDescriptor(engineRuntime()).installGuideLink !== null &&
             props.onInstallProvider
           }
         >
@@ -379,7 +382,7 @@ export function ProviderPicker(props: ProviderPickerProps) {
             class="provider-picker-install"
             aria-label={t("provider.custom.installLabel")}
             disabled={props.disabled || props.refreshingProviders}
-            onClick={() => void props.onInstallProvider?.("opencode")}
+            onClick={() => void props.onInstallProvider?.(engineRuntime())}
           >
             {t("provider.action.install")}
           </Button>

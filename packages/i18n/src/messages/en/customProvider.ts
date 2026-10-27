@@ -43,15 +43,13 @@ export const messages = defineMessages("customProvider", {
   "customProvider.error.baseUrlProtocol": "Use an http:// or https:// URL.",
   "customProvider.error.baseUrlCredential": "Put the credential in a header, not in the URL.",
 
-  // The note after a save or a removal. It tells the user when OpenCode reads the new list.
+  // The note after a save or a removal. It tells the user when OpenBot loads the new list.
   "customProvider.saved.restarted": "Saved. OpenBot is loading the models.",
-  "customProvider.saved.skippedBusy":
-    "Saved. OpenCode reads the list after the current task stops. Press Connect then.",
-  "customProvider.saved.notRunning": "Saved. OpenCode reads the list when it next starts.",
+  "customProvider.saved.skippedBusy": "Saved. OpenBot loads the models after the current task stops.",
+  "customProvider.saved.notRunning": "Saved. OpenBot loads the models at the next start.",
   "customProvider.removed.restarted": "Removed. OpenBot is loading the models.",
-  "customProvider.removed.skippedBusy":
-    "Removed. OpenCode reads the list after the current task stops. Press Connect then.",
-  "customProvider.removed.notRunning": "Removed. OpenCode reads the list when it next starts.",
+  "customProvider.removed.skippedBusy": "Removed. OpenBot loads the models after the current task stops.",
+  "customProvider.removed.notRunning": "Removed. OpenBot loads the models at the next start.",
   "customProvider.saveFailed": "OpenBot could not save this endpoint.",
   "customProvider.removeFailed": "OpenBot could not remove {name}.",
   "customProvider.saveUnavailable": "This build cannot save an endpoint.",
@@ -100,7 +98,7 @@ export const messages = defineMessages("customProvider", {
   "customProvider.preset.title": "Add a provider or an agent",
   "customProvider.preset.description": "Choose a local model server, an endpoint, or an ACP agent.",
   "customProvider.preset.heading": "Add custom",
-  "customProvider.preset.subtitle": "Models for OpenCode, or an agent of its own.",
+  "customProvider.preset.subtitle": "Models from your own endpoint, or an agent of its own.",
   "customProvider.preset.models": "Models",
   "customProvider.preset.agents": "Agents",
   "customProvider.preset.ollama": "Ollama",

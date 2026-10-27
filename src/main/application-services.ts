@@ -281,7 +281,7 @@ import {
   configureAttachmentProtocol,
   configureServerLogoProtocols,
 } from "./session-configuration";
-import { readSetupState } from "./setup-store";
+import { endpointSetupState, readSetupState, writeSetupState } from "./setup-store";
 import { SignInRelayClient } from "./sign-in-relay-client";
 import { agentPrintedLink, SignInRelayHost } from "./sign-in-relay-host";
 import { SignalIngress } from "./signal-ingress";
@@ -1247,6 +1247,11 @@ export async function createApplicationServices({
   // Before the service, which reads the endpoints at its first provider spawn. A file this build
   // cannot read leaves the list empty and every write refused; it does not stop the app.
   await runCauseEffect(customProviders.load());
+  // A default saved as OpenCode with an endpoint model moves to the `endpoint` provider, which serves
+  // the endpoints now. A write that fails is tried again at the next start.
+  const endpointSetup = endpointSetupState(setupState, new Set(customProviders.list().map((endpoint) => endpoint.id)));
+  if (endpointSetup) await Effect.runPromise(writeSetupState(setupFile, endpointSetup).pipe(Effect.ignore));
+  const preferredSetup = endpointSetup ?? setupState;
   // The same reasons as the endpoints: before the service, and a file this build cannot read only
   // refuses the writes.
   const customAgents = new CustomAgentStore({
@@ -1623,7 +1628,7 @@ export async function createApplicationServices({
         .pipe(
           Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
         ),
-    preferredProvider: setupState.preferredProvider ?? "codex",
+    preferredProvider: preferredSetup.preferredProvider ?? "codex",
     bundledExecutables: providerRuntimes.bundledExecutables(),
     prepareAgentWorkspace: (agent) =>
       Effect.gen(function* () {
@@ -1638,7 +1643,7 @@ export async function createApplicationServices({
       delete: (siteId) => hostedSites.delete(siteId).pipe(toHostedSiteOperationFailed),
     },
     sidebarLayout,
-    preferredModel: setupState.preferredModel,
+    preferredModel: preferredSetup.preferredModel,
     // Only a dev build leads with the OpenCode development model; a packaged app keeps the
     // built-in default.
     developmentDefaults: appVariant === "dev",

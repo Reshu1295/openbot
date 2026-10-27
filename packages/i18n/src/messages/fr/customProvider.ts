@@ -45,13 +45,11 @@ export const messages = {
   "customProvider.error.baseUrlCredential": "Mettez l’identifiant dans un en-tête, pas dans l’URL.",
 
   "customProvider.saved.restarted": "Enregistré. OpenBot charge les modèles.",
-  "customProvider.saved.skippedBusy":
-    "Enregistré. OpenCode lit la liste quand la tâche en cours s’arrête. Appuyez alors sur Se connecter.",
-  "customProvider.saved.notRunning": "Enregistré. OpenCode lit la liste à son prochain démarrage.",
+  "customProvider.saved.skippedBusy": "Enregistré. OpenBot charge les modèles quand la tâche en cours s’arrête.",
+  "customProvider.saved.notRunning": "Enregistré. OpenBot charge les modèles au prochain démarrage.",
   "customProvider.removed.restarted": "Supprimé. OpenBot charge les modèles.",
-  "customProvider.removed.skippedBusy":
-    "Supprimé. OpenCode lit la liste quand la tâche en cours s’arrête. Appuyez alors sur Se connecter.",
-  "customProvider.removed.notRunning": "Supprimé. OpenCode lit la liste à son prochain démarrage.",
+  "customProvider.removed.skippedBusy": "Supprimé. OpenBot charge les modèles quand la tâche en cours s’arrête.",
+  "customProvider.removed.notRunning": "Supprimé. OpenBot charge les modèles au prochain démarrage.",
   "customProvider.saveFailed": "OpenBot n’a pas pu enregistrer ce point de terminaison.",
   "customProvider.removeFailed": "OpenBot n’a pas pu supprimer {name}.",
   "customProvider.saveUnavailable": "Cette version ne peut pas enregistrer de point de terminaison.",
@@ -99,7 +97,7 @@ export const messages = {
   "customProvider.preset.description":
     "Choisissez un serveur de modèles local, un point de terminaison ou un agent ACP.",
   "customProvider.preset.heading": "Ajout personnalisé",
-  "customProvider.preset.subtitle": "Des modèles pour OpenCode, ou un agent à part entière.",
+  "customProvider.preset.subtitle": "Des modèles de votre propre point de terminaison, ou un agent à part entière.",
   "customProvider.preset.models": "Modèles",
   "customProvider.preset.agents": "Agents",
   "customProvider.preset.ollama": "Ollama",

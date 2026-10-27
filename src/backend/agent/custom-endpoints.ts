@@ -3,6 +3,7 @@ import {
   CUSTOM_AGENT_DEFAULT_MODEL,
   customAgentIdOfModel,
   defaultProviderModel,
+  isCustomProviderModelId,
   PICKER_PROVIDERS,
 } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
@@ -25,6 +26,8 @@ export interface CustomEndpointsHooks {
   emitError(code: string, error: unknown, agentId?: string): void;
   providerAvailable(provider: AgentProvider): boolean;
   preference(): ProviderPreference;
+  /** The ids of the saved endpoints, read at each call. */
+  endpointIds(): ReadonlySet<string>;
 }
 
 export interface CustomEndpointsOptions {
@@ -87,16 +90,17 @@ export class CustomEndpoints {
    * The catalogue every caller may choose from: what the connected providers report, less the models
    * of an endpoint whose removal is written.
    *
-   * The two lists differ only while OpenCode keeps running with an old configuration, which is what
-   * a removal during a turn leaves behind. The CLI still lists the endpoint, so the raw catalogue
+   * The two lists differ only while the endpoint provider's client keeps running with an old
+   * configuration, which is what a removal during a turn leaves behind. The CLI still lists the endpoint, so the raw catalogue
    * would let the renderer show it, `updateAgent` accept it, and a new agent start on it, all after
    * the file that defines it is gone. `alsoExcluded` names an endpoint whose removal is in progress
    * and therefore not recorded yet.
    */
   available(): AgentModelOption[] {
     if (this.#released.size === 0) return this.#providers.listModels();
-    // A custom agent id can be the same text as an endpoint id. Its models are not the endpoint's.
-    return this.#providers.listModels().filter((option) => option.provider === "acp" || this.serves(option.id));
+    // Only the endpoint provider serves endpoints. Another provider's model id can start with the same
+    // text as an endpoint id, as a custom agent's can.
+    return this.#providers.listModels().filter((option) => option.provider !== "endpoint" || this.serves(option.id));
   }
 
   /**
@@ -124,8 +128,7 @@ export class CustomEndpoints {
    * write, as one change nothing else can interleave with.
    *
    * The id is excluded although it is being added. The process answering now was spawned before this
-   * write, and an id this app has never saved can still exist in OpenCode's own configuration and in
-   * its live catalogue. Without the exclusion the picker reads those models as the saved endpoint's,
+   * write, and its catalogue still has the endpoint as it was before the save. Without the exclusion the picker reads those models as the saved endpoint's,
    * while every prompt still goes to the old process, at the URL and with the credentials it started
    * with. The exclusion is given back only when a process that read this write reports its own
    * catalogue, so a restart that is skipped for a busy CLI, or one that fails, leaves it in place.
@@ -225,7 +228,7 @@ export class CustomEndpoints {
       .list()
       .filter(
         (agent) =>
-          providerForAgent(agent) === "opencode" &&
+          providerForAgent(agent) === "endpoint" &&
           agent.model.startsWith(prefix) &&
           removed.has(agent.model.slice(prefix.length)),
       );
@@ -234,13 +237,13 @@ export class CustomEndpoints {
       (option) => !(option.id.startsWith(prefix) && removed.has(option.id.slice(prefix.length))),
     );
     const fallback =
-      remaining.find((option) => option.provider === "opencode" && option.id.startsWith(prefix)) ??
-      startingModel("opencode", remaining, this.#hooks.preference()) ??
+      remaining.find((option) => option.provider === "endpoint" && option.id.startsWith(prefix)) ??
+      startingModel("endpoint", remaining, this.#hooks.preference()) ??
       (this.#hooks.providerAvailable(DEFAULT_AGENT_PROVIDER)
         ? startingModel(DEFAULT_AGENT_PROVIDER, remaining, this.#hooks.preference())
         : null);
     if (!fallback) return;
-    if (fallback.provider !== "opencode" && affected.some((agent) => this.#hasWorkInFlight(agent))) {
+    if (fallback.provider !== "endpoint" && affected.some((agent) => this.#hasWorkInFlight(agent))) {
       return yield* new EndpointChangeFailed({ cause: new Error(sourceText("error.provider.endpointRemoveBusy")) });
     }
     for (const agent of affected) {
@@ -372,8 +375,8 @@ export class CustomEndpoints {
   }
 
   /**
-   * A fresh OpenCode process is the one the app uses now, and it read the endpoint files as they are,
-   * so what it lists is the truth and nothing has to be masked any more.
+   * A fresh endpoint client is the one the app uses now, and it read the endpoints as they are, so
+   * what it lists is the truth and nothing has to be masked any more.
    *
    * Only a client that reached `onProviderActivated` gets here. A restart that fails leaves the old
    * process answering, on the endpoints it started with, and every id removed since then stays out:
@@ -409,10 +412,10 @@ export class CustomEndpoints {
     // and choosing one here would move agents onto an endpoint that is gone.
     const affected = this.#store
       .list()
-      .filter((agent) => providerForAgent(agent) === "opencode" && !this.serves(agent.model));
+      .filter((agent) => providerForAgent(agent) === "endpoint" && !this.serves(agent.model));
     if (affected.length === 0) return;
-    // OpenCode declares no default model of its own -- its catalogue is whatever the CLI lists -- so
-    // the fallback is chosen from the live list with the endpoint being removed taken out of it.
+    // The endpoint provider declares no default model -- its catalogue is whatever is saved -- so the
+    // fallback is chosen from the live list with the endpoint being removed taken out of it.
     // The built-in default provider comes second, because an agent left on a model the CLI no longer
     // serves cannot answer, and a provider switch keeps its workspace, thread and identity.
     const remaining = this.available();
@@ -421,14 +424,14 @@ export class CustomEndpoints {
     // there. That would trap a user who runs custom endpoints only, because the last endpoint could
     // never be removed while an agent still names one of its models.
     const fallback =
-      startingModel("opencode", remaining, this.#hooks.preference()) ??
+      startingModel("endpoint", remaining, this.#hooks.preference()) ??
       (this.#hooks.providerAvailable(DEFAULT_AGENT_PROVIDER)
         ? startingModel(DEFAULT_AGENT_PROVIDER, remaining, this.#hooks.preference())
         : null);
     // Nothing is listed, so there is no model to move to. The removal still goes ahead: refusing it
     // would trap the user on an endpoint that may be the reason no model is listed.
     if (!fallback) return;
-    if (fallback.provider !== "opencode" && affected.some((agent) => this.#hasWorkInFlight(agent))) {
+    if (fallback.provider !== "endpoint" && affected.some((agent) => this.#hasWorkInFlight(agent))) {
       return yield* new EndpointChangeFailed({ cause: new Error(sourceText("error.provider.endpointRemoveBusy")) });
     }
     for (const agent of affected) {
@@ -462,9 +465,18 @@ export class CustomEndpoints {
     const models = this.available().filter((model) => model.provider === provider);
     const providerFallback = models.find((model) => model.id === defaultProviderModel(provider)) ?? models[0];
     if (!providerFallback) return;
+    // Before this release OpenCode served the endpoints, so an OpenCode agent can name an endpoint
+    // model. `adoptOpenCodeEndpointAgents` moves it to the endpoint provider with its model; moving it
+    // to an OpenCode model here would lose the model that the user chose.
+    const endpointIds = provider === "opencode" ? this.#hooks.endpointIds() : null;
     const affected = this.#store
       .list()
-      .filter((agent) => providerForAgent(agent) === provider && !models.some((model) => model.id === agent.model));
+      .filter(
+        (agent) =>
+          providerForAgent(agent) === provider &&
+          !models.some((model) => model.id === agent.model) &&
+          !(endpointIds && isCustomProviderModelId(agent.model, endpointIds)),
+      );
     for (const agent of affected) {
       // A custom agent is a program of its own, not a model: an agent moves only to another model of
       // the same custom agent. One that listed nothing, or did not answer, keeps its model. The router
@@ -487,6 +499,44 @@ export class CustomEndpoints {
         .pipe(
           Effect.catch((failure) =>
             Effect.sync(() => this.#hooks.emitError("agent_model_fallback_failed", failure.cause, agent.id)),
+          ),
+        );
+    }
+  }, Effect.uninterruptible).bind(this);
+
+  /**
+   * Moves each OpenCode agent on a saved endpoint's model to the endpoint provider, with the same
+   * model. Before this release OpenCode served the endpoints; now the endpoint provider does, and
+   * OpenCode lists none of them.
+   *
+   * Runs when the endpoint provider reports a fresh catalogue, so only a model it lists is a target. A
+   * provider switch keeps the agent's workspace, thread and identity. An agent with work in flight,
+   * or one whose move fails, stays as it is, and the next catalogue tries again.
+   */
+  readonly adoptOpenCodeEndpointAgents = Effect.fn("CustomEndpoints.adoptOpenCodeEndpointAgents")(function* (
+    this: CustomEndpoints,
+  ) {
+    const listed = new Map(
+      this.available()
+        .filter((model) => model.provider === "endpoint")
+        .map((model) => [model.id, model]),
+    );
+    const affected = this.#store
+      .list()
+      .filter((agent) => providerForAgent(agent) === "opencode" && listed.has(agent.model));
+    for (const agent of affected) {
+      const model = listed.get(agent.model);
+      if (!model || this.#hasWorkInFlight(agent)) continue;
+      yield* this.#hooks
+        .applyAgentUpdate({
+          agentId: agent.id,
+          provider: "endpoint",
+          model: model.id,
+          reasoningEffort: model.defaultReasoningEffort,
+        })
+        .pipe(
+          Effect.catch((failure) =>
+            Effect.sync(() => this.#hooks.emitError("agent_endpoint_move_failed", failure.cause, agent.id)),
           ),
         );
     }

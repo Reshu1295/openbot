@@ -109,8 +109,12 @@ export function pickerModels(options: ClientAgentModelOption[]): PickerModel[] {
           variants: [],
         };
       }
-      // OpenCode and custom agent models are named `<service>/<model>`; the service is the group.
-      const separator = model.provider === "opencode" || model.provider === "acp" ? model.name.indexOf("/") : -1;
+      // OpenCode, custom endpoint and custom agent models are named `<service>/<model>`; the service is
+      // the group.
+      const separator =
+        model.provider === "opencode" || model.provider === "endpoint" || model.provider === "acp"
+          ? model.name.indexOf("/")
+          : -1;
       let service = separator < 0 ? "" : model.name.slice(0, separator);
       let name = separator < 0 ? model.name : model.name.slice(separator + 1);
       // A custom agent can serve several providers. Its id holds them as `<agent>/<provider>/<model>`
@@ -163,7 +167,14 @@ export function customProviderIds(providers: readonly CustomProviderSummary[]): 
   return new Set(providers.map((provider) => provider.id));
 }
 
-/** A model of the Custom tab: a custom endpoint's, which OpenCode serves, or a custom agent's. */
+/**
+ * A model of the Custom tab: a custom endpoint's or a custom agent's. A host from before the
+ * `endpoint` provider serves its endpoints through OpenCode.
+ */
 export function isCustomModel(model: ClientAgentModelOption, customIds: ReadonlySet<string>): boolean {
-  return model.provider === "acp" || (model.provider === "opencode" && isCustomProviderModelId(model.id, customIds));
+  return (
+    model.provider === "acp" ||
+    model.provider === "endpoint" ||
+    (model.provider === "opencode" && isCustomProviderModelId(model.id, customIds))
+  );
 }

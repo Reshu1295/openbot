@@ -250,9 +250,20 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
 
 export type ProviderRow = ReturnType<typeof createProviderRow>;
 
-/** OpenCode runs user endpoints when its CLI is installed and answers; sign-in is irrelevant. */
-export function servesCustomProvider(openCode: ProviderPickerOption | undefined): boolean {
-  return openCode?.state === "available" || openCode?.state === "sign-in-required";
+/**
+ * The provider that runs the user's endpoints: `endpoint`, or OpenCode on a joined host from before
+ * it, which reports no `endpoint` row.
+ */
+export function customEngine(options: readonly ProviderPickerOption[]): ProviderPickerOption | undefined {
+  return options.find((option) => option.id === "endpoint") ?? options.find((option) => option.id === "opencode");
+}
+
+/**
+ * The engine runs user endpoints when its CLI is installed and answers. Its sign-in is irrelevant:
+ * the endpoint provider has no account, and lists no model until an endpoint is saved.
+ */
+export function servesCustomProvider(engine: ProviderPickerOption | undefined): boolean {
+  return engine?.state === "available" || engine?.state === "sign-in-required";
 }
 
 export type ProviderVisualState = AgentProviderState | ProviderRuntimePhase | "connecting" | "update-available";

@@ -44,13 +44,11 @@ export const messages = {
   "customProvider.error.baseUrlCredential": "Передавайте учётные данные в заголовке, а не в URL.",
 
   "customProvider.saved.restarted": "Сохранено. OpenBot загружает модели.",
-  "customProvider.saved.skippedBusy":
-    "Сохранено. OpenCode прочитает список, когда завершится текущая задача. Затем нажмите «Подключить».",
-  "customProvider.saved.notRunning": "Сохранено. OpenCode прочитает список при следующем запуске.",
+  "customProvider.saved.skippedBusy": "Сохранено. OpenBot загрузит модели, когда завершится текущая задача.",
+  "customProvider.saved.notRunning": "Сохранено. OpenBot загрузит модели при следующем запуске.",
   "customProvider.removed.restarted": "Удалено. OpenBot загружает модели.",
-  "customProvider.removed.skippedBusy":
-    "Удалено. OpenCode прочитает список, когда завершится текущая задача. Затем нажмите «Подключить».",
-  "customProvider.removed.notRunning": "Удалено. OpenCode прочитает список при следующем запуске.",
+  "customProvider.removed.skippedBusy": "Удалено. OpenBot загрузит модели, когда завершится текущая задача.",
+  "customProvider.removed.notRunning": "Удалено. OpenBot загрузит модели при следующем запуске.",
   "customProvider.saveFailed": "OpenBot не удалось сохранить этот эндпоинт.",
   "customProvider.removeFailed": "OpenBot не удалось удалить «{name}».",
   "customProvider.saveUnavailable": "Эта сборка не может сохранять эндпоинты.",
@@ -98,7 +96,7 @@ export const messages = {
   "customProvider.preset.title": "Добавить провайдера или агента",
   "customProvider.preset.description": "Выберите локальный сервер моделей, эндпоинт или агента ACP.",
   "customProvider.preset.heading": "Добавить своё",
-  "customProvider.preset.subtitle": "Модели для OpenCode или собственный агент.",
+  "customProvider.preset.subtitle": "Модели с вашего эндпоинта или собственный агент.",
   "customProvider.preset.models": "Модели",
   "customProvider.preset.agents": "Агенты",
   "customProvider.preset.ollama": "Ollama",

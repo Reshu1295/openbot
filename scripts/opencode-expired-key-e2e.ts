@@ -4,7 +4,8 @@
 // Checks that an expired key reads as the expired-key error, not "Internal error"; that a replaced
 // key reaches a new process and the same thread there, although `auth.json` still holds the old
 // key; that with no stored key the config names no key, so the user's own sign-in stays in use;
-// that a custom endpoint saved as `opencode-go` keeps its URL when a key is stored; and that a model
+// that a saved custom endpoint does not reach OpenCode, which no longer serves endpoints, even one
+// saved as `opencode-go`; and that a model
 // whose provider has no sign-in names that provider and its fix (#2746).
 // `bun run test:opencode-expired-key`. Writes .openbot-build/opencode-expired-key-e2e/report.json.
 import assert from "node:assert/strict";
@@ -14,8 +15,8 @@ import { join, resolve } from "node:path";
 import { sourceText } from "@openbot/i18n/source";
 import type { AgentClient } from "../src/backend/agent-client";
 import type { AgentCliInfo } from "../src/backend/cli";
+import type { CustomProviderConfig } from "../src/backend/custom-provider-config";
 import { runCauseEffect } from "../src/backend/effect-boundary";
-import type { CustomProviderConfig } from "../src/backend/opencode-config";
 import { NO_PROVIDER_CREDENTIALS, requireProviderDriver } from "../src/backend/provider-drivers";
 import { installFakeAgent, readJsonl, runTurn, startThread, stopClients } from "./provider-fakes/host";
 
@@ -105,8 +106,8 @@ try {
   report.noStoredKey = { configKey: spawn?.configKey ?? null, key: ownPrompt?.key ?? null };
   await runCauseEffect(third.stop());
 
-  // 4. A custom endpoint saved as `opencode-go` replaces that built-in provider, so the stored key
-  // must not drop its URL. The `opencode` provider still gets the key.
+  // 4. The `endpoint` provider runs custom endpoints in Pi. An endpoint saved as `opencode-go` must not
+  // replace OpenCode's built-in provider, and both built-in providers get the stored key.
   storedKey = "fresh";
   endpoints = [
     {
@@ -122,8 +123,8 @@ try {
   await startThread(open(cli), { cwd: workspace });
   const endpointSpawn = (await readJsonl<LogEntry>(log)).find((entry) => entry.event === "spawn");
   assert.ok(endpointSpawn, "The fake OpenCode started.");
-  assert.equal(endpointSpawn.baseURL, "http://127.0.0.1:1234/v1", "The endpoint keeps its URL.");
-  assert.equal(endpointSpawn.configKey, null, "The stored key does not replace the endpoint's options.");
+  assert.equal(endpointSpawn.baseURL, null, "The endpoint does not reach OpenCode.");
+  assert.equal(endpointSpawn.configKey, "fresh", "The OpenCode Go provider gets the stored key.");
   assert.equal(endpointSpawn.zenKey, "fresh", "The OpenCode provider gets the stored key.");
   report.endpoint = { baseURL: endpointSpawn.baseURL ?? null, zenKey: endpointSpawn.zenKey ?? null };
 

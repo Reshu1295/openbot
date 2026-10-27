@@ -55,7 +55,8 @@ export function createSettingsGeneralStore(props: GeneralStoreProps) {
           props.agentStatus?.providers?.some((candidate) => candidate.id === provider) === true),
     ).map((provider) => {
       const agent = props.agentStatus?.providers?.find((candidate) => candidate.id === provider);
-      const runtime = props.providerRuntimeStatuses?.[provider];
+      // The endpoint provider runs in the Pi CLI, so its download is Pi's.
+      const runtime = props.providerRuntimeStatuses?.[provider === "endpoint" ? "pi" : provider];
       // The Gemini status says only whether a saved key serves the turns.
       const keyStatus =
         provider === "opencode"

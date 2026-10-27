@@ -707,8 +707,10 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         captureConfigRevision: () => this.#endpoints.committedRevision(),
         onProviderActivated: (provider, configRevision) =>
           Effect.gen({ self: this }, function* () {
-            if (provider === "opencode") this.#endpoints.clearReleased(configRevision);
+            if (provider === "endpoint") this.#endpoints.clearReleased(configRevision);
             yield* this.#endpoints.runExclusive(() => this.#endpoints.moveAgentsOffUnlistedModels(provider));
+            if (provider === "endpoint")
+              yield* this.#endpoints.runExclusive(() => this.#endpoints.adoptOpenCodeEndpointAgents());
           }),
         onProviderResumed: (provider) => {
           for (const agent of this.#store.list()) {
@@ -764,10 +766,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         // changes what that pull answers while no provider state moves.
         modelsChanged: () => this.#emit({ type: "status", status: this.getStatus() }),
         stopProfileClients: () =>
-          this.#profileClients.stopOpenCode().pipe(Effect.andThen(this.#warmGenerations.stopIdle("opencode"))),
+          this.#profileClients.stopEndpoints().pipe(Effect.andThen(this.#warmGenerations.stopIdle("endpoint"))),
         emitError: (code, error, agentId) => this.#emitError(code, error, agentId),
         providerAvailable: (provider) => this.#providerAvailable(provider),
         preference: () => this.#preference(),
+        endpointIds: () => new Set(credentials.customProviders().map((endpoint) => endpoint.id)),
       },
     });
     this.#compaction = new ContextCompaction({
@@ -3598,9 +3601,9 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       );
   }
 
-  /** Restarts OpenCode so a saved or removed endpoint reaches it. Reports why, if it did not. */
-  reloadOpenCodeConfig(): Effect.Effect<CustomProviderRestart, AgentLifecycleFailed> {
-    return this.#providers.reloadOpenCodeConfig();
+  /** Restarts the endpoint provider so a saved or removed endpoint reaches it. Reports why, if it did not. */
+  reloadCustomEndpoints(): Effect.Effect<CustomProviderRestart, AgentLifecycleFailed> {
+    return this.#providers.reloadCustomEndpoints();
   }
 
   /** Replaces the custom agents' router so a saved or removed agent reaches it. Reports why, if it did not. */

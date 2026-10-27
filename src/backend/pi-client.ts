@@ -10,6 +10,7 @@ import { Effect, Exit, Schema, Scope, Semaphore } from "effect";
 import { secretElicitationField } from "./agent/prompts";
 import type { AgentClient, DiagnosticOrigin } from "./agent-client";
 import { type AgentCliInfo, cliPathEnvironment, cliSpawnTarget } from "./cli";
+import type { CustomProviderSource } from "./custom-provider-config";
 import { runCauseEffect } from "./effect-boundary";
 import { type DynamicToolNamespace, LocalMcpBridge, type LocalMcpSession } from "./local-mcp-bridge";
 import {
@@ -24,10 +25,11 @@ import {
 } from "./mcp-provider-shapes";
 import { mcpSecretValues, redactMcpRecord, redactMcpValues } from "./mcp-redaction";
 import { PendingServerRequests } from "./pending-server-requests";
+import { createPiEndpointExtension, usablePiEndpoints } from "./pi-endpoints";
 import { createPiKeyExtension } from "./pi-key-providers";
 import { createPiMcpExtension, type PiMcpExtension } from "./pi-mcp";
 import { piMessageItems, piPrompt, piText } from "./pi-messages";
-import { PiRpc } from "./pi-rpc";
+import { type PiProviderId, PiRpc } from "./pi-rpc";
 import type { SpawnTarget } from "./process-confinement";
 import {
   type AppServerNotification,
@@ -77,6 +79,13 @@ export interface PiProviderOptions {
    * `<provider>/` prefix.
    */
   keyProvider?: { id: KeyOnlyProviderId; apiKey: () => string | null };
+  /**
+   * The user's custom endpoints, read at each spawn. With them the client is the `endpoint` provider:
+   * Pi lists only the endpoints' models, as `<endpointId>/<modelId>`.
+   */
+  endpoints?: CustomProviderSource;
+  /** Whether an endpoint model may still be used. See `ProviderClientContext.servesModel`. */
+  servesModel?: (modelId: string) => boolean;
   providerStateDirectory?: string;
   profileGeneration?: boolean;
   mcpServers?: McpServerSource;
@@ -121,7 +130,7 @@ interface ClientEvents {
 /** Owns Pi's native sessions. The database owns OpenBot history and agent identity. */
 export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentClient {
   readonly contextCompaction = "request";
-  readonly provider: "pi" | KeyOnlyProviderId;
+  readonly provider: PiProviderId;
   readonly #bridge = new LocalMcpBridge();
   readonly #requests = new PendingServerRequests((request) => this.emit("request", request));
   readonly #threads = new Map<string, PiThread>();
@@ -137,7 +146,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     private readonly options: PiProviderOptions,
   ) {
     super();
-    this.provider = options.keyProvider?.id ?? "pi";
+    this.provider = options.keyProvider?.id ?? (options.endpoints ? "endpoint" : "pi");
   }
   get running(): boolean {
     return this.#running;
@@ -163,7 +172,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
 
   /** Pi starts an API error with its HTTP status. A key provider's 401 and 402 point at the saved key. */
   #failureText(message: string | null): string {
-    if (message && this.provider !== "pi") {
+    if (message && this.options.keyProvider) {
       const provider = agentProviderName(this.provider);
       if (/^401\b/u.test(message)) return sourceText("error.provider.keyProviderRefused", { provider });
       if (/^402\b/u.test(message)) return sourceText("error.provider.keyProviderNoBalance", { provider });
@@ -311,9 +320,12 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
   });
 
   readonly #models = Effect.fn("PiAgentClient.models")(function* (this: PiAgentClient, timeoutMs?: number) {
-    // With no key a key-only provider has no models, and Pi need not start.
+    // With no key a key-only provider has no models, and with no endpoint the endpoint provider has
+    // none. Pi need not start.
     const keyProvider = this.options.keyProvider;
     if (keyProvider && !keyProvider.apiKey()) return [];
+    const endpoints = this.options.endpoints ? usablePiEndpoints(this.options.endpoints()) : null;
+    if (endpoints?.length === 0) return [];
     const rpc = new PiRpc(this.#redact, this.provider);
     rpc.on("diagnostic", (text) => this.emit("diagnostic", text));
     rpc.on("record", (record) => {
@@ -345,8 +357,10 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
           for (const model of getArray(listed, "models")) {
             const provider = getString(model, "provider");
             const id = getString(model, "id");
-            // A key provider's client lists only its own models. Pi also lists the models of other signed-in providers.
-            if (!provider || !id || (keyProvider && provider !== keyProvider.id)) continue;
+            // A key provider's client lists only its own models, and the endpoint client only the endpoints'.
+            // Pi also lists the models of other signed-in providers.
+            const endpoint = endpoints?.find((candidate) => candidate.id === provider);
+            if (!provider || !id || (keyProvider && provider !== keyProvider.id) || (endpoints && !endpoint)) continue;
             const reasoning = isRecord(model) && model.reasoning === true;
             let levels: string[] = [];
             if (reasoning) {
@@ -359,7 +373,11 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
             const preferred = getString(state, "thinkingLevel");
             models.push({
               model: keyProvider ? id : `${provider}/${id}`,
-              displayName: getString(model, "name") ?? id,
+              // An endpoint model is named `<endpoint>/<model>`, as OpenCode named it, so the picker groups
+              // the models under the name the user gave the endpoint.
+              displayName: endpoint
+                ? `${endpoint.name}/${getString(model, "name") ?? id}`
+                : (getString(model, "name") ?? id),
               defaultReasoningEffort: preferred && levels.includes(preferred) ? preferred : (levels[0] ?? "none"),
               supportedReasoningEfforts: levels.map((reasoningEffort) => ({ reasoningEffort })),
               reasoningEffortConfigurable: levels.length > 0,
@@ -375,6 +393,13 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
   });
 
   readonly #keyExtension = Effect.fn("PiAgentClient.keyExtension")(function* (this: PiAgentClient) {
+    if (this.options.endpoints) {
+      const endpoints = usablePiEndpoints(this.options.endpoints());
+      if (endpoints.length === 0) return null;
+      const extension = yield* createPiEndpointExtension(endpoints, this.options.providerStateDirectory);
+      for (const secret of extension.secrets) this.#secrets.add(secret);
+      return extension;
+    }
     const keyProvider = this.options.keyProvider;
     const key = keyProvider?.apiKey();
     if (!keyProvider || !key) return null;
@@ -544,7 +569,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     params: unknown,
   ) {
     const model = getString(params, "model");
-    if (model && this.provider !== "pi") {
+    if (model && this.options.keyProvider) {
       yield* thread.rpc.request({ type: "set_model", provider: this.provider, modelId: model });
     } else if (model) {
       const separator = model.indexOf("/");
@@ -566,6 +591,10 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     steer: boolean,
   ) {
     if (thread.turn && !steer) return yield* providerFailure(new Error(sourceText("error.provider.piSessionBusy")));
+    // A removed endpoint stays in this thread's process, with the address and key it started with.
+    const model = getString(params, "model");
+    if (model && this.options.servesModel?.(model) === false)
+      return yield* providerFailure(new Error(sourceText("error.agent.endpointRemoved")));
     if (!thread.turn) yield* this.#configure(thread, params);
     const prompt = yield* piPrompt(params);
     const active = thread.turn;

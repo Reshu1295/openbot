@@ -166,7 +166,7 @@ function ProviderSettingsSection(props: ProviderSettingsSectionProps) {
   async function selectSavedEndpoint(value: SaveCustomProviderInput): Promise<void> {
     const firstModel = value.models[0];
     if (props.defaultProvider && firstModel) {
-      await selectProvider("opencode", true, `${value.id}/${firstModel.id}`);
+      await selectProvider("endpoint", true, `${value.id}/${firstModel.id}`);
     }
   }
   const detectedApi = createMemo((): DetectedProviderApi | undefined => {
@@ -187,6 +187,22 @@ function ProviderSettingsSection(props: ProviderSettingsSectionProps) {
    */
   const [choosing, setChoosing] = createSignal(false);
   const [presetFor, setPresetFor] = createSignal<DetectedProvider | null>(null);
+  /**
+   * The default after its endpoint model is gone: another endpoint's model while one is saved, else
+   * the first connected provider. Before the `endpoint` provider, OpenCode's own models stayed.
+   */
+  function leaveEndpointModel(removedId?: string): void {
+    const other = customProviders().find((item) => item.id !== removedId && item.models.length > 0);
+    const otherModel = other?.models[0];
+    if (other && otherModel) {
+      void selectProvider("endpoint", true, `${other.id}/${otherModel.id}`);
+      return;
+    }
+    const next = props.store
+      .providerOptions()
+      .find((option) => option.id !== "endpoint" && option.state === "available" && !option.off);
+    void selectProvider(next?.id ?? "codex", false, null);
+  }
   const host = createCustomProviderHostState({
     onAdd: (value) => props.onAddCustomProvider?.(value),
     onDelete: (id) => props.onDeleteCustomProvider?.(id),
@@ -194,18 +210,16 @@ function ProviderSettingsSection(props: ProviderSettingsSectionProps) {
     onSaved: (value) => void selectSavedEndpoint(value),
     onRemoved: (id) => {
       const choice = props.defaultProvider;
-      if (choice?.preferredProvider === "opencode" && choice.preferredModel?.startsWith(`${id}/`)) {
-        void selectProvider("opencode", false, null);
+      if (choice?.preferredProvider === "endpoint" && choice.preferredModel?.startsWith(`${id}/`)) {
+        leaveEndpointModel(id);
       }
     },
     // Main moves the agents off a model that the edit took out. The default model is the renderer's.
     onUpdated: (input) => {
       const choice = props.defaultProvider;
-      const model = choice?.preferredProvider === "opencode" ? choice.preferredModel : null;
+      const model = choice?.preferredProvider === "endpoint" ? choice.preferredModel : null;
       if (!model?.startsWith(`${input.id}/`)) return;
-      if (!input.models.some((item) => model === `${input.id}/${item.id}`)) {
-        void selectProvider("opencode", false, null);
-      }
+      if (!input.models.some((item) => model === `${input.id}/${item.id}`)) leaveEndpointModel();
     },
   });
   const editing = () => host.state.editing;
@@ -230,7 +244,7 @@ function ProviderSettingsSection(props: ProviderSettingsSectionProps) {
                   return Boolean(saving.pending);
                 },
                 onChange: (choice: ProviderDefaultChoice) =>
-                  void (choice === "custom" ? selectProvider("opencode", true) : selectProvider(choice)),
+                  void (choice === "custom" ? selectProvider("endpoint", true) : selectProvider(choice)),
               }
             : undefined
         }

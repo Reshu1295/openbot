@@ -41,7 +41,8 @@ export function onboardingProviderRows(
   kept: readonly AgentProviderId[] = [],
   includeFree = true,
 ): OnboardingProviderRows {
-  const plans = options.filter((option) => option.id !== FREE_PROVIDER);
+  // The endpoint provider is the Custom row, which the picker draws itself.
+  const plans = options.filter((option) => option.id !== FREE_PROVIDER && option.id !== "endpoint");
   const owned = plans.filter(userHasProvider);
   const popular = POPULAR_PROVIDERS.flatMap((id) => {
     const option = plans.find((candidate) => candidate.id === id);

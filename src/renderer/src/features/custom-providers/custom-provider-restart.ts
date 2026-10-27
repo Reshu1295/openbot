@@ -2,8 +2,8 @@ import type { CustomProviderRestart } from "@openbot/contracts/ipc";
 import type { AppTextKey, AppTranslate } from "@openbot/i18n";
 
 /**
- * One `opencode acp` process serves every OpenCode agent, and it reads its config only at spawn, so a
- * saved or removed endpoint needs a respawn that OpenBot will not force through a turn in progress.
+ * The endpoint provider's client reads the endpoints when its Pi processes start, so a saved or
+ * removed endpoint needs a restart that OpenBot will not force through a turn in progress.
  * The write is durable either way, which is why none of these is an error message: they say when the
  * model list catches up, not that something failed.
  */

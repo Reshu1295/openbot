@@ -382,6 +382,7 @@ export const messages = {
   "error.provider.museSignIn": "Inicia sesión en Muse en el equipo host para continuar.",
   "error.provider.inceptionSignIn": "Añade una clave de API de Inception para continuar.",
   "error.provider.deepseekSignIn": "Añade una clave de API de DeepSeek para continuar.",
+  "error.provider.endpointSignIn": "Añade un endpoint personalizado para continuar.",
   "error.provider.terminalLoginFailed":
     "No se pudo abrir la terminal de inicio de sesión. Abre la CLI del proveedor en este host, inicia sesión allí y actualiza los proveedores.",
   "error.provider.nativeArchiveInvalid": "La descarga del proveedor no contiene una instalación válida.",
