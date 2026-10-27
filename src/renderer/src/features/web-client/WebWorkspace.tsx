@@ -1325,13 +1325,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     workspace.state.capabilities.includes(SIGN_IN_RELAY_CAPABILITY) ||
     (workspace.state.capabilities.includes(MCP_SIGN_IN_CAPABILITY) &&
       workspace.state.capabilities.includes("browser-view"));
-  const browserTakeover = createMemo(() => {
-    const agent = workspace.selected();
-    if (!agent) return undefined;
-    return workspace.state.takeovers.find(
-      (request) => request.agentId === agent.id && request.threadId === agent.threadId,
-    );
-  });
   const clearSelectedAgentContext = createMemo(() => {
     const agent = workspace.selected();
     if (!agent || !workspace.runtime.admin || !workspace.state.capabilities.includes(CONTEXT_RESET_CAPABILITY))
@@ -1374,6 +1367,16 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
         return true;
       },
     });
+  });
+  /** The thread that the conversation shows: the open side thread, or the agent's own chat. */
+  const openThreadId = () => threads()?.open?.threadId;
+  const browserTakeover = createMemo(() => {
+    const agent = workspace.selected();
+    if (!agent) return undefined;
+    // A new thread draft has no turn, so it has no takeover.
+    const open = threads()?.open;
+    const threadId = open === undefined ? agent.threadId : open?.threadId;
+    return workspace.state.takeovers.find((request) => request.agentId === agent.id && request.threadId === threadId);
   });
   // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.
   // The marker does not tell whether the routine is paused; an agent makes an active routine unless told otherwise.
@@ -2481,7 +2484,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 remoteTaskLimitLoaded={remoteAgentAdmin.taskLimit() !== undefined}
                 onUpdateAgentPermissions={remoteAgentAdmin.settings() ? remoteAgentAdmin.update : undefined}
                 onClearAgentContext={clearSelectedAgentContext()}
-                onRespondToBrowserTakeover={(decision) => workspace.respondToBrowserTakeover(decision)}
+                onRespondToBrowserTakeover={(decision) => workspace.respondToBrowserTakeover(decision, openThreadId())}
                 onCancelQueuedMessage={workspace.cancelQueued}
                 onSteerQueuedMessage={workspace.steerQueued}
                 onUpdateQueuedMessage={workspace.updateQueued}

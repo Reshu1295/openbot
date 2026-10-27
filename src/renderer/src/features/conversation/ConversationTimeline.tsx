@@ -16,7 +16,6 @@ import { ChatScrollRail, createChatScrollRail } from "@openbot/ui/features/conve
 import { ChatSearch } from "@openbot/ui/features/conversation/ChatSearch";
 import { ChatVisual } from "@openbot/ui/features/conversation/ChatVisual";
 import { ContextCompactionMarker, type ContextCompactionView } from "@openbot/ui/features/conversation/ContextUsage";
-import { BrowserTakeoverCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { dayMarkerLabel } from "@openbot/ui/features/conversation/chat-day-markers";
 import { ReplyReturnButton, ScrollToLatestButton } from "@openbot/ui/features/conversation/MessageNavigation";
 import { MessageActions, MessageMenu } from "@openbot/ui/features/conversation/MessageRendering";
@@ -43,7 +42,7 @@ import {
   toggleSpokenReply,
 } from "../speech/speech-replies";
 import { groupedMessageIds } from "./agent-message-timeline";
-import { browserSecretVault } from "./browser-secret-vault";
+import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
 import { continuesSenderRun } from "./chat-grouping";
 import { isChatVisualAppShortcut } from "./chat-visual-shortcuts";
 import { chatVisualPageUrl } from "./chat-visual-url";
@@ -113,9 +112,6 @@ export function ConversationTimeline() {
     activeChatSearchIndex,
     agentActivitySpaceReserved,
     attachmentAction,
-    browserTakeoverPreview,
-    browserTakeoverResolution,
-    browserTakeoverTab,
     channel,
     chatSearchMatches,
     chatSearchOpen,
@@ -147,8 +143,6 @@ export function ConversationTimeline() {
     moveChatSearch,
     openExternalMessageUrl,
     openReactionMessageId,
-    openBrowserTakeoverTab,
-    localSignIn,
     openRoutineSettings,
     openSkillSettings,
     openSharedFile,
@@ -167,7 +161,6 @@ export function ConversationTimeline() {
     providerSilentMinutes,
     agentProviderName,
     replyJump,
-    respondToBrowserTakeover,
     replyToMessage,
     addPageText,
     setPageContext,
@@ -1463,40 +1456,9 @@ export function ConversationTimeline() {
                 />
               )}
             </Show>
-            <Show when={props.browserTakeover}>
-              <Loading>
-                <BrowserTakeoverCard
-                  request={props.browserTakeover}
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={browserTakeoverTab()}
-                  preview={browserTakeoverPreview().preview}
-                  previewStatus={browserTakeoverPreview().status}
-                  onOpen={openBrowserTakeoverTab}
-                  onComplete={() => respondToBrowserTakeover("complete")}
-                  onCancel={() => respondToBrowserTakeover("cancel")}
-                  onSignInLocally={localSignIn.canStartForTakeover() ? localSignIn.startForTakeover : undefined}
-                  signInBlocked={localSignIn.blockedTakeover()}
-                  browserSecret={{
-                    loadPreview: runtime.browser.capturePreview,
-                    vault: browserSecretVault(props.server),
-                    onRespond: runtime.agent.respondToBrowserSecret,
-                  }}
-                />
-              </Loading>
-            </Show>
-            <Show when={!props.browserTakeover && browserTakeoverResolution()}>
-              {(resolution) => (
-                <BrowserTakeoverCard
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={resolution().tab}
-                  preview={resolution().preview}
-                  previewStatus={resolution().previewStatus}
-                  decision={resolution().decision}
-                  signInBlocked={resolution().signInBlocked}
-                  onComplete={async () => false}
-                  onCancel={async () => false}
-                />
-              )}
+            {/* Under an open side thread, the thread draws the card of its own request. */}
+            <Show when={!sideThreadOpen()}>
+              <ConversationBrowserTakeover />
             </Show>
           </div>
         </Show>

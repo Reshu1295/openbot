@@ -1767,9 +1767,10 @@ export function createWebWorkspace(
       });
       await refresh();
     },
-    async respondToBrowserTakeover(decision: "complete" | "cancel") {
+    /** Answers the takeover of the selected agent's chat, or of its side thread `sideThreadId`. */
+    async respondToBrowserTakeover(decision: "complete" | "cancel", sideThreadId?: string) {
       const current = generation;
-      const threadId = state.agents.find((agent) => agent.id === selectedId)?.threadId;
+      const threadId = sideThreadId ?? state.agents.find((agent) => agent.id === selectedId)?.threadId;
       const request = state.takeovers.find((item) => item.agentId === selectedId && item.threadId === threadId);
       if (!request) return false;
       try {

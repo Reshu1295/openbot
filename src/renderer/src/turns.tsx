@@ -313,9 +313,10 @@ const Turns = createSimpleContext({
       return respondToApprovalRequest(agent.id, approval.requestId, decision);
     }
 
-    async function respondToBrowserTakeover(decision: "complete" | "cancel"): Promise<boolean> {
+    /** Answers the takeover of the agent's chat, or of its side thread `threadId`. */
+    async function respondToBrowserTakeover(decision: "complete" | "cancel", threadId?: string): Promise<boolean> {
       const agent = activeAgent();
-      const key = agent ? attentionKey(agent.id, agent.threadId) : undefined;
+      const key = agent ? attentionKey(agent.id, threadId ?? agent.threadId) : undefined;
       const event = key ? pendingPrompts()[key] : undefined;
       if (!agent || !key || event?.type !== "browser-takeover-requested") return false;
       const serverId = activeServerId();

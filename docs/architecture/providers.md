@@ -375,6 +375,43 @@ one with `-32000` "provider authentication required" and no provider ID. `OPENCO
 maps that code to `error.provider.opencodeAuthRequired`, which names the provider from the model ID
 before its first `/` and lists the fixes: a Free model, a Go key, or `opencode auth login`.
 
+#### Turns of a background subagent
+
+OpenCode 2.2.0 sends session updates only for the execution that a `session/prompt` starts. When a
+background subagent ends, OpenCode answers its result in a turn of its own (a `synthetic` row with
+`source: subagent` in its store), and no update of that turn reaches the client (#3406). The flag
+`unsentBackgroundTurns` of `OPENCODE_ACP_FLAVOR` turns on the recovery in `acp-client.ts`:
+
+- A tool call that ends with `rawOutput.metadata.status` "running" and a `sessionID` started a
+  background task. OpenBot then watches the session for 30 minutes, and longer while it changes.
+  The idle pool does not close a watched session, because a closed one never reports the result.
+- Every 2 seconds, when no prompt runs or opens, OpenBot reads `session/list`. When the session's
+  `updatedAt` changes, it sends `session/load` with the session's own MCP servers, and collects the
+  replay apart from live updates until the load answers, also after the request time limit. A
+  prompt waits for the load meanwhile. A failed load is tried again at the next poll.
+- The client keeps the ACP `messageId` of each message with text and the ID of each tool call that
+  the chat showed. The replay's entries after the last shown one, the updates of the tool calls
+  that are still open, and the added text of the message that the turn shows last go through the
+  live update path in a turn with `unprompted: true`. OpenCode stores a message when it starts and
+  its text when the step ends, so a replay can find it empty first. As for Claude
+  (#1904), no delivery attaches to that turn, and a message sent meanwhile fails with
+  `ProviderTurnActiveError` and waits in the queue.
+- OpenBot ends that turn when the session sends nothing new for 15 seconds and no tool call is open,
+  or after the stall limit while one is. A step that writes for longer can split one turn in two;
+  nothing is lost. A stop cancels the turn and marks its open tool calls as stopped. For 30 seconds
+  after any turn that does not complete, a replay marks new entries as shown and does not show
+  them, because OpenCode can go on with a stopped turn (#2858).
+
+The watch is in memory. A background task that ends while OpenBot is closed, or after OpenBot
+loaded the session again, shows only in OpenCode's own store.
+
+#### Text of two steps
+
+OpenCode 2.2.0 gives the message of each step its own ACP `messageId`. With `messagePerId`, text of a
+new `messageId` with no tool call before it starts a new paragraph of the same answer, so the text
+of two steps does not show as one line. As for every ACP agent, text before a tool call is
+commentary, which the chat folds into the turn's thinking.
+
 Provider session IDs remain in `projection_provider_sessions`; migration 17 adds OpenCode while
 preserving turn links. Provider switches keep the same agent, workspace, and local thread.
 Migrations 17, 22, 23, 24 and 26 widen the table's provider `CHECK`. Migration 28 removes it, so a

@@ -3,6 +3,7 @@ import { AgentThreadView } from "@openbot/ui/features/conversation/threads/Agent
 import { DRAFT_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
 import { createProjection, Show } from "solid-js";
 import { toAgentMessages } from "../../app-message-projection";
+import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
 import { useConversationController } from "./conversation-controller-context";
 import { threadDraftKey } from "./conversation-keys";
 import { useConversationViewScope } from "./conversation-scope";
@@ -11,7 +12,8 @@ import { currentConversationTarget } from "./stores/composer-store";
 
 /** The open side thread of the agent, in the place of the agent's own chat and its message box. */
 export function ConversationThread() {
-  const { props, openExternalMessageUrl, previewAttachment, attachmentAction } = useConversationViewScope();
+  const { props, openExternalMessageUrl, previewAttachment, attachmentAction, browserTakeoverResolution } =
+    useConversationViewScope();
   const { threadDrafts, setThreadDrafts } = useConversationController();
   /** Reconciled by id, so a stream chunk redraws only the message that changed. */
   const messages = createProjection<AgentMessage[]>(
@@ -70,6 +72,7 @@ export function ConversationThread() {
           onAttachmentAction={attachmentAction}
           approval={current().threads.approval}
           onRespondApproval={(decision) => current().threads.onRespondApproval(decision)}
+          attention={props.browserTakeover || browserTakeoverResolution() ? <ConversationBrowserTakeover /> : undefined}
         />
       )}
     </Show>
