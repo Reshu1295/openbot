@@ -276,7 +276,8 @@ export function ConversationTimeline() {
   );
 
   const runtime = conversationRuntime(props);
-  const loadImageFile = createMessageImageFiles(runtime.agent);
+  // The browser client reads a host file whole, with no size limit, so a named image stays a chip there.
+  const loadImageFile = props.runtime ? undefined : createMessageImageFiles(runtime.agent);
   /** The agent that asks in a card: in a channel, the working agent whose card shows. */
   const interactionAgentName = () => (channel ? channel.interactionAgentName() : props.agent?.name);
   /**
@@ -1231,12 +1232,14 @@ export function ConversationTimeline() {
                             onOpenQuote={openQuote}
                             onDownload={(attachment) => attachmentAction(attachment, "download")}
                             mediaSource={runtime.attachmentMedia}
-                            loadImageFile={(file) =>
-                              loadImageFile(file, {
-                                serverId: props.server?.id ?? "local",
-                                messageId: message()?.id ?? initialMessage.id,
-                                agentId: workspaceAgentId(),
-                              })
+                            loadImageFile={
+                              loadImageFile &&
+                              ((file) =>
+                                loadImageFile(file, {
+                                  serverId: props.server?.id ?? "local",
+                                  messageId: message()?.id ?? initialMessage.id,
+                                  agentId: workspaceAgentId(),
+                                }))
                             }
                             actions={
                               <>
