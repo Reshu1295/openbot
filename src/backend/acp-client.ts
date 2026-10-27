@@ -1762,6 +1762,9 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
   ): Effect.fn.Return<{ turn: { id: string; status: string }; turnId?: string }, ProviderClientOperationError> {
     yield* this.#threads.wake(threadId).pipe(toProviderClientOperationError);
     let thread = yield* providerSync(() => this.#requireThread(threadId));
+    // A background replay that runs can start a turn of the agent. The prompt waits for it before it
+    // opens the session again, because that replaces the thread that the replay writes to.
+    if (thread.backgroundReplay) yield* Deferred.await(thread.backgroundReplay);
     if (thread.needsResume && !thread.activeTurn) {
       yield* this.#startThread(
         {
@@ -1777,8 +1780,6 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       );
       thread = yield* providerSync(() => this.#requireThread(threadId));
     }
-    // A background replay that runs can start a turn of the agent. The prompt then waits for it.
-    if (thread.backgroundReplay) yield* Deferred.await(thread.backgroundReplay);
     if (thread.activeTurn) return yield* providerFailure(this.#turnActiveError(thread.activeTurn));
     yield* this.#configuration.applyConfig(
       thread,
