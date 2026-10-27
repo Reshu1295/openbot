@@ -67,6 +67,13 @@ export const createAgentToolSchema = z
 export const listModelsToolSchema = z
   .object({
     provider: z.enum(AGENT_PROVIDERS).describe("Show only the models of this provider.").optional(),
+    query: z
+      .string()
+      .trim()
+      .min(1)
+      .max(200)
+      .describe("Words that a model id or name contains. Searches all models.")
+      .optional(),
   })
   .strict();
 

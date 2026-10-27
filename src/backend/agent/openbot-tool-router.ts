@@ -124,6 +124,18 @@ const ACKNOWLEDGE_START_MS = 10_000;
 /** The tools that `#apiKeyTool` answers. */
 const API_KEY_TOOLS: ReadonlySet<string> = new Set(["request_api_key", "list_api_keys", "remove_api_key"]);
 
+/** The characters of an agent description that `list_agents` returns. `read_agent` returns all of it. */
+const LISTED_DESCRIPTION_LENGTH = 300;
+
+function listedDescription(description: string): string {
+  const characters = Array.from(description);
+  if (characters.length <= LISTED_DESCRIPTION_LENGTH) return description;
+  return `${characters
+    .slice(0, LISTED_DESCRIPTION_LENGTH - 1)
+    .join("")
+    .trimEnd()}…`;
+}
+
 /** The Marketplace apps that the chat draws a card for: the bundled catalog plugins and the connectors. */
 const MARKETPLACE_APP_IDS: readonly string[] = [
   ...pluginCatalog.plugins.map((plugin) => plugin.slug),
@@ -857,7 +869,7 @@ export class OpenBotToolRouter {
             id: agent.id,
             name: agent.name,
             title: agent.title,
-            description: agent.description,
+            description: listedDescription(agent.description),
             status: working ? "working" : queuedMessages > 0 ? "queued" : "ready",
             queuedMessages,
             ...(working && startedAt !== null ? { turnStartedAt: new Date(startedAt).toISOString() } : {}),
@@ -874,7 +886,16 @@ export class OpenBotToolRouter {
         this.#hooks.listModels(),
         this.#hooks.preferredProvider(),
         this.#hooks.providerAccounts,
-        args.provider,
+        {
+          provider: args.provider,
+          query: args.query,
+          inUse: this.#hooks
+            .listAgents()
+            .flatMap((agent) => [
+              { provider: agent.provider, model: agent.model },
+              ...(agent.backupModels?.order ?? []),
+            ]),
+        },
       );
       return { success: true, contentItems: [{ type: "inputText", text: redactText(JSON.stringify(payload)) }] };
     }
