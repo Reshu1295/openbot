@@ -28,6 +28,9 @@ export interface ThreadComposerActionsDeps {
  * shows no file row. A thread takes files only on this computer: `agent-tasks-v1` carries text only.
  */
 export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
+  /** The thread draft that each import in progress goes to, by request id. A send waits for them. */
+  const imports = new Map<string, string>();
+
   /** The draft of the open side thread, or of the new thread tab. Undefined while the agent's own chat is open. */
   function openDraftKey(): string | undefined {
     const target = currentConversationTarget(deps.props);
@@ -60,6 +63,45 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
   }
 
   /**
+   * Discards each file whose reference the user deleted. The box shows no file row, so such a file
+   * could not be removed, and it would still count toward the limit.
+   */
+  function dropUnreferenced(key: string, serverId: string): void {
+    const referenced = attachmentReferenceIds(draft(key).text);
+    const unreferenced = draft(key).attachments.filter((attachment) => !referenced.has(attachment.id));
+    if (!unreferenced.length) return;
+    const ids = new Set(unreferenced.map((attachment) => attachment.id));
+    updateDraft(key, (current) => ({
+      ...current,
+      attachments: current.attachments.filter((attachment) => !ids.has(attachment.id)),
+    }));
+    discard(unreferenced, serverId);
+  }
+
+  /**
+   * Takes an import from a drop or the file picker for the open thread. A thread on another computer
+   * refuses it, and the import then has no target. False when no thread takes the files.
+   */
+  function claimImport(requestId: string, serverId: string): boolean {
+    const key = openDraftKey();
+    if (!key) return false;
+    if (!deps.props.threads?.acceptsFiles) {
+      refuseFiles();
+      return false;
+    }
+    if (currentConversationTarget(deps.props)?.serverId !== serverId) return false;
+    imports.set(requestId, key);
+    return true;
+  }
+
+  /** Ends an import that `claimImport` took, and returns the key of its draft. */
+  function releaseImport(requestId: string): string | undefined {
+    const key = imports.get(requestId);
+    imports.delete(requestId);
+    return key;
+  }
+
+  /**
    * Adds the files that fit the draft and puts their references at the selection, or at the end when
    * the text changed since `before`. A message that would be too long keeps none of them.
    */
@@ -69,6 +111,7 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
     imported: readonly DraftAttachment[],
     at?: { before: string; selection: ComposerSelection },
   ): ComposerPasteResult | undefined {
+    dropUnreferenced(key, serverId);
     const available = Math.max(0, INPUT_LIMITS.attachments - draft(key).attachments.length);
     const accepted = imported.slice(0, available);
     discard(imported.slice(available), serverId);
@@ -103,7 +146,10 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
       refuseFiles();
       return;
     }
+    dropUnreferenced(key, target.serverId);
     const before = draft(key).text;
+    const requestId = crypto.randomUUID();
+    imports.set(requestId, key);
     try {
       const imported = await importPastedFiles(
         files,
@@ -113,6 +159,8 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
       return addFiles(key, target.serverId, imported, { before, selection });
     } catch (error) {
       actionToast.error(errorMessage(error, t("composer.error.keepAttachments")));
+    } finally {
+      imports.delete(requestId);
     }
   }
 
@@ -121,13 +169,16 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
   }
 
   /**
-   * Sends the text with the files that it still names. When the message went, the draft empties and
-   * each file whose reference the user deleted is discarded.
+   * Sends the text with the files that it still names, after each import of the draft ended. When the
+   * message went, the sent text leaves the draft and each file whose reference the user deleted is
+   * discarded. A file that came during the send stays.
    */
   async function send(threads: ConversationThreads, text: string): Promise<boolean> {
     // The first message of a new thread starts the thread and opens it, so the key is read before the send.
     const key = openDraftKey();
+    if (key && [...imports.values()].includes(key)) return false;
     const target = currentConversationTarget(deps.props);
+    const before = key ? draft(key).text : "";
     const attachments = key ? draft(key).attachments : [];
     const referenced = attachmentReferenceIds(text);
     const sent = await threads.onSend(
@@ -138,7 +189,8 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
     const known = new Set(attachments.map((attachment) => attachment.id));
     updateDraft(key, (current) => ({
       ...current,
-      text: "",
+      // A file that came during the send put its reference after the sent text.
+      text: current.text.startsWith(before) ? current.text.slice(before.length).trimStart() : "",
       attachments: current.attachments.filter((attachment) => !known.has(attachment.id)),
     }));
     if (target)
@@ -149,5 +201,5 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
     return sent;
   }
 
-  return { openDraftKey, draft, addFiles, pasteFiles, refuseFiles, setText, send };
+  return { openDraftKey, draft, addFiles, pasteFiles, claimImport, releaseImport, setText, send };
 }

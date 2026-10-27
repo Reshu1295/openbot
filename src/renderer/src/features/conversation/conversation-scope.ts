@@ -834,19 +834,12 @@ export function createConversationViewScope(props: ConversationProps) {
 
   onSettled(() => {
     const importSounds = createAttachmentImportSounds();
-    /** The thread draft that each import from a drop or the file picker goes to, by request id. */
-    const threadImports = new Map<string, string>();
     const unsubscribeImport = conversationRuntime(props).agent.onAttachmentImport((event) => {
-      const threadKey = threadImports.get(event.requestId);
+      const threadKey = event.type === "started" ? undefined : threadComposer.releaseImport(event.requestId);
       if (event.type === "started") {
         // A side thread covers the agent's own chat, so a file dropped or picked there goes to the thread.
-        const openThreadKey = threadComposer.openDraftKey();
-        if (openThreadKey !== undefined) {
-          if (!props.threads?.acceptsFiles) threadComposer.refuseFiles();
-          else if (currentTarget()?.serverId === event.serverId) {
-            threadImports.set(event.requestId, openThreadKey);
-            importSounds.started(event.requestId);
-          }
+        if (threadComposer.openDraftKey() !== undefined) {
+          if (threadComposer.claimImport(event.requestId, event.serverId)) importSounds.started(event.requestId);
           return;
         }
         const target = currentTarget();
@@ -858,7 +851,6 @@ export function createConversationViewScope(props: ConversationProps) {
         setAttachmentBusy(true);
         setScopedComposerError(null);
       } else if (threadKey !== undefined) {
-        threadImports.delete(event.requestId);
         if (event.type === "error") {
           importSounds.cancel(event.requestId);
           actionToast.error(event.message);
