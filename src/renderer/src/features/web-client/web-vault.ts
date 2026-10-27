@@ -1,4 +1,4 @@
-import { decodeHostVaultSecret, decodeHostVaultState } from "@openbot/contracts/ipc";
+import { decodeHostVaultSecret, decodeHostVaultState, type VaultSaveInput } from "@openbot/contracts/ipc";
 import { VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import type { TeamApiRequest } from "@openbot/team-client/team-api-requests";
 import { remoteVaultCalls, type VaultCalls } from "../vault/vault-port";
@@ -16,7 +16,8 @@ export function webVaultCalls(request: () => TeamApiRequest, onHostEvent: WebWor
   return remoteVaultCalls(
     {
       list: () => post(VAULT_ROUTES.list, decodeHostVaultState),
-      save: (input) => post(VAULT_ROUTES.save, decodeHostVaultState, { ...input }),
+      save: (input) =>
+        post(VAULT_ROUTES.save, decodeHostVaultState, input.kind === "card" ? cardBody(input) : { ...input }),
       remove: (id) => post(VAULT_ROUTES.delete, decodeHostVaultState, { id }),
       reveal,
       // The write starts in the click, with the value still on its way: Safari refuses a clipboard
@@ -34,4 +35,9 @@ export function webVaultCalls(request: () => TeamApiRequest, onHostEvent: WebWor
         if (event.type === "vault-changed") read();
       }),
   );
+}
+
+/** A card with no `fillSites` keeps them all; the key stays out of the body, as JSON has no undefined. */
+function cardBody({ fillSites, ...card }: Extract<VaultSaveInput, { kind: "card" }>) {
+  return fillSites === undefined ? card : { ...card, fillSites };
 }
