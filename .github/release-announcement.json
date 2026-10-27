@@ -1,10 +1,10 @@
 {
-  "version": "0.52.0",
+  "version": "0.52.1",
   "highlights": [
-    "Give an agent more than one conversation: click + in the chat header to start a new thread. Your tasks are now threads.",
-    "Attach MP4 videos in chat, and see image files that an agent names as previews under its answer.",
-    "Connect Obsidian, Trello, Render, Neon, Prisma, Netlify, Railway, Atlassian, Todoist and Hugging Face from the new Marketplace.",
-    "OpenBot is now available in Dutch.",
-    "Workspace only Pi, Cursor and DeepSeek agents on macOS work again, and a provider CLI update no longer stops OpenBot at start."
+    "Keep API keys in the Vault: every agent on the server can use them, and the key never goes into the chat.",
+    "Remove the downloaded CLI of a provider that is off, in Settings > Providers, to free disk space.",
+    "Save a password that you type in the secure card to the Vault of a joined server.",
+    "Text that you do not send in a side thread now stays there after a turn ends or a restart.",
+    "OpenBot now quits fully when a file operation never finishes, and long Codex and Pi compactions run to the end."
   ]
 }
