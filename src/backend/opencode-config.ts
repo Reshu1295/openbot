@@ -29,7 +29,7 @@ export interface CustomProviderConfig {
  */
 export type CustomProviderSource = () => readonly CustomProviderConfig[];
 
-/** The options block OpenCode hands to its bundled OpenAI-compatible or Anthropic adapter. */
+/** The options block OpenCode hands to its bundled OpenAI-compatible, OpenAI or Anthropic adapter. */
 interface OpenCodeProviderOptions {
   readonly baseURL: string;
   readonly apiKey?: string;
@@ -94,6 +94,12 @@ const OPENCODE_COMPATIBLE_NPM = "@ai-sdk/openai-compatible";
 /** The adapter OpenCode bundles for its own Anthropic provider. */
 const OPENCODE_ANTHROPIC_NPM = "@ai-sdk/anthropic";
 
+/** The adapter OpenCode bundles for its own OpenAI provider. It sends a turn to `/responses`. */
+const OPENCODE_OPENAI_NPM = "@ai-sdk/openai";
+
+/** The Azure hosts that serve the OpenAI v1 API at `/openai/v1`: Azure OpenAI and Azure AI Foundry. */
+const AZURE_OPENAI_HOST_SUFFIXES = [".openai.azure.com", ".services.ai.azure.com", ".cognitiveservices.azure.com"];
+
 /**
  * Anthropic's OpenAI-compatible endpoint ignores prompt caching, so each turn paid the full input
  * price. An endpoint on Anthropic's own API host uses the Messages API instead: OpenCode 1.19.3 adds
@@ -105,10 +111,33 @@ function anthropicBaseUrl(baseUrl: string): string | null {
   return url?.protocol === "https:" && url.hostname === "api.anthropic.com" ? `${url.origin}/v1` : null;
 }
 
+/**
+ * Azure OpenAI and Azure AI Foundry refuse function tools together with `reasoning_effort` on
+ * `/openai/v1/chat/completions`: "Function tools with reasoning_effort are not supported ... use
+ * /v1/responses". An agent turn always sends both, so each turn failed with a 400 (#3460). The
+ * `@ai-sdk/openai` adapter sends the turn to `{baseURL}/responses`, which accepts both, and Azure v1
+ * accepts the API key as a bearer token. `@ai-sdk/azure` is not used: it adds `/deployments/<model>`
+ * to the path, which a v1 endpoint answers with a 404.
+ */
+function isAzureOpenAiV1(baseUrl: string): boolean {
+  const url = URL.parse(baseUrl);
+  if (url?.protocol !== "https:") return false;
+  return (
+    AZURE_OPENAI_HOST_SUFFIXES.some((suffix) => url.hostname.endsWith(suffix)) &&
+    /^\/openai\/v1\/?$/u.test(url.pathname) &&
+    url.search === ""
+  );
+}
+
+function providerNpm(provider: CustomProviderConfig, anthropic: string | null) {
+  if (anthropic) return OPENCODE_ANTHROPIC_NPM;
+  return isAzureOpenAiV1(provider.baseUrl) ? OPENCODE_OPENAI_NPM : OPENCODE_COMPATIBLE_NPM;
+}
+
 function providerEntry(provider: CustomProviderConfig): OpenCodeProviderEntry {
   const anthropic = anthropicBaseUrl(provider.baseUrl);
   return {
-    npm: anthropic ? OPENCODE_ANTHROPIC_NPM : OPENCODE_COMPATIBLE_NPM,
+    npm: providerNpm(provider, anthropic),
     name: provider.name,
     options: {
       baseURL: anthropic ?? provider.baseUrl,
