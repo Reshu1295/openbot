@@ -5,7 +5,7 @@ import { type AppMobileMessages, enMobile } from "./messages/en/mobile";
 /**
  * The mobile catalog of `locale`, as in `mobile-catalogs.ts`. Metro puts this module in its place.
  * Each language other than English runs its module only when the app first shows that language, so
- * the app does not build the eleven catalogs before its first screen. Metro needs a literal path in
+ * the app does not build the twelve catalogs before its first screen. Metro needs a literal path in
  * each `require`.
  */
 export function mobileCatalog(locale: TranslatedLocale): PartialTranslation<AppMobileMessages> {
@@ -35,6 +35,10 @@ export function mobileCatalog(locale: TranslatedLocale): PartialTranslation<AppM
     case "ko": {
       const catalog: typeof import("./messages/ko/mobile") = require("./messages/ko/mobile");
       return catalog.koMobile;
+    }
+    case "nl": {
+      const catalog: typeof import("./messages/nl/mobile") = require("./messages/nl/mobile");
+      return catalog.nlMobile;
     }
     case "pl": {
       const catalog: typeof import("./messages/pl/mobile") = require("./messages/pl/mobile");
