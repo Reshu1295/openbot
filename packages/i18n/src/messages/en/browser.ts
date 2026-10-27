@@ -85,7 +85,7 @@ export const messages = defineMessages("browser", {
   "browser.secret.codeLength": "{digits}-digit code",
   "browser.secret.password": "Password",
   "browser.secret.saveToVaultOn": "Save to Vault on {server}",
-  "browser.secret.thisComputer": "this computer",
+  "browser.secret.saveToVaultLocal": "Save to Vault on this computer",
   "browser.secret.saveHintLocal": "Agents on this computer can then sign in without asking you.",
   "browser.secret.saveHintRemote": "It is kept on {server}. Its agents can then sign in without asking you.",
   "browser.secret.saveBlockedRole": "Only the owner or an admin of {server} can save to its Vault.",

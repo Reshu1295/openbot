@@ -86,7 +86,7 @@ export const messages = {
   "browser.secret.codeLength": "{digits} 位验证码",
   "browser.secret.password": "密码",
   "browser.secret.saveToVaultOn": "保存到 {server} 的保险库",
-  "browser.secret.thisComputer": "这台电脑",
+  "browser.secret.saveToVaultLocal": "保存到这台电脑的保险库",
   "browser.secret.saveHintLocal": "之后，这台电脑上的助手无需询问你即可登录。",
   "browser.secret.saveHintRemote": "密码保存在 {server} 上。之后，它的助手无需询问你即可登录。",
   "browser.secret.saveBlockedRole": "只有 {server} 的所有者或管理员可以保存到其保险库。",

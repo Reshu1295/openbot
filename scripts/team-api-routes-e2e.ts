@@ -2033,21 +2033,31 @@ try {
 
   // ---- A password saved from the secure card (browser-secret-vault-v1) ----
   {
-    const capabilities = [BROWSER_SECRET_VAULT_CAPABILITY];
+    const capabilities = ["browser-secret-handoff", BROWSER_SECRET_VAULT_CAPABILITY];
     const answer = { requestId: "auth-1", agentId: "agent-ada", secret: VAULT_PASSWORD, decision: "takeover" };
     const before = callsOf("respondToBrowserSecret").length;
-    const unsupported = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, { token: adaToken, json: answer });
+    const unsupported = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: adaToken,
+      json: answer,
+      capabilities: ["browser-secret-handoff"],
+    });
+    const noHandoff = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: adaToken,
+      json: answer,
+      capabilities: [BROWSER_SECRET_VAULT_CAPABILITY],
+    });
     const member = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
       token: bobToken,
       json: answer,
       capabilities,
     });
     check(
-      "a save without the capability gets 400 vaultUnsupported, and a member gets 403; neither reaches the agent",
+      "a save without either capability gets 400, and a member gets 403; none reaches the agent",
       errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(noHandoff, 400, sourceText("error.team.secureAuthUnsupported")) &&
         errorIs(member, 403, sourceText("error.team.adminRequired")) &&
         callsOf("respondToBrowserSecret").length === before,
-      [summary(unsupported), summary(member)],
+      [summary(unsupported), summary(noHandoff), summary(member)],
     );
     const saved = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
       token: adaToken,

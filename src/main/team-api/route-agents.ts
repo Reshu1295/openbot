@@ -331,6 +331,9 @@ export async function routeAgents(
     return empty(204);
   }
   if (method === "POST" && url.pathname === BROWSER_SECRET_VAULT_ROUTES.respond) {
+    // The submit has the gates of the released route; the save adds its own.
+    if (!capabilities.has("browser-secret-handoff"))
+      throw new HttpError(400, sourceText("error.team.secureAuthUnsupported"));
     if (!capabilities.has(BROWSER_SECRET_VAULT_CAPABILITY))
       throw new HttpError(400, sourceText("error.team.vaultUnsupported"));
     // The Vault is the owner's and the admins', as on the `vault-v1` routes.

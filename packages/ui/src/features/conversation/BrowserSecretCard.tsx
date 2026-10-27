@@ -4,7 +4,7 @@ import { OtpInput } from "@openbot/ui/features/account/OtpInput";
 import { BrowserTakeoverPreview } from "@openbot/ui/features/conversation/BrowserTakeoverPreview";
 import { useText } from "@openbot/ui/text";
 import { errorReference } from "@openbot/user-errors";
-import { createEffect, createSignal, createUniqueId, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, createUniqueId, onCleanup, Show } from "solid-js";
 
 /**
  * The Vault that a typed password can go to. `server` is null for this computer, or the name of the
@@ -64,11 +64,13 @@ export function BrowserSecretCard(props: {
     return { before, after };
   };
   // The server name is bold inside the sentence, as the origin is.
-  const saveLabel = (vault: BrowserSecretVault) => {
+  const remoteSaveLabel = createMemo(() => {
+    const server = props.vault?.server;
+    if (!server) return null;
     const marker = "\u0000";
     const [before = "", after = ""] = t("browser.secret.saveToVaultOn", { server: marker }).split(marker);
-    return { before, server: vault.server ?? t("browser.secret.thisComputer"), after };
-  };
+    return { before, server, after };
+  });
   const saveHint = (vault: BrowserSecretVault) => {
     if (vault.server === null) return t("browser.secret.saveHintLocal");
     if (vault.blocked === "role") return t("browser.secret.saveBlockedRole", { server: vault.server });
@@ -217,11 +219,15 @@ export function BrowserSecretCard(props: {
                     aria-describedby={`${saveId}-hint`}
                     onChange={(event) => setSaveChoice(event.currentTarget.checked)}
                   />
-                  <span>
-                    {saveLabel(vault()).before}
-                    <strong class="browser-secret-save-server">{saveLabel(vault()).server}</strong>
-                    {saveLabel(vault()).after}
-                  </span>
+                  <Show when={remoteSaveLabel()} fallback={<span>{t("browser.secret.saveToVaultLocal")}</span>}>
+                    {(label) => (
+                      <span>
+                        {label().before}
+                        <strong class="browser-secret-save-server">{label().server}</strong>
+                        {label().after}
+                      </span>
+                    )}
+                  </Show>
                 </label>
                 <p class="browser-secret-save-hint" id={`${saveId}-hint`}>
                   {saveHint(vault())}
