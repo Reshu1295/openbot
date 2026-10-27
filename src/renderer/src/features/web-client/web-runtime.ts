@@ -3,6 +3,7 @@ import {
   attachmentFileExtension,
   supportedAttachmentExtensions,
 } from "@openbot/contracts/attachment-files";
+import { isAvatarMimeType } from "@openbot/contracts/avatar-images";
 import type {
   AccountUsage,
   AgentEvent,
@@ -248,6 +249,8 @@ export interface WebWorkspaceRuntime {
   setAgentHidden?: (input: SetAgentHiddenInput) => Promise<HiddenAgentsSnapshot>;
   react(input: SetMessageReactionInput): Promise<void>;
   setAvatar(agentId: string, image: AvatarImageInput | null): Promise<void>;
+  /** The agent image as a data URL. The browser cannot open the host's `openbot-avatar:` URL. */
+  agentAvatar(agentId: string, avatarUrl: string): Promise<string>;
   models(): Promise<ClientAgentModelOption[]>;
   status(): Promise<AgentStatus>;
   accountUsage?: () => Promise<AccountUsage>;
@@ -932,6 +935,22 @@ export function createWebWorkspaceRuntime(
         {},
         { name: "avatar", mimeType: image.mimeType, base64: bytesToBase64(image.bytes) },
       );
+    },
+    async agentAvatar(agentId, avatarUrl) {
+      const version = new URL(avatarUrl).searchParams.get("v");
+      if (!version) throw new Error(currentText().t("error.remote.invalidData"));
+      const value = await request(
+        "GET",
+        `${TEAM_API_ROUTES.agent.avatar(agentId)}?${new URLSearchParams({ v: version })}`,
+      );
+      if (
+        !isDynamicRecord(value) ||
+        !isString(value.mimeType) ||
+        !isAvatarMimeType(value.mimeType) ||
+        !isString(value.base64)
+      )
+        throw new Error(currentText().t("error.remote.invalidData"));
+      return `data:${value.mimeType};base64,${value.base64}`;
     },
     async send(id, text, attachmentDraftIds, replyToMessageId = null, clientMessageId) {
       const result = await request("POST", TEAM_API_ROUTES.agent.messages(id), {
