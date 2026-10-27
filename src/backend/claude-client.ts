@@ -1225,7 +1225,9 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
       return;
     }
 
+    // Only a reply frame names the message that the next turn answers.
     if (
+      (message.type === "stream_event" || message.type === "assistant") &&
       !runtime.activeTurn &&
       message.parent_tool_use_id === null &&
       message.user_message_uuid &&
@@ -1342,6 +1344,8 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
     }
 
     if (message.type !== "result") return;
+    // A turn that ended with no output must not give its uuid to a later turn of the CLI's own.
+    runtime.nextTurnId = null;
     if (
       message.subtype === "success" &&
       message.total_cost_usd !== undefined &&

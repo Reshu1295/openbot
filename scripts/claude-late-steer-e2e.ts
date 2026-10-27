@@ -34,6 +34,7 @@ const claudeExecutable = join(root, "claude");
 const CLAUDE_MODEL = defaultProviderModel("claude");
 const OLD_ANSWER = "Answer of the running turn.";
 const STEERED_ANSWER = "Answer of the steered message.";
+const STEERED_MESSAGE = "Steered message.";
 
 // Before the service modules load: the stores and the CLI search read these. The history reader
 // finds the transcript in CLAUDE_CONFIG_DIR, as Bun's `homedir()` does not follow HOME.
@@ -269,16 +270,17 @@ function startService() {
     connection ??= new DatabaseSync(database.path);
     return connection;
   };
-  /** The stored assistant messages of the chat with this text. */
-  const answers = (threadId: string, text: string): StoredAnswer[] =>
+  /** The stored messages of the chat with this author and text. */
+  const messages = (threadId: string, author: string, text: string): StoredAnswer[] =>
     sqlite()
       .prepare(
         `SELECT message_id, turn_id FROM projection_thread_messages
-         WHERE thread_id = ? AND author = 'assistant' AND json_extract(message_json, '$.text') = ?
+         WHERE thread_id = ? AND author = ? AND json_extract(message_json, '$.text') = ?
          ORDER BY created_at, ordinal`,
       )
-      .all(threadId, text)
+      .all(threadId, author, text)
       .map((row) => ({ messageId: String(row.message_id), turnId: row.turn_id === null ? null : String(row.turn_id) }));
+  const answers = (threadId: string, text: string) => messages(threadId, "assistant", text);
   const idle = (agentId: string) =>
     !agents
       .listQueue(agentId)
@@ -288,7 +290,7 @@ function startService() {
     connection?.close();
     database.close();
   };
-  return { database, store, agents, answers, idle, stop };
+  return { database, store, agents, messages, answers, idle, stop };
 }
 
 await writeFile(claudeExecutable, STAND_IN_CLAUDE, { mode: 0o755 });
@@ -311,7 +313,7 @@ try {
   await waitFor("the stand-in to hold its answer", () => existsSync(holdMarker));
   const threadId = first.store.list().find((item) => item.id === agent.id)?.threadId;
   assert.ok(threadId, "The agent has a chat thread.");
-  const receipt = await runCauseEffect(first.agents.sendMessage({ agentId: agent.id, text: "Steered message." }));
+  const receipt = await runCauseEffect(first.agents.sendMessage({ agentId: agent.id, text: STEERED_MESSAGE }));
   const steerDeliveryId = receipt.deliveries[0]?.id;
   assert.ok(steerDeliveryId, "The steered message has a delivery.");
   report.steerDeliveryId = steerDeliveryId;
@@ -340,6 +342,11 @@ try {
   report.afterImport = { old: second.answers(threadId, OLD_ANSWER), steered: second.answers(threadId, STEERED_ANSWER) };
   assert.equal(report.afterImport.old.length, 1, "The running turn's answer is stored one time.");
   assert.equal(report.afterImport.steered.length, 1, "The steered answer is stored one time after the import.");
+  assert.equal(
+    second.messages(threadId, "user", STEERED_MESSAGE).length,
+    1,
+    "The steered message is stored one time after the import.",
+  );
   report.passed = true;
 } catch (error) {
   report.error = error instanceof Error ? (error.stack ?? error.message) : String(error);
