@@ -212,14 +212,6 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
     return agent ? approvalOfThread(agent.id, agent.threadId) : undefined;
   });
 
-  const activeBrowserTakeover = createMemo(() => {
-    const agent = activeAgent();
-    const event = agent ? pendingPrompts()[attentionKey(agent.id, agent.threadId)] : undefined;
-    return event?.type === "browser-takeover-requested" && event.request.threadId === agent?.threadId
-      ? event.request
-      : undefined;
-  });
-
   /**
    * Access and auto-approve of a joined server's agent, read from its host. Null for this
    * computer's agents, for a member, and for a host without `agent-admin-v1`.
@@ -371,6 +363,16 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       onRespondApproval: (approval, decision) =>
         respondToApprovalRequest(approval.agentId, approval.requestId, decision),
     });
+  });
+  /** The thread that the conversation shows: the open side thread, or the agent's own chat. */
+  const openThreadId = () => threads()?.open?.threadId;
+  const activeBrowserTakeover = createMemo(() => {
+    const agent = activeAgent();
+    const threadId = openThreadId() ?? agent?.threadId;
+    const event = agent && threadId ? pendingPrompts()[attentionKey(agent.id, threadId)] : undefined;
+    return event?.type === "browser-takeover-requested" && event.request.threadId === threadId
+      ? event.request
+      : undefined;
   });
   /**
    * A usage limit holds the active agent's queued message on this computer. The chat asks where to
@@ -595,7 +597,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
         agentMemoryLimit={generalSettings().agentMemoryLimit}
         onClearAgentContext={clearActiveAgentContext()}
         onCompactAgentContext={compactActiveAgentContext()}
-        onRespondToBrowserTakeover={respondToBrowserTakeover}
+        onRespondToBrowserTakeover={(decision) => respondToBrowserTakeover(decision, openThreadId())}
         onCancelQueuedMessage={cancelQueuedMessage}
         waits={activeWaits()}
         threads={threads()}

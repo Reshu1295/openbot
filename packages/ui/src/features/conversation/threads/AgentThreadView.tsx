@@ -10,6 +10,7 @@ import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor
 import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { type TextValue, useText } from "@openbot/ui/text";
+import type { JSX } from "@solidjs/web";
 import { createEffect, createSignal, For, onSettled, Show } from "solid-js";
 
 const HOLD_TEXT = {
@@ -66,6 +67,8 @@ export interface AgentThreadViewProps {
   /** The approval that the thread's running turn waits for. */
   approval?: AgentApproval | undefined;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
+  /** Another card that the thread waits for, such as a browser takeover. The app builds it. */
+  attention?: JSX.Element | undefined;
 }
 
 /**
@@ -191,6 +194,9 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                 />
               </div>
             )}
+          </Show>
+          <Show when={props.attention}>
+            <div class="virtual-chat-row">{props.attention}</div>
           </Show>
           <Show when={hold()}>
             {(text) => (
