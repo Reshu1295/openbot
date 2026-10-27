@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type { ClientSideConnection, InitializeResponse } from "@agentclientprotocol/sdk";
@@ -509,6 +509,9 @@ function piClient(
           confine: (target) => {
             const paths = piStatePaths();
             for (const path of paths.writable) mkdirSync(path, { recursive: true, mode: 0o700 });
+            // Pi writes an empty `auth.json` before it reads one, and the confined process cannot.
+            const auth = join(piAgentDirectory(), "auth.json");
+            if (!existsSync(auth)) writeFileSync(auth, "{}", { flag: "wx", mode: 0o600 });
             return confineSpawnTarget(target, confinement, paths);
           },
         }
