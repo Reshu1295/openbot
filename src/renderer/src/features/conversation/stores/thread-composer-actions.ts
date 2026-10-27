@@ -29,7 +29,23 @@ export interface ThreadComposerActionsDeps {
  */
 export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
   /** The thread draft that each import in progress goes to, by request id. A send waits for them. */
-  const imports = new Map<string, string>();
+  const imports = new Map<string, { key: string; ended: Promise<void>; end: () => void }>();
+
+  function trackImport(requestId: string, key: string): void {
+    let end = () => {};
+    const ended = new Promise<void>((resolve) => {
+      end = resolve;
+    });
+    imports.set(requestId, { key, ended, end });
+  }
+
+  /** Ends an import, and returns the key of its draft. */
+  function releaseImport(requestId: string): string | undefined {
+    const entry = imports.get(requestId);
+    imports.delete(requestId);
+    entry?.end();
+    return entry?.key;
+  }
 
   /** The draft of the open side thread, or of the new thread tab. Undefined while the agent's own chat is open. */
   function openDraftKey(): string | undefined {
@@ -90,15 +106,8 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
       return false;
     }
     if (currentConversationTarget(deps.props)?.serverId !== serverId) return false;
-    imports.set(requestId, key);
+    trackImport(requestId, key);
     return true;
-  }
-
-  /** Ends an import that `claimImport` took, and returns the key of its draft. */
-  function releaseImport(requestId: string): string | undefined {
-    const key = imports.get(requestId);
-    imports.delete(requestId);
-    return key;
   }
 
   /**
@@ -149,7 +158,7 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
     dropUnreferenced(key, target.serverId);
     const before = draft(key).text;
     const requestId = crypto.randomUUID();
-    imports.set(requestId, key);
+    trackImport(requestId, key);
     try {
       const imported = await importPastedFiles(
         files,
@@ -160,7 +169,7 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
     } catch (error) {
       actionToast.error(errorMessage(error, t("composer.error.keepAttachments")));
     } finally {
-      imports.delete(requestId);
+      releaseImport(requestId);
     }
   }
 
@@ -169,14 +178,21 @@ export function createThreadComposerActions(deps: ThreadComposerActionsDeps) {
   }
 
   /**
-   * Sends the text with the files that it still names, after each import of the draft ended. When the
+   * Sends the draft with the files that it still names, after each import of the draft ended. When the
    * message went, the sent text leaves the draft and each file whose reference the user deleted is
    * discarded. A file that came during the send stays.
    */
-  async function send(threads: ConversationThreads, text: string): Promise<boolean> {
+  async function send(threads: ConversationThreads, typed: string): Promise<boolean> {
     // The first message of a new thread starts the thread and opens it, so the key is read before the send.
     const key = openDraftKey();
-    if (key && [...imports.values()].includes(key)) return false;
+    for (;;) {
+      const pending = [...imports.values()].filter((entry) => entry.key === key).map((entry) => entry.ended);
+      if (!pending.length) break;
+      await Promise.all(pending);
+    }
+    // An import that ended put its reference in the draft after the user pressed Send.
+    const text = key ? draft(key).text.trim() : typed;
+    if (!text) return false;
     const target = currentConversationTarget(deps.props);
     const before = key ? draft(key).text : "";
     const attachments = key ? draft(key).attachments : [];

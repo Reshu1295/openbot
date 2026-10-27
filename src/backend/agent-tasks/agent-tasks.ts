@@ -418,7 +418,7 @@ export class AgentTasks implements TaskLanes {
       task.closedAt === null
         ? this.#mailbox.queuedTaskMessages(task.agentId, task.taskId).map((message) => ({
             deliveryId: message.deliveryId,
-            text: message.text.slice(0, AGENT_TASK_QUEUED_PREVIEW),
+            text: expandAttachmentReferences(message.text).slice(0, AGENT_TASK_QUEUED_PREVIEW),
             createdAt: message.createdAt,
           }))
         : [];
