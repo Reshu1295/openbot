@@ -92,6 +92,12 @@ export function QueuedMessagesScreen() {
           // With nothing else to show, the sheet would only say that the queue is empty.
           if (count === 0 && !queue?.error) router.back();
         }}
+        // Steer is the only action of an answer, so the row opens it only while a turn runs.
+        onOpenReply={
+          queue?.activeTurnId
+            ? (deliveryId) => router.push({ pathname: "/queued-messages/actions", params: { chat, deliveryId } })
+            : undefined
+        }
       />
       {count > 0 ? (
         <SettingsSection title={t("mobile.chat.queue.waitingTitle")}>

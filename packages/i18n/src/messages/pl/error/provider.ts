@@ -100,6 +100,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Nazwa nagłówka jest za długa.",
   "error.provider.headerNameDuplicate": "Dwa nagłówki mają tę samą nazwę.",
   "error.provider.headerValueInvalid": "Brak wartości nagłówka lub jest ona za długa.",
+  "error.provider.headerValueMissing": "Wpisz wartość nagłówka {name}.",
   "error.provider.apiKeyTooLong": "Klucz API jest za długi.",
   "error.provider.localOnly": "Dostawców można zmieniać tylko na komputerze, na którym działają agenci.",
   "error.provider.keyRequired": "Klucz dostawcy jest wymagany.",

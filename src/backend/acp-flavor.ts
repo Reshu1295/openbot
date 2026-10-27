@@ -53,6 +53,11 @@ export interface AcpFlavor {
   /** Answer text is shown at once, not only when `session/prompt` answers. */
   streamAnswerBeforePromptReturns?: true;
   /**
+   * A model can stream its reasoning between the tokens of one answer, so a thought does not end
+   * the answer text. A tool call or the end of the turn still does.
+   */
+  thoughtsInsideAnswer?: true;
+  /**
    * `session/prompt` stays open with no update while background tasks run, so a silent turn is not
    * stalled and OpenBot does not end it (`ACP_TURN_STALL_MS`).
    */

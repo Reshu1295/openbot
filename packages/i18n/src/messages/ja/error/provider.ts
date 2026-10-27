@@ -101,6 +101,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "ヘッダー名が長すぎます。",
   "error.provider.headerNameDuplicate": "2 つのヘッダーの名前が同じです。",
   "error.provider.headerValueInvalid": "ヘッダーの値がないか、長すぎます。",
+  "error.provider.headerValueMissing": "ヘッダー {name} の値を入力してください。",
   "error.provider.apiKeyTooLong": "API キーが長すぎます。",
   "error.provider.localOnly": "プロバイダーは、エージェントを実行しているコンピューターでのみ変更できます。",
   "error.provider.keyRequired": "プロバイダーキーが必要です。",

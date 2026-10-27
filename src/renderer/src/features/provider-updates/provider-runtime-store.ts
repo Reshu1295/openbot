@@ -325,6 +325,15 @@ export function createProviderRuntimeStore(
       // A remote workspace announces nothing, and leaves the record of what was announced alone:
       // it says what the user was told about this computer, which the open server does not change.
       if (!next) return;
+      // An offer that main takes back with no update running, as for a provider the user turned off,
+      // takes its notification down: its Update button could only say "up to date".
+      for (const update of next) {
+        const previous = announced.find((entry) => entry.provider === update.provider);
+        if (!previous || !providerUpdateAvailable(previous.runtime, previous.availableVersion)) continue;
+        if (update.availableVersion !== null || updating.has(update.provider) || failed.has(update.provider)) continue;
+        if (update.runtime.phase === "ready" || update.runtime.phase === "not-downloaded")
+          hideProviderUpdateToast(update.provider);
+      }
       for (const update of providerUpdatesToAnnounce(announced, next)) {
         // A closed notification stays closed, including across the server switch that rebuilds this
         // store: the record of it is kept by the notification module, which outlives the switch.

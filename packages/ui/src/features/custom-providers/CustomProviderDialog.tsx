@@ -39,6 +39,7 @@ import {
   type DiscoveredModel,
   emptyCustomProviderDraft,
   hasCustomProviderError,
+  keepsHeaderValue,
   type ModelDiscovery,
   validateCustomProvider,
 } from "./custom-provider-form";
@@ -80,7 +81,7 @@ interface CustomProviderDialogProps {
   takenProviderIds?: readonly string[] | undefined;
   /** Edit of a saved endpoint: the ID names it, so it cannot change. */
   providerIdLocked?: boolean | undefined;
-  /** Main holds a key or headers for this endpoint. A blank key field keeps them. */
+  /** Main holds a key for this endpoint. A blank key field keeps it. */
   apiKeyKept?: boolean | undefined;
   /**
    * The last model list request. The host owns it because the request leaves the renderer. Without
@@ -181,7 +182,10 @@ export function CustomProviderDialog(props: CustomProviderDialogProps) {
     },
     {
       label: (number) => t("customProvider.header.value", { number }),
-      placeholder: () => t("customProvider.header.valuePlaceholder"),
+      placeholder: (row) =>
+        keepsHeaderValue(row)
+          ? t("customProvider.header.keptPlaceholder")
+          : t("customProvider.header.valuePlaceholder"),
       maxlength: CUSTOM_PROVIDER_LIMITS.apiKey,
       identifier: true,
       read: (row) => row.value,

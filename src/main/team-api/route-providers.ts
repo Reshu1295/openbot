@@ -6,7 +6,12 @@ import {
   MANAGED_TOOL_RUNTIMES,
   type ManagedProviderId,
 } from "@openbot/contracts/agent-providers";
-import type { ProviderRuntimeSnapshot, ProviderRuntimeStatus } from "@openbot/contracts/ipc";
+import type {
+  CustomProviderResult,
+  CustomProviderSummary,
+  ProviderRuntimeSnapshot,
+  ProviderRuntimeStatus,
+} from "@openbot/contracts/ipc";
 import { type DynamicRecord, isOneOf } from "@openbot/contracts/runtime-values";
 import { PROVIDERS_ADMIN_CAPABILITY, PROVIDERS_ADMIN_ROUTES } from "@openbot/contracts/team-protocol/providers-v1";
 import {
@@ -231,11 +236,19 @@ export async function routeProviders(
       case PROVIDERS_RUNTIMES_V2_ROUTES.runtimesCheck:
         return json(200, wireSnapshotV2(await runCauseEffect(runtimes.checkForUpdates())));
       case PROVIDERS_ADMIN_ROUTES.customList:
-        return json(200, customProviders.list());
+        return json(200, customProviders.list().map(wireCustomProvider));
       case PROVIDERS_ADMIN_ROUTES.customSave:
-        return json(200, await runCauseEffect(customProviders.save(parsed(parseSaveCustomProvider, body))));
+        return json(
+          200,
+          wireCustomProviderResult(await runCauseEffect(customProviders.save(parsed(parseSaveCustomProvider, body)))),
+        );
       default:
-        return json(200, await runCauseEffect(customProviders.remove(parsed(parseDeleteCustomProvider, body).id)));
+        return json(
+          200,
+          wireCustomProviderResult(
+            await runCauseEffect(customProviders.remove(parsed(parseDeleteCustomProvider, body).id)),
+          ),
+        );
     }
   } catch (error) {
     if (error instanceof HttpError) throw error;
@@ -262,6 +275,15 @@ const ROUTES = new Set<string>([
 
 function isProvidersRoute(pathname: string): boolean {
   return ROUTES.has(pathname);
+}
+
+/** The `providers-v1` endpoint summary: the header names stay on this computer, as they did. */
+function wireCustomProvider({ headerNames: _headerNames, ...provider }: CustomProviderSummary): CustomProviderSummary {
+  return provider;
+}
+
+function wireCustomProviderResult(result: CustomProviderResult): CustomProviderResult {
+  return { ...result, providers: result.providers.map(wireCustomProvider) };
 }
 
 /**
