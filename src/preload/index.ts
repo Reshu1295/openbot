@@ -833,6 +833,12 @@ const openbotApi: OpenBotDesktopApi = {
     importCsv: decodeVaultImportResult,
     reset: decodeVaultState,
     changed: decodeVaultState,
+    hostList: decodeVaultState,
+    hostSave: decodeVaultState,
+    hostDelete: decodeVaultState,
+    hostReveal: decodeVaultSecret,
+    hostCopy: decodeVoid,
+    hostReset: decodeVaultState,
   }),
   onePasswordConnector: bridgeGroup(IPC_ENDPOINTS.onePasswordConnector, {
     status: decodeOnePasswordConnectorStatus,
