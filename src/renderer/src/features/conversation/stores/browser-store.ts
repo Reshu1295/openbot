@@ -187,6 +187,10 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
     },
   );
   const latestMessageMarker = createMemo(() => {
+    // An open side thread has its own messages, so a result card there goes with them, not with the chat.
+    const threads = deps.props.threads;
+    if (threads?.open !== undefined)
+      return `thread:${threads.open?.id ?? "new"}:${threads.conversation?.revision ?? 0}`;
     const message = deps.props.messages.at(-1);
     return message
       ? `${message.id}:${message.body.length}:${message.streaming === true ? "streaming" : "settled"}`

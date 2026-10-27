@@ -11,7 +11,7 @@ import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { type TextValue, useText } from "@openbot/ui/text";
 import type { JSX } from "@solidjs/web";
-import { createEffect, createSignal, For, onSettled, Show } from "solid-js";
+import { children, createEffect, createSignal, For, onSettled, Show } from "solid-js";
 
 const HOLD_TEXT = {
   "agent-restarting": "conversation.threads.hold.agentRestarting",
@@ -78,6 +78,8 @@ export interface AgentThreadViewProps {
  */
 export function AgentThreadView(props: AgentThreadViewProps) {
   const { t } = useText();
+  // Resolved once, so the card is built one time for the check and the row.
+  const attention = children(() => props.attention);
   const [draft, setDraft] = createSignal("");
   const [sending, setSending] = createSignal(false);
   let scroller: HTMLElement | undefined;
@@ -195,8 +197,8 @@ export function AgentThreadView(props: AgentThreadViewProps) {
               </div>
             )}
           </Show>
-          <Show when={props.attention}>
-            <div class="virtual-chat-row">{props.attention}</div>
+          <Show when={attention.toArray().length > 0}>
+            <div class="virtual-chat-row">{attention()}</div>
           </Show>
           <Show when={hold()}>
             {(text) => (

@@ -1352,14 +1352,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     return root.threads;
   });
   /** The selected agent's threads. A host without side threads shows only the agent's own chat. */
-  /** The thread that the conversation shows: the open side thread, or the agent's own chat. */
-  const openThreadId = () => threads()?.open?.threadId;
-  const browserTakeover = createMemo(() => {
-    const agent = workspace.selected();
-    if (!agent) return undefined;
-    const threadId = openThreadId() ?? agent.threadId;
-    return workspace.state.takeovers.find((request) => request.agentId === agent.id && request.threadId === threadId);
-  });
   const threads = createMemo((): ConversationThreads | undefined => {
     const agent = workspace.selected();
     const current = agentThreads();
@@ -1375,6 +1367,14 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
         return true;
       },
     });
+  });
+  /** The thread that the conversation shows: the open side thread, or the agent's own chat. */
+  const openThreadId = () => threads()?.open?.threadId;
+  const browserTakeover = createMemo(() => {
+    const agent = workspace.selected();
+    if (!agent) return undefined;
+    const threadId = openThreadId() ?? agent.threadId;
+    return workspace.state.takeovers.find((request) => request.agentId === agent.id && request.threadId === threadId);
   });
   // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.
   // The marker does not tell whether the routine is paused; an agent makes an active routine unless told otherwise.

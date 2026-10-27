@@ -1456,7 +1456,10 @@ export function ConversationTimeline() {
                 />
               )}
             </Show>
-            <ConversationBrowserTakeover />
+            {/* Under an open side thread, the thread draws the card of its own request. */}
+            <Show when={!sideThreadOpen()}>
+              <ConversationBrowserTakeover />
+            </Show>
           </div>
         </Show>
       </div>
