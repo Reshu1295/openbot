@@ -98,6 +98,11 @@
   background: var(--openbot-bg-surface);
 }
 
+/* The trigger that keeps the agent's own chat selected in the tabs. It never shows. */
+.agent-threads-tabs .agent-threads-main-key {
+  display: none;
+}
+
 .agent-threads-tab.ui-sliding-tabs-trigger {
   display: inline-flex;
   max-width: 200px;

@@ -13,7 +13,7 @@ import {
 import { useText } from "@openbot/ui/text";
 import { createSignal, For, flush, onSettled, Show } from "solid-js";
 import { ThreadStatusMark, threadAttention } from "./ThreadStatusMark";
-import { type ThreadHeaderProps, type ThreadItem, threadBusy } from "./thread-types";
+import { MAIN_THREAD_ID, type ThreadHeaderProps, type ThreadItem, threadBusy } from "./thread-types";
 
 /** The width of the soft edge where more tabs are out of view, as in the CSS. */
 const FADE = 24;
@@ -171,7 +171,11 @@ export function ThreadTabs(props: ThreadHeaderProps) {
     };
     const measure = () => {
       const tab = element.querySelector<HTMLElement>('.agent-threads-tab[aria-selected="true"]');
-      if (!tab) return;
+      // The agent's own chat has no tab: while it is open, no tab is selected and the fill hides.
+      if (!tab) {
+        setFill((current) => ({ x: current.x, width: 0 }));
+        return;
+      }
       setFill({ x: tab.offsetLeft, width: tab.offsetWidth });
       // While a tab moves, the pointer scrolls the tabs.
       if (drag?.moving) return;
@@ -351,9 +355,12 @@ export function ThreadTabs(props: ThreadHeaderProps) {
     const endChoice = () => {
       choosing = false;
     };
+    // A tab control that stops the event, such as close or move, keeps it from the window: the
+    // timer ends the action after the event in that case.
     const choose = (event: Event) => {
       choosing = true;
       window.addEventListener(event.type, endChoice, { once: true });
+      setTimeout(endChoice);
     };
     for (const type of CHOICE_EVENTS) element.addEventListener(type, choose, { capture: true });
     element.addEventListener("keydown", onKey);
@@ -461,6 +468,17 @@ export function ThreadTabs(props: ThreadHeaderProps) {
                 aria-hidden="true"
                 data-initializing={initializing()}
                 style={fillStyle()}
+              />
+              {/*
+                The agent's own chat has no tab, but Kobalte selects the first tab while the selected value
+                is not one of its triggers. This trigger never shows, so the agent's chat stays selected.
+              */}
+              <SlidingTabs.Trigger
+                value={MAIN_THREAD_ID}
+                class="agent-threads-main-key"
+                disabled
+                tabindex={-1}
+                aria-hidden="true"
               />
               {/* Keyed by id, so a tab keeps its element, focus and drag when its title or state changes. */}
               <For each={props.tabs} keyed={(thread) => thread.id}>

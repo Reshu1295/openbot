@@ -34,9 +34,9 @@ export function threadBusy(status: ThreadStatus): boolean {
  * when the host cannot rename or delete threads; the actions then do not show.
  */
 export interface ThreadHeaderProps {
-  /** Every thread that is not archived, with the agent's own chat. */
+  /** Every side thread that is not archived. The agent's name in the header opens the agent's own chat. */
   threads: readonly ThreadItem[];
-  /** The threads that have a tab, in tab order. The agent's own chat is always one of them. */
+  /** The side threads that have a tab, and the new thread, in tab order. */
   tabs: readonly ThreadItem[];
   archived: readonly ThreadItem[];
   activeId: string;

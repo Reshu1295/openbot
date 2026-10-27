@@ -64,6 +64,7 @@ export const messages = {
   "sidebar.agentMenu.restore": "Wiederherstellen",
   "sidebar.agentMenu.restoreTo": "In {section} wiederherstellen",
   "sidebar.agentMenu.openWindow": "In neuem Fenster öffnen",
+  "sidebar.agentMenu.newThread": "Neuer Thread",
   "sidebar.agentMenu.inWindow": "In eigenem Fenster offen",
   "sidebar.channelMenu.label": "Kanalaktionen",
   "sidebar.channelMenu.edit": "Kanal bearbeiten",

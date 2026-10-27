@@ -16,6 +16,8 @@ import { DirectConversation } from "../../lazy-views";
 import { useNavigation } from "../../navigation";
 import { usePlatform } from "../../platform";
 import { useTurns } from "../../turns";
+import { useAgentTasks } from "../agent-tasks/agent-tasks-context";
+import { useAgentThreads } from "../agent-threads/agent-threads-context";
 import { useAgentActions } from "../agents/agent-actions";
 import { attentionByAgent } from "../agents/agent-runtime-snapshot";
 import { agentThreadAttention } from "../agents/agent-thread-attention";
@@ -92,6 +94,15 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
   const { directPeople } = usePresence();
   const { activeDirectMember, activeDirectMemberId, directThreads } = useDirectMessages();
   const { selectAgent, selectDirectMember, setGlobalSearchVisibility, chatHistory } = useNavigation();
+  const agentTasks = useAgentTasks();
+  const agentThreads = useAgentThreads();
+  /** Opens the agent's chat with a new thread. A host without threads has no such item. */
+  const newAgentThread = () =>
+    agentTasks.available()
+      ? (agentId: string) => {
+          if (selectAgent(agentId)) agentThreads.startNew(agentId);
+        }
+      : undefined;
   /** The name of a chat as its sidebar row shows it. */
   const chatName = (entry: ChatHistoryEntry | undefined): { name: string } | null => {
     if (!entry) return null;
@@ -272,6 +283,7 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
       userHiddenAgents={userHiddenAgents()}
       onHideAgent={hideAllowed() ? (agentId) => void setAgentHiddenByUser(agentId, true) : undefined}
       onRestoreAgent={hideAllowed() ? (agentId) => void setAgentHiddenByUser(agentId, false) : undefined}
+      onNewAgentThread={newAgentThread()}
       onOpenAgentWindow={
         platform.landingPreview
           ? undefined

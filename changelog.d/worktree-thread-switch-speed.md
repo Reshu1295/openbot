@@ -1,3 +1,12 @@
+### Added
+
+- Right-click an agent in the sidebar and choose "New thread" to open its chat with a new thread.
+
+### Changed
+
+- The agent's name in the chat header opens the agent's main chat while a thread is open. In the main chat it opens
+  the agent settings, as before. The main chat no longer has a tab, and the thread list shows only threads.
+
 ### Fixed
 
 - Go back from a thread to the agent's main chat at once. Before, the main chat was built again, which took about half

@@ -42,6 +42,7 @@ export const messages = {
   "conversation.direct.input": "{name}에게 메시지 보내기",
   "conversation.direct.send": "1:1 메시지 보내기",
   "conversation.header.settings": "에이전트 설정 보기",
+  "conversation.header.mainChat": "메인 채팅 열기",
   "conversation.header.resumeRemote": "원격 제어 재개",
   "conversation.header.openRemote": "원격 제어 열기",
   "conversation.header.publish": "에이전트 게시",
