@@ -25,7 +25,7 @@ export function attentionKey(agentId: string, threadId: string | null): string {
  * Whether the answer to this prompt is on its way to main. The agent's own chat marks it by agent id,
  * and a side thread by its `attentionKey`, so an answer in one does not replace the mark of the other.
  */
-export function promptAnswerInFlight(
+function promptAnswerInFlight(
   prompt: { agentId: string; threadId: string; turnId: string; requestId: string | number },
   submittedRequests: Record<string, string | undefined>,
 ): boolean {
