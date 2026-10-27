@@ -1,9 +1,8 @@
-import type { AgentApproval, AgentContextState, AgentEvent, ConversationMessage } from "@openbot/contracts/ipc";
+import type { AgentApproval, AgentContextState, AgentEvent } from "@openbot/contracts/ipc";
 import { isAgentTaskActive, taskApproval } from "@openbot/team-client/agent-tasks";
 import { activeThreadId, threadLists } from "@openbot/ui/features/conversation/threads/thread-items";
 import { DRAFT_THREAD_ID, MAIN_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
 import type { AgentTasks } from "../agent-tasks/agent-tasks-state";
-import { messagePromptRequestKey, promptRequestKey } from "../conversation/conversation-keys";
 import type {
   BrowserTakeoverRequest,
   ConversationThreads,
@@ -27,11 +26,6 @@ export interface ConversationThreadsInput {
   onRespondApproval: (
     approval: AgentApproval,
     decision: "accept" | "decline",
-    options?: PromptAnswerOptions,
-  ) => Promise<boolean>;
-  onAnswerPrompt: (
-    prompt: PromptEvent,
-    answers: Record<string, string[]>,
     options?: PromptAnswerOptions,
   ) => Promise<boolean>;
   /**
@@ -73,8 +67,6 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
         ? null
         : list.find((task) => task.id === activeId);
   const approval = open ? taskApproval(open, approvals) : undefined;
-  const prompt = open ? ofTaskThread(open, prompts) : undefined;
-  const conversation = open ? tasks.conversation(open.id) : undefined;
   const editable = tasks.editable();
   return {
     header: {
@@ -95,10 +87,8 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     open,
     limit: snapshot?.limit ?? 1,
     running: list.filter(isAgentTaskActive).length,
-    conversation,
+    conversation: open ? tasks.conversation(open.id) : undefined,
     approval,
-    prompt,
-    promptUiBlock: prompt && conversation ? promptUiBlock(prompt, conversation.messages) : undefined,
     acceptsFiles: tasks.local(),
     onSend: (text, attachmentDraftIds) =>
       open ? tabs.send(agentId, open.id, text, attachmentDraftIds) : tabs.sendDraft(agentId, text, attachmentDraftIds),
@@ -107,8 +97,6 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     },
     onRespondApproval: (decision, options) =>
       approval ? input.onRespondApproval(approval, decision, options) : Promise.resolve(false),
-    onAnswerPrompt: (answers, options) =>
-      prompt ? input.onAnswerPrompt(prompt, answers, options) : Promise.resolve(false),
     get contextState() {
       return open ? input.contextStates?.()[open.threadId] : undefined;
     },
@@ -123,10 +111,4 @@ type TaskThread = { agentId: string; threadId: string };
 /** The question or takeover that the turn of this task waits for: the one of the task's own thread. */
 function ofTaskThread<Request extends TaskThread>(task: TaskThread, requests: readonly Request[]): Request | undefined {
   return requests.find((request) => request.agentId === task.agentId && request.threadId === task.threadId);
-}
-
-/** The block of the prompt's message. Until that message arrives, the prompt's questions draw the card. */
-function promptUiBlock(prompt: PromptEvent, messages: readonly ConversationMessage[]) {
-  const requestKey = promptRequestKey(prompt.turnId, prompt.requestId);
-  return messages.findLast((message) => messagePromptRequestKey(message) === requestKey)?.uiBlock;
 }

@@ -231,37 +231,33 @@ const Turns = createSimpleContext({
       },
     );
 
-    async function answerPrompt(answers: Record<string, string[]>, options?: PromptAnswerOptions): Promise<boolean> {
-      const agent = activeAgent();
-      const prompt = agent ? pendingPrompts()[attentionKey(agent.id, agent.threadId)] : undefined;
-      if (!agent || prompt?.type !== "prompt") return false;
-      return submitPromptAnswers(agent.id, prompt, answers, options);
-    }
-
-    /** Answers the question of a side thread. The answer marks belong to the agent's own chat. */
-    function answerThreadPrompt(
-      prompt: PromptEvent,
+    /** Answers the prompt of the agent's chat, or of its side thread `threadId`. */
+    async function answerPrompt(
       answers: Record<string, string[]>,
       options?: PromptAnswerOptions,
+      threadId?: string,
     ): Promise<boolean> {
-      return submitPromptAnswers(prompt.agentId, prompt, answers, options);
+      const agent = activeAgent();
+      const prompt = agent ? pendingPrompts()[attentionKey(agent.id, threadId ?? agent.threadId)] : undefined;
+      if (!agent || prompt?.type !== "prompt") return false;
+      // A side thread marks its answer by its own key: the agent id marks the agent's own chat.
+      const mark = threadId === undefined ? agent.id : attentionKey(agent.id, threadId);
+      return submitPromptAnswers(agent.id, mark, prompt, answers, options);
     }
 
     async function submitPromptAnswers(
       agentId: string,
+      mark: string,
       prompt: PromptEvent,
       answers: Record<string, string[]>,
       options?: PromptAnswerOptions,
     ): Promise<boolean> {
       const serverId = activeServerId();
       const analytics = desktopAnalytics.scope();
-      const ownChat = agentList().some((agent) => agent.id === agentId && agent.threadId === prompt.threadId);
-      if (ownChat) {
-        setSubmittedPromptRequests((current) => ({
-          ...current,
-          [agentId]: promptRequestKey(prompt.turnId, prompt.requestId) ?? undefined,
-        }));
-      }
+      setSubmittedPromptRequests((current) => ({
+        ...current,
+        [mark]: promptRequestKey(prompt.turnId, prompt.requestId) ?? undefined,
+      }));
       try {
         await turnsPort().agent.respondToPrompt({
           requestId: prompt.requestId,
@@ -274,7 +270,7 @@ const Turns = createSimpleContext({
         });
         return true;
       } catch (error) {
-        if (ownChat) setSubmittedPromptRequests((current) => ({ ...current, [agentId]: undefined }));
+        setSubmittedPromptRequests((current) => ({ ...current, [mark]: undefined }));
         analytics.track("agent_input_action", {
           kind: "prompt",
           decision: "answered",
@@ -519,7 +515,6 @@ const Turns = createSimpleContext({
       activeRoutines,
       refreshRoutineIds,
       answerPrompt,
-      answerThreadPrompt,
       respondToApproval,
       respondToApprovalRequest,
       respondToBrowserTakeover,

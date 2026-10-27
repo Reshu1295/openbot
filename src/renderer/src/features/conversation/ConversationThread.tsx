@@ -7,16 +7,12 @@ import type { AgentMessage } from "@openbot/ui/data";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { useText } from "@openbot/ui/text";
-import { createMemo, createProjection, createSignal, Loading, lazy, Show } from "solid-js";
+import { createMemo, createProjection, createSignal, Show } from "solid-js";
 import { actionToast } from "../../action-toast";
 import { toAgentMessages } from "../../app-message-projection";
-import { deviceSendShortcut } from "../../send-shortcut-preference";
 import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
-import { messagePromptRequestKey, promptRequestKey } from "./conversation-keys";
+import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
 import { useConversationViewScope } from "./conversation-scope";
-import type { ConversationThreads } from "./conversation-types";
-
-const PendingPrompt = lazy(() => import("./PendingPrompt").then((module) => ({ default: module.PendingPrompt })));
 
 /** A thread takes files only from this computer, which reads every supported type. */
 const THREAD_ATTACHMENT_ACCEPT = supportedAttachmentExtensions({ eml: true, media: true, zip: true, mp4: true })
@@ -46,30 +42,17 @@ export function ConversationThread() {
       });
     },
   });
-  /** The waiting question, by its request: a new copy of the same question keeps the card and what it holds. */
-  const promptKey = createMemo(() => {
-    const prompt = props.threads?.prompt;
-    return prompt ? promptRequestKey(prompt.turnId, prompt.requestId) : null;
-  });
   /** The takeover card, or its result, shows when the conversation's takeover is of this thread. */
   const takeoverShown = () => props.browserTakeover !== undefined || browserTakeoverResolution() !== null;
   /** Rebuilt only when a card comes or goes, so a card keeps what the person entered. */
-  const hasAttention = createMemo(() => takeoverShown() || promptKey() !== null);
-  /**
-   * Reconciled by id, so a stream chunk redraws only the message that changed. As in the agent's own
-   * chat, an open question shows only as its card.
-   */
+  const hasAttention = createMemo(() => takeoverShown() || props.prompt !== undefined);
+  /** Reconciled by id, so a stream chunk redraws only the message that changed. */
   const messages = createProjection<AgentMessage[]>(
     () => {
       const conversation = props.threads?.conversation;
-      if (!conversation) return [];
-      const requestKey = promptKey();
-      const shown = conversation.messages.filter(
-        (message) =>
-          message.questionPrompt?.resolution !== null &&
-          (!requestKey || messagePromptRequestKey(message) !== requestKey),
-      );
-      return toAgentMessages(shown, props.agent?.id);
+      // The card draws a question that waits, so its message is left out, as in the agent's chat.
+      const messages = conversation?.messages.filter((message) => message.questionPrompt?.resolution !== null);
+      return messages ? toAgentMessages(messages, props.agent?.id) : [];
     },
     [],
     { key: "id" },
@@ -92,26 +75,16 @@ export function ConversationThread() {
     input.click();
   };
   /** The cards that the thread waits for: its browser takeover, and its question as a form. */
-  const attention = (threads: () => ConversationThreads) => {
+  const attention = () => {
     if (!hasAttention()) return undefined;
     return (
       <>
+        <ConversationQuestionPrompt
+          onAnswer={(answers, options) =>
+            props.onAnswerPrompt(answers, options ?? failureToast("uiBlock.error.answerFailed"))
+          }
+        />
         <ConversationBrowserTakeover />
-        <Show when={promptKey()} keyed>
-          <Loading>
-            <PendingPrompt
-              questions={threads().prompt?.questions ?? []}
-              block={threads().promptUiBlock}
-              agents={props.agents}
-              onSelectAgent={props.onSelectAgent}
-              onOpenLink={(url) => void openExternalMessageUrl(url)}
-              sendShortcut={deviceSendShortcut(props.platform)}
-              onAnswer={(answers, options) =>
-                threads().onAnswerPrompt(answers, options ?? failureToast("uiBlock.error.answerFailed"))
-              }
-            />
-          </Loading>
-        </Show>
       </>
     );
   };
@@ -160,8 +133,8 @@ export function ConversationThread() {
             }
             context={contextUsageView(current().threads.contextState)}
             onCompactContext={current().threads.onCompactContext}
-            waitsForAnswer={promptKey() !== null || props.browserTakeover !== undefined}
-            attention={attention(() => current().threads)}
+            waitsForAnswer={props.prompt !== undefined || props.browserTakeover !== undefined}
+            attention={attention()}
           />
         </>
       )}

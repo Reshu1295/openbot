@@ -138,7 +138,6 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
     turnProgress,
     turnStepLines,
     answerPrompt,
-    answerThreadPrompt,
     respondToApproval,
     respondToApprovalRequest,
     respondToBrowserTakeover,
@@ -182,23 +181,6 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
   const auth = useAuth();
   const { teamPresence, currentTeamMember } = usePresence();
   const { selectAgent, openAgentMessage, messageFocusRequest, globalSearchOpen } = useNavigation();
-
-  const activePrompt = createMemo(() => {
-    const agent = activeAgent();
-    const event = agent ? pendingPrompts()[attentionKey(agent.id, agent.threadId)] : undefined;
-    return event?.type === "prompt" && event.threadId === agent?.threadId ? event : undefined;
-  });
-
-  // The timeline leaves the waiting prompt's message out, so its block is read here.
-  const activePromptUiBlock = createMemo(() => {
-    const agent = activeAgent();
-    const prompt = activePrompt();
-    if (!agent || !prompt) return undefined;
-    const requestKey = promptRequestKey(prompt.turnId, prompt.requestId);
-    return (conversations[agent.id]?.messages ?? []).findLast(
-      (message) => messagePromptRequestKey(message) === requestKey,
-    )?.uiBlock;
-  });
 
   // The waits of the agents that this agent asked, by the same rules as the sidebar's "Needs you".
   const agentWaits = createMemo(() =>
@@ -376,22 +358,41 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       newThreadTitle: t("conversation.threads.new"),
       onRespondApproval: (approval, decision, options) =>
         respondToApprovalRequest(approval.agentId, approval.requestId, decision, options),
-      onAnswerPrompt: answerThreadPrompt,
       contextStates: threadContextStates,
       onCompactContext: compactTaskContext(),
     });
   });
   /** The thread that the conversation shows: the open side thread, or the agent's own chat. */
   const openThreadId = () => threads()?.open?.threadId;
+  /** The thread whose waits the conversation shows. A new thread draft has no turn, so it has none. */
+  const shownThreadId = () => {
+    const open = threads()?.open;
+    return open === undefined ? activeAgent()?.threadId : open?.threadId;
+  };
   const activeBrowserTakeover = createMemo(() => {
     const agent = activeAgent();
-    // A new thread draft has no turn, so it has no takeover.
-    const open = threads()?.open;
-    const threadId = open === undefined ? agent?.threadId : open?.threadId;
+    const threadId = shownThreadId();
     const event = agent && threadId ? pendingPrompts()[attentionKey(agent.id, threadId)] : undefined;
     return event?.type === "browser-takeover-requested" && event.request.threadId === threadId
       ? event.request
       : undefined;
+  });
+  const activePrompt = createMemo(() => {
+    const agent = activeAgent();
+    const threadId = shownThreadId();
+    const event = agent && threadId ? pendingPrompts()[attentionKey(agent.id, threadId)] : undefined;
+    return event?.type === "prompt" && event.threadId === threadId ? event : undefined;
+  });
+
+  // The timeline leaves the waiting prompt's message out, so its block is read here.
+  const activePromptUiBlock = createMemo(() => {
+    const agent = activeAgent();
+    const prompt = activePrompt();
+    if (!agent || !prompt) return undefined;
+    const requestKey = promptRequestKey(prompt.turnId, prompt.requestId);
+    const messages =
+      threads()?.open === undefined ? conversations[agent.id]?.messages : threads()?.conversation?.messages;
+    return (messages ?? []).findLast((message) => messagePromptRequestKey(message) === requestKey)?.uiBlock;
   });
   /**
    * A usage limit holds the active agent's queued message on this computer. The chat asks where to
@@ -603,7 +604,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
           activeAgent() ? openAgentMessage(activeAgent()?.id ?? "", messageId) : Promise.resolve()
         }
         onTypingChange={setTeamTyping}
-        onAnswerPrompt={answerPrompt}
+        onAnswerPrompt={(answers, options) => answerPrompt(answers, options, openThreadId())}
         onPromptResolutionPresented={presentPromptResolution}
         onRespondToApproval={respondToApproval}
         onAlwaysAllowApproval={alwaysAllowApproval()}

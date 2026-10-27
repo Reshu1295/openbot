@@ -17,6 +17,7 @@ import {
   TEAM_SUBAGENTS_CAPABILITY,
   TEAM_UI_BLOCKS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
+import { toWireAgentKeysObjectForPath } from "@openbot/contracts/team-protocol/current-agent-keys";
 import { optionalTeamEvent } from "@openbot/contracts/team-protocol/optional-events";
 import { teamSideRouteCodec } from "@openbot/contracts/team-protocol/side-routes";
 import { encodeTeamProtocolV1ClientEvent } from "@openbot/contracts/team-protocol/v1";
@@ -615,6 +616,31 @@ export class TeamWebRtcHostPeer {
     uploaded: ReceivedWebRtcFile | null,
   ): Effect.fn.Return<TeamProtocolV2Json, RemoteWorkflowError, HostPeerTransport> {
     const sideRoute = teamSideRouteCodec(input.path);
+    const protocol = peerCapabilities.has(TEAM_OPEN_PROVIDERS_CAPABILITY)
+      ? 8
+      : peerCapabilities.has(TEAM_PI_MUSE_CAPABILITY)
+        ? 7
+        : peerCapabilities.has(TEAM_CURSOR_CLINE_CAPABILITY)
+          ? 6
+          : peerCapabilities.has(TEAM_LOCAL_PROVIDERS_CAPABILITY)
+            ? 5
+            : peerCapabilities.has("opencode")
+              ? 4
+              : isTeamProtocolV3OnlyRoute(input.method, input.path)
+                ? 3
+                : 1;
+    const decodeRequest =
+      protocol === 8
+        ? decodeTeamProtocolV8WebRtcHttpRequest
+        : protocol === 7
+          ? decodeTeamProtocolV7WebRtcHttpRequest
+          : protocol === 6
+            ? decodeTeamProtocolV6WebRtcHttpRequest
+            : protocol === 5
+              ? decodeTeamProtocolV5WebRtcHttpRequest
+              : protocol === 4
+                ? decodeTeamProtocolV4WebRtcHttpRequest
+                : decodeTeamProtocolV3WebRtcHttpRequest;
     const requestBody =
       input.method === "GET"
         ? undefined
@@ -622,26 +648,21 @@ export class TeamWebRtcHostPeer {
           ? yield* remoteCall(() => openAsBlob(uploaded.path))
           : input.body === null
             ? undefined
-            : yield* remoteDecode(() =>
-                JSON.stringify(
-                  sideRoute
-                    ? sideRoute.request(input.path, input.body)
-                    : (peerCapabilities.has(TEAM_OPEN_PROVIDERS_CAPABILITY)
-                        ? decodeTeamProtocolV8WebRtcHttpRequest
-                        : peerCapabilities.has(TEAM_PI_MUSE_CAPABILITY)
-                          ? decodeTeamProtocolV7WebRtcHttpRequest
-                          : peerCapabilities.has(TEAM_CURSOR_CLINE_CAPABILITY)
-                            ? decodeTeamProtocolV6WebRtcHttpRequest
-                            : peerCapabilities.has(TEAM_LOCAL_PROVIDERS_CAPABILITY)
-                              ? decodeTeamProtocolV5WebRtcHttpRequest
-                              : peerCapabilities.has("opencode")
-                                ? decodeTeamProtocolV4WebRtcHttpRequest
-                                : decodeTeamProtocolV3WebRtcHttpRequest)(input.method, input.path, input.body, {
-                        preserveSemanticTags,
-                        agentCreateModel: peerCapabilities.has(TEAM_AGENT_CREATE_MODEL_CAPABILITY),
-                      }),
-                ),
-              );
+            : yield* remoteDecode(() => {
+                if (sideRoute) return JSON.stringify(sideRoute.request(input.path, input.body));
+                const decoded = decodeRequest(input.method, input.path, input.body, {
+                  preserveSemanticTags,
+                  agentCreateModel: peerCapabilities.has(TEAM_AGENT_CREATE_MODEL_CAPABILITY),
+                });
+                // The local Team API decodes the body again, and with semantic tags its frozen projection
+                // reads only the wire keys: `ownerAgentId` is dropped where `ownerBotId` is kept. So the
+                // decoded frame goes back to the wire key names first.
+                return JSON.stringify(
+                  decoded !== null && typeof decoded === "object" && !Array.isArray(decoded)
+                    ? toWireAgentKeysObjectForPath(input.path, decoded)
+                    : decoded,
+                );
+              });
     return yield* Effect.acquireUseRelease(
       HostPeerTransport.use((transport) =>
         transport.fetch(url, {
@@ -649,19 +670,7 @@ export class TeamWebRtcHostPeer {
           headers: {
             Authorization: `Bearer ${this.#localSessionToken}`,
             "Content-Type": uploaded?.mimeType ?? input.contentType ?? "application/json",
-            "OpenBot-Protocol-Version": peerCapabilities.has(TEAM_OPEN_PROVIDERS_CAPABILITY)
-              ? "8"
-              : peerCapabilities.has(TEAM_PI_MUSE_CAPABILITY)
-                ? "7"
-                : peerCapabilities.has(TEAM_CURSOR_CLINE_CAPABILITY)
-                  ? "6"
-                  : peerCapabilities.has(TEAM_LOCAL_PROVIDERS_CAPABILITY)
-                    ? "5"
-                    : peerCapabilities.has("opencode")
-                      ? "4"
-                      : isTeamProtocolV3OnlyRoute(input.method, input.path)
-                        ? "3"
-                        : "1",
+            "OpenBot-Protocol-Version": String(protocol),
             "OpenBot-App-Version": this.#appVersion,
             "OpenBot-Capabilities": [...this.#peerCapabilities].join(","),
             ...(this.#localSessionId ? { "X-OpenBot-WebRTC-Session": this.#localSessionId } : {}),
