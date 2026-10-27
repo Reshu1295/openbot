@@ -607,16 +607,46 @@ export function createWebWorkspace(
   // through the host connection; until then, the agent keeps the host URL and its generated avatar.
   const [avatars, setAvatars] = createSignal<ReadonlyMap<string, { source: string; url: string }>>(new Map());
   const avatarLoads = new Set<string>();
+  // The images share the host connection and its file slots with the user's downloads, so only a few
+  // load at the same time.
+  const avatarQueue: { hostId: string; id: string; source: string }[] = [];
+  let avatarReads = 0;
   let avatarHost: string | null = null;
+  function loadAvatars() {
+    while (avatarReads < 2) {
+      const next = avatarQueue.shift();
+      if (!next) return;
+      const { hostId, id, source } = next;
+      avatarReads += 1;
+      void runtime
+        .agentAvatar(id, source)
+        .then(
+          (url) => {
+            if (avatarHost === hostId) setAvatars((current) => new Map(current).set(id, { source, url }));
+          },
+          // A failed image keeps the generated avatar, and the next agent list tries it again.
+          () => {
+            if (avatarHost === hostId) avatarLoads.delete(`${id} ${source}`);
+          },
+        )
+        .finally(() => {
+          avatarReads -= 1;
+          loadAvatars();
+        });
+    }
+  }
   createEffect(
     () => ({
       hostId: state.host?.hostId ?? null,
-      sources: state.agents.flatMap((agent) => (agent.avatarUrl ? [{ id: agent.id, source: agent.avatarUrl }] : [])),
+      sources: state.agents.flatMap((agent) =>
+        agent.avatarUrl?.startsWith("openbot-avatar:") ? [{ id: agent.id, source: agent.avatarUrl }] : [],
+      ),
     }),
     ({ hostId, sources }) => {
       if (hostId !== avatarHost) {
         avatarHost = hostId;
         avatarLoads.clear();
+        avatarQueue.length = 0;
         setAvatars(new Map());
       }
       if (!hostId) return;
@@ -624,14 +654,9 @@ export function createWebWorkspace(
         const key = `${id} ${source}`;
         if (avatarLoads.has(key)) continue;
         avatarLoads.add(key);
-        // A failed image keeps the generated avatar.
-        void runtime.agentAvatar(id, source).then(
-          (url) => {
-            if (avatarHost === hostId) setAvatars((current) => new Map(current).set(id, { source, url }));
-          },
-          () => undefined,
-        );
+        avatarQueue.push({ hostId, id, source });
       }
+      loadAvatars();
     },
   );
   const shownAgents = createMemo(() =>
