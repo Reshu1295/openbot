@@ -152,6 +152,9 @@ export const OPENCODE_ACP_FLAVOR: AcpFlavor = {
   // A long answer with no tool call otherwise shows nothing until the prompt ends, and the turn
   // looks stuck (#2858).
   streamAnswerBeforePromptReturns: true,
+  // OpenCode 1.18.31 and 2.1.4 pass on the reasoning that an endpoint streams between answer tokens.
+  // Ending the answer at each thought cut words in two, such as "B aca" (#3351).
+  thoughtsInsideAnswer: true,
   // OpenCode 2.1.4 adds each session's MCP servers to the session's directory under their names. A
   // second chat of the agent replaced the `openbot` token, and closing it left the first refused.
   mcpServersPerDirectory: true,

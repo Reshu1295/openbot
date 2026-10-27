@@ -61,6 +61,8 @@ const CASES: Record<string, Delta[]> = {
   ),
   "endpoint-spaces": TOKENS.map((content, index) => ({ content: index === 0 ? content : ` ${content.trimStart()}` })),
 };
+/** What the control case sends: the space in "B aca" comes from the endpoint, and stays. */
+const SPACED = (CASES["endpoint-spaces"] ?? []).map((delta) => delta.content).join("");
 
 function stream(response: ServerResponse, deltas: readonly Delta[]): void {
   response.writeHead(200, { "content-type": "text/event-stream" });
@@ -81,7 +83,7 @@ const server = createServer((request: IncomingMessage, response: ServerResponse)
   request.on("end", () => {
     if (!request.url?.endsWith("/chat/completions")) return void response.writeHead(404).end();
     const name = Object.keys(CASES).find((key) => body.includes(`case:${key}`));
-    // A title request or anything else gets a plain short answer.
+    // OpenCode's title request also holds the prompt, so it gets the stream of the same case.
     stream(response, name ? (CASES[name] ?? []) : [{ content: "Title" }]);
   });
 });
@@ -155,7 +157,7 @@ try {
     report.cases.push({ name, events, answers, answer: answers.join(""), error: turn.error });
     assert.equal(turn.error, null, `${name}: the turn failed`);
     if (name === "endpoint-spaces") {
-      assert.equal(answers.length, 1, `${name}: one answer`);
+      assert.deepEqual(answers, [SPACED], `${name}: the answer keeps the endpoint's own spaces`);
       continue;
     }
     assert.deepEqual(answers, [ANSWER], `${name}: the answer is one item with whole words`);

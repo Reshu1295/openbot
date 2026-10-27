@@ -1,3 +1,3 @@
 ### Fixed
 
-- An answer from an OpenCode or other ACP agent stays whole when the model streams its reasoning between the words of the answer. Before, the answer was cut into pieces at each thought, so words showed with a space inside them, such as "B aca" for "Baca".
+- An answer through OpenCode stays whole when the model streams its reasoning between the words of the answer. Before, the answer was cut at each thought, so the start of a word moved to the steps and words showed in pieces, such as "B aca" for "Baca".
