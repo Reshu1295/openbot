@@ -54,8 +54,9 @@ const context = createSimpleContext({
       };
     };
     const localMessaging = localMessagingApi();
-    // Slack, Discord and Telegram reach this computer through its published server, so turning one on
-    // publishes the server too. A failed publish does not stop the connection: it reports its own error.
+    // Slack, Discord and Telegram need this computer's server to have a name. Turning one on also
+    // publishes the server (#3393), which names it when it has no name, so the user does not have to
+    // do either first. A failed publish does not stop the connection: it reports its own error.
     const publishFirst = async () => {
       if (hostStatus().phase !== "online") await publishLocalServer().catch(() => undefined);
     };
