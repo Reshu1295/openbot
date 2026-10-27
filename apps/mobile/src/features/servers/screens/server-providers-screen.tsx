@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Typography } from "heroui-native";
 import { useState } from "react";
+import { View } from "react-native";
 import { ProviderMark } from "@/features/servers/components/provider-mark";
 import { TrailingValue } from "@/features/servers/components/trailing-value";
 import { type ProviderRow, providerRows, providerStatusText } from "@/features/servers/model/provider-admin";
@@ -57,7 +58,11 @@ export function ServerProvidersScreen() {
           <SettingsRow
             key={row.id}
             supportingText={row.status?.email ?? undefined}
-            leading={<ProviderMark provider={row.id} size={22} />}
+            leading={
+              <View className="py-1.5 pr-1">
+                <ProviderMark provider={row.id} size={22} />
+              </View>
+            }
             trailing={<TrailingValue value={providerStatusLabel(row, text)} />}
             onPress={() =>
               router.push({ pathname: "/server-settings/provider", params: { serverId, provider: row.id } })
