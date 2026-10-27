@@ -268,6 +268,9 @@ try {
       await saveKey(null, "OPENAI_API_KEY", "e2e-vault-openai-key-31b0");
       await Effect.runPromise(keys.save("agent-3", "OPENAI_API_KEY", KEY));
       const vaultFolder = join(root, "agent-api-keys", ".vault");
+      // A start registers the agents' own keys and writes no Vault key: only an agent's list does.
+      await Effect.runPromise(keys.registerSaved());
+      await assert.rejects(stat(vaultFolder));
       const listed = await Effect.runPromise(keys.list("agent-3"));
       assert.deepEqual(listed, [
         { name: "OPENAI_API_KEY", path: join(root, "agent-api-keys", "agent-3", "OPENAI_API_KEY") },

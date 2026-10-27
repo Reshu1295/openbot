@@ -469,6 +469,7 @@ export const messages = defineMessages("mobile.server", {
   "mobile.server.vault.phone": "Phone",
   "mobile.server.vault.email": "Email",
   "mobile.server.vault.variableName": "Variable name",
+  "mobile.server.vault.variableNamePlaceholder": "OPENAI_API_KEY",
   "mobile.server.vault.variableNameHint":
     "The environment variable that a program reads: capital letters, digits and _. Agents find the key by this name.",
   "mobile.server.vault.apiKey": "API key",

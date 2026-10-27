@@ -435,14 +435,15 @@ function ServerSettings() {
     const target = serverSettingsTarget();
     return serverCanAdminister(target, VAULT_CAPABILITY) ? target.id : undefined;
   });
+  // A host that updates or rolls back keeps its id, so the API key kind follows this capability too.
+  const vaultApiKeys = createMemo(() => serverCanAdminister(serverSettingsTarget(), VAULT_V2_CAPABILITY));
   const vault = createMemo(() => {
     const serverId = vaultServerId();
     if (serverId === undefined) return undefined;
-    const target = untrack(serverSettingsTarget);
-    const local = target?.kind === "local";
+    const local = untrack(serverSettingsTarget)?.kind === "local";
     return {
       store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)),
-      apiKeys: serverCanAdminister(target, VAULT_V2_CAPABILITY),
+      apiKeys: vaultApiKeys(),
     };
   });
   // The workspace belongs to the selected server. For another server, the switch comes first and

@@ -41,8 +41,6 @@ import { useText } from "@/shared/lib/text";
 const KINDS: readonly VaultItemKind[] = ["login", "card", "contact", "apiKey"];
 // An address, the same in each language.
 const WEBSITE_PLACEHOLDER = "https://example.com";
-// A variable name, the same in each language.
-const VARIABLE_NAME_PLACEHOLDER = "OPENAI_API_KEY";
 const VARIABLE_NAME_LIMIT = 64;
 
 /** Short fields side by side, each with an equal share of the width. */
@@ -203,7 +201,8 @@ function VaultItemForm({
       maxLength={VAULT_TEXT_LIMIT}
       editable={!locked}
       value={draft[key]}
-      onChangeText={(value) => editText(key, value)}
+      // A variable name is capitals: the keyboard capitalizes typed letters, not pasted text.
+      onChangeText={(value) => editText(key, key === "name" ? value.toUpperCase() : value)}
       {...props}
     />
   );
@@ -312,7 +311,7 @@ function VaultItemForm({
               isRequired: true,
               autoCapitalize: "characters",
               maxLength: VARIABLE_NAME_LIMIT,
-              placeholder: VARIABLE_NAME_PLACEHOLDER,
+              placeholder: t("mobile.server.vault.variableNamePlaceholder"),
               hint: t("mobile.server.vault.variableNameHint"),
             })}
             {secret("key", t("mobile.server.vault.apiKey"), {

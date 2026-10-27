@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { API_KEY_NAME_PATTERN } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import { registerSecretValue } from "@openbot/logging";
-import { Effect, Schema } from "effect";
+import { Effect, Schema, Semaphore } from "effect";
 import { writeFileAtomically } from "./atomic-json-file";
 import { isMissingFileError } from "./file-errors";
 
@@ -38,11 +38,14 @@ const failed = () => new AgentApiKeyFailed({ cause: new Error(sourceText("error.
  *
  * The Vault's API keys are for every agent. The Vault keeps them encrypted; `list` writes each one to
  * `<root>/.vault/<NAME>` only when an agent asks for its keys, and `syncVault` rewrites or removes those
- * files when the Vault changes. The Vault registers its values for redaction itself.
+ * files when the Vault changes. Both run one at a time and read the Vault inside their turn, so a key
+ * that the user deleted is never written again after its removal. The Vault registers its values for
+ * redaction itself.
  */
 export class AgentApiKeys {
   readonly #root: string;
   readonly #vaultKeys: VaultApiKeySource;
+  readonly #vaultFiles = Semaphore.makeUnsafe(1);
 
   constructor(root: string, vaultKeys: VaultApiKeySource = () => []) {
     this.#root = root;
@@ -63,19 +66,19 @@ export class AgentApiKeys {
 
   /** The agent's own keys, then the Vault's keys. The agent's own key wins over a Vault key of its name. */
   readonly list = Effect.fn("AgentApiKeys.list")(function* (this: AgentApiKeys, agentId: string) {
-    const folder = yield* this.#agentFolder(agentId);
-    const names = yield* Effect.tryPromise({ try: () => folderNames(folder), catch: failed });
-    const own = names
-      .filter((name) => API_KEY_NAME_PATTERN.test(name))
-      .sort()
-      .map((name): SavedApiKey => ({ name, path: join(folder, name) }));
-    const vault: SavedApiKey[] = [];
-    for (const { name, value } of this.#vaultKeys()) {
-      if (!API_KEY_NAME_PATTERN.test(name) || own.some((key) => key.name === name)) continue;
-      const path = join(this.#root, VAULT_FOLDER, name);
-      yield* writeFileAtomically(path, value, { createDirectory: true }).pipe(Effect.mapError(failed));
-      vault.push({ name, path, source: "vault" });
-    }
+    const own = yield* this.#ownKeys(agentId);
+    const vault = yield* this.#vaultFiles.withPermit(
+      Effect.gen({ self: this }, function* () {
+        const written: SavedApiKey[] = [];
+        for (const { name, value } of this.#vaultKeys()) {
+          if (!API_KEY_NAME_PATTERN.test(name) || own.some((key) => key.name === name)) continue;
+          const path = join(this.#root, VAULT_FOLDER, name);
+          yield* writeIfChanged(path, value);
+          written.push({ name, path, source: "vault" });
+        }
+        return written;
+      }),
+    );
     return [...own, ...vault.sort((a, b) => a.name.localeCompare(b.name))];
   });
 
@@ -84,16 +87,21 @@ export class AgentApiKeys {
    * again, and a key that is gone, or a Vault that cannot be read, removes its file.
    */
   readonly syncVault = Effect.fn("AgentApiKeys.syncVault")(function* (this: AgentApiKeys) {
-    const folder = join(this.#root, VAULT_FOLDER);
-    const names = yield* Effect.tryPromise({ try: () => folderNames(folder), catch: failed });
-    const keys = new Map(this.#vaultKeys().map(({ name, value }) => [name, value]));
-    for (const name of names) {
-      const value = API_KEY_NAME_PATTERN.test(name) ? keys.get(name) : undefined;
-      const path = join(folder, name);
-      if (value === undefined)
-        yield* Effect.tryPromise({ try: () => rm(path, { force: true, recursive: true }), catch: failed });
-      else yield* writeFileAtomically(path, value).pipe(Effect.mapError(failed));
-    }
+    yield* this.#vaultFiles.withPermit(
+      Effect.gen({ self: this }, function* () {
+        const folder = join(this.#root, VAULT_FOLDER);
+        const names = yield* Effect.tryPromise({ try: () => folderNames(folder), catch: failed });
+        const keys = new Map(this.#vaultKeys().map(({ name, value }) => [name, value]));
+        for (const name of names) {
+          // Another name is a temporary file that a stopped write left: no write runs now.
+          const value = API_KEY_NAME_PATTERN.test(name) ? keys.get(name) : undefined;
+          const path = join(folder, name);
+          if (value === undefined)
+            yield* Effect.tryPromise({ try: () => rm(path, { force: true, recursive: true }), catch: failed });
+          else yield* writeIfChanged(path, value);
+        }
+      }),
+    );
   });
 
   /** False when the agent has no key with that name. */
@@ -119,13 +127,29 @@ export class AgentApiKeys {
   readonly registerSaved = Effect.fn("AgentApiKeys.registerSaved")(function* (this: AgentApiKeys) {
     const agents = yield* Effect.promise(() => folderNames(this.#root).catch((): string[] => []));
     for (const agentId of agents.filter((id) => AGENT_ID_PATTERN.test(id))) {
-      const keys = yield* this.list(agentId).pipe(Effect.catch(() => Effect.succeed<SavedApiKey[]>([])));
+      const keys = yield* this.#ownKeys(agentId).pipe(Effect.catch(() => Effect.succeed<SavedApiKey[]>([])));
       for (const key of keys) {
         const value = yield* Effect.promise(() => readFile(key.path, "utf8").catch(() => ""));
         registerSecretValue(value);
       }
     }
   });
+
+  /** The keys that the user saved for this agent with `request_api_key`. */
+  #ownKeys(agentId: string): Effect.Effect<SavedApiKey[], AgentApiKeyFailed> {
+    return this.#agentFolder(agentId).pipe(
+      Effect.flatMap((folder) =>
+        Effect.tryPromise({ try: () => folderNames(folder), catch: failed }).pipe(
+          Effect.map((names) =>
+            names
+              .filter((name) => API_KEY_NAME_PATTERN.test(name))
+              .sort()
+              .map((name): SavedApiKey => ({ name, path: join(folder, name) })),
+          ),
+        ),
+      ),
+    );
+  }
 
   #agentFolder(agentId: string): Effect.Effect<string, AgentApiKeyFailed> {
     return AGENT_ID_PATTERN.test(agentId) ? Effect.succeed(join(this.#root, agentId)) : Effect.fail(failed());
@@ -135,6 +159,17 @@ export class AgentApiKeys {
     if (!API_KEY_NAME_PATTERN.test(name)) return Effect.fail(failed());
     return this.#agentFolder(agentId).pipe(Effect.map((folder) => join(folder, name)));
   }
+}
+
+/** Writes a Vault key file only when it does not hold `value` yet, so a Vault change does not rewrite each key. */
+function writeIfChanged(path: string, value: string): Effect.Effect<void, AgentApiKeyFailed> {
+  return Effect.promise(() => readFile(path, "utf8").catch(() => null)).pipe(
+    Effect.flatMap((saved) =>
+      saved === value
+        ? Effect.void
+        : writeFileAtomically(path, value, { createDirectory: true }).pipe(Effect.mapError(failed)),
+    ),
+  );
 }
 
 /** The names in a folder; none when the folder is missing. */

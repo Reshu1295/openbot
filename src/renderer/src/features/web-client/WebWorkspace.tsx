@@ -1224,9 +1224,11 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     const current = server();
     return serverCanAdminister(current, VAULT_CAPABILITY) ? current?.id : undefined;
   });
+  // A host that updates or rolls back keeps its id, so the store follows this capability too.
+  const vaultV2 = createMemo(() => serverCanAdminister(server(), VAULT_V2_CAPABILITY));
   const vaultSettings = createMemo((): ServerVaultOptions | undefined => {
     if (vaultHostId() === undefined) return undefined;
-    const v2 = serverCanAdminister(untrack(server), VAULT_V2_CAPABILITY);
+    const v2 = vaultV2();
     return { store: createVaultStore(webVaultCalls(() => hostRequest(), workspace.onHostEvent, v2)), apiKeys: v2 };
   });
   const openBrowserProfileSettings = (trigger: HTMLElement) => {

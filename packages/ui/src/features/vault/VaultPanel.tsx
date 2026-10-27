@@ -443,7 +443,7 @@ export function VaultPanel(props: VaultPanelProps) {
             description={t("vault.items.description")}
             actions={
               <NewItemMenu
-                apiKeys={props.apiKeys}
+                kinds={filters().flatMap((item) => (item.value === "all" ? [] : [item.value]))}
                 mount={props.menuMount}
                 onNew={(kind) => openEdit(kind, null)}
                 onImport={
@@ -861,14 +861,12 @@ function ItemMenu(props: {
 
 /** "New item" with each kind that the server keeps, and the import when the server has one. */
 function NewItemMenu(props: {
-  apiKeys: boolean;
+  kinds: readonly VaultItemKind[];
   mount: HTMLElement | undefined;
   onNew: (kind: VaultItemKind) => void;
   onImport: (() => void) | undefined;
 }) {
   const { t } = useText();
-  const kinds = (): VaultItemKind[] =>
-    props.apiKeys ? ["login", "card", "contact", "apiKey"] : ["login", "card", "contact"];
   return (
     <DropdownMenu.Root placement="bottom-end" gutter={4}>
       <DropdownMenu.Trigger class={buttonVariants({ variant: "default", size: "sm" })}>
@@ -877,7 +875,7 @@ function NewItemMenu(props: {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal mount={props.mount ?? document.body}>
         <DropdownMenu.Content>
-          <For each={kinds()}>
+          <For each={props.kinds}>
             {(kind) => (
               <DropdownMenu.Item onSelect={() => props.onNew(kind)}>
                 <KindIcon kind={kind} />
