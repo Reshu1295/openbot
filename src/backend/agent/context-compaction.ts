@@ -309,16 +309,17 @@ export class ContextCompaction {
     }
 
     this.#compacting.set(threadId, { agentId, client });
-    // A `request` compaction runs inside the request, so it starts now.
-    this.#armDeadline(
-      agentId,
-      threadId,
-      client,
-      client.contextCompaction === "request" ? this.#runTimeoutMs : this.#timeoutMs,
-    );
+    // A `request` compaction runs inside the request, so it starts now and the request waits as long.
+    const runsInRequest = client.contextCompaction === "request";
+    this.#armDeadline(agentId, threadId, client, runsInRequest ? this.#runTimeoutMs : this.#timeoutMs);
 
     yield* client
-      .request("thread/compact/start", { threadId }, decodeRecordResponse)
+      .request(
+        "thread/compact/start",
+        { threadId },
+        decodeRecordResponse,
+        runsInRequest ? this.#runTimeoutMs : undefined,
+      )
       .pipe(toContextCompactionFailed)
       .pipe(
         Effect.tap(() =>
