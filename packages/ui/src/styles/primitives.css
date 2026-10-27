@@ -752,6 +752,13 @@
   padding-left: var(--openbot-space-8);
 }
 
+.ui-search-select-root {
+  min-height: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
 .ui-search-select-content .ui-select-listbox {
   min-height: 0;
   flex: 1 1 auto;

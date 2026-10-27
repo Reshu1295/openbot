@@ -11,6 +11,31 @@ export interface ServerTimezoneOptions {
   calls?: HostTimezoneCalls;
 }
 
+// The formatters for all zones take about 60 ms to make, so the names stay for the session.
+const zoneNameCache = new Map<string, string>();
+
+/** The names of a zone in the interface language and in English, such as "Eastern Time". */
+function zoneNames(locale: string, zone: string): string {
+  const key = `${locale} ${zone}`;
+  let names = zoneNameCache.get(key);
+  if (names === undefined) {
+    names = [...new Set([locale, "en"])]
+      .map((language) => {
+        try {
+          return new Intl.DateTimeFormat(language, { timeZone: zone, timeZoneName: "longGeneric" })
+            .formatToParts()
+            .find((part) => part.type === "timeZoneName")?.value;
+        } catch {
+          // A zone that this runtime does not know, kept from an earlier choice.
+          return undefined;
+        }
+      })
+      .join(" ");
+    zoneNameCache.set(key, names);
+  }
+  return names;
+}
+
 /** The option for `null`. No IANA zone has this name, and the host refuses it as a zone. */
 const AUTOMATIC = "automatic";
 
@@ -62,28 +87,9 @@ export function ServerTimezoneSetting(
     zone === AUTOMATIC
       ? t("server.settings.timezoneAutomatic", { zone: settings()?.systemTimezone ?? "" })
       : zone.replaceAll("_", " ");
-  const zoneNames = new Map<string, string>();
   /** What the search reads: the zone, its label, and its name, such as "Eastern Time". */
-  const searchText = (zone: string) => {
-    if (zone === AUTOMATIC) return label(zone);
-    const key = `${locale()} ${zone}`;
-    let text = zoneNames.get(key);
-    if (text === undefined) {
-      const names = [...new Set([locale(), "en"])].map((language) => {
-        try {
-          return new Intl.DateTimeFormat(language, { timeZone: zone, timeZoneName: "longGeneric" })
-            .formatToParts()
-            .find((part) => part.type === "timeZoneName")?.value;
-        } catch {
-          // A zone that this runtime does not know, kept from an earlier choice.
-          return undefined;
-        }
-      });
-      text = [zone, label(zone), ...names].join(" ");
-      zoneNames.set(key, text);
-    }
-    return text;
-  };
+  const searchText = (zone: string) =>
+    zone === AUTOMATIC ? label(zone) : `${zone} ${label(zone)} ${zoneNames(locale(), zone)}`;
 
   function choose(zone: string | null): void {
     const current = settings();
