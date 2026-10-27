@@ -23,11 +23,12 @@ export const localFilePreview = Effect.fn("FilePreview.local")(function* (
   name: string,
   size: number,
   generation: number,
+  maxBytes: number = ATTACHMENT_LIMITS.fileBytes,
 ) {
   const extension = attachmentFileExtension(name);
   const mimeType = extension === "html" || extension === "htm" ? "text/html" : mimeTypeForName(name);
   // A file over the limit is not read. The panel still opens, reveals and saves it by its path.
-  const kind = size > ATTACHMENT_LIMITS.fileBytes ? "none" : filePreviewKindForFile(name, mimeType);
+  const kind = size > Math.min(maxBytes, ATTACHMENT_LIMITS.fileBytes) ? "none" : filePreviewKindForFile(name, mimeType);
   const bytes = kind === "none" ? null : new Uint8Array(yield* attachmentCall(() => readFile(path)));
   const pageUrl = bytes ? filePreviewPages.add(mimeType, bytes, generation) : undefined;
   return {

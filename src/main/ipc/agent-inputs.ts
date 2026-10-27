@@ -1,4 +1,4 @@
-import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
+import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import {
   type AcknowledgeFailedTurnInput,
   type AgentIpcRequest,
@@ -44,6 +44,8 @@ import {
   type OpenSharedFileInput,
   type OpenWorkspaceFileInput,
   type PasteMessageLinkInput,
+  type PreviewSharedFileInput,
+  type PreviewWorkspaceFileInput,
   type ReadConversationPageInput,
   type RenameAgentTaskInput,
   type ReorderQueueInput,
@@ -809,6 +811,23 @@ export function parseOpenWorkspaceFile(value: unknown): OpenWorkspaceFileInput {
     path: requireString(value.path, "path", INPUT_LIMITS.path),
     action: parseFileAction(value.action),
   };
+}
+
+export function parsePreviewSharedFile(value: unknown): PreviewSharedFileInput {
+  if (!isObject(value)) throw new Error("Invalid shared file request.");
+  return { ...parseOpenSharedFile(value), ...optionalPreviewByteLimit(value.maxBytes) };
+}
+
+export function parsePreviewWorkspaceFile(value: unknown): PreviewWorkspaceFileInput {
+  if (!isObject(value)) throw new Error("Invalid workspace file request.");
+  return { ...parseOpenWorkspaceFile(value), ...optionalPreviewByteLimit(value.maxBytes) };
+}
+
+function optionalPreviewByteLimit(value: unknown): { maxBytes?: number } {
+  if (value === undefined) return {};
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > ATTACHMENT_LIMITS.fileBytes)
+    throw new Error("Invalid preview size limit.");
+  return { maxBytes: value };
 }
 
 export function parseCancelQueuedMessage(value: unknown): CancelQueuedMessageInput {

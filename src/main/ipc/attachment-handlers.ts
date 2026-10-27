@@ -56,6 +56,8 @@ import {
   parseOpenAttachment,
   parseOpenSharedFile,
   parseOpenWorkspaceFile,
+  parsePreviewSharedFile,
+  parsePreviewWorkspaceFile,
 } from "./agent-inputs";
 import { type IpcGroupHandlers, payloadHandler } from "./define-ipc-group";
 import { routeToServer } from "./route-to-server";
@@ -259,28 +261,32 @@ export function attachmentIpcHandlers({
           );
         },
       }),
-      previewSharedFile: scopedHandler(parseOpenSharedFile, {
+      previewSharedFile: scopedHandler(parsePreviewSharedFile, {
         local: async (parsed) => {
           const generation = filePreviewPages.generation;
           const sharedFile = await runCauseEffect(service.resolveSharedFile(parsed.path));
-          return runCauseEffect(localFilePreview(sharedFile.path, sharedFile.name, sharedFile.size, generation));
-        },
-        remote: async (parsed, serverId) => {
-          const downloaded = await runCauseEffect(remoteServers.downloadSharedFile(parsed.path, serverId));
-          return filePreviewFromBytes(downloaded.name, downloaded.bytes);
-        },
-      }),
-      previewWorkspaceFile: scopedHandler(parseOpenWorkspaceFile, {
-        local: async (parsed) => {
-          const generation = filePreviewPages.generation;
-          const workspaceFile = await runCauseEffect(service.resolveLocalWorkspaceFile(parsed.agentId, parsed.path));
           return runCauseEffect(
-            localFilePreview(workspaceFile.path, workspaceFile.name, workspaceFile.size, generation),
+            localFilePreview(sharedFile.path, sharedFile.name, sharedFile.size, generation, parsed.maxBytes),
           );
         },
         remote: async (parsed, serverId) => {
           const downloaded = await runCauseEffect(
-            remoteServers.downloadWorkspaceFile(parsed.agentId, parsed.path, serverId),
+            remoteServers.downloadSharedFile(parsed.path, serverId, parsed.maxBytes),
+          );
+          return filePreviewFromBytes(downloaded.name, downloaded.bytes);
+        },
+      }),
+      previewWorkspaceFile: scopedHandler(parsePreviewWorkspaceFile, {
+        local: async (parsed) => {
+          const generation = filePreviewPages.generation;
+          const workspaceFile = await runCauseEffect(service.resolveLocalWorkspaceFile(parsed.agentId, parsed.path));
+          return runCauseEffect(
+            localFilePreview(workspaceFile.path, workspaceFile.name, workspaceFile.size, generation, parsed.maxBytes),
+          );
+        },
+        remote: async (parsed, serverId) => {
+          const downloaded = await runCauseEffect(
+            remoteServers.downloadWorkspaceFile(parsed.agentId, parsed.path, serverId, parsed.maxBytes),
           );
           return filePreviewFromBytes(downloaded.name, downloaded.bytes);
         },

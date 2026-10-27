@@ -1,12 +1,8 @@
-import { bytesToBase64 } from "@openbot/team-client/base64";
 import type { MessageImageFile } from "@openbot/ui/features/conversation/MarkdownMessageText";
 import { releaseFilePreviewPage } from "./conversation-port";
 import type { ConversationRuntime } from "./conversation-runtime";
 
-/**
- * A larger named image keeps only its chip. The file preview has no size-only read, so a large
- * file is read once, as a chip click reads it, and is then dropped.
- */
+/** A larger named image keeps only its chip. The host does not read or send a larger file. */
 const INLINE_IMAGE_BYTES = 8 * 1024 * 1024;
 /** The cached `data:` URLs together take at most this many characters. */
 const CACHE_CHARACTERS = 64 * 1024 * 1024;
@@ -47,13 +43,13 @@ export function createMessageImageFiles(
     if (file.kind === "workspace" && !agentId) return null;
     const preview =
       file.kind === "shared"
-        ? await agent.previewSharedFile({ path: file.path })
-        : await agent.previewWorkspaceFile({ agentId: agentId ?? "", path: file.path });
+        ? await agent.previewSharedFile({ path: file.path, maxBytes: INLINE_IMAGE_BYTES })
+        : await agent.previewWorkspaceFile({ agentId: agentId ?? "", path: file.path, maxBytes: INLINE_IMAGE_BYTES });
     releaseFilePreviewPage(preview.pageUrl);
     const type = preview.mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
     if (preview.previewKind !== "image" || !preview.bytes || !INLINE_IMAGE_TYPES.has(type)) return null;
     if (preview.bytes.byteLength > INLINE_IMAGE_BYTES) return null;
-    return `data:${type};base64,${bytesToBase64(preview.bytes)}`;
+    return dataUrl(new Blob([new Uint8Array(preview.bytes).buffer], { type }));
   }
 
   return (
@@ -68,23 +64,29 @@ export function createMessageImageFiles(
       cache.set(key, cached);
       return cached.job;
     }
-    const entry = { job: read(file, scope.agentId), characters: 0 };
+    // A file that does not load, or is too large, shows no preview until the chat opens again, so
+    // a row that renders again does not ask the host again.
+    const entry = { job: read(file, scope.agentId).catch(() => null), characters: 0 };
     cache.set(key, entry);
-    entry.job.then(
-      (url) => {
-        if (cache.get(key) !== entry) return;
-        entry.characters = url?.length ?? 0;
-        total += entry.characters;
-        for (const oldKey of cache.keys()) {
-          if (total <= CACHE_CHARACTERS || oldKey === key) break;
-          drop(oldKey);
-        }
-      },
-      // A failed read is not kept: the file can appear later, and the next show tries again.
-      () => {
-        if (cache.get(key) === entry) drop(key);
-      },
-    );
-    return entry.job.catch(() => null);
+    void entry.job.then((url) => {
+      if (cache.get(key) !== entry) return;
+      entry.characters = url?.length ?? 0;
+      total += entry.characters;
+      for (const oldKey of cache.keys()) {
+        if (total <= CACHE_CHARACTERS || oldKey === key) break;
+        drop(oldKey);
+      }
+    });
+    return entry.job;
   };
+}
+
+/** Encodes off the UI thread: one answer can name several large images. */
+function dataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => (typeof reader.result === "string" ? resolve(reader.result) : reject(reader.error));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
