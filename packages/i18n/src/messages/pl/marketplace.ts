@@ -385,7 +385,7 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.overdue": "Przenieś moje zaległe zadania w Todoist na jutro.",
   "marketplace.plugin.trello.tagline": "Tablice, listy i karty",
   "marketplace.plugin.trello.description":
-    "Trello pozwala agentom wyszukiwać i czytać tablice, listy, karty, listy kontrolne i komentarze, tworzyć tablice i karty, przenosić listy i karty, oznaczać karty jako ukończone oraz dodawać listy kontrolne, komentarze i etykiety. Każdy użytkownik loguje się na własne konto Trello przez przeglądarkę i wybiera obszary robocze na ekranie zgody. Agenci mają w tych obszarach roboczych te same uprawnienia co użytkownik. Mogą archiwizować karty i listy, ale serwer nie może niczego trwale usunąć.",
+    "Trello pozwala agentom wyszukiwać i czytać tablice, listy, karty, listy kontrolne i komentarze, tworzyć tablice i karty, przenosić listy i karty, oznaczać karty jako ukończone oraz dodawać listy kontrolne, komentarze i etykiety. Agenci mogą też czytać i dodawać karty w skrzynce odbiorczej Trello użytkownika oraz czytać wydarzenia z Plannera, które mogą pochodzić z połączonego kalendarza Google lub Outlook. Każdy użytkownik loguje się na własne konto Trello przez przeglądarkę i wybiera obszary robocze na ekranie zgody. Agenci mają w tych obszarach roboczych te same uprawnienia co użytkownik. Mogą archiwizować karty i listy, ale serwer nie może niczego trwale usunąć.",
   "marketplace.plugin.trello.app": "Tablice, listy i karty przez serwer MCP Trello z logowaniem w przeglądarce.",
   "marketplace.plugin.trello.prompt.myCards": "Które karty w Trello są przypisane do mnie?",
   "marketplace.plugin.trello.prompt.board": "Podsumuj, co jest w toku na mojej tablicy w Trello.",

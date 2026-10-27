@@ -342,7 +342,7 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.overdue": "把我逾期的 Todoist 任务改到明天。",
   "marketplace.plugin.trello.tagline": "看板、列表和卡片",
   "marketplace.plugin.trello.description":
-    "Trello 让助手搜索和读取看板、列表、卡片、清单和评论，创建看板和卡片，移动列表和卡片，将卡片标记为完成，并添加清单、评论和标签。每位用户通过浏览器登录自己的 Trello 账号，并在授权页面上选择工作区。助手在这些工作区中拥有与用户相同的权限。助手可以归档卡片和列表，但服务器无法永久删除任何内容。",
+    "Trello 让助手搜索和读取看板、列表、卡片、清单和评论，创建看板和卡片，移动列表和卡片，将卡片标记为完成，并添加清单、评论和标签。助手还可以读取和添加用户 Trello 收件箱中的卡片，并读取 Planner 中的日程，这些日程可能来自已连接的 Google 或 Outlook 日历。每位用户通过浏览器登录自己的 Trello 账号，并在授权页面上选择工作区。助手在这些工作区中拥有与用户相同的权限。助手可以归档卡片和列表，但服务器无法永久删除任何内容。",
   "marketplace.plugin.trello.app": "通过 Trello 的 MCP 服务器和浏览器登录，提供看板、列表和卡片。",
   "marketplace.plugin.trello.prompt.myCards": "哪些 Trello 卡片分配给了我？",
   "marketplace.plugin.trello.prompt.board": "总结我的 Trello 看板上正在进行的工作。",

@@ -64,7 +64,7 @@ export const PLUGIN_CATALOG_INDEX: PluginCatalogIndex = {
       slug: "trello",
       version: "1.0.0",
       featured: false,
-      detailSha256: "6af981615dd7e759197dc8f0e9831dc84f2c8f911d899da4c993ef6a1f803b22",
+      detailSha256: "f85666d6f360a29f8cb29be4c7fd992e1c0d018b5b1a0f5c59cadddefa6883b8",
     },
     {
       slug: "cobrain",
@@ -498,7 +498,7 @@ export const PLUGIN_CATALOG_DETAILS: Record<string, PluginCatalogDetail> = {
     name: "Trello",
     tagline: "Boards, lists and cards",
     description:
-      "Trello lets agents search and read boards, lists, cards, checklists and comments, create boards and cards, move lists and cards, mark cards done, and add checklists, comments and labels. Each user signs in to their own Trello account through the browser and chooses the workspaces on a consent screen. Agents get the same permissions as the user in those workspaces. They can archive cards and lists, but the server cannot delete anything permanently.",
+      "Trello lets agents search and read boards, lists, cards, checklists and comments, create boards and cards, move lists and cards, mark cards done, and add checklists, comments and labels. Agents can also read and add cards in the user's Trello Inbox, and read Planner events, which can come from a connected Google or Outlook calendar. Each user signs in to their own Trello account through the browser and chooses the workspaces on a consent screen. Agents get the same permissions as the user in those workspaces. They can archive cards and lists, but the server cannot delete anything permanently.",
     category: "productivity",
     creatorName: "Atlassian",
     iconUrl: "https://trello.com/favicon.ico",

@@ -395,7 +395,7 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.overdue": "Geciken Todoist görevlerimi yarına taşı.",
   "marketplace.plugin.trello.tagline": "Panolar, listeler ve kartlar",
   "marketplace.plugin.trello.description":
-    "Trello ile ajanlar panoları, listeleri, kartları, kontrol listelerini ve yorumları arayıp okur, pano ve kart oluşturur, listeleri ve kartları taşır, kartları tamamlandı olarak işaretler ve kontrol listesi, yorum ve etiket ekler. Her kullanıcı tarayıcıda kendi Trello hesabına giriş yapar ve bir onay ekranında çalışma alanlarını seçer. Ajanlar bu çalışma alanlarında kullanıcıyla aynı izinlere sahiptir. Kartları ve listeleri arşivleyebilirler, ancak sunucu hiçbir şeyi kalıcı olarak silemez.",
+    "Trello ile ajanlar panoları, listeleri, kartları, kontrol listelerini ve yorumları arayıp okur, pano ve kart oluşturur, listeleri ve kartları taşır, kartları tamamlandı olarak işaretler ve kontrol listesi, yorum ve etiket ekler. Ajanlar ayrıca kullanıcının Trello Gelen Kutusu'ndaki kartları okuyup kart ekleyebilir ve bağlı bir Google veya Outlook takviminden gelebilen Planner etkinliklerini okuyabilir. Her kullanıcı tarayıcıda kendi Trello hesabına giriş yapar ve bir onay ekranında çalışma alanlarını seçer. Ajanlar bu çalışma alanlarında kullanıcıyla aynı izinlere sahiptir. Kartları ve listeleri arşivleyebilirler, ancak sunucu hiçbir şeyi kalıcı olarak silemez.",
   "marketplace.plugin.trello.app":
     "Panolar, listeler ve kartlar, tarayıcıda giriş yapılan Trello MCP sunucusu üzerinden.",
   "marketplace.plugin.trello.prompt.myCards": "Bana hangi Trello kartları atanmış?",

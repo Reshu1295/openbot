@@ -20,14 +20,14 @@ export const TRELLO_PLUGIN_GUIDE: PluginGuide = {
     },
     {
       title: "Plan your day",
-      text: "The agent reads and adds cards in your Trello Inbox, reads your Planner events, and links cards to events. Creating focus time in Planner needs Trello Premium or Enterprise.",
+      text: "The agent reads and adds cards in your Trello Inbox, reads your Planner events, and links cards to events. Planner events can come from a Google or Outlook calendar that you connected to Trello.",
     },
   ],
   faq: [
     {
       question: "Is the Trello MCP server official?",
       answer:
-        "Yes. Atlassian hosts the Trello MCP server at mcp.trello.com and documents it in the Trello help center. It is a different server from the Atlassian Rovo MCP server, which does not cover Trello. Trello says the server is in active development, so more tools can come later.",
+        "Yes. Atlassian hosts the Trello MCP server at mcp.trello.com and documents it in the Trello help center. It is a separate server from the Atlassian Rovo MCP server. Trello says the server is in active development, so more tools can come later.",
     },
     {
       question: "Does the Trello plugin need an API key?",
@@ -42,7 +42,7 @@ export const TRELLO_PLUGIN_GUIDE: PluginGuide = {
     {
       question: "What data does Trello get, and what can an admin control?",
       answer:
-        "Trello gets the requests that the agent sends, and the results go back to the agent. Your workspaces, conversations and files stay on the computer that runs OpenBot. The server works on every Trello plan. Enterprise admins can turn off read or write access, or block the connection, in Atlassian Administration.",
+        "Trello gets the requests that the agent sends, and the results go back to the agent. Your workspaces, conversations and files stay on the computer that runs OpenBot. The server works on every Trello plan, but some tools need a paid plan: focus time in Planner needs Premium or Enterprise. Enterprise admins can turn off read or write access, or block the connection, in Atlassian Administration.",
     },
   ],
   sources: [

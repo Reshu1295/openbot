@@ -341,7 +341,7 @@ export const messages = {
   "marketplace.plugin.todoist.prompt.overdue": "기한이 지난 Todoist 작업을 내일로 옮겨 줘.",
   "marketplace.plugin.trello.tagline": "보드, 리스트, 카드",
   "marketplace.plugin.trello.description":
-    "Trello를 사용하면 에이전트가 보드, 리스트, 카드, 체크리스트, 댓글을 검색하고 읽으며, 보드와 카드를 만들고, 리스트와 카드를 옮기고, 카드를 완료로 표시하고, 체크리스트, 댓글, 라벨을 추가할 수 있어요. 사용자는 각자 브라우저에서 자신의 Trello 계정으로 로그인하고 동의 화면에서 워크스페이스를 선택해요. 에이전트는 그 워크스페이스에서 사용자와 같은 권한을 가져요. 카드와 리스트를 보관할 수 있지만, 서버는 어떤 것도 영구 삭제할 수 없어요.",
+    "Trello를 사용하면 에이전트가 보드, 리스트, 카드, 체크리스트, 댓글을 검색하고 읽으며, 보드와 카드를 만들고, 리스트와 카드를 옮기고, 카드를 완료로 표시하고, 체크리스트, 댓글, 라벨을 추가할 수 있어요. 또한 사용자의 Trello 받은 편지함에서 카드를 읽고 추가하며, 연결된 Google 또는 Outlook 캘린더에서 올 수 있는 Planner 일정을 읽을 수 있어요. 사용자는 각자 브라우저에서 자신의 Trello 계정으로 로그인하고 동의 화면에서 워크스페이스를 선택해요. 에이전트는 그 워크스페이스에서 사용자와 같은 권한을 가져요. 카드와 리스트를 보관할 수 있지만, 서버는 어떤 것도 영구 삭제할 수 없어요.",
   "marketplace.plugin.trello.app": "보드, 리스트, 카드를 브라우저 로그인 방식의 Trello MCP 서버로 제공해요.",
   "marketplace.plugin.trello.prompt.myCards": "나에게 배정된 Trello 카드는 뭐야?",
   "marketplace.plugin.trello.prompt.board": "내 Trello 보드에서 진행 중인 작업을 요약해 줘.",
