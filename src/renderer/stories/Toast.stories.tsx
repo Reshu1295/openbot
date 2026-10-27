@@ -1,6 +1,9 @@
+import type { UpdateStatus } from "@openbot/contracts/ipc";
 import { Button, Heading, Text, Toaster, toast } from "@openbot/ui";
+import { useText } from "@openbot/ui/text";
 import { createSignal, onCleanup, type ParentProps } from "solid-js";
 import type { Meta, StoryObj } from "storybook-solidjs-vite";
+import { createScheduledUpdateToast } from "../src/features/updates/scheduled-update-toast";
 
 const meta = {
   title: "Foundations/Toast",
@@ -125,6 +128,56 @@ export const Gallery: Story = {
       </div>
     </ToastStory>
   ),
+};
+
+// Uses the same notice and status updates as the app.
+export const ScheduledUpdate: Story = {
+  render: () => {
+    const { t } = useText();
+    const [status, setStatus] = createSignal<UpdateStatus>({
+      phase: "downloading",
+      currentVersion: "0.52.0",
+      availableVersion: "0.53.0",
+      progress: 10,
+      checkedAt: null,
+      message: null,
+      errorCode: null,
+      scheduledRestart: { requestedBy: null, mode: "when-idle", waitingFor: ["agent-turn"] },
+    });
+    createScheduledUpdateToast({
+      status,
+      cancel: async () => {
+        setStatus((current) => {
+          const { scheduledRestart: _cancelled, ...next } = current;
+          return next;
+        });
+      },
+    });
+    return (
+      <ToastStory>
+        <Heading as="h1" size="lg">
+          {t("update.scheduled.automaticTitle")}
+        </Heading>
+        <Text role="status">{status().scheduledRestart ? "Update scheduled" : "Update cancelled"}</Text>
+        <div class="foundation-story-row">
+          <Button variant="outline" onClick={() => setStatus((current) => ({ ...current, progress: 90 }))}>
+            Advance download
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              setStatus((current) => ({
+                ...current,
+                scheduledRestart: { requestedBy: "Ada", mode: "when-idle", waitingFor: ["agent-turn"] },
+              }))
+            }
+          >
+            Schedule another update
+          </Button>
+        </div>
+      </ToastStory>
+    );
+  },
 };
 
 export const WithAction: Story = {
