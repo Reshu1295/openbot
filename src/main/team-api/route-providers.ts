@@ -169,11 +169,7 @@ export async function routeProviders(
         return json(200, {
           status: credentials.status(
             parsed(
-              V8_ROUTES.has(url.pathname)
-                ? managedProviderV8
-                : V5_ROUTES.has(url.pathname)
-                  ? managedProviderV5
-                  : provider,
+              V8_ROUTES.has(url.pathname) ? keyProviderV8 : V5_ROUTES.has(url.pathname) ? managedProviderV5 : provider,
               body,
             ),
           ),
@@ -182,9 +178,15 @@ export async function routeProviders(
       case PROVIDERS_V5_ROUTES.apiKeySet:
       case PROVIDERS_ADMIN_ROUTES.apiKeySet: {
         const input = parsed(
-          V8_ROUTES.has(url.pathname) || V5_ROUTES.has(url.pathname) ? peerApiKeyInput : wireApiKeyInput,
+          V8_ROUTES.has(url.pathname)
+            ? parseProviderApiKeyInput
+            : V5_ROUTES.has(url.pathname)
+              ? peerApiKeyInput
+              : wireApiKeyInput,
           body,
         );
+        // A key-only provider runs on Pi. The download outlasts the request, so the route only starts it.
+        await runCauseEffect(runtimes.startKeyProviderCli(input.provider));
         // The same step as the local handler: the key and the process that uses it change together.
         await runCauseEffect(
           service.changeProviderCredential(input.provider, () =>
@@ -203,7 +205,7 @@ export async function routeProviders(
       case PROVIDERS_V5_ROUTES.apiKeyClear:
       case PROVIDERS_ADMIN_ROUTES.apiKeyClear: {
         const id = parsed(
-          V8_ROUTES.has(url.pathname) ? managedProviderV8 : V5_ROUTES.has(url.pathname) ? managedProviderV5 : provider,
+          V8_ROUTES.has(url.pathname) ? keyProviderV8 : V5_ROUTES.has(url.pathname) ? managedProviderV5 : provider,
           body,
         );
         await runCauseEffect(
@@ -339,7 +341,7 @@ function codeSubmitInputV4(body: DynamicRecord): { provider: SignInProviderIdV4;
   return { provider: signInProviderV4(body), code: pastedCode(body) };
 }
 
-// Inception, DeepSeek and OpenRouter run only on this computer, so a peer does not set their keys.
+// `providers-v5` does not name Inception, DeepSeek or OpenRouter; `providers-v8` sets their keys.
 function peerApiKeyInput(body: DynamicRecord) {
   const input = parseProviderApiKeyInput(body);
   if (isKeyOnlyProvider(input.provider)) throw new Error("Unknown provider.");
@@ -461,6 +463,12 @@ function managedProviderV8(body: DynamicRecord): ManagedProviderId {
   const id = hostProvider(body);
   if (!isManagedRuntimeProvider(id)) throw new Error(sourceText("error.team.providerNotManaged"));
   return id;
+}
+
+/** A `providers-v8` provider whose key this host keeps: a managed runtime, or a key-only provider on Pi. */
+function keyProviderV8(body: DynamicRecord) {
+  const id = hostProvider(body);
+  return isKeyOnlyProvider(id) ? id : managedProviderV8(body);
 }
 
 /** The `providers-v8` runtime snapshot: one row for each managed runtime, keyed by `id`. */

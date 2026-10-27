@@ -18,6 +18,7 @@ import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits
 import {
   AGENT_PROVIDERS,
   type AgentProviderId,
+  type AgentStatus,
   type AgentSummary,
   type AttachmentDataInput,
   type BitwardenConnectorStatus,
@@ -50,6 +51,8 @@ import {
   PROVIDER_USAGE_RESET_CAPABILITY,
   PROVIDER_USAGE_RESET_ROUTES,
 } from "@openbot/contracts/team-protocol/provider-usage-reset-v1";
+import { PROVIDERS_V5_CAPABILITY, PROVIDERS_V5_ROUTES } from "@openbot/contracts/team-protocol/providers-v5";
+import { PROVIDERS_V8_CAPABILITY, PROVIDERS_V8_ROUTES } from "@openbot/contracts/team-protocol/providers-v8";
 import { QueueEditRejectedError, TEAM_QUEUE_EDIT_CAPABILITY } from "@openbot/contracts/team-protocol/queue-edit-v1";
 import {
   ROUTINE_RESULTS_CAPABILITY,
@@ -247,6 +250,17 @@ function queueSnapshot(agentId: string): QueueSnapshot {
     ],
   };
 }
+
+// The provider keys that the fake host keeps.
+const providerKeys = new Set<string>();
+const NO_STATUS: AgentStatus = {
+  phase: "ready",
+  cliVersion: null,
+  auth: { kind: "unknown" },
+  capabilities: { chat: "ready", browser: "unavailable", computerUse: "unavailable" },
+  message: null,
+  fullAccess: true,
+};
 
 let hidden: HiddenAgentsSnapshot = { agents: [{ agentId: "agent-pi", hiddenAt: new Date(0).toISOString() }] };
 
@@ -628,6 +642,42 @@ try {
               : null;
             return Effect.succeed(routineDestination);
           }),
+      },
+      // A credential store in memory. The service runs the change as the host's does.
+      providers: {
+        service: {
+          startProviderCodeLogin: unused("providers.startProviderCodeLogin"),
+          submitProviderCodeLogin: unused("providers.submitProviderCodeLogin"),
+          cancelProviderCodeLogin: unused("providers.cancelProviderCodeLogin"),
+          changeProviderCredential: (_provider, change) => change().pipe(Effect.as(NO_STATUS)),
+          clearProviderCredential: (_provider, change) => change().pipe(Effect.as(NO_STATUS)),
+        },
+        credentials: {
+          status: (provider) => (providerKeys.has(provider) ? "saved" : "missing"),
+          set: (provider, key) =>
+            Effect.sync(() => {
+              record("setProviderKey", provider, key);
+              providerKeys.add(provider);
+            }),
+          clear: (provider) =>
+            Effect.sync(() => {
+              record("clearProviderKey", provider);
+              providerKeys.delete(provider);
+            }),
+        },
+        runtimes: {
+          getStatus: unused("providers.runtimes.getStatus"),
+          download: unused("providers.runtimes.download"),
+          cancel: unused("providers.runtimes.cancel"),
+          checkForUpdates: unused("providers.runtimes.checkForUpdates"),
+          startKeyProviderCli: (provider) => Effect.sync(() => record("startKeyProviderCli", provider)),
+        },
+        customProviders: {
+          list: unused("providers.customProviders.list"),
+          save: unused("providers.customProviders.save"),
+          remove: unused("providers.customProviders.remove"),
+        },
+        pasteSignIn: false,
       },
     },
     bitwardenConnector,
@@ -1170,8 +1220,7 @@ try {
         isDeepStrictEqual(ids(v8), ["agent-ada", "agent-oc", "agent-pi"]),
       { v3: ids(v3), v6: ids(v6), v7: ids(v7), v8: ids(v8) },
     );
-    // Each frozen list is the released vocabulary of its protocol. Protocol 8 and later hide only the
-    // local-only providers, which every protocol hides.
+    // Each frozen list is the released vocabulary of its protocol. Protocol 8 and later hide none.
     const hiddenBy = (protocol: number) =>
       AGENT_PROVIDERS.filter((provider) => isPeerHiddenProvider(provider, protocol));
     const expectedHidden: Record<number, readonly string[]> = {
@@ -1181,8 +1230,8 @@ try {
       5: ["cursor", "cline", "pi", "muse", "inception", "deepseek", "openrouter"],
       6: ["pi", "muse", "inception", "deepseek", "openrouter"],
       7: ["inception", "deepseek", "openrouter"],
-      8: ["inception", "deepseek", "openrouter"],
-      9: ["inception", "deepseek", "openrouter"],
+      8: [],
+      9: [],
     };
     const hiddenRows = Object.entries(expectedHidden).map(([protocol, expected]) => ({
       protocol: Number(protocol),
@@ -1190,7 +1239,7 @@ try {
       expected: AGENT_PROVIDERS.filter((provider) => expected.includes(provider)),
     }));
     check(
-      "the frozen provider lists hide each provider that a protocol below 8 does not know, and every protocol hides the local-only providers",
+      "the frozen provider lists hide each provider that a protocol below 8 does not know, and protocol 8 hides none",
       hiddenRows.every((row) => isDeepStrictEqual(row.hidden, row.expected)),
       hiddenRows,
     );
@@ -1704,6 +1753,50 @@ try {
       "the disk route ignores a path in the body and reads the disk of the OpenBot data",
       withBody.status === 200 && isDeepStrictEqual(withBody.body, expected) && callsOf("disk").length === 3,
       summary(withBody),
+    );
+  }
+
+  // ---- Keys of the key-only providers (providers-v8) ----
+  {
+    const v8 = { token: adaToken, protocol: 8, capabilities: [PROVIDERS_V8_CAPABILITY] };
+    const key = ["sk", "e2e", "deepseek", "fake0000"].join("-");
+    const before = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    const set = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, { ...v8, json: { provider: "deepseek", key } });
+    const after = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    check(
+      "an admin on providers-v8 saves a DeepSeek key on the host, and the host starts the Pi CLI for it",
+      before.status === 200 &&
+        field(before.body, "status") === "missing" &&
+        set.status === 200 &&
+        isDeepStrictEqual(callsOf("setProviderKey"), [["deepseek", key]]) &&
+        isDeepStrictEqual(callsOf("startKeyProviderCli"), [["deepseek"]]) &&
+        after.status === 200 &&
+        field(after.body, "status") === "saved",
+      [summary(before), summary(set), summary(after)],
+    );
+    const cleared = await call("POST", PROVIDERS_V8_ROUTES.apiKeyClear, { ...v8, json: { provider: "deepseek" } });
+    const afterClear = await call("POST", PROVIDERS_V8_ROUTES.apiKeyState, { ...v8, json: { provider: "deepseek" } });
+    check(
+      "an admin on providers-v8 clears the DeepSeek key",
+      cleared.status === 200 &&
+        isDeepStrictEqual(callsOf("clearProviderKey"), [["deepseek"]]) &&
+        field(afterClear.body, "status") === "missing",
+      [summary(cleared), summary(afterClear)],
+    );
+    const v5 = await call("POST", PROVIDERS_V5_ROUTES.apiKeySet, {
+      token: adaToken,
+      capabilities: [PROVIDERS_V5_CAPABILITY],
+      json: { provider: "openrouter", key },
+    });
+    const member = await call("POST", PROVIDERS_V8_ROUTES.apiKeySet, {
+      ...v8,
+      token: bobToken,
+      json: { provider: "openrouter", key },
+    });
+    check(
+      "providers-v5 refuses a key-only provider's key, a member gets 403, and neither saves a key",
+      v5.status === 400 && member.status === 403 && callsOf("setProviderKey").length === 1,
+      [summary(v5), summary(member)],
     );
   }
 

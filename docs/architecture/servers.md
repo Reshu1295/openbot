@@ -174,8 +174,7 @@ to the web client and to the mobile app. Its routes are `POST /v1/workflows/<nam
 with the same filter as `get`. The contract header in `team-protocol/workflows-v1.ts` records the grant:
 
 - A member sees a workflow only when every agent of its agent steps is visible and no model step
-  names a provider that the member's protocol hides (a local-only provider hides it from every
-  peer, the owner on a remote client too). An owner or admin also sees a workflow that names a
+  names a provider that the member's protocol hides (also for the owner on a remote client). An owner or admin also sees a workflow that names a
   deleted agent, so they can fix or delete it. The host answers any other workflow, and its runs,
   steps and versions, with 404.
 - A run, a single step, a stop, a retry or a decision needs the chat level for each named agent. A
