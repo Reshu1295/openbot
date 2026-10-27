@@ -11,6 +11,7 @@ import { secretElicitationField } from "./agent/prompts";
 import { type AgentClient, type DiagnosticOrigin, MissingPiSessionError, RequestTimeoutError } from "./agent-client";
 import { type AgentCliInfo, cliPathEnvironment, cliSpawnTarget } from "./cli";
 import { runCauseEffect } from "./effect-boundary";
+import { isMissingFileError } from "./file-errors";
 import { type DynamicToolNamespace, LocalMcpBridge, type LocalMcpSession } from "./local-mcp-bridge";
 import {
   agentMcpServers,
@@ -418,16 +419,23 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
         const replaced = yield* live.gate.withPermit(
           Effect.gen({ self: this }, function* () {
             if (live.turn) return false;
-            yield* this.#close(live);
             this.#threads.delete(requestedId);
+            yield* this.#close(live);
             return true;
           }),
         );
         if (!replaced) return live;
       }
       if (!isAbsolute(requestedId)) return yield* providerFailure(new MissingPiSessionError());
+      // Only a file that is gone retires the session. Another failure, such as no permission, can pass.
       yield* providerCall(() => access(requestedId)).pipe(
-        Effect.mapError(() => providerFailure(new MissingPiSessionError())),
+        Effect.mapError(({ cause }) =>
+          providerFailure(
+            isMissingFileError(cause)
+              ? new MissingPiSessionError()
+              : new Error(sourceText("error.provider.piSessionMissing")),
+          ),
+        ),
       );
     }
     const cwd = yield* providerSync(() => requiredString(params, "cwd"));
