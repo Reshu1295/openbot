@@ -44,13 +44,12 @@ export function SidebarChannelRow(rowProps: { channel: ChannelSummary; waiting?:
    * carries both and the row keeps the height every other row in the list has. */
   const preview = () => {
     // A waiting row previews the question, as on the agent row.
-    const question = wait()?.detail;
-    if (question) return question;
-    const text = rowProps.channel.lastMessage?.text ?? t("sidebar.channel.noMessages");
+    const text = wait()?.detail || (rowProps.channel.lastMessage?.text ?? t("sidebar.channel.noMessages"));
     return rowProps.channel.activeTasks > 0 ? t("sidebar.channel.workingPreview", { preview: text }) : text;
   };
-  // The wait label already reads the question, so the label does not say it twice.
-  const labelPreview = () => (wait()?.detail ? "" : `. ${preview()}`);
+  // The wait label already reads the question, so the label does not say it twice, unless the
+  // preview also says that work runs.
+  const labelPreview = () => (wait()?.detail && rowProps.channel.activeTasks === 0 ? "" : `. ${preview()}`);
   const row = (): JSX.Element => (
     <ContextMenu.Root modal={false} onOpenChange={setMenuOpen}>
       <ContextMenu.Trigger
