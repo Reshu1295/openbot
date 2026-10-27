@@ -160,7 +160,9 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
    * waits, the badge says so and the action names the version it installs; otherwise the same
    * action checks for one.
    */
-  const updateOffered = () => Boolean(host.onUpdateProvider) && (runtimeStatus()?.phase === "ready" || updatable());
+  // A provider that is off gets no update offer from main, so a check there could only say "up to date".
+  const updateOffered = () =>
+    Boolean(host.onUpdateProvider) && !off() && (runtimeStatus()?.phase === "ready" || updatable());
   const restartOffered = () =>
     Boolean(host.onRestartProvider) && (option().restartPending || (available() && !connecting()));
   const diagnosticsOffered = () => Boolean(option().lastError && option().diagnostics);

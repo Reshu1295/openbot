@@ -65,8 +65,7 @@ export const messages = {
   "customProvider.field.baseUrl": "Bazowy URL",
   "customProvider.field.apiKey": "Klucz API",
   "customProvider.field.apiKeyHint": "Opcjonalnie. Zostaw puste, jeśli uwierzytelniasz przez nagłówki.",
-  "customProvider.field.apiKeyKeptHint":
-    "Klucz jest zapisany. Zostaw to pole puste, aby zachować klucz i zapisane nagłówki.",
+  "customProvider.field.apiKeyKeptHint": "Klucz jest zapisany. Zostaw to pole puste, aby go zachować.",
   "customProvider.models": "Modele",
   "customProvider.model.id": "ID modelu {number}",
   "customProvider.model.name": "Nazwa wyświetlana modelu {number}",
@@ -77,6 +76,7 @@ export const messages = {
   "customProvider.header.name": "Nazwa nagłówka {number}",
   "customProvider.header.value": "Wartość nagłówka {number}",
   "customProvider.header.valuePlaceholder": "wartość",
+  "customProvider.header.keptPlaceholder": "Zapisano. Zostaw puste, aby zachować.",
   "customProvider.header.remove": "Usuń nagłówek {number}",
   "customProvider.header.add": "Dodaj nagłówek",
   "customProvider.submit": "Zapisz",

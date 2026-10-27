@@ -16,6 +16,8 @@ export interface AwaitingReply {
   state: AwaitingReplyState;
   /** The answer, for a teammate that replied. */
   preview: string | null;
+  /** The queued answer, which the person can steer into the running turn. */
+  deliveryId: string | null;
 }
 
 export function awaitingReplies(
@@ -39,18 +41,30 @@ export function awaitingReplies(
       );
       if (reply) {
         shown.add(reply.id);
-        rows.push({ id, agentId: delivery.recipientAgentId, state: "replied", preview: replyPreview(reply) });
+        rows.push({
+          id,
+          agentId: delivery.recipientAgentId,
+          state: "replied",
+          preview: replyPreview(reply),
+          deliveryId: reply.id,
+        });
         continue;
       }
       const state = deliveryState(delivery.status);
       if (!state || (state === "failed" && index < lastUserIndex)) continue;
-      rows.push({ id, agentId: delivery.recipientAgentId, state, preview: null });
+      rows.push({ id, agentId: delivery.recipientAgentId, state, preview: null, deliveryId: null });
     }
   });
   // An answer to a question on an earlier page, or to one sent from another conversation.
   for (const reply of replies) {
     if (shown.has(reply.id) || reply.sender.kind !== "agent") continue;
-    rows.push({ id: reply.id, agentId: reply.sender.agentId, state: "replied", preview: replyPreview(reply) });
+    rows.push({
+      id: reply.id,
+      agentId: reply.sender.agentId,
+      state: "replied",
+      preview: replyPreview(reply),
+      deliveryId: reply.id,
+    });
   }
   return rows;
 }

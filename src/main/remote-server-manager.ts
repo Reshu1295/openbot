@@ -1878,13 +1878,14 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
       this: RemoteServerManager,
       sharedPath: string,
       serverId = this.#store.activeServerId,
+      maxBytes?: number,
     ): Effect.fn.Return<{ bytes: Uint8Array; name: string }, RemoteWorkflowError, RemoteRequest> {
       const server = yield* remoteDecode(() => this.#store.require(serverId));
       const url = new URL(TEAM_API_ROUTES.sharedFiles, server.apiUrl);
       url.searchParams.set("path", sharedPath);
       const response = yield* this.#client.fetch(server, url);
       return {
-        bytes: new Uint8Array(yield* remoteCall(() => response.arrayBuffer())),
+        bytes: yield* remoteCall(() => fileResponseBytes(response, maxBytes)),
         name: contentDispositionFileName(response.headers.get("content-disposition"), basename(sharedPath)),
       };
     },
@@ -1897,6 +1898,7 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
       agentId: string,
       workspacePath: string,
       serverId = this.#store.activeServerId,
+      maxBytes?: number,
     ): Effect.fn.Return<{ bytes: Uint8Array; name: string }, RemoteWorkflowError, RemoteRequest> {
       const server = yield* remoteDecode(() => this.#store.require(serverId));
       const url = new URL(TEAM_API_ROUTES.workspaceFiles, server.apiUrl);
@@ -1905,7 +1907,7 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
       url.searchParams.set("path", workspacePath);
       const response = yield* this.#client.fetch(server, url);
       return {
-        bytes: new Uint8Array(yield* remoteCall(() => response.arrayBuffer())),
+        bytes: yield* remoteCall(() => fileResponseBytes(response, maxBytes)),
         name: contentDispositionFileName(response.headers.get("content-disposition"), basename(workspacePath)),
       };
     },
@@ -2063,4 +2065,19 @@ function requiredServerSummary(servers: ServerSummary[], serverId: string): Serv
   const server = servers.find((candidate) => candidate.id === serverId);
   if (!server) throw new Error("Remote server summary is missing.");
   return server;
+}
+
+/**
+ * The body of a host file. With `maxBytes`, a preview that names a larger size stops before it reads
+ * the body. A host that names no size is read, and the result is checked.
+ */
+async function fileResponseBytes(response: Response, maxBytes: number | undefined): Promise<Uint8Array> {
+  if (maxBytes !== undefined && Number(response.headers.get("content-length")) > maxBytes) {
+    await response.body?.cancel();
+    throw new Error(sourceText("error.attachment.previewTooLarge"));
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (maxBytes !== undefined && bytes.byteLength > maxBytes)
+    throw new Error(sourceText("error.attachment.previewTooLarge"));
+  return bytes;
 }

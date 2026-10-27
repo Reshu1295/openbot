@@ -101,6 +101,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Ein Headername ist zu lang.",
   "error.provider.headerNameDuplicate": "Zwei Header haben denselben Namen.",
   "error.provider.headerValueInvalid": "Ein Headerwert fehlt oder ist zu lang.",
+  "error.provider.headerValueMissing": "Gib einen Wert für den Header {name} ein.",
   "error.provider.apiKeyTooLong": "Der API-Schlüssel ist zu lang.",
   "error.provider.localOnly": "Anbieter können nur auf dem Computer geändert werden, auf dem die Agenten laufen.",
   "error.provider.keyRequired": "Ein Anbieterschlüssel ist erforderlich.",

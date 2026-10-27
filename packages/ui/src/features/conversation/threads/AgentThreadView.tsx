@@ -5,7 +5,7 @@ import { ArrowUp, Button, Square } from "@openbot/ui";
 import { createScrollFades } from "@openbot/ui/components/createScrollFades";
 import type { AgentMessage, AgentProfile } from "@openbot/ui/data";
 import { AgentActivityIndicator, nextAgentActivityLabel } from "@openbot/ui/features/conversation/AgentActivity";
-import { ChatMessageRow } from "@openbot/ui/features/conversation/ChatMessageRow";
+import { type ChatMessageAuthor, ChatMessageRow } from "@openbot/ui/features/conversation/ChatMessageRow";
 import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor";
 import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
@@ -123,10 +123,20 @@ export function AgentThreadView(props: AgentThreadViewProps) {
       setSending(false);
     }
   };
-  const author = (message: AgentMessage) =>
-    message.author === "you"
-      ? { kind: "you" as const, name: t("chat.message.you") }
-      : { kind: "agent" as const, name: props.agent.name, agent: props.agent };
+  // An answer from another agent to a request of this thread shows with the name of that agent.
+  const author = (message: AgentMessage): ChatMessageAuthor => {
+    if (message.author === "you") return { kind: "you", name: t("chat.message.you") };
+    const senderId = message.senderAgentId;
+    if (senderId === undefined || senderId === props.agent.id)
+      return { kind: "agent", name: props.agent.name, agent: props.agent };
+    const sender = props.agents.find((candidate) => candidate.id === senderId);
+    return {
+      kind: "agent",
+      name: sender?.name ?? t("chat.message.agentFallback"),
+      agent: sender,
+      avatarSeed: senderId,
+    };
+  };
   const failed = () => (props.task?.state === "idle" && props.task.outcome === "failed" ? props.task : undefined);
   const running = () => (props.task?.state === "running" && !props.approval ? props.task : undefined);
   const queued = () => (props.task && props.task.queuedMessages.length > 0 ? props.task : undefined);

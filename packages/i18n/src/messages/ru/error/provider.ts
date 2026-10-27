@@ -99,6 +99,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Имя заголовка слишком длинное.",
   "error.provider.headerNameDuplicate": "У двух заголовков одинаковое имя.",
   "error.provider.headerValueInvalid": "Значение заголовка отсутствует или слишком длинное.",
+  "error.provider.headerValueMissing": "Введите значение заголовка {name}.",
   "error.provider.apiKeyTooLong": "API-ключ слишком длинный.",
   "error.provider.localOnly": "Провайдеров можно изменить только на компьютере, где работают агенты.",
   "error.provider.keyRequired": "Нужен ключ провайдера.",

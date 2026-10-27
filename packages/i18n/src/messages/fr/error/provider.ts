@@ -111,6 +111,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Un nom d’en-tête est trop long.",
   "error.provider.headerNameDuplicate": "Deux en-têtes ont le même nom.",
   "error.provider.headerValueInvalid": "Une valeur d’en-tête est manquante ou trop longue.",
+  "error.provider.headerValueMissing": "Saisissez une valeur pour l’en-tête {name}.",
   "error.provider.apiKeyTooLong": "La clé d’API est trop longue.",
   "error.provider.localOnly": "Les fournisseurs ne peuvent être modifiés que sur l’ordinateur qui exécute les agents.",
   "error.provider.keyRequired": "Une clé de fournisseur est requise.",

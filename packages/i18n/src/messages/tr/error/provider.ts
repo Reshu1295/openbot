@@ -100,6 +100,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Bir üstbilgi adı çok uzun.",
   "error.provider.headerNameDuplicate": "İki üstbilgi aynı ada sahip.",
   "error.provider.headerValueInvalid": "Bir üstbilgi değeri eksik veya çok uzun.",
+  "error.provider.headerValueMissing": "{name} başlığı için bir değer girin.",
   "error.provider.apiKeyTooLong": "API anahtarı çok uzun.",
   "error.provider.localOnly": "Sağlayıcılar yalnızca ajanları çalıştıran bilgisayarda değiştirilebilir.",
   "error.provider.keyRequired": "Bir sağlayıcı anahtarı gereklidir.",

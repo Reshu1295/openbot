@@ -122,6 +122,14 @@ export const AsksQuestion: Story = {
   },
 };
 
+/** The agent still runs a turn, so the person can steer a reply into it. */
+export const SteerReply: Story = {
+  args: {
+    onSteer: fn(),
+    items: [{ ...researchReplied, deliveryId: "delivery-research" }, ...items.slice(1)],
+  },
+};
+
 /** The plan of an agent that was asked is spent. Nobody can act, so the row has no button. */
 export const UsageLimit: Story = {
   args: {
