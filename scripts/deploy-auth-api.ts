@@ -14,66 +14,107 @@ const executableSuffix = process.platform === "win32" ? ".exe" : "";
 const bunExecutable = process.execPath;
 // Bun installs the workspace binaries at the repository root.
 const wranglerExecutable = join(projectRoot, "node_modules", ".bin", `wrangler${executableSuffix}`);
-const cloudflareEnvironment = readCloudflareEnvironment(process.argv.slice(2));
-const environmentArgs = cloudflareEnvironment ? ["--env", cloudflareEnvironment] : [];
+
+interface SecretWrite {
+  name: string;
+  value: string;
+}
+
+interface DeploymentPlan {
+  secretWrites: SecretWrite[];
+  omittedGroups: string[];
+}
 
 async function main(): Promise<void> {
-  // Check both values before any remote change. Test Workers do not send account analytics.
-  if (!cloudflareEnvironment) {
-    requiredSecret("OPENPANEL_CLIENT_ID");
-    requiredSecret("OPENPANEL_CLIENT_SECRET");
-    assertLandingBeam();
-  }
-  assertFcmServiceAccount();
-  await putRequiredSecret("EMAIL_SMTP_PASSWORD");
-  await putRequiredSecret("SKILLS_ADMIN_TOKEN");
-  await putRequiredSecret("SITE_REPORT_HASH_SECRET");
-  await putRequiredSecret("REMOTE_TICKET_PRIVATE_JWK");
-  await putRequiredSecret("REMOTE_TICKET_PUBLIC_JWKS");
-  await putRequiredSecret("REMOTE_AUTH_WEBHOOK_SECRET");
-  assertStripeKeyMode();
-  await putOptionalSecretSet("STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET");
-  await putOptionalSecretSet("BOAT_API_KEY", "BOAT_WEBHOOK_SECRET");
-  // Production releases own the template. Test deployments keep their separate setting.
-  if (cloudflareEnvironment === "test") await putOptionalSecret("HOSTED_SERVER_TEMPLATE");
-  // Without the key, agents act on GitHub as the signed-in user and not as the OpenBot GitHub App.
-  await putOptionalSecret("GITHUB_APP_PRIVATE_KEY");
-  // Without the token, no one can make a server claim.
-  await putOptionalSecret("SERVER_CLAIMS_ADMIN_TOKEN");
-  // Slack is optional: without these, the Slack routes answer 503 slack_not_configured. The test
-  // Worker takes the development app's values from the .env.dev file.
-  await putOptionalSecretSet("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "SLACK_STATE_SECRET");
-  await putOptionalSecretSet("SLACK_ROUTE_PRIVATE_JWK", "SLACK_ROUTE_KEY_ID");
-  // Discord is optional too: without these, the Discord routes answer 503 discord_not_configured.
-  await putOptionalSecretSet("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_STATE_SECRET");
-  await putOptionalSecretSet("DISCORD_ROUTE_PRIVATE_JWK", "DISCORD_ROUTE_KEY_ID");
-  // Telegram too: without these, the Telegram routes answer 503. Neither is the bot token, which only
-  // Signal has; the route ticket uses the SLACK_ROUTE_* key.
-  await putOptionalSecretSet("TELEGRAM_BOT_ID", "TELEGRAM_BOT_USERNAME");
-  if (cloudflareEnvironment === "test") {
-    await putTestAllowList();
-    // The key is in the encrypted .env.dev file. Each developer who can decrypt it can create servers.
-    await putOptionalSecret("HOSTED_SERVERS_DEVELOPER_KEY");
-  }
-  // Only production sends account events, so a test Worker does not add events to the production project.
-  if (!cloudflareEnvironment) {
-    await putRequiredSecret("OPENPANEL_CLIENT_ID");
-    await putRequiredSecret("OPENPANEL_CLIENT_SECRET");
-  }
-  // The Live Activity relay stays off until the Apple key is in the environment.
-  await putOptionalSecretSet("APNS_PRIVATE_KEY", "APNS_KEY_ID");
-  // The Android notification relay stays off until the Firebase service account key is in the environment.
-  await putOptionalSecret("FCM_SERVICE_ACCOUNT");
-  await run(wranglerExecutable, ["d1", "migrations", "apply", "DB", "--remote", ...environmentArgs], {
-    label: "Remote D1 migrations",
-  });
+  const cloudflareEnvironment = readCloudflareEnvironment(process.argv.slice(2));
+  const environmentArgs = cloudflareEnvironment ? ["--env", cloudflareEnvironment] : [];
+  const plan = createDeploymentPlan(cloudflareEnvironment);
   await run(bunExecutable, ["run", "build"], {
     label: "Auth API build",
     env: cloudflareEnvironment ? { CLOUDFLARE_ENV: cloudflareEnvironment } : undefined,
   });
+  for (const group of plan.omittedGroups) logger.info(group);
+  for (const secret of plan.secretWrites) {
+    await run(wranglerExecutable, ["secret", "put", secret.name, ...environmentArgs], {
+      input: `${secret.value}\n`,
+      label: `${secret.name} secret`,
+    });
+  }
+  await run(wranglerExecutable, ["d1", "migrations", "apply", "DB", "--remote", ...environmentArgs], {
+    label: "Remote D1 migrations",
+  });
   await run(wranglerExecutable, ["deploy", "--keep-vars", ...environmentArgs], {
     label: "Auth API deployment",
   });
+}
+
+function createDeploymentPlan(cloudflareEnvironment: string | null): DeploymentPlan {
+  const secretWrites: SecretWrite[] = [];
+  const omittedGroups: string[] = [];
+  const addRequired = (name: string) => secretWrites.push({ name, value: requiredSecret(name) });
+  const addOptional = (name: string) => {
+    if (process.env[name]?.trim()) addRequired(name);
+  };
+  /**
+   * Billing and hosting are optional: the Worker turns each off without its secrets.
+   * Set all or none of a set. A Stripe or boat key without its webhook secret takes payments or makes
+   * sandboxes that the Worker never sees.
+   */
+  const addOptionalSet = (names: string[]) => {
+    const present = names.filter((name) => process.env[name]?.trim());
+    if (present.length === 0) {
+      omittedGroups.push(`${names.join(", ")} are not set. The Worker keeps its current values.`);
+      return;
+    }
+    if (present.length !== names.length) {
+      throw new Error(`Set all of ${names.join(", ")} in the decrypted production environment, or none.`);
+    }
+    for (const name of names) addRequired(name);
+  };
+
+  // Check both values before any remote change. Test Workers do not send account analytics.
+  const productionAnalytics = cloudflareEnvironment
+    ? []
+    : ["OPENPANEL_CLIENT_ID", "OPENPANEL_CLIENT_SECRET"].map((name) => ({ name, value: requiredSecret(name) }));
+  if (!cloudflareEnvironment) assertLandingBeam();
+  assertFcmServiceAccount();
+  addRequired("EMAIL_SMTP_PASSWORD");
+  addRequired("SKILLS_ADMIN_TOKEN");
+  addRequired("SITE_REPORT_HASH_SECRET");
+  addRequired("REMOTE_TICKET_PRIVATE_JWK");
+  addRequired("REMOTE_TICKET_PUBLIC_JWKS");
+  addRequired("REMOTE_AUTH_WEBHOOK_SECRET");
+  assertStripeKeyMode(cloudflareEnvironment);
+  addOptionalSet(["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"]);
+  addOptionalSet(["BOAT_API_KEY", "BOAT_WEBHOOK_SECRET"]);
+  // Production releases own the template. Test deployments keep their separate setting.
+  if (cloudflareEnvironment === "test") addOptional("HOSTED_SERVER_TEMPLATE");
+  // Without the key, agents act on GitHub as the signed-in user and not as the OpenBot GitHub App.
+  addOptional("GITHUB_APP_PRIVATE_KEY");
+  // Without the token, no one can make a server claim.
+  addOptional("SERVER_CLAIMS_ADMIN_TOKEN");
+  // Slack is optional: without these, the Slack routes answer 503 slack_not_configured. The test
+  // Worker takes the development app's values from the .env.dev file.
+  addOptionalSet(["SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET", "SLACK_STATE_SECRET"]);
+  addOptionalSet(["SLACK_ROUTE_PRIVATE_JWK", "SLACK_ROUTE_KEY_ID"]);
+  // Discord is optional too: without these, the Discord routes answer 503 discord_not_configured.
+  addOptionalSet(["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_STATE_SECRET"]);
+  addOptionalSet(["DISCORD_ROUTE_PRIVATE_JWK", "DISCORD_ROUTE_KEY_ID"]);
+  // Telegram too: without these, the routes answer 503. The bot token belongs to Signal.
+  addOptionalSet(["TELEGRAM_BOT_ID", "TELEGRAM_BOT_USERNAME"]);
+  if (cloudflareEnvironment === "test") {
+    const allowList = testAllowListValue();
+    if (allowList) secretWrites.push({ name: "HOSTED_SERVERS_ALLOWED_USER_IDS", value: allowList });
+    else omittedGroups.push("HOSTED_SERVERS_TEST_ALLOW_LIST is not set. The Worker keeps its current allow list.");
+    // The key is in the encrypted .env.dev file. Each developer who can decrypt it can create servers.
+    addOptional("HOSTED_SERVERS_DEVELOPER_KEY");
+  }
+  if (!cloudflareEnvironment) secretWrites.push(...productionAnalytics);
+  // The Live Activity relay stays off until the Apple key is in the environment.
+  addOptionalSet(["APNS_PRIVATE_KEY", "APNS_KEY_ID"]);
+  // The Android notification relay stays off until the Firebase service account key is in the environment.
+  addOptional("FCM_SERVICE_ACCOUNT");
+  return { secretWrites, omittedGroups };
 }
 
 // The build drops the home page beam when the private port is missing. Production always has it.
@@ -94,14 +135,6 @@ function requiredSecret(name: string): string {
   return value;
 }
 
-async function putRequiredSecret(name: string): Promise<void> {
-  const value = requiredSecret(name);
-  await run(wranglerExecutable, ["secret", "put", name, ...environmentArgs], {
-    input: `${value}\n`,
-    label: `${name} secret`,
-  });
-}
-
 /** A key that the Worker cannot read turns the relay off, so it stops the deployment before remote changes. */
 function assertFcmServiceAccount(): void {
   const value = process.env.FCM_SERVICE_ACCOUNT?.trim();
@@ -112,7 +145,7 @@ function assertFcmServiceAccount(): void {
 }
 
 /** A test Worker must never take real payments, and production must never take test payments. */
-function assertStripeKeyMode(): void {
+function assertStripeKeyMode(cloudflareEnvironment: string | null): void {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
   if (!key) return;
   const live = key.startsWith("sk_live_") || key.startsWith("rk_live_");
@@ -129,41 +162,14 @@ function assertStripeKeyMode(): void {
  * developer key, can create servers there. Production allows each account with a var in
  * wrangler.jsonc, and a var and a secret cannot have one name.
  */
-async function putTestAllowList(): Promise<void> {
+function testAllowListValue(): string | undefined {
   const value = process.env.HOSTED_SERVERS_TEST_ALLOW_LIST?.trim();
-  if (!value) {
-    logger.info("HOSTED_SERVERS_TEST_ALLOW_LIST is not set. The Worker keeps its current allow list.");
-    return;
-  }
+  if (!value) return undefined;
   if (value.startsWith("encrypted:")) throw new Error("HOSTED_SERVERS_TEST_ALLOW_LIST is not decrypted.");
   if (value.split(",").some((entry) => entry.trim() === "*")) {
     throw new Error("HOSTED_SERVERS_TEST_ALLOW_LIST must name accounts, not `*`.");
   }
-  await run(wranglerExecutable, ["secret", "put", "HOSTED_SERVERS_ALLOWED_USER_IDS", ...environmentArgs], {
-    input: `${value}\n`,
-    label: "HOSTED_SERVERS_ALLOWED_USER_IDS secret",
-  });
-}
-
-async function putOptionalSecret(name: string): Promise<void> {
-  if (process.env[name]?.trim()) await putRequiredSecret(name);
-}
-
-/**
- * Billing and hosting are optional: the Worker turns each off without its secrets.
- * Set all or none of a set. A Stripe or boat key without its webhook secret takes payments or makes
- * sandboxes that the Worker never sees.
- */
-async function putOptionalSecretSet(...names: string[]): Promise<void> {
-  const present = names.filter((name) => process.env[name]?.trim());
-  if (present.length === 0) {
-    logger.info(`${names.join(", ")} are not set. The Worker keeps its current values.`);
-    return;
-  }
-  if (present.length !== names.length) {
-    throw new Error(`Set all of ${names.join(", ")} in the decrypted production environment, or none.`);
-  }
-  for (const name of names) await putRequiredSecret(name);
+  return value;
 }
 
 async function run(
