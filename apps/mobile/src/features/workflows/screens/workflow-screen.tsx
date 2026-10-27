@@ -141,13 +141,18 @@ export function WorkflowScreen() {
         ) : (
           <>
             <View className="flex-row gap-2">
-              <Button className="flex-1" variant="primary" isDisabled={starting} onPress={() => void runNow()}>
-                <Button.Label>
+              <Button
+                className="flex-1 bg-action"
+                feedbackVariant="scale"
+                isDisabled={starting}
+                onPress={() => void runNow()}
+              >
+                <Button.Label className="text-action-foreground">
                   {starting ? t("mobile.workflow.detail.starting") : t("mobile.workflow.action.run")}
                 </Button.Label>
               </Button>
               {workflow.needsNewerApp ? null : (
-                <Button className="flex-1" variant="secondary" onPress={() => commands.edit(workflowId)}>
+                <Button className="flex-1" variant="tertiary" onPress={() => commands.edit(workflowId)}>
                   <Button.Label>{t("mobile.workflow.action.edit")}</Button.Label>
                 </Button>
               )}

@@ -132,11 +132,16 @@ function RunStepRow({
               {stepText(node, t)}
             </Typography.Paragraph>
             <View className="flex-row gap-2">
-              <Button className="flex-1" variant="secondary" isDisabled={busy} onPress={() => onDecide(step, false)}>
+              <Button className="flex-1" variant="tertiary" isDisabled={busy} onPress={() => onDecide(step, false)}>
                 <Button.Label>{t("mobile.workflow.run.decline")}</Button.Label>
               </Button>
-              <Button className="flex-1" variant="primary" isDisabled={busy} onPress={() => onDecide(step, true)}>
-                <Button.Label>{t("mobile.workflow.run.approve")}</Button.Label>
+              <Button
+                className="flex-1 bg-action"
+                feedbackVariant="scale"
+                isDisabled={busy}
+                onPress={() => onDecide(step, true)}
+              >
+                <Button.Label className="text-action-foreground">{t("mobile.workflow.run.approve")}</Button.Label>
               </Button>
             </View>
           </View>
@@ -144,7 +149,7 @@ function RunStepRow({
         {step && status === "failed" ? (
           <Button
             size="sm"
-            variant="secondary"
+            variant="tertiary"
             className="mt-1 self-start"
             isDisabled={busy}
             onPress={() => onRetry(step)}
