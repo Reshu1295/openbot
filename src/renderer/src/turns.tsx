@@ -291,7 +291,7 @@ const Turns = createSimpleContext({
       agentId: string,
       requestId: string | number,
       decision: "accept" | "decline",
-      options?: { onError?: (error: unknown) => void },
+      options?: PromptAnswerOptions,
     ): Promise<boolean> {
       const serverId = activeServerId();
       const approval = approvals().find(
