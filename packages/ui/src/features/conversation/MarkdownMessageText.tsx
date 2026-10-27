@@ -1197,18 +1197,23 @@ const IMAGE_FILE_LIMIT = INPUT_LIMITS.attachments;
 /** A local image file that a message names, in a code span or a file link. */
 export type MessageImageFile = FileDirectoryContext;
 
-/** The image files that a message names in code spans and file links, in order, without repeats. */
-export function messageImageFiles(body: string): MessageImageFile[] {
-  const directory = messageFileDirectory(body);
+/**
+ * The image files that the text blocks of a message name in code spans and file links, in order,
+ * without repeats. Each block resolves a file name against its own folder, as its chips do.
+ */
+export function messageImageFiles(blocks: readonly string[]): MessageImageFile[] {
   const files = new Map<string, MessageImageFile>();
-  void markdown.walkTokens(lexBlockTokens(body, true), (token) => {
-    const file = tokenIs(token, "codespan")
-      ? mentionedFileTarget(token.text, directory)
-      : tokenIs(token, "link")
-        ? linkFileTarget(token.href)
-        : null;
-    if (file && IMAGE_FILE_PATTERN.test(fileReferenceName(file.path))) files.set(`${file.kind}:${file.path}`, file);
-  });
+  for (const body of blocks) {
+    const directory = messageFileDirectory(body);
+    void markdown.walkTokens(lexBlockTokens(body, true), (token) => {
+      const file = tokenIs(token, "codespan")
+        ? mentionedFileTarget(token.text, directory)
+        : tokenIs(token, "link")
+          ? linkFileTarget(token.href)
+          : null;
+      if (file && IMAGE_FILE_PATTERN.test(fileReferenceName(file.path))) files.set(`${file.kind}:${file.path}`, file);
+    });
+  }
   return [...files.values()].slice(0, IMAGE_FILE_LIMIT);
 }
 

@@ -352,7 +352,10 @@ export function MessageBody(props: {
     () => {
       if (props.message.author !== "agent" || props.message.streaming || !props.loadImageFile) return [];
       const attached = new Set((props.message.attachments ?? []).map((attachment) => attachment.name));
-      return messageImageFiles(props.message.body).filter((file) => !attached.has(fileReferenceName(file.path)));
+      const texts = messageContentBlocks(props.message.body, false).flatMap((block) =>
+        block.type === "text" ? [block.text] : [],
+      );
+      return messageImageFiles(texts).filter((file) => !attached.has(fileReferenceName(file.path)));
     },
     { equals: (previous, next) => imageFileKeys(previous) === imageFileKeys(next) },
   );

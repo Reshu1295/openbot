@@ -1234,6 +1234,7 @@ export function ConversationTimeline() {
                             loadImageFile={(file) =>
                               loadImageFile(file, {
                                 serverId: props.server?.id ?? "local",
+                                messageId: message()?.id ?? initialMessage.id,
                                 agentId: workspaceAgentId(),
                               })
                             }
