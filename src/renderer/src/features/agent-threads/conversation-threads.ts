@@ -1,10 +1,13 @@
-import type { AgentApproval } from "@openbot/contracts/ipc";
+import type { AgentApproval, AgentEvent, ConversationMessage } from "@openbot/contracts/ipc";
 import { isAgentTaskActive, taskApproval } from "@openbot/team-client/agent-tasks";
 import { activeThreadId, threadLists } from "@openbot/ui/features/conversation/threads/thread-items";
 import { DRAFT_THREAD_ID, MAIN_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
 import type { AgentTasks } from "../agent-tasks/agent-tasks-state";
-import type { ConversationThreads } from "../conversation/conversation-types";
+import { messagePromptRequestKey, promptRequestKey } from "../conversation/conversation-keys";
+import type { ConversationThreads, PromptAnswerOptions } from "../conversation/conversation-types";
 import type { AgentThreadTabsState } from "./agent-thread-tabs";
+
+type PromptEvent = Extract<AgentEvent, { type: "prompt" }>;
 
 export interface ConversationThreadsInput {
   agent: { id: string; updatedAt: string };
@@ -12,13 +15,20 @@ export interface ConversationThreadsInput {
   tabs: AgentThreadTabsState;
   /** The approvals that wait on the server. A side thread's turn waits for the one of its own thread. */
   approvals: readonly AgentApproval[];
+  /** The questions that wait on the server. A side thread's turn waits for the one of its own thread. */
+  prompts: readonly PromptEvent[];
   newThreadTitle: string;
   onRespondApproval: (approval: AgentApproval, decision: "accept" | "decline") => Promise<boolean>;
+  onAnswerPrompt: (
+    prompt: PromptEvent,
+    answers: Record<string, string[]>,
+    options?: PromptAnswerOptions,
+  ) => Promise<boolean>;
 }
 
 /** The threads of one agent, for the conversation. Read it in a memo: it reads the thread state. */
 export function conversationThreads(input: ConversationThreadsInput): ConversationThreads {
-  const { agent, tasks, tabs, approvals } = input;
+  const { agent, tasks, tabs, approvals, prompts } = input;
   const agentId = agent.id;
   const snapshot = tasks.snapshot(agentId);
   const list = snapshot?.tasks ?? [];
@@ -29,7 +39,12 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     draft: tabs.hasDraft(agentId),
     draftTitle: input.newThreadTitle,
     hidden: tabs.hidden(),
-    waitsForApproval: (task) => taskApproval(task, approvals) !== undefined,
+    waitsFor: (task) =>
+      taskApproval(task, approvals) !== undefined
+        ? "approval"
+        : taskPrompt(task, prompts) !== undefined
+          ? "question"
+          : undefined,
   });
   const activeId = activeThreadId(lists.tabs, tabs.activeId(agentId));
   const open =
@@ -39,6 +54,8 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
         ? null
         : list.find((task) => task.id === activeId);
   const approval = open ? taskApproval(open, approvals) : undefined;
+  const prompt = open ? taskPrompt(open, prompts) : undefined;
+  const conversation = open ? tasks.conversation(open.id) : undefined;
   const editable = tasks.editable();
   return {
     header: {
@@ -59,14 +76,32 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     open,
     limit: snapshot?.limit ?? 1,
     running: list.filter(isAgentTaskActive).length,
-    conversation: open ? tasks.conversation(open.id) : undefined,
+    conversation,
     approval,
+    prompt,
+    promptUiBlock: prompt && conversation ? promptUiBlock(prompt, conversation.messages) : undefined,
     onSend: (text) => (open ? tabs.send(agentId, open.id, text) : tabs.sendDraft(agentId, text)),
     onStop: () => {
       if (open) tasks.stopTask(agentId, open.id);
     },
     onRespondApproval: (decision) => (approval ? input.onRespondApproval(approval, decision) : Promise.resolve(false)),
+    onAnswerPrompt: (answers, options) =>
+      prompt ? input.onAnswerPrompt(prompt, answers, options) : Promise.resolve(false),
     // Only this computer moves a queued message to a new thread.
     onRunQueuedMessage: tasks.local() ? (deliveryId) => void tabs.runQueuedMessage(agentId, deliveryId) : undefined,
   };
+}
+
+/** The question that the turn of this task waits for: the one of the task's own thread. */
+function taskPrompt(
+  task: { agentId: string; threadId: string },
+  prompts: readonly PromptEvent[],
+): PromptEvent | undefined {
+  return prompts.find((prompt) => prompt.agentId === task.agentId && prompt.threadId === task.threadId);
+}
+
+/** The block of the prompt's message. Until that message arrives, the prompt's questions draw the card. */
+function promptUiBlock(prompt: PromptEvent, messages: readonly ConversationMessage[]) {
+  const requestKey = promptRequestKey(prompt.turnId, prompt.requestId);
+  return messages.findLast((message) => messagePromptRequestKey(message) === requestKey)?.uiBlock;
 }

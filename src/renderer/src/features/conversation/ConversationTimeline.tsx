@@ -1410,30 +1410,17 @@ export function ConversationTimeline() {
                   );
                 return (
                   <Loading>
-                    <Show
-                      when={pendingPromptBlock()}
-                      fallback={
-                        <QuestionPromptBubble
-                          questions={entry.prompt.questions}
-                          elementRef={setRequiredInteractionElement}
-                          sendShortcut={deviceSendShortcut(props.platform)}
-                          onSubmit={props.onAnswerPrompt}
-                          onResolutionPresented={presentResolution}
-                        />
-                      }
-                    >
-                      {(block) => (
-                        <UiBlockPrompt
-                          block={block()}
-                          agents={props.agents}
-                          onSelectAgent={props.onSelectAgent}
-                          onOpenLink={(url) => void openExternalMessageUrl(url)}
-                          elementRef={setRequiredInteractionElement}
-                          onAnswer={props.onAnswerPrompt}
-                          onAnswered={presentResolution}
-                        />
-                      )}
-                    </Show>
+                    <PendingPrompt
+                      questions={entry.prompt.questions}
+                      block={pendingPromptBlock()}
+                      agents={props.agents}
+                      onSelectAgent={props.onSelectAgent}
+                      onOpenLink={(url) => void openExternalMessageUrl(url)}
+                      sendShortcut={deviceSendShortcut(props.platform)}
+                      elementRef={setRequiredInteractionElement}
+                      onAnswer={props.onAnswerPrompt}
+                      onResolutionPresented={presentResolution}
+                    />
                   </Loading>
                 );
               }}
@@ -1511,3 +1498,4 @@ const QuestionPromptBubble = lazy(() =>
   import("@openbot/ui/components/QuestionPromptBubble").then((module) => ({ default: module.QuestionPromptBubble })),
 );
 const UiBlockPrompt = lazy(() => import("./UiBlockPrompt").then((module) => ({ default: module.UiBlockPrompt })));
+const PendingPrompt = lazy(() => import("./PendingPrompt").then((module) => ({ default: module.PendingPrompt })));

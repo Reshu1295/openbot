@@ -1368,9 +1368,20 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       tasks: current.tasks,
       tabs: current.tabs,
       approvals: workspace.state.approvals,
+      prompts: workspace.state.prompts,
       newThreadTitle: t("conversation.threads.new"),
       onRespondApproval: async (item, decision) => {
         await workspace.approve({ requestId: item.requestId, decision });
+        return true;
+      },
+      onAnswerPrompt: async (prompt, answers, options) => {
+        try {
+          await workspace.answer({ requestId: prompt.requestId, answers });
+        } catch (error) {
+          if (!options?.onError) throw error;
+          options.onError(error);
+          return false;
+        }
         return true;
       },
     });

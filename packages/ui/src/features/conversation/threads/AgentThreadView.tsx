@@ -10,6 +10,7 @@ import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor
 import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { type TextValue, useText } from "@openbot/ui/text";
+import type { JSX } from "@solidjs/web";
 import { createEffect, createSignal, For, onSettled, Show } from "solid-js";
 
 const HOLD_TEXT = {
@@ -66,6 +67,10 @@ export interface AgentThreadViewProps {
   /** The approval that the thread's running turn waits for. */
   approval?: AgentApproval | undefined;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
+  /** Whether the thread's running turn waits for the answer to a question. */
+  waitsForAnswer?: boolean | undefined;
+  /** The card of that question. */
+  prompt?: JSX.Element | undefined;
 }
 
 /**
@@ -138,7 +143,8 @@ export function AgentThreadView(props: AgentThreadViewProps) {
     };
   };
   const failed = () => (props.task?.state === "idle" && props.task.outcome === "failed" ? props.task : undefined);
-  const running = () => (props.task?.state === "running" && !props.approval ? props.task : undefined);
+  const running = () =>
+    props.task?.state === "running" && !props.approval && !props.waitsForAnswer ? props.task : undefined;
   const queued = () => (props.task && props.task.queuedMessages.length > 0 ? props.task : undefined);
   const hold = () => (props.task ? agentThreadHoldText(props.task, props.limit, t) : null);
   return (
@@ -191,6 +197,9 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                 />
               </div>
             )}
+          </Show>
+          <Show when={props.waitsForAnswer}>
+            <div class="virtual-chat-row">{props.prompt}</div>
           </Show>
           <Show when={hold()}>
             {(text) => (

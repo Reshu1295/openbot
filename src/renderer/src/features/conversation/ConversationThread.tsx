@@ -1,8 +1,12 @@
 import type { AgentMessage } from "@openbot/ui/data";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
-import { createProjection, Show } from "solid-js";
+import { createMemo, createProjection, Loading, lazy, Show } from "solid-js";
 import { toAgentMessages } from "../../app-message-projection";
+import { deviceSendShortcut } from "../../send-shortcut-preference";
+import { promptRequestKey } from "./conversation-keys";
 import { useConversationViewScope } from "./conversation-scope";
+
+const PendingPrompt = lazy(() => import("./PendingPrompt").then((module) => ({ default: module.PendingPrompt })));
 
 /** The open side thread of the agent, in the place of the agent's own chat and its message box. */
 export function ConversationThread() {
@@ -16,6 +20,11 @@ export function ConversationThread() {
     [],
     { key: "id" },
   );
+  /** The waiting question, by its request: a new copy of the same question keeps the card and what it holds. */
+  const promptKey = createMemo(() => {
+    const prompt = props.threads?.prompt;
+    return prompt ? promptRequestKey(prompt.turnId, prompt.requestId) : null;
+  });
   const view = () => {
     const agent = props.agent;
     const threads = props.threads;
@@ -37,6 +46,22 @@ export function ConversationThread() {
           onAttachmentAction={attachmentAction}
           approval={current().threads.approval}
           onRespondApproval={(decision) => current().threads.onRespondApproval(decision)}
+          waitsForAnswer={promptKey() !== null}
+          prompt={
+            <Show when={promptKey()} keyed>
+              <Loading>
+                <PendingPrompt
+                  questions={current().threads.prompt?.questions ?? []}
+                  block={current().threads.promptUiBlock}
+                  agents={props.agents}
+                  onSelectAgent={props.onSelectAgent}
+                  onOpenLink={(url) => void openExternalMessageUrl(url)}
+                  sendShortcut={deviceSendShortcut(props.platform)}
+                  onAnswer={(answers, options) => current().threads.onAnswerPrompt(answers, options)}
+                />
+              </Loading>
+            </Show>
+          }
         />
       )}
     </Show>

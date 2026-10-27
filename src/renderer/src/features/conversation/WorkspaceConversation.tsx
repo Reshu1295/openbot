@@ -137,6 +137,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
     turnProgress,
     turnStepLines,
     answerPrompt,
+    answerThreadPrompt,
     respondToApproval,
     respondToApprovalRequest,
     respondToBrowserTakeover,
@@ -367,9 +368,11 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       tasks: agentTasks,
       tabs: agentThreads,
       approvals: approvals(),
+      prompts: Object.values(pendingPrompts()).filter((event) => event?.type === "prompt"),
       newThreadTitle: t("conversation.threads.new"),
       onRespondApproval: (approval, decision) =>
         respondToApprovalRequest(approval.agentId, approval.requestId, decision),
+      onAnswerPrompt: answerThreadPrompt,
     });
   });
   /**

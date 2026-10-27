@@ -404,9 +404,14 @@ export interface ConversationThreads {
   conversation: ConversationSnapshot | undefined;
   /** The approval that the open side thread's turn waits for. */
   approval: AgentApproval | undefined;
+  /** The question that the open side thread's turn waits for. */
+  prompt: Extract<AgentEvent, { type: "prompt" }> | undefined;
+  /** The interactive block of `prompt`'s message, when the agent asked with one. */
+  promptUiBlock: ConversationUiBlock | undefined;
   onSend: (text: string) => Promise<boolean>;
   onStop: () => void;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
+  onAnswerPrompt: (answers: Record<string, string[]>, options?: PromptAnswerOptions) => Promise<boolean>;
   /** Missing when the host cannot move a queued message to a new thread. */
   onRunQueuedMessage?: ((deliveryId: string) => void) | undefined;
 }
