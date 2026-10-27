@@ -3,7 +3,7 @@ import { AgentThreadView } from "@openbot/ui/features/conversation/threads/Agent
 import { createMemo, createProjection, Loading, lazy, Show } from "solid-js";
 import { toAgentMessages } from "../../app-message-projection";
 import { deviceSendShortcut } from "../../send-shortcut-preference";
-import { promptRequestKey } from "./conversation-keys";
+import { messagePromptRequestKey, promptRequestKey } from "./conversation-keys";
 import { useConversationViewScope } from "./conversation-scope";
 
 const PendingPrompt = lazy(() => import("./PendingPrompt").then((module) => ({ default: module.PendingPrompt })));
@@ -11,20 +11,30 @@ const PendingPrompt = lazy(() => import("./PendingPrompt").then((module) => ({ d
 /** The open side thread of the agent, in the place of the agent's own chat and its message box. */
 export function ConversationThread() {
   const { props, openExternalMessageUrl, previewAttachment, attachmentAction } = useConversationViewScope();
-  /** Reconciled by id, so a stream chunk redraws only the message that changed. */
-  const messages = createProjection<AgentMessage[]>(
-    () => {
-      const conversation = props.threads?.conversation;
-      return conversation ? toAgentMessages(conversation.messages, props.agent?.id) : [];
-    },
-    [],
-    { key: "id" },
-  );
   /** The waiting question, by its request: a new copy of the same question keeps the card and what it holds. */
   const promptKey = createMemo(() => {
     const prompt = props.threads?.prompt;
     return prompt ? promptRequestKey(prompt.turnId, prompt.requestId) : null;
   });
+  /**
+   * Reconciled by id, so a stream chunk redraws only the message that changed. As in the agent's own
+   * chat, an open question shows only as its card.
+   */
+  const messages = createProjection<AgentMessage[]>(
+    () => {
+      const conversation = props.threads?.conversation;
+      if (!conversation) return [];
+      const requestKey = promptKey();
+      const shown = conversation.messages.filter(
+        (message) =>
+          message.questionPrompt?.resolution !== null &&
+          (!requestKey || messagePromptRequestKey(message) !== requestKey),
+      );
+      return toAgentMessages(shown, props.agent?.id);
+    },
+    [],
+    { key: "id" },
+  );
   const view = () => {
     const agent = props.agent;
     const threads = props.threads;
