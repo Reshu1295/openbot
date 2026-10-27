@@ -1,7 +1,21 @@
 import type { AppLanguage } from "@openbot/contracts/app-language";
 
 /** The languages a catalog exists for. `"system"` resolves to one of these; it is never one itself. */
-export const TRANSLATED_LOCALES = ["en", "de", "es", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh"] as const;
+export const TRANSLATED_LOCALES = [
+  "en",
+  "de",
+  "es",
+  "fr",
+  "it",
+  "ja",
+  "ko",
+  "pl",
+  "pt",
+  "ru",
+  "tr",
+  "zh",
+  "zh-TW",
+] as const;
 
 export type TranslatedLocale = (typeof TRANSLATED_LOCALES)[number];
 
@@ -19,8 +33,19 @@ export function resolveLocale(language: AppLanguage, systemLocale: string): Tran
   if (language !== "system") {
     return isTranslatedLocale(language) ? language : "en";
   }
+  if (isTraditionalChinese(systemLocale)) return "zh-TW";
   const subtag = systemLocale.split("-")[0]?.toLowerCase() ?? "";
   return isTranslatedLocale(subtag) ? subtag : "en";
+}
+
+/**
+ * Taiwan, Hong Kong and Macau, and any locale that names the Traditional script, read the
+ * Traditional Chinese catalog; other Chinese locales read Simplified Chinese.
+ */
+function isTraditionalChinese(systemLocale: string): boolean {
+  const parts = systemLocale.toLowerCase().split(/[-_]/);
+  if (parts[0] !== "zh") return false;
+  return parts.includes("hant") || parts.includes("tw") || parts.includes("hk") || parts.includes("mo");
 }
 
 /**
