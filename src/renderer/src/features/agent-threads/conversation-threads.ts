@@ -99,7 +99,9 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     approval,
     prompt,
     promptUiBlock: prompt && conversation ? promptUiBlock(prompt, conversation.messages) : undefined,
-    onSend: (text) => (open ? tabs.send(agentId, open.id, text) : tabs.sendDraft(agentId, text)),
+    acceptsFiles: tasks.local(),
+    onSend: (text, attachmentDraftIds) =>
+      open ? tabs.send(agentId, open.id, text, attachmentDraftIds) : tabs.sendDraft(agentId, text, attachmentDraftIds),
     onStop: () => {
       if (open) tasks.stopTask(agentId, open.id);
     },

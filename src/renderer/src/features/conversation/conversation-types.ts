@@ -413,7 +413,10 @@ export interface ConversationThreads {
   prompt: Extract<AgentEvent, { type: "prompt" }> | undefined;
   /** The interactive block of `prompt`'s message, when the agent asked with one. */
   promptUiBlock: ConversationUiBlock | undefined;
-  onSend: (text: string) => Promise<boolean>;
+  /** The thread takes files. Only this computer sends them: `agent-tasks-v1` carries text only. */
+  acceptsFiles: boolean;
+  /** `attachmentDraftIds` are the files that the text names. */
+  onSend: (text: string, attachmentDraftIds: string[]) => Promise<boolean>;
   onStop: () => void;
   onRespondApproval: (decision: "accept" | "decline", options?: PromptAnswerOptions) => Promise<boolean>;
   onAnswerPrompt: (answers: Record<string, string[]>, options?: PromptAnswerOptions) => Promise<boolean>;

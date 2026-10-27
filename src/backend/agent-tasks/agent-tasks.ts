@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { agentProviderDescriptor } from "@openbot/contracts/agent-providers";
+import { expandAttachmentReferences } from "@openbot/contracts/attachment-references";
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import {
   AGENT_TASK_QUEUED_PREVIEW,
@@ -422,7 +423,7 @@ export class AgentTasks implements TaskLanes {
       task.closedAt === null
         ? this.#mailbox.queuedTaskMessages(task.agentId, task.taskId).map((message) => ({
             deliveryId: message.deliveryId,
-            text: message.text.slice(0, AGENT_TASK_QUEUED_PREVIEW),
+            text: expandAttachmentReferences(message.text).slice(0, AGENT_TASK_QUEUED_PREVIEW),
             createdAt: message.createdAt,
           }))
         : [];
@@ -458,10 +459,10 @@ function startedTaskResult(task: AgentThreadRecord): OpenBotToolResponse {
   });
 }
 
-/** The first line of the text, cut to the title limit. */
+/** The first line of the text, cut to the title limit. An attachment reference shows as its file name. */
 function taskTitle(text: string): string {
   const line =
-    text
+    expandAttachmentReferences(text)
       .split("\n")
       .map((part) => part.trim())
       .find((part) => part.length > 0) ?? "";

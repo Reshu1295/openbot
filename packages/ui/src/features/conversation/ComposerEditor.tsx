@@ -75,7 +75,7 @@ interface ComposerEditorProps {
   skills?: ComposerSkill[] | undefined;
   /** The host's MCP servers, offered by the same `$` the skills answer. */
   mcpServers?: ComposerMcpServer[] | undefined;
-  attachments?: DraftAttachment[];
+  attachments?: DraftAttachment[] | undefined;
   value: string;
   placeholder: string;
   ariaLabel: string;
@@ -98,9 +98,11 @@ interface ComposerEditorProps {
    * Enter sends and plain Enter adds a line. The renderer resolves the platform and passes it.
    */
   sendShortcut?: SendShortcut | undefined;
-  onOpenAttachment?: (attachment: DraftAttachment) => void;
+  onOpenAttachment?: ((attachment: DraftAttachment) => void) | undefined;
   /** Receives pasted files. Without it, a file paste does nothing here; the desktop preload imports it. */
-  onPasteFiles?: (files: File[], selection: ComposerSelection) => undefined | Promise<ComposerPasteResult | undefined>;
+  onPasteFiles?:
+    | ((files: File[], selection: ComposerSelection) => undefined | Promise<ComposerPasteResult | undefined>)
+    | undefined;
   onPasteAttachments?: (
     clipboard: DataTransfer,
     selection: ComposerSelection,

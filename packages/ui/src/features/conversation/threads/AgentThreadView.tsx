@@ -3,16 +3,21 @@ import type {
   AgentTask,
   AgentTaskHold,
   AttachmentSummary,
+  DraftAttachment,
   InstalledSkill,
 } from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import { isAgentTaskActive } from "@openbot/team-client/agent-tasks";
-import { ArrowUp, Button, Square } from "@openbot/ui";
+import { ArrowUp, Button, Image, Square } from "@openbot/ui";
 import { createScrollFades } from "@openbot/ui/components/createScrollFades";
 import type { AgentMessage, AgentProfile, ComposerMcpServer } from "@openbot/ui/data";
 import { AgentActivityIndicator, nextAgentActivityLabel } from "@openbot/ui/features/conversation/AgentActivity";
 import { type ChatMessageAuthor, ChatMessageRow } from "@openbot/ui/features/conversation/ChatMessageRow";
-import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor";
+import {
+  ComposerEditor,
+  type ComposerPasteResult,
+  type ComposerSelection,
+} from "@openbot/ui/features/conversation/ComposerEditor";
 import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice";
 import { ContextUsageMeter, type ContextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
@@ -73,7 +78,16 @@ export interface AgentThreadViewProps {
   mcpServers?: ComposerMcpServer[] | undefined;
   /** The unsent text of this thread's message box. The host keeps it for each thread. */
   draft: string;
+  /** The files that the draft names. */
+  draftAttachments?: DraftAttachment[] | undefined;
   onDraftChange: (text: string) => void;
+  /** Receives pasted files. Without it, a file paste does nothing here. */
+  onPasteFiles?:
+    | ((files: File[], selection: ComposerSelection) => undefined | Promise<ComposerPasteResult | undefined>)
+    | undefined;
+  onOpenDraftAttachment?: ((attachment: DraftAttachment) => void) | undefined;
+  /** Opens the file picker. Without it, the message box has no attach button. */
+  onAttachFiles?: (() => void) | undefined;
   /** Sends a message. The host clears the text when the message went; when it did not, the text stays. */
   onSend: (text: string) => Promise<boolean>;
   onStop: () => void;
@@ -249,6 +263,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
         <form
           class="composer agent-thread-composer"
           data-compact="true"
+          data-attach={props.onAttachFiles ? "" : undefined}
           onSubmit={(event) => {
             event.preventDefault();
             void send();
@@ -261,15 +276,33 @@ export function AgentThreadView(props: AgentThreadViewProps) {
               skills={props.skills}
               skillsLoadFailed={props.skillsLoadFailed}
               mcpServers={props.mcpServers}
+              attachments={props.draftAttachments}
               value={props.draft}
               placeholder={placeholder()}
               ariaLabel={placeholder()}
               disabled={sending()}
               onSubmit={() => void send()}
               onValueChange={props.onDraftChange}
+              onPasteFiles={props.onPasteFiles}
+              onOpenAttachment={props.onOpenDraftAttachment}
             />
           </div>
           <div class="composer-toolbar">
+            <Show when={props.onAttachFiles}>
+              {(attach) => (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  class="composer-button"
+                  aria-label={t("composer.add.image")}
+                  title={t("composer.add.image")}
+                  disabled={sending()}
+                  onClick={() => attach()()}
+                >
+                  <Image aria-hidden="true" />
+                </Button>
+              )}
+            </Show>
             <div class="composer-primary-actions">
               {/* One meter for each thread: a pending Compact or an open popover stays with its thread. */}
               <Show when={props.task?.id} keyed>
