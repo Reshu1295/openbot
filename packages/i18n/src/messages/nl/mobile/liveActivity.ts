@@ -45,5 +45,5 @@ export const messages = {
     "De taak is gestopt voordat die klaar was. Open het gesprek om het opnieuw te proberen.",
   "mobile.liveActivity.island.approvalCommand": "Opdracht moet worden bekeken",
   "mobile.liveActivity.island.approvalFileChange": "Bestandswijzigingen moeten worden bekeken",
-  "mobile.liveActivity.island.approvalPermissions": "Rechten moeten worden bekeken",
+  "mobile.liveActivity.island.approvalPermissions": "Machtigingen controleren",
 } as const satisfies PartialTranslation<typeof source>;

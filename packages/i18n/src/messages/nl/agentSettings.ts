@@ -15,7 +15,7 @@ export const messages = {
   "agentSettings.backToDetails": "Terug naar details",
   "agentSettings.closeDetails": "Details sluiten",
   "agentSettings.backToSettings": "Terug naar instellingen",
-  "agentSettings.permissions.title": "Rechten",
+  "agentSettings.permissions.title": "Machtigingen",
   "agentSettings.advanced.title": "Geavanceerd",
   "agentSettings.backupModels.title": "Reservemodellen",
   "agentSettings.backupModels.valueAsk": "Eerst vragen",

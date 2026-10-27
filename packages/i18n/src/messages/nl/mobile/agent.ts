@@ -273,7 +273,7 @@ export const messages = {
   "mobile.agent.groups.knows": "Weet",
   "mobile.agent.groups.does": "Doet",
   "mobile.agent.groups.rules": "Regels",
-  "mobile.agent.permissions.title": "Rechten",
+  "mobile.agent.permissions.title": "Machtigingen",
   "mobile.agent.advanced.title": "Geavanceerd",
   "mobile.agent.runtime.unavailable": "Niet beschikbaar",
   "mobile.agent.runtime.updateToUse": "Werk OpenBot bij om {name} te gebruiken",

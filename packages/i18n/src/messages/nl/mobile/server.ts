@@ -485,7 +485,7 @@ export const messages = {
   "mobile.server.connectors.slack.workspaceTitle": "Werkruimte",
   "mobile.server.connectors.slack.workspaceDescription": "Mensen noemen @OpenBot of sturen een direct bericht.",
   "mobile.server.connectors.slack.missingScopes":
-    "OpenBot heeft deze rechten niet in Slack: {scopes}. Ontkoppel de werkruimte en verbind hem opnieuw.",
+    "OpenBot heeft deze machtigingen niet in Slack: {scopes}. Ontkoppel de werkruimte en verbind hem opnieuw.",
   "mobile.server.connectors.slack.retryAt": "Slack vroeg OpenBot te wachten. Het probeert het opnieuw om {time}.",
   "mobile.server.connectors.slack.helpInvalidToken":
     "Slack accepteert OpenBot niet meer in deze werkruimte. Misschien is de app verwijderd. Verbind de werkruimte opnieuw.",
@@ -537,7 +537,7 @@ export const messages = {
   "mobile.server.connectors.discord.workspaceDescription":
     "Noem @OpenBot in een kanaal. Antwoord op OpenBot om verder te gaan.",
   "mobile.server.connectors.discord.missingScopes":
-    "OpenBot heeft deze rechten niet in Discord: {scopes}. Ontkoppel de Discord-server en verbind hem opnieuw.",
+    "OpenBot heeft deze machtigingen niet in Discord: {scopes}. Ontkoppel de Discord-server en verbind hem opnieuw.",
   "mobile.server.connectors.discord.retryAt": "Discord vroeg OpenBot te wachten. Het probeert het opnieuw om {time}.",
   "mobile.server.connectors.discord.helpInvalidToken":
     "Discord accepteert OpenBot niet meer in deze Discord-server. Misschien is de bot verwijderd. Verbind de Discord-server opnieuw.",

@@ -14,7 +14,7 @@ export const messages = {
   "status.messaging.approvalTitle": "OpenBot vraagt om goedkeuring om door te gaan.",
   "status.messaging.approvalCommand": "Een opdracht uitvoeren",
   "status.messaging.approvalFileChange": "Bestanden wijzigen",
-  "status.messaging.approvalPermissions": "Meer rechten krijgen",
+  "status.messaging.approvalPermissions": "Meer machtigingen krijgen",
   "status.messaging.approve": "Goedkeuren",
   "status.messaging.deny": "Weigeren",
   "status.messaging.approvedBy": "Goedgekeurd door {user}.",

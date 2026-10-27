@@ -281,10 +281,10 @@ export const messages = {
   "mobile.chat.approval.from": "{name} vraagt om goedkeuring",
   "mobile.chat.approval.title.command": "Voer een opdracht uit",
   "mobile.chat.approval.title.fileChange": "Wijzig bestanden",
-  "mobile.chat.approval.title.permissions": "Geef rechten",
+  "mobile.chat.approval.title.permissions": "Machtigingen verlenen",
   "mobile.chat.approval.files": "Bestanden",
   "mobile.chat.approval.agentWorkspace": "Werkruimte van agent",
-  "mobile.chat.approval.permissions": "Gevraagde rechten",
+  "mobile.chat.approval.permissions": "Gevraagde machtigingen",
   "mobile.chat.approval.network": "Netwerktoegang",
   "mobile.chat.approval.read": "Lees {path}",
   "mobile.chat.approval.write": "Schrijf {path}",
@@ -293,7 +293,7 @@ export const messages = {
   "mobile.chat.approval.effect.fileChange":
     "Toestaan laat {name} deze bestanden wijzigen op {server}. Weigeren laat de bestanden zoals ze zijn.",
   "mobile.chat.approval.effect.permissions":
-    "Toestaan geeft {name} deze rechten op {server}. Weigeren behoudt de huidige rechten.",
+    "Toestaan geeft {name} deze machtigingen op {server}. Weigeren behoudt de huidige machtigingen.",
   "mobile.chat.approval.partial":
     "Dit verzoek is te lang om op de telefoon te tonen. Open OpenBot op {server} om het toe te staan. Je kunt het hier weigeren.",
   "mobile.chat.approval.allow": "Toestaan",
