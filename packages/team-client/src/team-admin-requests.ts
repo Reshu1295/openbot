@@ -72,6 +72,8 @@ import {
   decodeHostReleaseStatus,
   decodeHostTimezoneSettings,
   decodeHostUpdateStatus,
+  decodeHostVaultImport,
+  decodeHostVaultState,
   decodeInstalledSkills,
   decodeMcpServerConfigs,
   decodeMcpSignInAppState,
@@ -154,6 +156,9 @@ import {
   type UpdateAgentAdminSettingsInput,
   type UpdateHostIdentityInput,
   type UpdateRestartMode,
+  type VaultHostImportResult,
+  type VaultSaveInput,
+  type VaultState,
 } from "@openbot/contracts/ipc";
 import { decodeRecord, guardedListDecoder, nullableString, requiredBoolean } from "@openbot/contracts/ipc-decoding";
 import {
@@ -210,6 +215,8 @@ import { type SIGN_IN_RELAY_PROVIDERS, SIGN_IN_RELAY_ROUTES } from "@openbot/con
 import { SKILLS_ADMIN_ROUTES } from "@openbot/contracts/team-protocol/skills-admin-v1";
 import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
+import { VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
+import { VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import { WEBHOOK_TESTS_ROUTES } from "@openbot/contracts/team-protocol/webhook-tests-v1";
 import { Effect, Schema } from "effect";
 import { bytesToBase64 } from "./base64";
@@ -1174,6 +1181,38 @@ export function bitwardenConnectorRequest(
   return adminCall(() =>
     request("POST", BITWARDEN_CONNECTOR_ROUTES[route], decodeHostBitwardenConnectorStatus, { ...body }),
   );
+}
+
+/** The host's Vault (`vault-v1`). No list item carries a password, a card number or a security code. */
+export function listHostVault(request: TeamApiRequest): Effect.Effect<VaultState, TeamAdminRequestError> {
+  return adminCall(() => request("POST", VAULT_ROUTES.list, decodeHostVaultState, {}));
+}
+
+/** Adds or changes one item of the host's Vault. A null secret keeps the saved one; a new one goes to the host once. */
+export function saveHostVaultItem(
+  request: TeamApiRequest,
+  input: VaultSaveInput,
+): Effect.Effect<VaultState, TeamAdminRequestError> {
+  // Only a card has approved sites, and an absent list keeps them all.
+  const { fillSites, ...item } = { fillSites: undefined, ...input };
+  return adminCall(() =>
+    request("POST", VAULT_ROUTES.save, decodeHostVaultState, fillSites === undefined ? item : { ...item, fillSites }),
+  );
+}
+
+export function deleteHostVaultItem(
+  request: TeamApiRequest,
+  id: string,
+): Effect.Effect<VaultState, TeamAdminRequestError> {
+  return adminCall(() => request("POST", VAULT_ROUTES.delete, decodeHostVaultState, { id }));
+}
+
+/** Adds the logins of a CSV password export (`vault-import-v1`). The answer has only the counts. */
+export function importHostVaultCsv(
+  request: TeamApiRequest,
+  csv: string,
+): Effect.Effect<VaultHostImportResult, TeamAdminRequestError> {
+  return adminCall(() => request("POST", VAULT_IMPORT_ROUTES.import, decodeHostVaultImport, { csv }));
 }
 
 /** The host's Slack workspaces, Discord servers or Telegram chats (`connectors-v1`). */

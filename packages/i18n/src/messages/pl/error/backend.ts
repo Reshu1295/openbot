@@ -317,6 +317,14 @@ export const messages = {
   "error.backend.taskNotFound": "To zadanie nie jest dostępne.",
   "error.backend.taskClosed": "To zadanie jest zamknięte. Otwórz je ponownie, aby wysłać wiadomość.",
   "error.backend.taskStillRunning": "To zadanie nadal działa. Poczekaj, aż się zatrzyma, a potem je zamknij.",
+  "error.backend.threadNotFound": "Ten wątek jest niedostępny.",
+  "error.backend.threadStillRunning": "Ten wątek nadal działa. Zatrzymaj go, a potem spróbuj ponownie.",
+  "error.backend.threadArchived": "Ten wątek jest zarchiwizowany. Przywróć go, aby wysłać wiadomość.",
+  "error.backend.threadTitleRequired": "Nadaj wątkowi krótki tytuł.",
+  "error.backend.threadOpenLimitReached":
+    "Liczba otwartych wątków tego agenta: {count}. Zarchiwizuj wątek, a potem rozpocznij lub przywróć inny.",
+  "error.backend.threadRemoteUnsupported": "Wątki są dostępne tylko dla agentów na tym komputerze.",
+  "error.backend.threadMoveRefused": "W nowym wątku można uruchomić tylko wiadomość wysłaną wyłącznie do tego agenta.",
   "error.backend.taskTitleRequired": "Nadaj zadaniu krótki tytuł.",
   "error.backend.taskToolInvalid":
     "Nadaj zadaniu tytuł o długości maksymalnie 120 znaków i opis, który mówi, co zrobić.",

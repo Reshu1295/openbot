@@ -106,6 +106,10 @@ Turns at the same time: at most 2
 The guard reads cgroup v2. On a system with cgroup v1, it uses the machine memory and the log has
 one warning.
 
+Agent processes run at nice 10 with an OOM value of 500, also a job that an agent detaches. At the
+`critical` level, OpenBot stops leftover agent processes first. Node programs of agents see the CPU
+limit of the unit in `os.cpus()`. See [agent processes](hosted-servers.md#memory).
+
 ## Display size
 
 A self-hosted server gives the agents a virtual display (Xvfb), and computer use reads that display.

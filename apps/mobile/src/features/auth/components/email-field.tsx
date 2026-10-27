@@ -5,6 +5,7 @@ import Animated from "react-native-reanimated";
 
 import { SIGN_IN_CONTROL_HEIGHT, useSignInColors } from "@/features/auth/components/sign-in-colors";
 import { useShake } from "@/features/auth/components/use-shake";
+import { selectionColorProps } from "@/shared/lib/selection-color";
 
 interface EmailFieldProps {
   ref?: Ref<TextInputInstance>;
@@ -83,8 +84,7 @@ export function EmailField({
           returnKeyType="send"
           submitBehavior="submit"
           maxLength={INPUT_LIMITS.email}
-          cursorColor={colors.brand}
-          selectionColor={colors.brand}
+          {...selectionColorProps(colors.brand)}
           className="flex-1 px-4 font-sans text-[17px]"
           style={{ color: colors.text }}
         />

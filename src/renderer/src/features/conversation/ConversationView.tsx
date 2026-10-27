@@ -5,6 +5,7 @@ import { currentDevicePlatform } from "../../send-shortcut-preference";
 import { ConversationComposer } from "./ConversationComposer";
 import { ConversationHeader } from "./ConversationHeader";
 import { ConversationPanels } from "./ConversationPanels";
+import { ConversationThread } from "./ConversationThread";
 import { ConversationTimeline } from "./ConversationTimeline";
 import { ConversationViewScopeContext, createConversationViewScope } from "./conversation-scope";
 import type { ConversationProps } from "./conversation-types";
@@ -24,7 +25,6 @@ export function ConversationView(props: ConversationProps) {
     dropActive,
     filePreviewOpen,
     filesOpen,
-    taskPanelOpen,
     activeRightPanel,
     settingsOpen,
     sidePanel,
@@ -36,6 +36,7 @@ export function ConversationView(props: ConversationProps) {
     setDropActive,
     settingsPanelWidth,
     submitting,
+    sideThreadOpen,
   } = scope;
   const { t } = useText();
   createEffect(
@@ -58,7 +59,6 @@ export function ConversationView(props: ConversationProps) {
               browserSidebarOpen() ||
               filePreviewOpen() ||
               filesOpen() ||
-              taskPanelOpen() ||
               activeRightPanel() === "question" ||
               activeRightPanel() === "voice" ||
               activeRightPanel() === "subagent" ||
@@ -97,9 +97,13 @@ export function ConversationView(props: ConversationProps) {
         <ConversationHeader />
         {props.notice}
 
+        {/* A side thread covers the agent's own chat and its message box. They stay mounted, so the way
+            back keeps their rows and scroll position and does not build the chat again. */}
         <ConversationTimeline />
-
         <ConversationComposer />
+        <Show when={sideThreadOpen()}>
+          <ConversationThread />
+        </Show>
 
         <ConversationPanels onOpenUsage={props.onOpenUsage} />
       </main>

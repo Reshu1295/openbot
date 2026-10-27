@@ -45,11 +45,22 @@ export function createAttachmentToken(attachment: DraftAttachment, actions: Atta
   token.setAttribute("tabindex", "0");
   token.setAttribute("aria-label", currentText().t("composer.token.attachment", { name: attachment.name }));
   token.setAttribute("aria-describedby", actions.tooltipId);
-  appendAttachmentReferenceVisual(token, attachment.name);
+  if (attachment.kind === "image" && attachment.previewUrl) {
+    const preview = document.createElement("img");
+    preview.className = "composer-file-reference-image";
+    preview.src = attachment.previewUrl;
+    preview.alt = "";
+    preview.draggable = false;
+    token.append(preview);
+  } else appendAttachmentReferenceVisual(token, attachment.name);
   const name = document.createElement("span");
   name.className = "inline-file-reference-name";
   name.textContent = attachment.name;
   token.append(name);
+  const size = document.createElement("span");
+  size.className = "composer-file-reference-size";
+  size.textContent = currentText().format.fileSize(attachment.size);
+  token.append(size);
   const showTooltip = () => actions.showTooltip(token, attachment.name);
   const hideTooltip = () => actions.hideTooltip(token);
   token.addEventListener("pointerenter", showTooltip);

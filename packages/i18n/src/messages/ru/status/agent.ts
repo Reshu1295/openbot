@@ -36,4 +36,6 @@ export const messages = {
   "status.agent.skillUsing": "Использование навыка {name}…",
   "status.agent.skillReading": "Чтение навыка…",
   "status.agent.memoryChanges": "Память: сохранено {saved}, обновлено {updated}, забыто {forgotten}.",
+  "status.agent.memoryChangesWithConflicts":
+    "Память: сохранено {saved}, обновлено {updated}, забыто {forgotten}, не изменено {notChanged}, потому что другая ветка изменила их раньше.",
 } as const satisfies PartialTranslation<typeof source>;

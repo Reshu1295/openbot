@@ -169,6 +169,10 @@ export const messages = {
   "provider.deepseekKey.description":
     "Сохраните ключ API DeepSeek на этом компьютере, чтобы использовать модели DeepSeek. OpenBot запускает их в загруженном Pi CLI.",
   "provider.deepseekKey.label": "Ключ API DeepSeek",
+  "provider.openrouterKey.title": "Ключ API OpenRouter",
+  "provider.openrouterKey.description":
+    "Сохраните ключ API OpenRouter на этом компьютере, чтобы использовать модели OpenRouter. OpenBot запускает их в загруженном Pi CLI.",
+  "provider.openrouterKey.label": "Ключ API OpenRouter",
 
   "provider.openCodeKey.title": "Вход в OpenCode Go",
   "provider.openCodeKey.description": "Бесплатным моделям аккаунт не нужен. Ключ открывает платные модели Go.",
@@ -223,4 +227,24 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 час",
   "provider.settings.promptCacheDefault": "По умолчанию Claude Code",
   "provider.settings.promptCacheLoadFailed": "Не удалось загрузить время кэша промптов этого сервера.",
+  "provider.settings.download": "Загрузка",
+  "provider.settings.downloadedCli": "CLI {name}",
+  "provider.settings.downloadDetail": {
+    one: "{version} · {count} версия · {size}",
+    few: "{version} · {count} версии · {size}",
+    many: "{version} · {count} версий · {size}",
+    other: "{version} · {count} версии · {size}",
+  },
+  "provider.settings.downloadVersions": {
+    one: "{count} версия · {size}",
+    few: "{count} версии · {size}",
+    many: "{count} версий · {size}",
+    other: "{count} версии · {size}",
+  },
+  "provider.settings.downloadAgain": "Когда вы включите {name}, OpenBot снова загрузит CLI.",
+  "provider.settings.removeDownloadConfirm": "Удалить {size}?",
+  "provider.settings.removeDownloadKeeps": "Аккаунты, входы и агенты останутся.",
+  "provider.settings.removeDownload": "Удалить загрузку",
+  "provider.settings.removingDownload": "Удаление…",
+  "provider.settings.removeDownloadFailed": "Не удалось удалить загрузку.",
 } as const satisfies PartialTranslation<typeof source>;

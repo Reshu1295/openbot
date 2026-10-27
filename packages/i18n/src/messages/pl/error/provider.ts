@@ -6,6 +6,7 @@ export const messages = {
     "Nie udało się zarejestrować serwerów MCP w konfiguracji Codex. Sprawdź, czy plik config.toml Codex jest poprawny i zapisywalny, a potem uruchom ponownie OpenBot.",
   "error.provider.computerUseConfig":
     "Nie udało się zarejestrować Sterowania komputerem w konfiguracji Codex. Sprawdź, czy plik config.toml Codex jest poprawny i zapisywalny, a potem uruchom ponownie OpenBot. Aby kontynuować bez tej funkcji, wyłącz Sterowanie komputerem w ustawieniach członka zespołu.",
+  "error.provider.codexUnresponsive": "Codex przestał odpowiadać, więc OpenBot zakończył jego proces.",
   "error.provider.endpointsReadOnly":
     "Zapisane endpointy zapisała nowsza wersja OpenBot albo nie można odczytać pliku. Zaktualizuj OpenBot, aby je zmienić.",
   "error.provider.endpointNoSecureStorage":
@@ -56,6 +57,9 @@ export const messages = {
     "Nie udało się połączyć ze źródłami wydań dostawców. Sprawdź połączenie i spróbuj ponownie.",
   "error.provider.runtimesUnsupported": "Środowiska uruchomieniowe dostawców nie są dostępne na tej platformie.",
   "error.provider.closing": "OpenBot się zamyka.",
+  "error.provider.removeWhileOn": "Wyłącz dostawcę, zanim usuniesz jego pobrane pliki.",
+  "error.provider.removeWhileDownloading": "Poczekaj na koniec pobierania, a potem je usuń.",
+  "error.provider.removeIncomplete": "Program używa plików tego CLI. Zamknij go i spróbuj ponownie.",
   "error.provider.cliOverride": "Usuń jawnie ustawioną ścieżkę CLI, zanim zaktualizujesz CLI w OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "Aktualizacja środowiska uruchomieniowego nie została ukończona.",
   "error.provider.downloadHttp": "Pobieranie środowiska uruchomieniowego nie powiodło się (HTTP {status}).",
@@ -99,6 +103,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "Nazwa nagłówka jest za długa.",
   "error.provider.headerNameDuplicate": "Dwa nagłówki mają tę samą nazwę.",
   "error.provider.headerValueInvalid": "Brak wartości nagłówka lub jest ona za długa.",
+  "error.provider.headerValueMissing": "Wpisz wartość nagłówka {name}.",
   "error.provider.apiKeyTooLong": "Klucz API jest za długi.",
   "error.provider.localOnly": "Dostawców można zmieniać tylko na komputerze, na którym działają agenci.",
   "error.provider.keyRequired": "Klucz dostawcy jest wymagany.",
@@ -375,6 +380,7 @@ export const messages = {
   "error.provider.museSignIn": "Zaloguj się do Muse na komputerze hosta, aby kontynuować.",
   "error.provider.inceptionSignIn": "Dodaj klucz API Inception, aby kontynuować.",
   "error.provider.deepseekSignIn": "Dodaj klucz API DeepSeek, aby kontynuować.",
+  "error.provider.openrouterSignIn": "Dodaj klucz API OpenRouter, aby kontynuować.",
   "error.provider.endpointSignIn": "Dodaj własny endpoint, aby kontynuować.",
   "error.provider.terminalLoginFailed":
     "Nie można otworzyć terminala logowania. Otwórz CLI dostawcy na tym hoście, zaloguj się tam, a potem odśwież dostawców.",

@@ -34,4 +34,6 @@ export const messages = {
   "status.agent.skillUsing": "Usando la habilidad {name}…",
   "status.agent.skillReading": "Leyendo una habilidad…",
   "status.agent.memoryChanges": "Recuerdos: {saved} guardados, {updated} actualizados, {forgotten} olvidados.",
+  "status.agent.memoryChangesWithConflicts":
+    "Recuerdos: {saved} guardados, {updated} actualizados, {forgotten} olvidados, {notChanged} sin cambios porque otro hilo los cambió antes.",
 } as const satisfies PartialTranslation<typeof source>;

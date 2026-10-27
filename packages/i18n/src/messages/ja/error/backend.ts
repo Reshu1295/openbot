@@ -326,6 +326,15 @@ export const messages = {
   "error.backend.taskNotFound": "このタスクは利用できません。",
   "error.backend.taskClosed": "このタスクは閉じています。メッセージを送信するには、もう一度開いてください。",
   "error.backend.taskStillRunning": "このタスクはまだ実行中です。停止するまで待ってから閉じてください。",
+  "error.backend.threadNotFound": "このスレッドは利用できません。",
+  "error.backend.threadStillRunning": "このスレッドはまだ実行中です。停止してから、もう一度お試しください。",
+  "error.backend.threadArchived": "このスレッドはアーカイブされています。メッセージを送信するには、復元してください。",
+  "error.backend.threadTitleRequired": "スレッドに短いタイトルを付けてください。",
+  "error.backend.threadOpenLimitReached":
+    "このエージェントには {count} 件の開いているスレッドがあります。スレッドをアーカイブしてから、別のスレッドを開始するか復元してください。",
+  "error.backend.threadRemoteUnsupported": "スレッドは、このコンピューター上のエージェントでのみ利用できます。",
+  "error.backend.threadMoveRefused":
+    "新しいスレッドで実行できるのは、このエージェントだけに送信したメッセージのみです。",
   "error.backend.taskTitleRequired": "タスクに短いタイトルを付けてください。",
   "error.backend.taskToolInvalid": "タスクには 120 文字以内のタイトルと、何をするかを説明する指示を付けてください。",
   "error.backend.taskOwnChatOnly":

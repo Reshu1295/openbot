@@ -2,7 +2,9 @@ import {
   type AgentProviderId,
   type AgentStatus,
   agentProviderDescriptor,
+  isManagedRuntimeProvider,
   LOCAL_SERVER_ID,
+  type ProviderRuntimeDownload,
 } from "@openbot/contracts/ipc";
 import { CLAUDE_API_KEY_CAPABILITY } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import {
@@ -252,6 +254,23 @@ const Providers = createSimpleContext({
       if (activeServer()?.id === server.id) flush(() => applyAgentStatus(status));
     }
 
+    /**
+     * The downloaded CLI of a provider of this computer that is off. A joined host has no such call,
+     * so its providers offer no removal.
+     */
+    async function measureProviderDownload(provider: AgentProviderId): Promise<ProviderRuntimeDownload> {
+      if (activeServer()?.kind !== "local" || !isManagedRuntimeProvider(provider)) return { bytes: 0, versions: 0 };
+      return await providersPort().providerRuntimes.measureDownload(provider);
+    }
+
+    /** Removes the downloaded CLI of a provider of this computer that is off. */
+    async function removeProviderDownload(provider: AgentProviderId): Promise<void> {
+      const server = activeServer();
+      if (server?.kind !== "local" || !isManagedRuntimeProvider(provider)) return;
+      const snapshot = await providersPort().providerRuntimes.removeDownload(provider);
+      if (activeServer()?.id === server.id) flush(() => runtimes.applyProviderRuntimeSnapshot(snapshot));
+    }
+
     /** The joined server whose host's provider accounts this window manages (`provider-accounts-v1`). */
     const accountsAdminServerId = createMemo(() => remoteAdminServer(activeServer(), PROVIDER_ACCOUNTS_CAPABILITY)?.id);
     /** The joined server whose host spends the usage reset credits of its accounts (`provider-usage-reset-v1`). */
@@ -469,6 +488,8 @@ const Providers = createSimpleContext({
       openProviderInstallGuide,
       refreshAgentProviders,
       setProviderOn,
+      measureProviderDownload,
+      removeProviderDownload,
       providerAccounts,
       restartProvider,
       cancelProviderRestart,

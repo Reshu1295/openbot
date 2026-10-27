@@ -418,6 +418,32 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Füllt Anmeldedaten aus Bitwarden im Browser aus. Richte es in der Desktop-App ein.",
+  "mobile.server.connectors.bitwarden.hostSummary": "Füllt Browser-Anmeldungen aus Bitwarden oder Vaultwarden aus",
+  "mobile.server.connectors.bitwarden.description":
+    "Browser-Anmeldungen auf {host} aus Bitwarden oder Vaultwarden ausfüllen.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} meldet sich mit seiner eigenen Bitwarden CLI an. Erstelle in deinem Tresor einen Ordner mit dem Namen Shared with OpenBot und lege nur die Anmeldungen hinein, die Agenten verwenden dürfen. Öffne im Web-Tresor Einstellungen › Sicherheit › Schlüssel und zeige deinen API-Schlüssel an.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Serveradresse",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden oder die Adresse deines Vaultwarden-Servers. {host} muss sie über HTTPS erreichen.",
+  "mobile.server.connectors.bitwarden.clientId": "API-Schlüssel client_id",
+  "mobile.server.connectors.bitwarden.clientSecret": "API-Schlüssel client_secret",
+  "mobile.server.connectors.bitwarden.masterPassword": "Master-Passwort",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} speichert den API-Schlüssel und das Master-Passwort verschlüsselt, damit es nach einem Neustart wieder entsperren kann. Dieses Telefon speichert sie nicht.",
+  "mobile.server.connectors.bitwarden.connect": "Bitwarden verbinden",
+  "mobile.server.connectors.bitwarden.connecting": "Wird verbunden…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} meldet sich bei Bitwarden an. Die erste Anmeldung kann einige Minuten dauern.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Geteilter Ordner",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Ordner in Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Verschiebe Anmeldedaten in diesen Ordner in Bitwarden, damit Agenten sie verwenden können. Entferne sie, um die Nutzung zu beenden.",
+  "mobile.server.connectors.bitwarden.disconnect": "Bitwarden trennen",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Bitwarden trennen?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} entfernt den API-Schlüssel und das Master-Passwort. Agenten auf {host} können keine Logins mehr aus Bitwarden ausfüllen.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Repositories, Issues und Pull Requests für alle Agenten",
   "mobile.server.connectors.github.description":

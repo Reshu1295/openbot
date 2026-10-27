@@ -3,23 +3,33 @@
 // Runs the real agent service, tool router and provider account store on a temporary profile with a fake
 // Codex app-server and a second Codex account. The fake calls the tools through `tool_call`, as a model
 // does, and logs the tool result that it gets.
-// The check asserts that the accounts list with their id and label and without their folders, that the
+// The check asserts that the accounts list with their id and label and without their folders, that
+// list_models lists a short list of models with the models in use and finds the others with a query, that
+// create_agent accepts a model that the short list leaves out, that the
 // account and the backup models are written and read back, that an unknown account or model is a tool
-// failure that changes nothing, and that a reset returns both to their defaults.
+// failure that changes nothing, that a reset returns both to their defaults, and that a delete stops the
+// process that the agent runs on with the second account.
 // `bun scripts/agent-profile-accounts-e2e.ts`. Writes .openbot-build/agent-profile-accounts-e2e/report.json.
 import assert from "node:assert/strict";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { AGENT_PROVIDERS, type AgentSummary } from "@openbot/contracts/ipc";
 import { Effect } from "effect";
 import type { z } from "zod";
-import type { updateProfileToolSchema } from "../src/backend/agent/profile-tools";
+import type {
+  createAgentToolSchema,
+  listModelsToolSchema,
+  updateProfileToolSchema,
+} from "../src/backend/agent/profile-tools";
 import type { AgentBrowserHost } from "../src/backend/agent/turn-lifecycle";
+import { isProcessAlive } from "./dev-automation/registry-files";
 
-/** The arguments the fake passes to a profile tool; list_models and read_agent take a subset. */
-type ProfileToolArgs = z.input<typeof updateProfileToolSchema>;
+/** The arguments the fake passes to a profile tool; read_agent takes a subset. */
+type ProfileToolArgs = z.input<typeof updateProfileToolSchema> &
+  Pick<z.input<typeof createAgentToolSchema>, "initialMessage"> &
+  z.input<typeof listModelsToolSchema>;
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/agent-profile-accounts-e2e");
 const root = await mkdtemp(join(tmpdir(), "openbot-profile-accounts-"));
@@ -45,6 +55,13 @@ const { OpenBotDatabase } = await import("../src/backend/openbot-database");
 const CALL_MARK = "PROFILE-CALL";
 const MODEL = "gpt-6-luna";
 const OTHER_MODEL = "gpt-6-sol";
+/** More models than the short list of list_models holds: 8 a provider. OTHER_MODEL is last in the catalog. */
+const EXTRA_MODELS = Array.from({ length: 10 }, (_, index) => `gpt-6-extra-${index + 1}`);
+const CATALOG = [
+  { model: MODEL, displayName: "GPT-6 Luna" },
+  ...EXTRA_MODELS.map((model, index) => ({ model, displayName: `GPT-6 Extra ${index + 1}` })),
+  { model: OTHER_MODEL, displayName: "GPT-6 Sol" },
+];
 
 /**
  * A Codex app-server with the methods that the service calls. A turn whose input has
@@ -81,7 +98,7 @@ const answer = (message) => {
     case "initialize": return write({ id: message.id, result: {} });
     case "account/read": return write({ id: message.id, result: { account: { type: "chatgpt", email: process.env.CODEX_HOME.startsWith(${JSON.stringify(accountsRoot)}) ? "team-b@example.com" : "codex@example.com" } } });
     case "account/rateLimits/read": return write({ id: message.id, result: { rateLimits: { limitId: "codex", primary: null, secondary: null }, rateLimitsByLimitId: null } });
-    case "model/list": return write({ id: message.id, result: { data: [{ model: ${JSON.stringify(MODEL)}, displayName: "GPT-6 Luna" }, { model: ${JSON.stringify(OTHER_MODEL)}, displayName: "GPT-6 Sol" }] } });
+    case "model/list": return write({ id: message.id, result: { data: ${JSON.stringify(CATALOG)} } });
     case "plugin/list": return write({ id: message.id, result: { marketplaces: [] } });
     case "config/read": return write({ id: message.id, result: config });
     case "config/batchWrite": return write({ id: message.id, result: {} });
@@ -158,7 +175,13 @@ interface ChoiceBody {
 
 /** The fields of a tool result that the check reads. The router sends them as JSON text. */
 interface ProfileToolBody {
-  providers?: { provider: string; accounts?: { id: string; label: string | null; state: string }[] }[];
+  providers?: {
+    provider: string;
+    models?: { id: string }[];
+    omittedModels?: number;
+    accounts?: { id: string; label: string | null; state: string }[];
+  }[];
+  model?: string;
   name?: string;
   providerAccountId?: string;
   backupModels?: { automatic: boolean; order: ChoiceBody[] } | null;
@@ -168,6 +191,7 @@ interface ProfileToolBody {
 const report: {
   calls: { name: string; turnId: string; success: boolean | null; text: string }[];
   stored?: Pick<AgentSummary, "providerAccountId" | "backupModels">;
+  deletedAgent?: { ownProcessStopped: boolean; workspaceRemoved: boolean };
   checks: { name: string; passed: boolean }[];
   passed: boolean;
   error?: string;
@@ -309,6 +333,15 @@ try {
       listedAccounts[1]?.state === "connected",
     listed.text,
   );
+  const codexModels = (call: { body: ProfileToolBody | null }) =>
+    call.body?.providers?.find((row) => row.provider === "codex");
+  pass(
+    "list_models lists the default model and the first models, and counts the others",
+    codexModels(listed)
+      ?.models?.map((model) => model.id)
+      .join(",") === [MODEL, ...EXTRA_MODELS.slice(0, 7)].join(",") && codexModels(listed)?.omittedModels === 4,
+    listed.text,
+  );
   pass(
     "list_models has no account email or folder",
     !listed.text.includes("@") &&
@@ -354,7 +387,36 @@ try {
   );
   pass("The update_profile result has the account", updated.body?.providerAccountId === second.id, updated.text);
 
-  // 3. read_agent returns the account, the backup models and no usage limit return.
+  // 3. list_models lists a backup model that the short list left out, and a query finds the others.
+  const listedInUse = await callTool("list models in use", coordinator.id, "list_models", { provider: "codex" });
+  pass(
+    "list_models lists a model that an agent uses as a backup model",
+    codexModels(listedInUse)?.models?.some((model) => model.id === OTHER_MODEL) === true &&
+      codexModels(listedInUse)?.omittedModels === 4,
+    listedInUse.text,
+  );
+  const searched = await callTool("search models", coordinator.id, "list_models", { query: "extra 9" });
+  pass(
+    "A list_models query searches all models",
+    codexModels(searched)
+      ?.models?.map((model) => model.id)
+      .join(",") === "gpt-6-extra-9" && codexModels(searched)?.omittedModels === undefined,
+    searched.text,
+  );
+  const created = await callTool("create with an omitted model", coordinator.id, "create_agent", {
+    name: "Helper",
+    description: "Helper",
+    initialMessage: "Hello.",
+    provider: "codex",
+    model: "gpt-6-extra-9",
+  });
+  pass(
+    "create_agent accepts a model that the short list leaves out",
+    created.success && created.body?.model === "gpt-6-extra-9",
+    created.text,
+  );
+
+  // 4. read_agent returns the account, the backup models and no usage limit return.
   const read = await callTool("read worker", coordinator.id, "read_agent", { agentId: worker.id });
   pass(
     "read_agent returns the account and the backup models",
@@ -365,7 +427,7 @@ try {
     read.text,
   );
 
-  // 4. An unknown account, an unknown backup account or an unknown backup model changes nothing.
+  // 5. An unknown account, an unknown backup account or an unknown backup model changes nothing.
   const unknownAccount = await callTool("unknown account", coordinator.id, "update_profile", {
     agentId: worker.id,
     name: "Renamed",
@@ -394,7 +456,7 @@ try {
     "Unknown accounts, models and ids are tool failures that name the reason",
     refused(unknownAccount, "account is not on this computer") &&
       refused(unknownBackupAccount, "account is not on this computer") &&
-      refused(unknownBackupModel, "Available models: gpt-6-luna, gpt-6-sol") &&
+      refused(unknownBackupModel, `Available models: ${[MODEL, ...EXTRA_MODELS.slice(0, 7), "…"].join(", ")}.`) &&
       refused(badId, "Use an account id from list_models"),
     [unknownAccount, unknownBackupAccount, unknownBackupModel, badId].map((call) => call.text).join("\n"),
   );
@@ -406,7 +468,7 @@ try {
       JSON.stringify(afterFailures.backupModels) === JSON.stringify(afterUpdate.backupModels),
   );
 
-  // 5. A null account returns the agent to the provider's own sign-in. An order that asks first with
+  // 6. A null account returns the agent to the provider's own sign-in. An order that asks first with
   // no model is no saved backup models, as the settings page saves it.
   const reset = await callTool("reset", coordinator.id, "update_profile", {
     agentId: worker.id,
@@ -422,6 +484,31 @@ try {
       reset.body?.providerAccountId === "default" &&
       reset.body.backupModels === null,
     reset.text,
+  );
+
+  // 7. A delete stops the agent's own process. On Windows a live process in the workspace makes the
+  // folder removal fail with EBUSY until the app restarts (#3205).
+  const reassigned = await callTool("set account again", coordinator.id, "update_profile", {
+    agentId: worker.id,
+    providerAccountId: second.id,
+  });
+  pass("update_profile sets the account again", reassigned.success, reassigned.text);
+  const receipt = await runCauseEffect(agents.sendMessage({ agentId: worker.id, text: "Hello again." }));
+  const deliveryId = receipt.deliveries[0]?.id;
+  assert.ok(deliveryId, "own process turn: no delivery");
+  await waitFor("the worker's turn to end", () => mailbox.getDelivery(deliveryId)?.delivery.status === "completed");
+  // The fake names each turn `turn-<pid>-<n>`.
+  const ownPid = Number(mailbox.getDelivery(deliveryId)?.delivery.turnId?.split("-")[1]);
+  pass("The worker's turn ran on a live process of its own", Number.isInteger(ownPid) && isProcessAlive(ownPid));
+  const { workspacePath } = storedAgent(worker.id);
+  await runCauseEffect(agents.deleteAgent(worker.id));
+  // The delete waits for the stop: on Windows the folder removal after it needs the process gone.
+  const stopped = !isProcessAlive(ownPid);
+  report.deletedAgent = { ownProcessStopped: stopped, workspaceRemoved: !existsSync(workspacePath) };
+  pass("The delete stops the agent's own process", stopped);
+  pass(
+    "The delete removes the workspace and the record",
+    report.deletedAgent.workspaceRemoved && !store.list().some((candidate) => candidate.id === worker.id),
   );
   report.passed = true;
 } catch (error) {

@@ -16,6 +16,7 @@ import { AGENT_PUBLISH_CODECS } from "./agent-publish-v1";
 import { AGENT_SESSION_SETTINGS_CODECS } from "./agent-session-settings-v1";
 import { AGENT_TASK_LIMIT_CODECS } from "./agent-task-limit-v1";
 import { AGENT_TASKS_CODECS } from "./agent-tasks-v1";
+import { AGENT_THREADS_CODECS } from "./agent-threads-v1";
 import { AGENT_UPDATE_CODECS } from "./agent-update-v1";
 import { BITWARDEN_CONNECTOR_CODECS } from "./bitwarden-connector-v1";
 import { BROWSER_PAGE_STATE_CODECS } from "./browser-page-state-v1";
@@ -60,6 +61,8 @@ import { SIDE_QUESTION_CODECS } from "./side-question-v1";
 import { SIGN_IN_RELAY_CODECS } from "./sign-in-relay-v1";
 import { SKILLS_ADMIN_CODECS } from "./skills-admin-v1";
 import { STORAGE_DISK_CODECS } from "./storage-disk-v1";
+import { VAULT_IMPORT_CODECS } from "./vault-import-v1";
+import { VAULT_CODECS } from "./vault-v1";
 import { WEBHOOK_TESTS_CODECS } from "./webhook-tests-v1";
 import { WORKFLOWS_CODECS } from "./workflows-v1";
 import { WORKSPACE_DIRECTORY_CODECS } from "./workspace-directory-v1";
@@ -125,9 +128,12 @@ const CODECS: ReadonlyMap<string, OptionalRouteCodec> = new Map([
   ...BROWSER_PAGE_STATE_CODECS,
   ...BROWSER_SIGN_IN_CODECS,
   ...AGENT_TASKS_CODECS,
+  ...AGENT_THREADS_CODECS,
   ...SIDE_QUESTION_CODECS,
   ...BROWSER_PROFILES_CODECS,
   ...WORKFLOWS_CODECS,
+  ...VAULT_CODECS,
+  ...VAULT_IMPORT_CODECS,
 ]);
 
 export function optionalRouteCodec(path: string): OptionalRouteCodec | undefined {

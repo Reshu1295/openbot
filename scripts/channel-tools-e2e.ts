@@ -6,7 +6,8 @@
 // It checks that `html_render` gives a visual reply in the channel with its page attached, that
 // `ask_ui` and the plan card of `acknowledge_request` show in the channel and that the answer reaches
 // the turn, that a screen capture asks each time and names the channel also with Full access, that
-// `channel_history` reads the channel, and that `start_task` starts no task from a channel. The model
+// `channel_history` reads the channel, that `start_task` starts no task from a channel, and that text
+// after `channel_result` folds into the steps rather than showing as a second reply. The model
 // does the tool calls, so a model that does not follow the instructions fails a step. It makes its own
 // channel and deletes it, and gives the agent its settings back.
 // Writes .openbot-build/channel-tools-e2e/report.json.
@@ -42,6 +43,7 @@ interface Report {
   planCard?: { promptOnChannelThread: boolean; uiBlockInChannel: boolean; answered: boolean; state: string };
   screenCapture?: { asked: boolean; namesChannel: boolean; reason: string };
   history?: { reply: string; tasksStarted: number };
+  result?: { answers: string[]; folded: string[] };
   passed: boolean;
 }
 
@@ -241,6 +243,31 @@ try {
   report.history = { reply: historyReply, tasksStarted: tasksAfter - tasksBefore };
   assert.match(historyReply, /heron/i, "channel_history did not find the code word.");
   assert.equal(report.history.tasksStarted, 0, "start_task started a task from a channel.");
+
+  // 6. Text after channel_result folds into the steps; the result is the only reply (#3202).
+  const result = await ask(
+    channel.id,
+    a.id,
+    "Call the channel_result tool once with the text PELICAN. After the tool returns, reply with Yes. only.",
+    "the result turn ends",
+  );
+  const answers = result.replies.filter(
+    (message) =>
+      message.message.author === "assistant" &&
+      !message.message.uiBlock &&
+      (!message.message.itemType || message.message.itemType === "agentMessage"),
+  );
+  report.result = {
+    answers: answers.map((message) => message.message.text),
+    folded: result.replies
+      .filter((message) => message.message.itemType === "commentary")
+      .map((message) => message.message.text),
+  };
+  assert.deepEqual(report.result.answers, ["PELICAN"], "The turn shows more than its result as a reply.");
+  assert.ok(
+    report.result.folded.some((text) => /^yes\.?$/i.test(text.trim())),
+    "The text after the result is not in the steps.",
+  );
 
   report.passed = true;
 } finally {

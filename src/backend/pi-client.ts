@@ -8,10 +8,11 @@ import { sourceText } from "@openbot/i18n/source";
 import { redactText } from "@openbot/logging";
 import { Effect, Exit, Schema, Scope, Semaphore } from "effect";
 import { secretElicitationField } from "./agent/prompts";
-import type { AgentClient, DiagnosticOrigin } from "./agent-client";
+import { type AgentClient, type DiagnosticOrigin, MissingPiSessionError, RequestTimeoutError } from "./agent-client";
 import { type AgentCliInfo, cliPathEnvironment, cliSpawnTarget } from "./cli";
 import type { CustomProviderSource } from "./custom-provider-config";
 import { runCauseEffect } from "./effect-boundary";
+import { isMissingFileError } from "./file-errors";
 import { type DynamicToolNamespace, LocalMcpBridge, type LocalMcpSession } from "./local-mcp-bridge";
 import {
   agentMcpServers,
@@ -74,7 +75,7 @@ export interface PiProviderOptions {
   confine?: (target: SpawnTarget) => SpawnTarget;
   extraEnv?: () => Record<string, string>;
   /**
-   * A provider that signs in only with a key, such as Inception or DeepSeek, and its saved key. With
+   * A provider that signs in only with a key, such as Inception, DeepSeek or OpenRouter, and its saved key. With
    * it the client is that provider: Pi lists only that provider's models, and the model ids have no
    * `<provider>/` prefix.
    */
@@ -119,6 +120,11 @@ interface PiThread {
   turn: PiTurn | null;
   closed: boolean;
   gate: Semaphore.Semaphore;
+  /**
+   * Opened with the session settings of `thread/start` or `thread/resume`: OpenBot tools,
+   * instructions and access. A thread that a history read opened after a restart has none of them.
+   */
+  configured: boolean;
 }
 interface ClientEvents {
   notification: [AppServerNotification];
@@ -223,7 +229,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
   readonly releaseIdleThreads = Effect.fn("PiAgentClient.releaseIdleThreads")(function* (this: PiAgentClient) {
     for (const [id, thread] of this.#threads) {
       if (thread.turn) continue;
-      this.#released.set(id, thread.params);
+      if (thread.configured) this.#released.set(id, thread.params);
       yield* this.#close(thread);
       this.#threads.delete(id);
     }
@@ -258,7 +264,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
         break;
       case "thread/start":
       case "thread/resume": {
-        const thread = yield* this.#opening.withPermit(this.#open(params, method === "thread/resume"));
+        const thread = yield* this.#opening.withPermit(this.#open(params, method === "thread/resume", true));
         response = { thread: { id: thread.id } };
         break;
       }
@@ -292,7 +298,9 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
       case "turn/steer": {
         const id = yield* providerSync(() => requiredString(params, "threadId"));
         const thread = yield* this.#thread(id, params);
-        response = yield* thread.gate.withPermit(this.#prompt(thread, params, method === "turn/steer"));
+        response = yield* thread.gate.withPermit(
+          method === "turn/steer" ? this.#steer(thread, params) : this.#prompt(thread, params),
+        );
         break;
       }
       case "turn/interrupt": {
@@ -424,15 +432,35 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     this: PiAgentClient,
     params: unknown,
     resume: boolean,
+    configured: boolean,
   ): Effect.fn.Return<PiThread, ProviderClientOperationError> {
     const requestedId = getString(params, "threadId");
     if (resume && requestedId) {
       const live = this.#threads.get(requestedId);
-      if (live) return live;
-      if (!isAbsolute(requestedId))
-        return yield* providerFailure(new Error(sourceText("error.provider.piSessionMissing")));
+      if (live && (live.configured || !configured)) return live;
+      // The live thread has no OpenBot tools, and its next prompt would remove them from the session
+      // (#3343). An idle one is replaced by a thread with the session settings.
+      if (live) {
+        const replaced = yield* live.gate.withPermit(
+          Effect.gen({ self: this }, function* () {
+            if (live.turn) return false;
+            this.#threads.delete(requestedId);
+            yield* this.#close(live);
+            return true;
+          }),
+        );
+        if (!replaced) return live;
+      }
+      if (!isAbsolute(requestedId)) return yield* providerFailure(new MissingPiSessionError());
+      // Only a file that is gone retires the session. Another failure, such as no permission, can pass.
       yield* providerCall(() => access(requestedId)).pipe(
-        Effect.mapError(() => providerFailure(new Error(sourceText("error.provider.piSessionMissing")))),
+        Effect.mapError(({ cause }) =>
+          providerFailure(
+            isMissingFileError(cause)
+              ? new MissingPiSessionError()
+              : new Error(sourceText("error.provider.piSessionMissing")),
+          ),
+        ),
       );
     }
     const cwd = yield* providerSync(() => requiredString(params, "cwd"));
@@ -530,6 +558,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
         turn: null,
         closed: false,
         gate: Semaphore.makeUnsafe(1),
+        configured,
       };
       yield* this.#configure(thread, params);
       this.#threads.set(id, thread);
@@ -559,7 +588,11 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     if (existing) return existing;
     const saved = this.#released.get(id);
     return yield* this.#opening.withPermit(
-      this.#open({ ...(isRecord(saved) ? saved : {}), ...(isRecord(params) ? params : {}), threadId: id }, true),
+      this.#open(
+        { ...(isRecord(saved) ? saved : {}), ...(isRecord(params) ? params : {}), threadId: id },
+        true,
+        isRecord(saved),
+      ),
     );
   });
 
@@ -588,18 +621,16 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     this: PiAgentClient,
     thread: PiThread,
     params: unknown,
-    steer: boolean,
   ) {
-    if (thread.turn && !steer) return yield* providerFailure(new Error(sourceText("error.provider.piSessionBusy")));
+    if (thread.turn) return yield* providerFailure(new Error(sourceText("error.provider.piSessionBusy")));
     // A removed endpoint stays in this thread's process, with the address and key it started with.
     const model = getString(params, "model");
     if (model && this.options.servesModel?.(model) === false)
       return yield* providerFailure(new Error(sourceText("error.agent.endpointRemoved")));
-    if (!thread.turn) yield* this.#configure(thread, params);
+    yield* this.#configure(thread, params);
     const prompt = yield* piPrompt(params);
-    const active = thread.turn;
-    const turn: PiTurn = active ?? {
-      id: getString(params, "clientUserMessageId") ?? randomUUID(),
+    const turn: PiTurn = {
+      id: getString(params, "clientTurnId") ?? getString(params, "clientUserMessageId") ?? randomUUID(),
       startedAt: Date.now() / 1_000,
       messageIndex: 0,
       items: new Map(),
@@ -607,38 +638,79 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
       failure: null,
       finishing: false,
     };
-    const userId = `${turn.id}:user:${randomUUID()}`;
-    turn.items.set(userId, {
-      id: userId,
-      type: "userMessage",
-      content: [{ type: "text", text: this.#redact(prompt.message) }],
-    });
-    if (!active) {
-      thread.turn = turn;
-      this.#notify("turn/started", thread, { turn: { id: turn.id, status: "inProgress" } });
-    }
+    this.#addUserMessage(turn, prompt.message);
+    thread.turn = turn;
+    this.#notify("turn/started", thread, { turn: { id: turn.id, status: "inProgress" } });
     // Subscribe before sending: a completed event can precede the prompt acknowledgement.
     yield* Effect.forkIn(
-      thread.rpc
-        .request(
-          { type: "prompt", ...prompt, ...(steer ? { streamingBehavior: "steer" } : {}) },
-          this.options.requestTimeoutMs,
-        )
-        .pipe(
-          Effect.flatMap((response) =>
-            response.disposition === "handled" && thread.turn === turn
-              ? this.#finish(thread, "completed")
-              : Effect.void,
-          ),
-          Effect.catch((failure) =>
-            thread.turn === turn ? this.#finish(thread, "failed", this.#redact(String(failure.cause))) : Effect.void,
-          ),
+      thread.rpc.request({ type: "prompt", ...prompt }, this.options.requestTimeoutMs).pipe(
+        Effect.flatMap((response) =>
+          response.disposition === "handled" && thread.turn === turn ? this.#finish(thread, "completed") : Effect.void,
         ),
+        Effect.catch((failure) =>
+          thread.turn === turn ? this.#finish(thread, "failed", this.#redact(String(failure.cause))) : Effect.void,
+        ),
+      ),
       this.#scope,
       { startImmediately: true },
     );
     return { turn: { id: turn.id, status: "inProgress" }, turnId: turn.id };
   });
+
+  readonly #steer = Effect.fn("PiAgentClient.steer")(function* (
+    this: PiAgentClient,
+    thread: PiThread,
+    params: unknown,
+  ) {
+    const turn = thread.turn;
+    // Pi starts a message for an ended turn as a run of its own, which OpenBot did not start.
+    // The message then waits in the queue.
+    if (!turn || turn.id !== getString(params, "expectedTurnId") || turn.stopped || turn.finishing)
+      return yield* providerFailure(new Error(sourceText("error.backend.steerTurnChanged")));
+    const prompt = yield* piPrompt(params);
+    // Pi's `steer` also queues the message while Pi compacts, which `prompt` refuses. A refusal
+    // fails only this steer, not the running turn, so the message waits in the queue (#3206).
+    yield* thread.rpc.request({ type: "steer", ...prompt }, this.options.requestTimeoutMs).pipe(
+      // Pi can still queue a steer that timed out, and the queue would then send the message again.
+      // A refusal queues nothing, so other steers of the turn stay in Pi's queue.
+      Effect.tapError((failure) =>
+        failure.cause instanceof RequestTimeoutError ? this.#dropSteer(thread, turn, prompt.message) : Effect.void,
+      ),
+    );
+    if (thread.turn !== turn || turn.finishing || turn.stopped) {
+      // Pi had settled or was stopped, so its next run would take the message, or the stop removed it.
+      // Remove it, as it stays queued here.
+      yield* thread.rpc.request({ type: "clear_queue" }).pipe(Effect.ignore);
+      return yield* providerFailure(new Error(sourceText("error.backend.steerTurnChanged")));
+    }
+    this.#addUserMessage(turn, prompt.message);
+    return { turn: { id: turn.id, status: "inProgress" }, turnId: turn.id };
+  });
+
+  /** Removes one queued steer. Pi clears its whole queue, so the other steers go back in, as text only. */
+  readonly #dropSteer = Effect.fn("PiAgentClient.dropSteer")(
+    function* (this: PiAgentClient, thread: PiThread, turn: PiTurn, message: string) {
+      const cleared = yield* thread.rpc.request({ type: "clear_queue" });
+      const steering = getArray(cleared, "steering").filter(isString);
+      const index = steering.indexOf(message);
+      if (index >= 0) steering.splice(index, 1);
+      for (const text of steering) {
+        // A steer for an ended or stopped turn would start a Pi run that OpenBot did not start.
+        if (thread.turn !== turn || turn.stopped || turn.finishing) return;
+        yield* thread.rpc
+          .request({ type: "steer", message: text })
+          .pipe(
+            Effect.catch((failure) => Effect.sync(() => this.emit("diagnostic", this.#redact(String(failure.cause))))),
+          );
+      }
+    },
+    (effect) => Effect.ignore(effect),
+  );
+
+  #addUserMessage(turn: PiTurn, message: string): void {
+    const id = `${turn.id}:user:${randomUUID()}`;
+    turn.items.set(id, { id, type: "userMessage", content: [{ type: "text", text: this.#redact(message) }] });
+  }
 
   #notify(method: string, thread: PiThread, params: DynamicRecord): void {
     // Usage contains only validated numeric counters. Generic secret-name matching masks `*Tokens`.

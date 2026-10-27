@@ -21,12 +21,12 @@ After switching from the isolated linker to the hoisted linker, move the old
 from the repository root. A normal install can retain old workspace symlinks and cause
 the local fingerprint to differ from the clean EAS installation.
 
-Expo 58.0.16 is patched in `patches/expo@58.0.16.patch` so a DOM component ignores a props
+Expo 58.0.17 is patched in `patches/expo@58.0.17.patch` so a DOM component ignores a props
 message that it sends before Android mounts its web view, or after Android removes it. Android
 rejects these calls, and the rejection shows as a console error. The DOM component asks for the
 props again when it is ready.
 
-expo-splash-screen 58.0.10 is patched in `patches/expo-splash-screen@58.0.10.patch` so Android 12
+expo-splash-screen 58.0.11 is patched in `patches/expo-splash-screen@58.0.11.patch` so Android 12
 and 13 get no splash exit animation listener. With the listener, the platform hides the starting
 window on the first draw, and the app crashes when that window is already gone. Gradle links the
 prebuilt AAR of an Expo module and ignores a patch to its Kotlin source, so
@@ -45,7 +45,7 @@ centers each line in its `lineHeight`. Without the offset, the text view drew ea
 of its line box, so iOS message bubbles had more space above the text than below it. Remove the
 patch when a release applies the offset.
 
-Expo Router 58.0.24 is patched in `patches/expo-router@58.0.24.patch` to apply zoom dismissal
+Expo Router 58.0.25 is patched in `patches/expo-router@58.0.25.patch` to apply zoom dismissal
 bounds when its enabler registers after the chat mounts. This keeps the avatar-to-header zoom
 interactive from the left edge without enabling dismissal from the middle of the chat.
 If a row or pinned avatar is tapped during the native return transition, the app retains that
@@ -83,6 +83,24 @@ missing, the command stops with setup instructions. The standard command does no
 look for RocketSim, even if `ROCKETSIM_APP_PATH` or the old `OPENBOT_ROCKETSIM`
 variable is set.
 
+The iOS commands keep the Xcode build in `ios/DerivedData`, not in
+`~/Library/Developer/Xcode/DerivedData`, so removing a worktree removes its build. Do not remove
+`ios/build`: CocoaPods writes codegen output there. When that output is missing, `bun mobile:ios`
+installs the pods again. Metro keeps its
+caches in `.expo/metro-cache` and `.expo/metro-file-map` of the worktree.
+
+`bun mobile:android` also applies the config plugins without clearing `android/`, then runs
+`expo run:android`. Three local settings make a build in a new worktree faster:
+
+- A release variant builds native code only for the ABIs of the connected devices and running
+  emulators, not for all four. Pass `--all-arch` to build every ABI.
+- The local `android/gradle.properties` gets `org.gradle.caching=true`. Worktrees share Gradle task
+  outputs in `~/.gradle/caches/build-cache-1`. The app config, fingerprint and EAS builds stay the
+  same.
+- `CCACHE_BASEDIR` and `CCACHE_NOHASHDIR` let ccache share the C++ results of the app CMake project
+  between worktrees. Install ccache with `brew install ccache`; React Native uses it when it is on
+  `PATH`.
+
 The local launcher enables RocketSim Connect in the local native project. The config plugin
 loads it before React Native starts, only in Debug builds on the iOS Simulator.
 It does not copy the framework into the app. Release builds and physical devices
@@ -118,8 +136,9 @@ The native UI does not depend on a native WebRTC module. A hidden Expo DOM compo
 `RTCPeerConnection` and its authenticated DataChannels, then forwards validated commands and live
 events to React Native. This keeps the production transport identical while remaining testable in
 Expo Go without a development build. Expo Go on Android does not include `@expo/dom-webview`, so there
-the component uses `react-native-webview`. `react-native.config.js` keeps that package out of Android
-builds. iOS builds link it for the PDF preview (`pdf-preview.ios.tsx`).
+the component uses `react-native-webview`. Native builds link that package for HTML pages
+(`html-page-view.native.tsx`), and iOS also uses it for the PDF preview (`pdf-preview.ios.tsx`). An Android
+build from before it was linked shows HTML pages with no scripts.
 
 Remote connection recovery starts the first attempt immediately, then waits 10 seconds after each failure. After
 five failures it waits two minutes before starting a new series. The agent list shows `Reconnecting`
@@ -483,7 +502,7 @@ store and the file is not ready, and the Changelog workflow stops such a pull re
 
 The message mentions the `Mobile Release Pings` role, then has the title
 `OpenBot vx.y.z is out on iOS and Android`, the highlights, and one line of links:
-`iOS (TestFlight) · Android · Full Changelog`. The last link opens the version on the Mobile tab of
+`iOS · Android · Full Changelog`. The last link opens the version on the Mobile tab of
 `/changelog`. It notifies only that role.
 
 One-time setup:

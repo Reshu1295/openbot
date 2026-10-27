@@ -8,6 +8,7 @@ import {
   installMarketplaceAgent,
   listAgentSkills,
   listMcpServers,
+  listMcpSignIns,
   removeMcpServer,
   saveMcpServer,
   setAgentSkillEnabled,
@@ -60,6 +61,9 @@ export function createWebMarketplaceCalls(
     mcp: {
       listMcpServers: async (serverId) =>
         runTeamEffect(listMcpServers(request(serverId)).pipe(Effect.mapError((error) => error.cause))),
+      // A host without `mcp-sign-in-v1` refuses the route; the marketplace then shows no sign-in state.
+      listMcpSignIns: async (serverId) =>
+        runTeamEffect(listMcpSignIns(request(serverId)).pipe(Effect.mapError((error) => error.cause))),
       testMcpServer: async (input, serverId) =>
         runTeamEffect(testMcpServer(request(serverId), input).pipe(Effect.mapError((error) => error.cause))),
       saveMcpServer: async (input, serverId) =>

@@ -65,8 +65,7 @@ export const messages = {
   "customProvider.field.baseUrl": "URL di base",
   "customProvider.field.apiKey": "Chiave API",
   "customProvider.field.apiKeyHint": "Facoltativa. Lasciala vuota se gestisci l'autenticazione con gli header.",
-  "customProvider.field.apiKeyKeptHint":
-    "Una chiave è già salvata. Lascia vuoto per mantenerla insieme agli header salvati.",
+  "customProvider.field.apiKeyKeptHint": "Una chiave è già salvata. Lascia vuoto per mantenerla.",
   "customProvider.models": "Modelli",
   "customProvider.model.id": "ID del modello {number}",
   "customProvider.model.name": "Nome visualizzato del modello {number}",
@@ -77,6 +76,7 @@ export const messages = {
   "customProvider.header.name": "Nome dell'header {number}",
   "customProvider.header.value": "Valore dell'header {number}",
   "customProvider.header.valuePlaceholder": "valore",
+  "customProvider.header.keptPlaceholder": "Salvato. Lascia vuoto per mantenerlo.",
   "customProvider.header.remove": "Rimuovi l'header {number}",
   "customProvider.header.add": "Aggiungi header",
   "customProvider.submit": "Invia",

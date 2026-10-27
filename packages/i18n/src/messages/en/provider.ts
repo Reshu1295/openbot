@@ -165,6 +165,10 @@ export const messages = defineMessages("provider", {
   "provider.deepseekKey.description":
     "Save a DeepSeek API key on this computer to use the DeepSeek models. OpenBot runs them in the Pi CLI that it downloads.",
   "provider.deepseekKey.label": "DeepSeek API key",
+  "provider.openrouterKey.title": "OpenRouter API key",
+  "provider.openrouterKey.description":
+    "Save an OpenRouter API key on this computer to use the models that OpenRouter serves. OpenBot runs them in the Pi CLI that it downloads.",
+  "provider.openrouterKey.label": "OpenRouter API key",
 
   // The optional OpenCode Go key dialog.
   "provider.openCodeKey.title": "Sign in to OpenCode Go",
@@ -268,6 +272,19 @@ export const messages = defineMessages("provider", {
   "provider.settings.turnOnFirst": "Turn {name} on first.",
   "provider.settings.makeDefault": "Make default",
   "provider.settings.useTitle": "Use {name}",
+  "provider.settings.download": "Download",
+  "provider.settings.downloadedCli": "{name} CLI",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 version · {size}",
+    other: "{version} · {count} versions · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 version · {size}", other: "{count} versions · {size}" },
+  "provider.settings.downloadAgain": "When you turn {name} on, OpenBot downloads its CLI again.",
+  "provider.settings.removeDownloadConfirm": "Remove {size}?",
+  "provider.settings.removeDownloadKeeps": "Accounts, sign-ins and agents stay.",
+  "provider.settings.removeDownload": "Remove download",
+  "provider.settings.removingDownload": "Removing…",
+  "provider.settings.removeDownloadFailed": "Could not remove the download.",
   "provider.settings.endpoints": "Endpoints",
   "provider.settings.noEndpoints": "No endpoints.",
   "provider.settings.endpointModels": { one: "{url} · 1 model", other: "{url} · {count} models" },

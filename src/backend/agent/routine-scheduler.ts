@@ -33,7 +33,11 @@ import type { DynamicToolCallParams } from "../protocol";
 import { recordRestartActivity } from "../restart-activity";
 import type { OwnedRoutineRecord, ReceivedWebhookEvent, RoutineHoldWindow, RoutineRecordInput } from "../routine-store";
 import type { RoutineDueSource, RoutineTimer } from "../routine-timer";
-import { type ConversationRuntime, withDatabaseTransaction } from "./conversation-runtime";
+import {
+  type ConversationRuntime,
+  type ConversationTransaction,
+  withDatabaseTransaction,
+} from "./conversation-runtime";
 import { routineStatusForDelivery } from "./delivery-content";
 import { quietRoutineRun } from "./routine-quiet-runs";
 import {
@@ -61,6 +65,8 @@ import {
 export interface RoutineMutationOptions {
   recordConversationEvent?: boolean;
   turnId?: string | undefined;
+  /** The side thread whose turn made the change. Its card shows there, not in the agent's own chat. */
+  sideThreadId?: string | undefined;
 }
 
 /**
@@ -300,6 +306,8 @@ export class RoutineScheduler implements RoutineDueSource {
             () => this.#routines.create(input),
             (created) => created,
             options.turnId,
+            undefined,
+            options.sideThreadId,
           );
     this.stateChanged(input.agentId);
     this.arm();
@@ -317,6 +325,8 @@ export class RoutineScheduler implements RoutineDueSource {
             () => this.#routines.update(input),
             (updated) => updated,
             options.turnId,
+            undefined,
+            options.sideThreadId,
           );
     this.stateChanged(input.agentId);
     this.arm();
@@ -543,6 +553,18 @@ export class RoutineScheduler implements RoutineDueSource {
   }
 
   /** The target agent of a routine tool call. An unknown agent is a request the model can correct. */
+  /**
+   * The card of a change that an agent makes to its own routine joins the calling turn, in the thread
+   * of that turn. A delete stays in the agent's own chat, where the routine's runs show.
+   */
+  #toolMutationOptions(agentId: string, senderAgentId: string, params: DynamicToolCallParams): RoutineMutationOptions {
+    if (agentId !== senderAgentId) return {};
+    const publicThreadId = this.#conversation.publicThreadId(agentId, params.threadId);
+    return this.#conversation.isTaskThread(publicThreadId)
+      ? { turnId: params.turnId, sideThreadId: publicThreadId }
+      : { turnId: params.turnId };
+  }
+
   #toolAgentId(args: DynamicRecord, senderAgentId: string): string {
     const agentId = routineToolAgentId(args, senderAgentId);
     try {
@@ -612,7 +634,7 @@ export class RoutineScheduler implements RoutineDueSource {
           schedule: routineToolSchedule(args.schedule),
           ...routineToolPolicies(args),
         },
-        agentId === senderAgentId ? { turnId: params.turnId } : {},
+        this.#toolMutationOptions(agentId, senderAgentId, params),
       );
       return openBotToolResult(routine);
     }
@@ -738,7 +760,7 @@ export class RoutineScheduler implements RoutineDueSource {
         hasUpdate = true;
       }
       if (!hasUpdate) throw new RoutineInputError("At least one routine update is required.");
-      return openBotToolResult(this.update(input, input.agentId === senderAgentId ? { turnId: params.turnId } : {}));
+      return openBotToolResult(this.update(input, this.#toolMutationOptions(input.agentId, senderAgentId, params)));
     }
 
     if (params.tool === "delete_routine") {
@@ -1262,44 +1284,44 @@ export class RoutineScheduler implements RoutineDueSource {
       beforeMutate?: (snapshot: ConversationSnapshot) => readonly ConversationMessage[];
       onRollback?: () => void;
     },
+    sideThreadId?: string,
   ): T {
     const database = this.#store.database;
-    return this.#conversation.withConversationTransaction(
-      agentId,
-      ({ threadId, snapshot: nextSnapshot }) => {
-        const changedMessages = transactionHooks?.beforeMutate?.(nextSnapshot) ?? [];
-        const result = mutate();
-        const routine = eventRoutine(result);
-        const createdAt = new Date().toISOString();
-        const message: ConversationMessage = {
-          id: randomUUID(),
-          ...(turnId ? { turnId } : {}),
-          author: "system",
-          source: "system",
-          text: routine.name,
-          createdAt,
-          status: "completed",
-          itemType: routineConversationEventItemType(action, routine.id),
-        };
-        nextSnapshot.messages.push(message);
-        sortConversationMessages(nextSnapshot.messages);
-        nextSnapshot.revision = database.persistConversationChanges({
-          agentId,
-          threadId,
-          activeTurnId: nextSnapshot.activeTurnId,
-          changedMessages: [...changedMessages, message],
-          eventType: `routine.${action}`,
-          detail: {
-            action,
-            routineId: routine.id,
-            routineName: routine.name,
-            messageId: message.id,
-          },
-        });
-        return { result, snapshot: nextSnapshot };
-      },
-      transactionHooks?.onRollback,
-    );
+    const record = ({ threadId, snapshot: nextSnapshot }: ConversationTransaction) => {
+      const changedMessages = transactionHooks?.beforeMutate?.(nextSnapshot) ?? [];
+      const result = mutate();
+      const routine = eventRoutine(result);
+      const createdAt = new Date().toISOString();
+      const message: ConversationMessage = {
+        id: randomUUID(),
+        ...(turnId ? { turnId } : {}),
+        author: "system",
+        source: "system",
+        text: routine.name,
+        createdAt,
+        status: "completed",
+        itemType: routineConversationEventItemType(action, routine.id),
+      };
+      nextSnapshot.messages.push(message);
+      sortConversationMessages(nextSnapshot.messages);
+      nextSnapshot.revision = database.persistConversationChanges({
+        agentId,
+        threadId,
+        activeTurnId: nextSnapshot.activeTurnId,
+        changedMessages: [...changedMessages, message],
+        eventType: `routine.${action}`,
+        detail: {
+          action,
+          routineId: routine.id,
+          routineName: routine.name,
+          messageId: message.id,
+        },
+      });
+      return { result, snapshot: nextSnapshot };
+    };
+    return sideThreadId
+      ? this.#conversation.withThreadTransaction(agentId, sideThreadId, record)
+      : this.#conversation.withConversationTransaction(agentId, record, transactionHooks?.onRollback);
   }
 }
 

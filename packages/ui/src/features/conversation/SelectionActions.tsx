@@ -12,7 +12,7 @@ import type { Element as SolidElement } from "solid-js";
 import { createEffect, createMemo, createSignal, For, onSettled, Show } from "solid-js";
 import { useText } from "../../text";
 
-const MESSAGE_TEXT_SELECTOR = ".message-copy[data-selection-message-id]";
+const MESSAGE_TEXT_SELECTOR = "[data-selection-message-id]";
 /**
  * The text of a file in the side panel. `data-selection-file-quote` is its quote id without lines;
  * `data-selection-file-lines` marks text that is the file source, so a selection gives its lines.

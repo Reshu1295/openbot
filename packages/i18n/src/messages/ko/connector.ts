@@ -32,7 +32,6 @@ export const messages = {
   "connector.github.statusConnected": "연결됨",
   "connector.github.statusConnecting": "연결 중",
   "connector.github.statusExpired": "만료됨",
-  "connector.github.statusNotSetUp": "설정 안 됨",
   "connector.github.accountTitle": "계정",
   "connector.github.filterPlaceholder": { other: "저장소 {count}개 필터" },
   "connector.github.filterLabel": "저장소 필터",
@@ -66,19 +65,9 @@ export const messages = {
   "connector.statusUnknown": "알 수 없음",
   "connector.readFailed": "OpenBot이 이 연결의 상태를 읽지 못했어요.",
 
-  "connector.hub.onThisComputer": "이 컴퓨터",
-  "connector.hub.onHost": "{host}",
-  "connector.hub.notSetUp": "설정 안 됨",
-  "connector.hub.available": "사용 가능",
-  "connector.hub.localOnly": "내 컴퓨터 전용",
-  "connector.hub.open": "{name} 열기",
-  "connector.hub.setUp": "설정",
-  "connector.hub.usedBy": "사용 중: {names}",
-
   "connector.slack.title": "Slack",
   "connector.slack.description":
     "사람들이 Slack에서 @OpenBot을 멘션하거나 다이렉트 메시지를 보내면 Slack 오케스트레이터가 알맞은 에이전트에게 물어보고 답해요.",
-  "connector.slack.statusNotSetUp": "설정 안 됨",
   "connector.slack.statusConnected": "연결됨",
   "connector.slack.statusAttention": "확인 필요",
   "connector.slack.summaryConnected": "{workspace} · Slack 오케스트레이터가 답변",
@@ -91,6 +80,11 @@ export const messages = {
   "connector.slack.workspaceTitle": "워크스페이스",
   "connector.slack.workspaceDescription": "사람들이 @OpenBot을 멘션하거나 다이렉트 메시지를 보내요.",
   "connector.slack.disconnectWorkspace": "연결 해제",
+  "connector.slack.disconnectAllTitle": "Slack 연결 해제",
+  "connector.slack.disconnectAllSummary":
+    "모든 워크스페이스의 연결이 해제돼요. 더 이상 @OpenBot으로 에이전트에게 연락할 수 없어요.",
+  "connector.slack.disconnectAllSummaryOrchestrator":
+    "모든 워크스페이스의 연결이 해제돼요. Slack 오케스트레이터와 그 대화가 OpenBot에서 삭제돼요.",
   "connector.slack.missingScopes":
     "OpenBot에 Slack에서 다음 권한이 없어요: {scopes}. 워크스페이스 연결을 해제한 뒤 다시 연결해 주세요.",
   "connector.slack.retryAt": "Slack이 OpenBot에 기다리라고 요청했어요. {time}에 다시 시도해요.",
@@ -143,7 +137,6 @@ export const messages = {
   "connector.discord.title": "Discord",
   "connector.discord.description":
     "사람들이 Discord 서버의 채널에서 @OpenBot을 멘션하면 Discord 오케스트레이터가 알맞은 에이전트에게 물어보고 답해요.",
-  "connector.discord.statusNotSetUp": "설정 안 됨",
   "connector.discord.statusConnected": "연결됨",
   "connector.discord.statusAttention": "확인 필요",
   "connector.discord.summaryConnected": "{workspace} · Discord 오케스트레이터가 답변",
@@ -157,6 +150,11 @@ export const messages = {
   "connector.discord.workspaceDescription":
     "채널에서 @OpenBot을 멘션하세요. 대화를 이어가려면 OpenBot의 메시지에 답장하세요.",
   "connector.discord.disconnectWorkspace": "연결 해제",
+  "connector.discord.disconnectAllTitle": "Discord 연결 해제",
+  "connector.discord.disconnectAllSummary":
+    "모든 서버의 연결이 해제돼요. 더 이상 @OpenBot으로 에이전트에게 연락할 수 없어요.",
+  "connector.discord.disconnectAllSummaryOrchestrator":
+    "모든 서버의 연결이 해제돼요. Discord 오케스트레이터와 그 대화가 OpenBot에서 삭제돼요.",
   "connector.discord.missingScopes":
     "OpenBot에 Discord에서 다음 권한이 없어요: {scopes}. Discord 서버 연결을 해제한 뒤 다시 연결해 주세요.",
   "connector.discord.retryAt": "Discord가 OpenBot에 기다리라고 요청했어요. {time}에 다시 시도해요.",
@@ -224,7 +222,6 @@ export const messages = {
   "connector.telegram.title": "Telegram",
   "connector.telegram.description":
     "OpenBot 봇을 Telegram 그룹에 추가하거나 봇과 1:1 채팅을 시작하세요. Telegram 오케스트레이터가 알맞은 에이전트에게 물어보고 답해요.",
-  "connector.telegram.statusNotSetUp": "설정 안 됨",
   "connector.telegram.statusConnected": "연결됨",
   "connector.telegram.statusAttention": "확인 필요",
   "connector.telegram.summaryConnected": { other: "채팅 {count}개 · Telegram 오케스트레이터가 답변" },
@@ -249,10 +246,13 @@ export const messages = {
   "connector.telegram.resume": "재개",
   "connector.telegram.reconnect": "다시 연결",
   "connector.telegram.disconnectChat": "연결 해제",
+  "connector.telegram.disconnectAllTitle": "Telegram 연결 해제",
+  "connector.telegram.disconnectAllSummary":
+    "모든 채팅의 연결이 해제돼요. 더 이상 OpenBot 봇으로 에이전트에게 연락할 수 없어요.",
+  "connector.telegram.disconnectAllSummaryOrchestrator":
+    "모든 채팅의 연결이 해제돼요. Telegram 오케스트레이터와 그 대화가 OpenBot에서 삭제돼요.",
   "connector.telegram.rowAction": "{action}: {name}",
-  "connector.telegram.linkTitle": "다른 채팅 연결",
-  "connector.telegram.linkDescription": "브라우저에서 Telegram이 열려요. 채팅이 연결되면 여기에 표시돼요.",
-  "connector.telegram.linkWaiting": "Telegram 대기 중이에요. Telegram에서 채팅을 선택하세요.",
+  "connector.telegram.linkChat": "채팅 연결",
   "connector.telegram.addToGroup": "그룹에 추가",
   "connector.telegram.openDirectChat": "1:1 채팅 열기",
   "connector.telegram.orchestratorTitle": "Telegram 오케스트레이터",
@@ -315,7 +315,8 @@ export const messages = {
   "connector.onePassword.stepVaultTitle": "공유 보관함 만들기",
   "connector.onePassword.stepVaultDescription":
     "OpenBot이 “Shared with OpenBot” 보관함과 그 보관함만 읽을 수 있는 서비스 계정을 만들어요. 1Password에서 승인을 요청해요.",
-  "connector.onePassword.useToken": "대신 서비스 계정 토큰 사용",
+  "connector.onePassword.useTokenDescription": "이 단계 대신 1Password.com의 서비스 계정 토큰을 붙여넣으세요.",
+  "connector.onePassword.useTokenAction": "토큰 사용",
   "connector.onePassword.tokenLabel": "서비스 계정 토큰",
   "connector.onePassword.tokenPlaceholder": "ops_…",
   "connector.onePassword.connectWithToken": "연결",
@@ -336,7 +337,6 @@ export const messages = {
   "connector.onePassword.actionFailed": "OpenBot이 1Password 연결을 변경하지 못했어요.",
   "connector.onePassword.statusConnected": "연결됨",
   "connector.onePassword.statusConnecting": "연결 중",
-  "connector.onePassword.statusNotSetUp": "설정 안 됨",
   "connector.onePassword.descriptionHost":
     "서비스 계정을 통해 전용 1Password 보관함을 {host}의 OpenBot과 공유하면, {host}의 에이전트가 브라우저에서 사이트에 로그인할 수 있어요.",
   "connector.onePassword.howItWorksHost":
@@ -354,8 +354,12 @@ export const messages = {
   "connector.bitwarden.sessionKey": "Bitwarden 세션 키",
   "connector.bitwarden.connect": "Bitwarden 연결",
   "connector.bitwarden.disconnect": "Bitwarden 연결 해제",
+  "connector.bitwarden.disconnectAction": "연결 해제",
+  "connector.bitwarden.disconnectSummary":
+    "OpenBot이 세션 키를 삭제해요. 에이전트가 더 이상 Bitwarden에서 로그인을 채울 수 없어요. 다른 Bitwarden 클라이언트는 잠금 해제 상태로 유지돼요.",
+  "connector.bitwarden.disconnectSummaryHost":
+    "{host}에서 API 키와 마스터 비밀번호를 삭제해요. {host}의 에이전트가 더 이상 Bitwarden에서 로그인을 채울 수 없어요.",
   "connector.bitwarden.connected": "연결됨",
-  "connector.bitwarden.disconnected": "연결되지 않음",
   "connector.bitwarden.actionFailed": "OpenBot이 Bitwarden 연결을 변경하지 못했어요.",
   "connector.bitwarden.descriptionHost": "Bitwarden 또는 Vaultwarden에서 {host}의 브라우저 로그인 정보를 입력해요.",
   "connector.bitwarden.setupHost":
@@ -365,9 +369,13 @@ export const messages = {
   "connector.bitwarden.sessionHost":
     "{host}은(는) 재시작 후에도 다시 잠금 해제할 수 있도록 API 키와 마스터 비밀번호를 암호화해 보관해요. 이 컴퓨터에는 보관되지 않아요. 연결을 해제하면 {host}에서 삭제돼요. {host}이(가) 서버 주소에 HTTPS로 접근할 수 있어야 해요.",
   "connector.bitwarden.serverUrl": "서버 주소",
+  "connector.bitwarden.folderTitle": "공유 폴더",
+  "connector.bitwarden.folderDescription":
+    "에이전트가 로그인 정보를 사용하게 하려면 Bitwarden에서 이 폴더로 옮기세요. 사용을 멈추려면 폴더에서 제거하세요.",
+  "connector.bitwarden.folderName": "Shared with OpenBot",
+  "connector.bitwarden.folderKind": "Bitwarden 폴더",
   "connector.bitwarden.clientId": "API 키 client_id",
   "connector.bitwarden.clientSecret": "API 키 client_secret",
   "connector.bitwarden.masterPassword": "마스터 비밀번호",
   "connector.bitwarden.connecting": "연결 중",
-  "connector.bitwarden.connectedServer": "{server}에 연결됨.",
 } as const satisfies PartialTranslation<typeof source>;

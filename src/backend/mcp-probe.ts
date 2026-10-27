@@ -31,7 +31,17 @@ import {
 } from "./mcp-provider-shapes";
 import { redactMcpSecrets, redactMcpValues } from "./mcp-redaction";
 
-export const MCP_PROBE_TIMEOUT_MS = 10_000;
+const MCP_PROBE_TIMEOUT_MS = 10_000;
+
+/**
+ * The deadline for a stdio server. Its first start can download the package and all its
+ * dependencies: `npx -y firecrawl-mcp` fetches about 170 packages before the server answers.
+ */
+export const MCP_STDIO_PROBE_TIMEOUT_MS = 60_000;
+
+function probeTimeoutMs(config: McpServerConfig) {
+  return config.transport === "stdio" ? MCP_STDIO_PROBE_TIMEOUT_MS : MCP_PROBE_TIMEOUT_MS;
+}
 
 interface McpProbeResult {
   toolCount: number;
@@ -57,8 +67,8 @@ export interface McpProbeOutcome extends McpProbeResult {
  * Tests one configuration, saved or not: connects, counts the tools, and disconnects.
  *
  * Only a user asking for it starts this. OpenBot does not test by itself, because a connection is
- * not free - an http server can want an OAuth sign-in, a cold `npx` can take longer than the
- * deadline below, and a server can do real work at startup. The answer is reported once and not
+ * not free - an http server can want an OAuth sign-in, a cold `npx` can download for most of the
+ * stdio deadline, and a server can do real work at startup. The answer is reported once and not
  * stored.
  */
 // SDK errors can quote credentials. Internal operations have no tracing spans; only the
@@ -78,7 +88,7 @@ export type McpSignInPlace = "here" | "host";
 
 export const testMcpServer = Effect.fnUntraced(function* (
   config: McpServerConfig,
-  timeoutMs = MCP_PROBE_TIMEOUT_MS,
+  timeoutMs = probeTimeoutMs(config),
   tools: McpToolRuntimes = NO_MCP_TOOL_RUNTIMES,
   oauth?: Pick<McpOAuthAuthority, "accessToken" | "signIn">,
   signInPlace: McpSignInPlace | null = null,
@@ -90,7 +100,7 @@ export const testMcpServer = Effect.fnUntraced(function* (
 /** `testMcpServer` with the tool names and the need an agent reads. */
 export const inspectMcpServer = Effect.fnUntraced(function* (
   config: McpServerConfig,
-  timeoutMs = MCP_PROBE_TIMEOUT_MS,
+  timeoutMs = probeTimeoutMs(config),
   tools: McpToolRuntimes = NO_MCP_TOOL_RUNTIMES,
   oauth?: Pick<McpOAuthAuthority, "accessToken" | "signIn">,
   signInPlace: McpSignInPlace | null = null,

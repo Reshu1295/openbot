@@ -73,8 +73,8 @@ export function McpKeyDialog(props: McpKeyDialogProps) {
       onSubmit={submit}
       action={
         <Button
-          class="mcp-connect-primary"
           type="submit"
+          size="sm"
           loading={busy()}
           loadingLabel={t("common.connecting")}
           disabled={form.touched && !complete()}

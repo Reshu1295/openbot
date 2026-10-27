@@ -105,7 +105,7 @@ SolidJS, provider, Cloudflare, and application code; and the account server to d
   (`AttentionRegistry.answerGrantedRequests`). The registry also accepts, once, Codex's consent to run
   an MCP tool (`_meta.codex_approval_kind` `mcp_tool_call`, a tool set to ask every time included), and
   saves nothing: "Always allow" stays the user's choice, which Codex keeps per server and tool. A
-  Workspace only agent and a Computer Use tool keep their card. OpenBot keeps Codex's `approvalPolicy`
+  Workspace only agent keeps its card; a Computer Use tool does not. OpenBot keeps Codex's `approvalPolicy`
   at `on-request`, because `never` denies MCP tool calls and rejects elicitations. Other questions, MCP
   forms and sign-in requests, and browser takeovers remain interactive.
 - `browser-tabs.json` is the embedded browser's own durable state, outside `openbot.db` and outside the
@@ -160,8 +160,8 @@ surface and responsive rules override earlier component rules.
 tabs, and a page for each listing. It reads a typed `MarketplaceModel` and holds no data of its
 own. The renderer's `marketplace-controller.ts` builds the model on the injected `MarketplaceCalls`,
 and `MarketplaceModal` adds the connect and uninstall dialogs. `ConnectorsProvider` creates the
-connector controllers once; a connector's app page and Server settings › Connectors show the same
-`ConnectorDetailPanel` from them.
+connector controllers once; a connector's app page shows `ConnectorDetailPanel` from them. Server
+settings has no connector section.
 
 `AgentSettingsPanel` owns the form draft, ordered save queue, avatar editor, and model controls.
 Its renderer adapter owns persisted width and native memories, routines, skills, and tables,

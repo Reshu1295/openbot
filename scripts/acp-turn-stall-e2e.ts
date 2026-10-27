@@ -2,6 +2,7 @@
 // (#2858). Drives the real `AcpAgentClient` with the OpenCode and Antigravity flavors over one fake
 // agent (`provider-fakes/agents/stall.ts`) and a short stall limit:
 // - a silent prompt fails with the stall message, and the next turn opens the session again;
+// - a stall on a custom endpoint's model names the endpoint, not OpenCode (#3234);
 // - an open tool call longer than the limit is not a stall;
 // - a stop of a prompt that ignores `session/cancel` ends the turn as interrupted;
 // - OpenCode answer text streams before the prompt answers;
@@ -37,6 +38,7 @@ interface Report {
   passed: boolean;
   stall?: { status: string | null; error: string | null; elapsedMs: number; cancelSent: boolean };
   afterStall?: { status: string | null; sessionRestored: boolean };
+  endpointStall?: { status: string | null; error: string | null };
   tool?: { status: string | null; elapsedMs: number };
   stop?: { status: string | null; elapsedMs: number; next: string | null };
   stream?: { deltaBeforeCompletion: boolean; reply: string };
@@ -55,6 +57,7 @@ async function open(
   flavor: AcpFlavor,
   log: string,
   env: Readonly<Record<string, string>> = {},
+  providerName?: (modelId: string | null) => string | null,
 ): Promise<AgentClient> {
   const executable = join(root, provider, "bin", provider);
   await installFakeAgent(executable, "stall", {
@@ -70,6 +73,7 @@ async function open(
     env: {},
     signInMessage: "Sign in to the fake agent.",
     turnStallMs: STALL_MS,
+    ...(providerName ? { providerName } : {}),
   });
   clients.push(client);
   client.start();
@@ -128,6 +132,21 @@ try {
   report.afterStall = { status: afterStall.status, sessionRestored };
   assert.equal(afterStall.status, "completed", "A turn after a stall completes.");
   assert.equal(sessionRestored, true, "A turn after a stall opens the session again.");
+
+  // OpenCode serves a custom endpoint, and the user knows that turn by the endpoint's name. The fake
+  // agent's one model stands for an endpoint model here.
+  const endpoint = await open("opencode", OPENCODE_ACP_FLAVOR, join(root, "endpoint.jsonl"), {}, (modelId) =>
+    modelId === "fake-alpha" ? "My Lab" : null,
+  );
+  const endpointThread = await startThread(endpoint, { cwd: workspace });
+  const endpointStall = await runTurn(endpoint, endpointThread, { text: "hang", timeoutMs: STALL_MS * 10 });
+  report.endpointStall = { status: endpointStall.status, error: endpointStall.error };
+  assert.equal(endpointStall.status, "failed", "A silent endpoint turn fails.");
+  assert.equal(
+    endpointStall.error,
+    sourceText("error.agent.turnStalled", { provider: "My Lab" }),
+    "A stall on a custom endpoint names the endpoint.",
+  );
 
   // An open tool call is work, not a stall, also when it takes longer than the limit.
   const tool = await timed(() => runTurn(client, thread, { text: "tool" }));

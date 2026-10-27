@@ -240,8 +240,6 @@ export const messages = {
   "server.settings.importDescription": "Grok Bot이나 Hermes Agent의 에이전트를 이 서버로 옮겨요.",
   "server.settings.transferTitle": "이전",
   "server.settings.transferDescription": "이 서버의 에이전트와 서버 설정을 파일로 내보내거나 파일에서 가져와요.",
-  "server.settings.connectorsTitle": "커넥터",
-  "server.settings.connectorsDescription": "이 서버의 모든 에이전트가 사용할 수 있는 계정을 연결해요.",
   "server.settings.routinesTitle": "루틴",
   "server.settings.routinesDescription": "이 컴퓨터의 루틴 일정을 캘린더 앱에 표시해요.",
   "server.routineFeed.title": "캘린더 피드",

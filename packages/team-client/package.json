@@ -35,13 +35,14 @@
     "./push-notification-seal": "./src/push-notification-seal.ts",
     "./usage-series": "./src/usage-series.ts",
     "./plan-limits": "./src/plan-limits.ts",
-    "./agent-tasks": "./src/agent-tasks.ts"
+    "./agent-tasks": "./src/agent-tasks.ts",
+    "./workflow-decoding": "./src/workflow-decoding.ts"
   },
   "scripts": {
     "typecheck": "bun ../../scripts/type-checker.ts --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@noble/ed25519": "3.1.0",
+    "@noble/ed25519": "3.2.0",
     "@noble/hashes": "catalog:",
     "@openbot/contracts": "workspace:*",
     "@openbot/i18n": "workspace:*",

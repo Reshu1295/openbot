@@ -1,10 +1,10 @@
 {
-  "version": "0.50.0",
+  "version": "0.52.0",
   "highlights": [
-    "Sign in to Google MCP servers, such as Gmail, Calendar or Drive, again after you update. Then the sign-in keeps working after the first hour.",
-    "Draw a workflow on a canvas with agent, model, condition and approval steps, and run it on a schedule or from a webhook.",
-    "Save logins, payment cards and contact info in the Vault. Agents use them, but never see a password or a card number.",
-    "Open the trace of an agent's turn to see each thought, tool call and subagent on one timeline, with its cost.",
-    "Claude can use an Anthropic API key, and Gemini can hold more than one Google account."
+    "Give an agent more than one conversation: click + in the chat header to start a new thread. Your tasks are now threads.",
+    "Attach MP4 videos in chat, and see image files that an agent names as previews under its answer.",
+    "Connect Obsidian, Trello, Render, Neon, Prisma, Netlify, Railway, Atlassian, Todoist and Hugging Face from the new Marketplace.",
+    "OpenBot is now available in Dutch.",
+    "Workspace only Pi, Cursor and DeepSeek agents on macOS work again, and a provider CLI update no longer stops OpenBot at start."
   ]
 }

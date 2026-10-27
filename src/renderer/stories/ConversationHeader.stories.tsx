@@ -19,7 +19,7 @@ const meta = {
       onChange: fn(),
       onReasoningEffortChange: fn(),
     },
-    sidePanel: { open: false, running: 0, onToggle: fn() },
+    sidePanel: { open: false, onToggle: fn() },
   },
   parameters: { layout: "fullscreen", a11y: { test: "error" } },
 } satisfies Meta<typeof ConversationHeader>;
@@ -38,10 +38,7 @@ export const OfflineHost: Story = {
   },
 };
 export const AgentUsingBrowser: Story = {
-  args: { sidePanel: { open: true, actingAgentName: STORY_AGENT.name, running: 0, onToggle: fn() } },
-};
-export const TasksRunning: Story = {
-  args: { sidePanel: { open: false, running: 2, onToggle: fn() } },
+  args: { sidePanel: { open: true, actingAgentName: STORY_AGENT.name, onToggle: fn() } },
 };
 /** A model chosen during the turn. The picker names it; the badge says that it starts with the next turn. */
 export const ModelAfterThisTurn: Story = {

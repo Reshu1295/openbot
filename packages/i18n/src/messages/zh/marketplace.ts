@@ -21,10 +21,12 @@ export const messages = {
 
   // The dialog frame: title, close and tabs.
   "marketplace.title": "市场",
-  "marketplace.close": "关闭市场",
   "marketplace.kinds": "市场内容类型",
   "marketplace.tab.agents": "助手",
   "marketplace.tab.skills": "技能",
+  "marketplace.description.apps": "连接你的助手使用的工具和服务。",
+  "marketplace.description.agents": "带有自身指令和技能的现成助手。",
+  "marketplace.description.skills": "教助手完成某项任务或使用某个工具的指令。",
 
   // A plugin link.
   "marketplace.plugins.missing": "OpenBot 目录中没有该插件。",
@@ -94,18 +96,24 @@ export const messages = {
   "marketplace.app.reconnectNamed": "重新连接 {name}",
   "marketplace.app.connected": "已连接",
   "marketplace.app.attention": "需要关注",
+  "marketplace.app.partialTitle": "{name} 未完成安装",
+  "marketplace.app.partialDescription": "部分应用或技能尚未安装。重新连接即可安装。",
   "marketplace.app.notConnected": "未连接",
   "marketplace.app.custom": "MCP 服务器",
   "marketplace.app.githubTagline": "仓库、Issue 与拉取请求",
   "marketplace.app.onePasswordTagline": "用你共享的登录信息登录网站",
+  "marketplace.app.slackTagline": "Slack 中的提及和私信",
+  "marketplace.app.discordTagline": "Discord 中的提及和私信",
+  "marketplace.app.telegramTagline": "Telegram 中的群组和私聊",
+  "marketplace.app.bitwardenTagline": "用共享文件夹中的登录信息登录网站",
   // The category row in the 1Password page's information.
   "marketplace.app.onePasswordCategory": "登录与凭据管理",
   "marketplace.app.yourApps": "你的应用",
-  "marketplace.app.moreApps": "更多应用",
+  "marketplace.app.addCustom": "添加自定义项",
   "marketplace.app.server": "服务器",
   "marketplace.app.command": "命令",
   "marketplace.app.address": "地址",
-  "marketplace.app.disconnect.title": "断开连接",
+  "marketplace.app.disconnect.title": "断开 {name}",
   "marketplace.app.disconnect.description": "从这台电脑移除 {name} 及其技能。之后可以再次连接。",
   "marketplace.app.disconnect.action": "断开连接",
   "marketplace.app.remove.title": "移除服务器",
@@ -113,6 +121,16 @@ export const messages = {
   "marketplace.app.remove.action": "移除",
   "marketplace.app.remove.confirmTitle": "移除 {name}？",
   "marketplace.app.remove.keep": "保留",
+  "marketplace.app.connection": "连接",
+  "marketplace.app.setup.account": "在浏览器中使用你的 {name} 账号登录。",
+  "marketplace.app.setup.key": "需要你的 {name} 账号中的 API 密钥。",
+  "marketplace.app.setup.keySaved": "{field} 已保存在 {host} 上。",
+  "marketplace.app.setup.desktop": "在 {name} 桌面应用中运行，地址为 {address}。",
+  "marketplace.app.setup.desktopConnected": "已连接到 {address}。",
+  "marketplace.app.setup.open": "无需登录或密钥。",
+  "marketplace.app.connectAgain": "再次连接",
+  "marketplace.app.signInTitle": "请重新登录 {name}",
+  "marketplace.app.signInDescription": "{name} 拒绝了已保存的登录。重新登录之前，你的助手无法使用它。",
 
   // The catalog apps' listing text, by slug. Each English text is the catalog's own text, byte for
   // byte: a key whose English no longer matches the catalog is not used. The prompts are requests that
@@ -168,6 +186,14 @@ export const messages = {
   "marketplace.plugin.paper.prompt.implement": "按我们的代码规范，在这个代码库里实现选中的 Paper 画框。",
   "marketplace.plugin.paper.prompt.codeToDesign": "用这个仓库里的样式，在 Paper 中设计一个设置页面。",
   "marketplace.plugin.paper.prompt.tokens": "列出打开的 Paper 文件中的设计 token，并与我们的主题对比。",
+  "marketplace.plugin.appleApps.tagline": "Mac 上的邮件、日历等",
+  "marketplace.plugin.appleApps.description":
+    "Apple apps 让助手使用这台 Mac 上的邮件、日历、通讯录、提醒事项、备忘录、信息和 Safari。它仅适用于 macOS。OpenBot 会启动 mcp-icloud，这是一个社区服务器，不是 Apple 或 OpenBot 制作的。该服务器在这台电脑上通过 AppleScript 控制这些应用，不需要账号和密钥。助手第一次使用某个应用时，macOS 会询问是否允许 OpenBot 控制它。如需之后更改，打开系统设置 › 隐私与安全性 › 自动化。助手可以发送邮件和 iMessage，并修改或删除日程、联系人和提醒事项，因此请在批准前检查每次写入。工具读取的内容（例如邮件正文）会发送给助手的模型提供商。",
+  "marketplace.plugin.appleApps.app":
+    "通过本地 mcp-icloud 服务器使用邮件、日历、通讯录、提醒事项、备忘录、信息和 Safari。需要 macOS 和自动化权限。",
+  "marketplace.plugin.appleApps.prompt.unread": "总结我今天在 Apple 邮件中的未读邮件。",
+  "marketplace.plugin.appleApps.prompt.today": "我今天和明天的 Apple 日历上有什么安排？",
+  "marketplace.plugin.appleApps.prompt.schedule": "找到关于项目会议的最新邮件，并把这个会议添加到我的日历中。",
   "marketplace.plugin.sentry.tagline": "错误与崩溃排查",
   "marketplace.plugin.sentry.description":
     "Sentry 让助手搜索最近的错误、查看堆栈与受影响的版本，并总结发布后出了什么问题。每位用户通过浏览器登录自己的 Sentry 账号。",
@@ -189,6 +215,13 @@ export const messages = {
   "marketplace.plugin.cloudflare.prompt.workers": "我的 Cloudflare 账号中部署了哪些 Workers？",
   "marketplace.plugin.cloudflare.prompt.errors": "过去一小时哪些 Cloudflare Workers 记录了错误？",
   "marketplace.plugin.cloudflare.prompt.dns": "列出我的 Cloudflare 账号中每个区域的 DNS 记录。",
+  "marketplace.plugin.supabase.tagline": "数据库、日志与 Edge Functions",
+  "marketplace.plugin.supabase.description":
+    "Supabase 让助手列出项目、运行 SQL、读取表结构和日志、查看 advisors 的安全与性能建议、管理 Edge Functions 和分支，并搜索 Supabase 文档。每位用户通过浏览器登录自己的 Supabase 账号并选择一个组织。助手拥有完全访问权限：可以运行修改或删除数据的 SQL、应用迁移、部署 Edge Functions，以及创建或暂停项目。",
+  "marketplace.plugin.supabase.app": "通过 Supabase 的 MCP 服务器和浏览器登录，提供数据库、日志与 Edge Functions。",
+  "marketplace.plugin.supabase.prompt.projects": "我的 Supabase 组织中有哪些项目？",
+  "marketplace.plugin.supabase.prompt.tables": "列出我的 Supabase 数据库中的表和列。",
+  "marketplace.plugin.supabase.prompt.errors": "我的 Supabase 项目在过去一小时记录了哪些错误？",
   "marketplace.plugin.context7.tagline": "最新的库文档",
   "marketplace.plugin.context7.description":
     "Context7 获取库与框架的最新文档和 API 参考，让回答基于项目实际运行的版本。无需账号，也无需密钥。",
@@ -231,6 +264,15 @@ export const messages = {
   "marketplace.plugin.braveSearch.prompt.search": "评测者对这个框架版本有什么评价？",
   "marketplace.plugin.braveSearch.prompt.news": "找找今天这个产品领域的公告。",
   "marketplace.plugin.braveSearch.prompt.compare": "对比这两家供应商，并附上来源。",
+  "marketplace.plugin.obsidian.tagline": "你仓库中的笔记",
+  "marketplace.plugin.obsidian.description":
+    "Obsidian 让助手搜索、阅读和写入你仓库中的笔记，让仓库成为它们的记忆。本地服务器连接这台电脑上 Obsidian 应用中的 Local REST API 插件。插件的 API 密钥作为一个环境变量传给本地服务器。助手使用期间请保持 Obsidian 打开。",
+  "marketplace.plugin.obsidian.app": "通过使用 Local REST API 插件密钥的本地 MCP 服务器，搜索、阅读和编辑笔记。",
+  "marketplace.plugin.obsidian.prompt.recall": "我的笔记里关于这个项目的决定是怎么写的？",
+  "marketplace.plugin.obsidian.prompt.save": "把这个决定作为新笔记保存到我的仓库。",
+  "marketplace.plugin.obsidian.prompt.log": "把今天工作的总结添加到我的“工作日志”笔记中。",
+  "marketplace.plugin.obsidian.hint.apiKey":
+    '在 Obsidian 中打开 Settings > Local REST API。复制 API 密钥并开启 "Enable non-encrypted (HTTP) server"。',
   "marketplace.plugin.resend.tagline": "事务性邮件",
   "marketplace.plugin.resend.description":
     "Resend 让助手通过一个 API 发送事务性邮件并检查投递情况。把 Resend 控制台中的 API 密钥作为一个环境变量传给本地服务器即可。",
@@ -249,6 +291,70 @@ export const messages = {
   // The connect form text of the catalog listings. Each English text is the catalog's own text, byte for byte.
   "marketplace.plugin.composio.hint.url": "你的 Composio 账号中某个 MCP 服务器的链接",
   "marketplace.plugin.composio.hint.apiKey": "可在你的 Composio 账号的 Settings > Sessions & API Key 中找到。",
+  "marketplace.plugin.neon.tagline": "Postgres 项目、分支与迁移",
+  "marketplace.plugin.neon.description":
+    "Neon 让助手列出项目和分支、运行 SQL、读取表结构、在临时分支上测试结构变更、查找慢查询，并搜索 Neon 文档。每位用户通过浏览器登录自己的 Neon 账号，并可在授权时选择只读访问。在完全访问模式下，助手可以运行修改或删除数据的 SQL，并创建、重置或删除分支、数据库和项目。Neon 建议将其 MCP 服务器用于开发和测试，而不是生产数据库。",
+  "marketplace.plugin.neon.app": "通过 Neon 的 MCP 服务器和浏览器登录，提供 Postgres 项目、分支、SQL 与迁移。",
+  "marketplace.plugin.neon.prompt.projects": "我的 Neon 账号中有哪些项目和分支？",
+  "marketplace.plugin.neon.prompt.slowQueries": "我的 Neon 数据库中哪些查询最慢？原因是什么？",
+  "marketplace.plugin.neon.prompt.migration": "在临时分支上为 orders 表添加索引，并在应用之前把结果给我看。",
+  "marketplace.plugin.prisma.tagline": "Postgres 数据库、备份与 Compute 应用",
+  "marketplace.plugin.prisma.description":
+    "Prisma 让助手列出和创建 Prisma Postgres 数据库、读取数据库结构、运行 SQL、列出备份并将其恢复到新数据库、管理 Object Storage 存储桶、读取 Compute 构建和日志，并搜索 Prisma 文档。每位用户通过浏览器登录自己的 Prisma 账号并选择一个工作区。助手拥有完全访问权限：可以运行修改或删除数据的 SQL、更新数据库结构、删除数据库和存储桶，以及停止、回滚或删除 Compute 部署。",
+  "marketplace.plugin.prisma.app": "通过 Prisma 的 MCP 服务器和浏览器登录，提供数据库、SQL、备份与 Compute 应用。",
+  "marketplace.plugin.prisma.prompt.databases": "我的 Prisma 工作区中有哪些数据库？",
+  "marketplace.plugin.prisma.prompt.backups": "列出我的数据库所有可用的备份。",
+  "marketplace.plugin.prisma.prompt.logs": "显示我最新一次 Compute 部署的运行时日志。",
+  "marketplace.plugin.netlify.tagline": "项目、部署与请求日志",
+  "marketplace.plugin.netlify.description":
+    "Netlify 让助手列出项目和部署、读取边缘请求日志、创建项目，并将代码部署到现有项目。每位用户通过浏览器登录自己的 Netlify 账号。助手拥有与该账号相同的访问权限：可以修改环境变量、表单和访客访问设置，安装或移除扩展，以及删除表单提交和环境变量。",
+  "marketplace.plugin.netlify.app": "通过 Netlify 的 MCP 服务器和浏览器登录，提供项目、部署、请求日志与站点设置。",
+  "marketplace.plugin.netlify.prompt.latestDeploy": "我的每个 Netlify 项目最新一次部署的状态是什么？",
+  "marketplace.plugin.netlify.prompt.errors": "过去一天里，我的网站有哪些 URL 返回了服务器错误？",
+  "marketplace.plugin.netlify.prompt.deploy": "把这个文件夹部署到我现有的 Netlify 项目。",
+  "marketplace.plugin.railway.tagline": "项目、服务与部署",
+  "marketplace.plugin.railway.description":
+    "Railway 让助手列出项目和服务、创建项目、重新部署服务并管理功能开关。助手还可以把多步骤的工作交给 Railway Agent，它会读取日志、查明部署失败的原因、创建服务并设置变量。每位用户通过浏览器登录自己的 Railway 账号，并选择助手可用的工作区和项目。在这些项目中，助手拥有完全访问权限：可以部署暂存的更改、删除功能开关，并通过 Railway Agent 修改服务、变量、数据库和网络。",
+  "marketplace.plugin.railway.app": "通过 Railway 的 MCP 服务器和浏览器登录，提供项目、服务与部署。",
+  "marketplace.plugin.railway.prompt.projects": "我的 Railway 工作区里有哪些项目和服务？",
+  "marketplace.plugin.railway.prompt.crash": "我在 Railway 上的后端服务为什么在部署时崩溃？",
+  "marketplace.plugin.railway.prompt.redeploy": "重新部署我 Railway 项目中的 API 服务。",
+  "marketplace.plugin.render.tagline": "服务、部署与日志",
+  "marketplace.plugin.render.description":
+    "Render 让助手列出工作区和服务，读取日志、事件和指标，查看部署历史，触发部署，并在 Render Postgres 上运行只读 SQL。Render API 密钥放在一个 Authorization 请求头中。该密钥可访问 Render 账号的所有工作区。助手可以创建 Web 服务、静态网站、定时任务、Postgres 数据库和 Key Value 实例，这可能产生费用；助手还可以替换服务的环境变量。服务器无法删除任何资源。",
+  "marketplace.plugin.render.app": "通过 Render 的 MCP 服务器和 API 密钥，提供服务、部署、日志与指标。",
+  "marketplace.plugin.render.prompt.services": "我的 Render 工作区里有哪些服务？",
+  "marketplace.plugin.render.prompt.logs": "我的 Render Web 服务在过去一小时记录了哪些错误？",
+  "marketplace.plugin.render.prompt.deploy": "我的 Render 服务最近一次部署为什么失败？",
+  "marketplace.plugin.atlassian.tagline": "Jira 工作项与 Confluence 页面",
+  "marketplace.plugin.atlassian.description":
+    "Atlassian 让助手搜索和读取 Jira 工作项、Confluence 页面和 Bitbucket 拉取请求，并创建或更新工作项、页面和评论。每位用户通过浏览器登录自己的 Atlassian 账号，并在授权页面上批准访问。助手拥有与该用户相同的权限：可以修改工作项和页面、修改页面权限，以及合并拉取请求。删除 Jira 数据的工具默认关闭，直到组织管理员将其开启。每次调用工具都会消耗 Rovo 积分。",
+  "marketplace.plugin.atlassian.app": "通过 Atlassian 的 MCP 服务器和浏览器登录，提供 Jira、Confluence 与 Bitbucket。",
+  "marketplace.plugin.atlassian.prompt.assigned": "哪些未完成的 Jira 工作项分配给了我？",
+  "marketplace.plugin.atlassian.prompt.releasePage": "找到关于我们发布流程的 Confluence 页面并总结。",
+  "marketplace.plugin.atlassian.prompt.newItem": "为登录问题创建一个 Jira 工作项，附上复现步骤。",
+  "marketplace.plugin.todoist.tagline": "任务、项目和提醒",
+  "marketplace.plugin.todoist.description":
+    "Todoist 让助手按日期、文本、标签或过滤器查找任务，添加任务并重新安排日期，并管理项目、分区、标签、评论和提醒。每位用户通过浏览器登录自己的 Todoist 账号。助手拥有读写权限：可以更改、完成和删除任务、项目及其他条目。",
+  "marketplace.plugin.todoist.app": "通过 Todoist 的 MCP 服务器和浏览器登录，提供任务、项目和提醒。",
+  "marketplace.plugin.todoist.prompt.today": "今天到期的 Todoist 任务有哪些？",
+  "marketplace.plugin.todoist.prompt.capture": "把这些待办事项添加到我的 Todoist 收件箱。",
+  "marketplace.plugin.todoist.prompt.overdue": "把我逾期的 Todoist 任务改到明天。",
+  "marketplace.plugin.trello.tagline": "看板、列表和卡片",
+  "marketplace.plugin.trello.description":
+    "Trello 让助手搜索和读取看板、列表、卡片、清单和评论，创建看板和卡片，移动列表和卡片，将卡片标记为完成，并添加清单、评论和标签。助手还可以读取和添加用户 Trello 收件箱中的卡片，并读取 Planner 中的日程，这些日程可能来自已连接的 Google 或 Outlook 日历。每位用户通过浏览器登录自己的 Trello 账号，并在授权页面上选择工作区。助手在这些工作区中拥有与用户相同的权限。助手可以归档卡片和列表，但服务器无法永久删除任何内容。",
+  "marketplace.plugin.trello.app": "通过 Trello 的 MCP 服务器和浏览器登录，提供看板、列表和卡片。",
+  "marketplace.plugin.trello.prompt.myCards": "哪些 Trello 卡片分配给了我？",
+  "marketplace.plugin.trello.prompt.board": "总结我的 Trello 看板上正在进行的工作。",
+  "marketplace.plugin.trello.prompt.newCards": "把这些待办事项作为卡片添加到我的 Trello 看板。",
+  "marketplace.plugin.huggingface.tagline": "Hub 上的模型、数据集和论文",
+  "marketplace.plugin.huggingface.description":
+    "Hugging Face 让助手在 Hugging Face Hub 上搜索模型、数据集、Spaces、合集和论文，读取模型卡片和仓库文件，预览数据集，并搜索 Hugging Face 文档。它使用 Hub 的公开数据，无需账号和密钥。这些工具只读取数据：助手不能创建仓库，也不能运行任务。",
+  "marketplace.plugin.huggingface.app":
+    "通过 Hugging Face 的 MCP 服务器搜索模型、数据集、Spaces、论文和文档，无需登录。",
+  "marketplace.plugin.huggingface.prompt.models": "在 Hugging Face 上找一些用于语音识别的小型开放模型。",
+  "marketplace.plugin.huggingface.prompt.papers": "今天 Hugging Face 上有哪些热门论文？",
+  "marketplace.plugin.huggingface.prompt.dataset": "找一个天气时间序列数据集，并显示它的列。",
   "marketplace.auth.apiKey": "API 密钥",
   "marketplace.auth.personalApiKey": "个人 API 密钥",
   "marketplace.auth.mcpUrl": "MCP 链接",

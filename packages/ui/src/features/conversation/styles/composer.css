@@ -694,6 +694,22 @@
   user-select: none;
 }
 
+.composer-file-reference-image {
+  width: var(--openbot-space-4);
+  height: var(--openbot-space-4);
+  flex: none;
+  border-radius: var(--openbot-radius-sm);
+  object-fit: cover;
+}
+
+.composer-file-reference-size {
+  flex: none;
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-sm);
+  font-weight: var(--openbot-weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
 /*
  * Hangs off the composer's top edge inside `.composer-wrap`, like `.agent-queue-panel`: the
  * composer paints over the overlap, so the panel grows out from under the input. The bottom comes

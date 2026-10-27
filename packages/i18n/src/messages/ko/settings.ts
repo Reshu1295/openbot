@@ -149,7 +149,8 @@ export const messages = {
   "settings.tab.voice.description":
     "메시지 입력란의 음성 받아쓰기예요. 로컬 모델은 이 컴퓨터에서, ElevenLabs는 클라우드에서 실행돼요.",
   "settings.tab.computerUse.title": "컴퓨터 제어",
-  "settings.tab.computerUse.description": "OpenBot이 이 컴퓨터의 앱을 보고 조작하도록 허용해요.",
+  "settings.tab.computerUse.description":
+    "이 컴퓨터의 OpenBot 에이전트가 이 컴퓨터의 앱을 보고 조작하도록 허용해요. 다른 서버의 에이전트는 그 서버의 컴퓨터를 사용해요.",
   "settings.tab.profile.title": "프로필",
   "settings.tab.profile.description": "OpenBot에서 내가 표시되는 방식을 관리해요.",
   "settings.tab.mobileConnect.title": "모바일 연결",
@@ -178,13 +179,12 @@ export const messages = {
   "settings.mobileConnect.app.copyLink": "링크 복사",
   "settings.mobileConnect.app.linkCopied": "링크를 복사했어요",
   "settings.mobileConnect.iosApp.title": "iPhone용 OpenBot",
-  "settings.mobileConnect.iosApp.badge": "베타",
-  "settings.mobileConnect.iosApp.description": "TestFlight 공개 베타예요. iOS 16.4 이상에서 사용할 수 있어요.",
-  "settings.mobileConnect.iosApp.qrLabel": "TestFlight 초대 QR 코드",
-  "settings.mobileConnect.iosApp.step.testFlight": "iPhone에서 App Store의 TestFlight를 설치해요.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "iPhone 카메라로 이 QR 코드를 스캔하거나, 초대 링크를 복사해서 iPhone에서 열어요.",
-  "settings.mobileConnect.iosApp.step.install": "TestFlight에서 수락을 누른 다음 설치를 눌러요.",
+  "settings.mobileConnect.iosApp.badge": "사용 가능",
+  "settings.mobileConnect.iosApp.description": "App Store에서 받을 수 있어요. iOS 16.4 이상에서 사용할 수 있어요.",
+  "settings.mobileConnect.iosApp.qrLabel": "App Store QR 코드",
+  "settings.mobileConnect.iosApp.step.scan":
+    "iPhone 카메라로 이 QR 코드를 스캔하거나, 링크를 복사해서 iPhone에서 열어요.",
+  "settings.mobileConnect.iosApp.step.install": "App Store에서 받기를 눌러요.",
   "settings.mobileConnect.androidApp.title": "Android용 OpenBot",
   "settings.mobileConnect.androidApp.badge": "사용 가능",
   "settings.mobileConnect.androidApp.description":
@@ -294,7 +294,7 @@ export const messages = {
   "settings.profile.share.createFailed": "이미지를 만들 수 없어요.",
   "settings.profile.share.fileName": "openbot-activity.png",
   "settings.profile.share.caption": "OpenBot과 함께한 지난 6개월",
-  "settings.profile.activity.title": "활동",
+  "settings.profile.activity.title": "이 컴퓨터의 활동",
   "settings.profile.activity.activeDays": {
     other: "지난 1년간 활동한 날 {count}일",
   },

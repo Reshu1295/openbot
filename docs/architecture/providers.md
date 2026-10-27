@@ -5,10 +5,11 @@ To add a provider, or to see how a provider signs in on a joined server, read
 
 ## Built-in tool discovery
 
-`agent/tool-catalog.ts` exposes ten direct tools and three discovery tools to every adapter.
+`agent/tool-catalog.ts` exposes eleven direct tools and three discovery tools to every adapter.
 Claude uses its native question tool instead of `ask_user`. The direct tools are `ask_user`,
 `attach_files_to_response`, `list_agents`, `send_message`, `search_memories`, `remember`,
-`forget_memory`, `react_to_user_message`, `routine_no_update`, and `routine_report_failure`. External plugin registration stays with each provider adapter.
+`forget_memory`, `react_to_user_message`, `request_api_key`, `routine_no_update`, and
+`routine_report_failure`. External plugin registration stays with each provider adapter.
 
 `tool_search` uses local keyword matching. Exact names come first, then word matches, with stable
 catalog order for ties. It returns five results by default and at most ten. It accepts `queries`, or
@@ -38,12 +39,11 @@ loads through `tool_search` or `tool_describe`. Essential secret handling and un
 permanent instructions. ACP and Muse still insert these shorter instructions on each normal turn.
 Retention after compaction is not assumed. Compaction thresholds are unchanged.
 
-The default synthetic fixture measures 11,541 instruction characters and 8,382 characters for the
-serialized visible tool definitions, including the 1,912-character catalog. This is 19,923
-characters, or about 4,981 tokens at four characters per token, compared with the earlier 101,602
-characters (about 25,401 tokens). It is an 80.4% reduction in default application text. Schemas and
-guidance loaded later add context and can add model steps. Provider prompts, external plugins,
-caching, billing, and native model serialization are outside this measurement.
+`bun run check:agent-context` measures the instruction text, the visible tool definitions, the
+catalog, and the guidance in bytes, and fails when one of them grows. See
+[Agent context budget](../development-checks.md#agent-context-budget). Schemas and guidance loaded
+later add context and can add model steps. Provider prompts, external plugins, caching, billing, and
+native model serialization are outside this measurement.
 
 ## History retrieval and replacement sessions
 
@@ -222,6 +222,22 @@ only what was stamped within three hours. So a version another instance or anoth
 worktree's pin still runs is not removed; a collection that fails, as it does on Windows for an open
 binary, never stops startup.
 
+A provider that is off in this profile runs no CLI, so the manager does not stamp its versions. Pi
+counts as in use while a key-only provider that runs on it is on. Its
+provider page in Settings offers Remove download (#3321), which removes every version of that CLI and
+this profile's partial downloads of it, and leaves accounts and sign-ins alone. It is refused while
+the provider is on, while its download runs, and for a provider with an explicit CLI path. The same
+age rule keeps a version another instance stamped, with one change: the manager remembers its own
+last stamp of each directory, and a directory whose mtime is not later than that stamp counts as
+unstamped. Otherwise the stamps this instance wrote before the user turned the provider off would
+keep it for hours. A sibling stamp older than this instance's last one is hidden by it until the
+sibling's next check stamps again. Each version is moved aside before it is deleted, so a version a
+program holds open stays whole, and the removal then reports that it did not finish. The manager
+stamps the version it activates, so an install it made in the same session is its own. Because a
+provider that is off is not stamped, a sibling can collect its version; turning the provider on
+reads the store again when that version is gone. Turning the provider on later downloads the CLI as
+on first use.
+
 ### Managed provider updates
 
 The main process offers the version that the section above selects. The lock pins each provider
@@ -229,6 +245,14 @@ for `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, and `win32-x64`; a
 that it is not supported instead of offering a download. An older managed installation is display
 metadata until the offered runtime passes the existing download and install checks. Runtime snapshots carry the previous version and an optional `availableVersion` through the
 preload decoder. Cancellation and failure preserve the previous installation and its update offer.
+
+After an app upgrade, main updates the managed CLIs with no offer (#3164).
+`openbot-provider-cli-app-version-v1.json` in `userData` keeps the app version that last started the
+update checks. A different or missing version calls `startUpdateChecks({ updateInstalled: true })`.
+Until the first check starts the downloads, `getStatus` does not offer the CLIs that it will update. That check then starts the
+download of each managed CLI that has a newer version, before it sends its status, so the renderer
+announces no offer. A CLI the user installed, an explicit path and an off provider keep the normal
+offer path. The renderer shows a notification for such an update only when it fails, with a Retry.
 
 `ProvidersProvider` starts the shared renderer runtime store for the active server. The store
 announces each provider that gains an offer as one notification, from an effect over both the
@@ -553,7 +577,9 @@ the primary window. The reader also sends `GetPlanInfo`: on a merged plan (`isMe
 subscription, the included usage covers Grok and Composer only, so `totalPercentUsed` alone fills the
 primary window and the dock shows no other models window, as the Cursor app does. The Cursor app
 keeps the split for a merged Enterprise team plan; the reader cannot see the membership type, so it
-does not. A failed `GetPlanInfo` keeps the split. No token, a 401 or 403, or no percentage gives no reading. The dock poll calls
+does not. That merged total is the Grok plan quota, so the reading sets `sharedQuotaWith: "grok"`
+(not sent on the Team API): the page rail then shows the Grok ring alone when Grok has one. Its
+hover card lists the Cursor reading too, and the ring draws the reading with the least left. A failed `GetPlanInfo` keeps the split. No token, a 401 or 403, or no percentage gives no reading. The dock poll calls
 `readCursorUsage` directly, as it does for OpenCode, so it does not start the CLI for a reading.
 `scripts/cursor-usage-e2e.ts` covers it.
 
@@ -619,8 +645,11 @@ provider added after v8 needs no new protocol version. The `providers-v8` routes
 The host hides a provider from a peer below v8 when that protocol's frozen list does not have it
 (`FROZEN_PROVIDERS` in `src/main/team-api/provider-visibility.ts`). So a new provider is hidden
 from old peers with no change there. Do not edit those lists. A key-only provider
-(`KEY_ONLY_PROVIDERS`, now Inception and DeepSeek) is hidden from peers on every protocol, v8 too,
-and the peer key routes refuse its key.
+(`KEY_ONLY_PROVIDERS`, now Inception, DeepSeek and OpenRouter) is not in any frozen list, so a v8
+peer is the first to see it. The `providers-v8` key routes read, set and clear its key. A key set
+there starts the host's Pi download when Pi cannot start, and does not wait for it. Until Pi is
+ready no process uses the key, so the route saves only the key; the provider is checked again when Pi
+is ready. The `providers-v5` and `providers-v1` key routes refuse its key.
 
 A v8 client keeps the agents of a provider that its build does not know (`ForeignProviderId`,
 `AgentProviderRef`). The agent stays in the list and chat works, because the host runs it. The
@@ -792,8 +821,8 @@ only sign-in. The key is stored as the `inception` API key. `pi-key-providers.ts
 calls `pi.registerProvider("inception", …)` with the Mercury models; the key is in the process
 environment and a `globalThis` slot, because Pi runs extensions again on `switch_session`. The
 Inception client lists only the `inception` models, with bare ids such as `mercury-3`. The Pi client
-does not load this extension, so it keeps only the user's own `inception` models. Without a key the provider has no models and asks for a key. Inception is local-only:
-no Team API protocol carries it, v8 included (`KEY_ONLY_PROVIDERS`).
+does not load this extension, so it keeps only the user's own `inception` models. Without a key the provider has no models and asks for a key. Team API v8 carries Inception; peers
+below v8 do not see it.
 
 ## DeepSeek
 
@@ -808,7 +837,25 @@ which replaces either key. A 401 or a 402 from a key provider shows a text about
 the account balance (`#failureText` in `pi-client.ts`). The DeepSeek client lists only the `deepseek`
 models, with bare ids such as `deepseek-v4-pro`. The Pi client loads no key extension, so it keeps
 the user's own `deepseek` models, for example from `DEEPSEEK_API_KEY` in Pi's environment.
-DeepSeek is local-only, as Inception is.
+Peers see DeepSeek from v8, as Inception.
+
+## OpenRouter
+
+OpenRouter works as DeepSeek does: a key-only provider on Pi's managed CLI. The key is stored as the
+`openrouter` API key. Pi has a built-in `openrouter` provider with OpenRouter's model list (401 models
+in Pi 1.1.0 and 1.4.0), so the extension registers only the key and the `Authorization` header, and
+OpenBot keeps no OpenRouter model list. Pi sends some models to OpenRouter's Anthropic Messages
+endpoint and the others to its chat completions endpoint; both read the header. On the Anthropic
+Messages endpoint Pi also sends the key from its own `auth.json` as `x-api-key`, so the extension sets
+that header to the OpenBot key too (checked in Pi 1.4.0 with a local server). Pi's own
+`/api/models/user` request still uses a key from `auth.json` when the user saved one there; it reads
+the model list and sends no turn content. Model ids keep
+OpenRouter's `<lab>/<model>` form, such as `anthropic/claude-opus-5.5`, and the client passes them to
+Pi unchanged. The catalog drops the aliases that start with `~`, such as
+`~anthropic/claude-sonnet-latest`, because `isAgentModel` refuses that character, and the default is
+`anthropic/claude-sonnet-5.5`. The model picker groups the models by lab (`openRouterLab` in
+`provider-model-options.ts`) and marks the `:free` models as free. A 402 means the account has no
+credits. Peers see OpenRouter from v8, as Inception.
 
 ## Custom endpoints
 

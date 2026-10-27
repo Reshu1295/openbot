@@ -8,7 +8,13 @@
 // Electron-free, with the cipher injected, so its tests need neither a keychain nor a display.
 
 import { readFile } from "node:fs/promises";
-import type { CustomProviderSummary, SaveCustomProviderInput, UpdateCustomProviderInput } from "@openbot/contracts/ipc";
+import type {
+  CustomProviderHeader,
+  CustomProviderHeaderInput,
+  CustomProviderSummary,
+  SaveCustomProviderInput,
+  UpdateCustomProviderInput,
+} from "@openbot/contracts/ipc";
 import { sameCustomProviderOrigin } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import { Effect, Schema, Semaphore } from "effect";
@@ -116,13 +122,17 @@ export class CustomProviderStore {
     });
   }
 
-  /** What the renderer is allowed to know. Five fields, none of which can hold a credential. */
+  /**
+   * What the renderer is allowed to know. None of the fields can hold a credential: the header names
+   * are shown so that Edit can keep their values, which stay here.
+   */
   list(): CustomProviderSummary[] {
     return this.#entries.map(({ stored, secret }) => ({
       id: stored.id,
       name: stored.name,
       baseUrl: stored.baseUrl,
       hasApiKey: Boolean(secret?.apiKey),
+      headerNames: (secret?.headers ?? []).map((header) => header.name),
       // Copied, not shared: the renderer's list must not alias the stored entry.
       models: stored.models.map((model) => ({ id: model.id, name: model.name })),
     }));
@@ -170,7 +180,8 @@ export class CustomProviderStore {
   }
 
   /**
-   * Changes one saved endpoint. An absent `apiKey` or `headers` keeps the stored part.
+   * Changes one saved endpoint. An absent `apiKey` or `headers` keeps the stored part, and a header
+   * with a `null` value keeps its stored value.
    *
    * A kept part may not follow the endpoint to another origin: the user typed the key for one server,
    * and an edit of the address alone must not send it to another one. When nothing secret changes,
@@ -179,14 +190,12 @@ export class CustomProviderStore {
    */
   update(input: UpdateCustomProviderInput): Effect.Effect<CustomProviderSummary[], CustomProviderFailure> {
     return this.#mutate(() => {
-      const { index, current } = this.#checkUpdate(input);
+      const { index, current, keepHeaders, headers } = this.#checkUpdate(input);
       const keepKey = input.apiKey === undefined;
-      const keepHeaders = input.headers === undefined;
       let sealed = current.stored.secret ?? null;
       let secret = current.secret;
       if (!keepKey || !keepHeaders) {
         const apiKey = keepKey ? (current.secret?.apiKey ?? null) : input.apiKey || null;
-        const headers = keepHeaders ? (current.secret?.headers ?? []) : (input.headers ?? []);
         secret = apiKey || headers.length > 0 ? { apiKey, headers } : null;
         if (secret && !this.#cipher.canPersist()) throw new Error(NO_SECURE_STORAGE_MESSAGE);
         sealed = secret ? this.#cipher.encrypt(JSON.stringify(secret)).toString("base64") : null;
@@ -211,34 +220,46 @@ export class CustomProviderStore {
    */
   checkUpdate(input: UpdateCustomProviderInput): void {
     if (this.#readOnly) throw new Error(READ_ONLY_MESSAGE);
-    const { current } = this.#checkUpdate(input);
-    const replacesSecret = input.apiKey !== undefined || input.headers !== undefined;
+    const { current, keepHeaders, headers } = this.#checkUpdate(input);
+    const replacesSecret = input.apiKey !== undefined || !keepHeaders;
     if (replacesSecret && !this.#cipher.canPersist()) {
       const apiKey = input.apiKey ?? current.secret?.apiKey ?? null;
-      const headers = input.headers ?? current.secret?.headers ?? [];
       if (apiKey || headers.length > 0) throw new Error(NO_SECURE_STORAGE_MESSAGE);
     }
   }
 
-  #checkUpdate(input: UpdateCustomProviderInput): { index: number; current: Entry } {
+  /**
+   * `headers` is the list that the edit leaves, with the kept values filled in. An edit that keeps
+   * every saved header, in the same order, is `keepHeaders`, so its ciphertext is not rewritten.
+   */
+  #checkUpdate(input: UpdateCustomProviderInput): {
+    index: number;
+    current: Entry;
+    keepHeaders: boolean;
+    headers: readonly CustomProviderHeader[];
+  } {
     const index = this.#entries.findIndex((entry) => entry.stored.id === input.id);
     const current = this.#entries[index];
     if (!current) throw new Error(NOT_SAVED_MESSAGE);
+    const saved = current.secret?.headers ?? [];
     const keepKey = input.apiKey === undefined;
-    const keepHeaders = input.headers === undefined;
+    const keepHeaders = input.headers === undefined || keepsSavedHeaders(input.headers, saved);
+    const unreadable = Boolean(current.stored.secret) && !current.secret;
     // A ciphertext this computer cannot open cannot be merged: replacing one part would drop the other.
-    if (keepKey !== keepHeaders && current.stored.secret && !current.secret) {
+    if (keepKey !== keepHeaders && unreadable) {
       throw new Error(SECRET_UNREADABLE_MESSAGE);
     }
+    const headers = keepHeaders ? saved : mergeHeaders(input.headers ?? [], saved);
     const keptSecret =
       (keepKey && Boolean(current.secret?.apiKey)) ||
-      (keepHeaders && (current.secret?.headers.length ?? 0) > 0) ||
+      (keepHeaders && saved.length > 0) ||
+      (!keepHeaders && (input.headers ?? []).some((header) => header.value === null)) ||
       // A ciphertext that this computer cannot open still holds something the user saved.
-      (keepKey && keepHeaders && Boolean(current.stored.secret) && !current.secret);
+      (keepKey && keepHeaders && unreadable);
     if (keptSecret && !sameCustomProviderOrigin(current.stored.baseUrl, input.baseUrl)) {
       throw new Error(KEY_FOR_NEW_ADDRESS_MESSAGE);
     }
-    return { index, current };
+    return { index, current, keepHeaders, headers };
   }
 
   /** Removes one endpoint and its credentials. An id that is not saved writes nothing. */
@@ -299,6 +320,29 @@ export class CustomProviderStore {
     yield* writeFileAtomically(this.#path, content, { createDirectory: true }).pipe(
       Effect.mapError(({ cause }) => new CustomProviderFailure({ cause })),
     );
+  });
+}
+
+/** The same names in the same order, each with its saved value. */
+function keepsSavedHeaders(
+  input: readonly CustomProviderHeaderInput[],
+  saved: readonly CustomProviderHeader[],
+): boolean {
+  return (
+    input.length === saved.length &&
+    input.every((header, index) => header.value === null && header.name === saved[index]?.name)
+  );
+}
+
+/** A `null` value takes the saved value of that name. Throws when there is none to take. */
+function mergeHeaders(
+  input: readonly CustomProviderHeaderInput[],
+  saved: readonly CustomProviderHeader[],
+): CustomProviderHeader[] {
+  return input.map((header) => {
+    const value = header.value ?? saved.find((entry) => entry.name === header.name)?.value;
+    if (value === undefined) throw new Error(sourceText("error.provider.headerValueMissing", { name: header.name }));
+    return { name: header.name, value };
   });
 }
 

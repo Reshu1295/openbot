@@ -44,6 +44,7 @@ import {
   type OpenBotDesktopApi,
   type QueuedMessageReceipt,
   type RemoteAgentImportResult,
+  type RenameAgentTaskInput,
   type ReorderQueueInput,
   type RespondToApprovalInput,
   type RespondToBrowserSecretInput,
@@ -65,6 +66,7 @@ import {
   AGENT_MEMORY_SELECTION_PAGE_ROUTE,
 } from "@openbot/contracts/team-protocol/agent-memories-v1";
 import { AGENT_TASKS_ROUTES } from "@openbot/contracts/team-protocol/agent-tasks-v1";
+import { AGENT_THREADS_ROUTES } from "@openbot/contracts/team-protocol/agent-threads-v1";
 import { CHANNEL_ROUTES } from "@openbot/contracts/team-protocol/channels-v1";
 import { CONTEXT_RESET_ROUTES } from "@openbot/contracts/team-protocol/context-reset-v1";
 import { ROUTINE_FLOWS_ROUTES } from "@openbot/contracts/team-protocol/routine-flows-v1";
@@ -222,6 +224,24 @@ export const agentTaskControl = Effect.fn("TeamClient.agentTaskControl")(functio
   { agentId, taskId }: AgentTaskInput,
 ): Effect.fn.Return<void, TeamRequestError> {
   return yield* teamCall(() => request("POST", AGENT_TASKS_ROUTES[action], ignoreResponse, { agentId, taskId }));
+});
+
+/** Renames a side thread. Send it only to a host that serves `agent-threads-v1`. */
+export const renameAgentThread = Effect.fn("TeamClient.renameAgentThread")(function* (
+  request: TeamApiRequest,
+  { agentId, taskId, title }: RenameAgentTaskInput,
+): Effect.fn.Return<void, TeamRequestError> {
+  return yield* teamCall(() =>
+    request("POST", AGENT_THREADS_ROUTES.rename, ignoreResponse, { agentId, taskId, title }),
+  );
+});
+
+/** Deletes a side thread for good. Send it only to a host that serves `agent-threads-v1`. */
+export const deleteAgentThread = Effect.fn("TeamClient.deleteAgentThread")(function* (
+  request: TeamApiRequest,
+  { agentId, taskId }: AgentTaskInput,
+): Effect.fn.Return<void, TeamRequestError> {
+  return yield* teamCall(() => request("POST", AGENT_THREADS_ROUTES.delete, ignoreResponse, { agentId, taskId }));
 });
 
 /** Sends a Grok Bot export to the host. Send it only to a host that serves `agent-import-v1`. */

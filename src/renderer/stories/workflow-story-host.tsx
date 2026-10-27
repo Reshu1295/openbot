@@ -181,7 +181,6 @@ export function WorkflowInAppStory(props: { workflows: readonly StoryWorkflow[];
         usageRows={usageRows}
         onAgents={() => setPage("agents")}
         onRoutines={() => setPage("routines")}
-        onTasks={() => setPage("tasks")}
         onSchedule={() => setPage("schedule")}
         onUsage={() => setPage("usage")}
         onMarketplace={fn()}

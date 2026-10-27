@@ -12,6 +12,7 @@ import { TextInput, View } from "react-native";
 import type { QuestionPromptController } from "@/features/chat/components/use-question-prompt";
 import { promptAnswerLabel } from "@/features/chat/model/question-prompt";
 import { haptics } from "@/shared/lib/haptics";
+import { selectionColorProps } from "@/shared/lib/selection-color";
 import { useText } from "@/shared/lib/text";
 
 export function ChatQuestionPrompt({
@@ -217,7 +218,7 @@ export function ChatQuestionPrompt({
             placeholder={t("mobile.chat.question.privatePlaceholder")}
             placeholderTextColor={muted}
             secureTextEntry
-            selectionColor={foreground}
+            {...selectionColorProps(foreground)}
             className="min-h-12 min-w-0 flex-1 font-sans text-foreground"
             value={controller.draft}
             onChangeText={controller.setDraft}

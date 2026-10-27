@@ -5,8 +5,8 @@ import PdfPages from "./pdf-pages.dom";
 
 /**
  * A PDF file. The Android web view cannot draw a PDF, so pdf.js draws its pages. iOS uses
- * `pdf-preview.ios.tsx`. This file does not import react-native-webview: Android builds do not link
- * its native module, and the module throws when it loads without it.
+ * `pdf-preview.ios.tsx`. This file does not import react-native-webview: an Android build from before
+ * Android linked it has no native module, and the module throws when it loads without it.
  */
 export function PdfPreview({ uri, title, insets }: DocumentPreviewProps) {
   const { t } = useText();

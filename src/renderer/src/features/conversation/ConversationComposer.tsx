@@ -1,15 +1,18 @@
-import { isKnownAgentProvider, providerDisplayName } from "@openbot/contracts/agent-providers";
+import { isKnownAgentProvider } from "@openbot/contracts/agent-providers";
 import { supportedAttachmentExtensions } from "@openbot/contracts/attachment-files";
 import {
+  type AccountUsageLimit,
   type AgentWait,
   accountUsageCoversModel,
   canPreviewAttachment,
+  DEFAULT_PROVIDER_ACCOUNT_ID,
   type QueueSnapshot,
   usageQuotaForModel,
 } from "@openbot/contracts/ipc";
 import {
   TEAM_EML_ATTACHMENTS_CAPABILITY,
   TEAM_MEDIA_ATTACHMENTS_CAPABILITY,
+  TEAM_MP4_ATTACHMENTS_CAPABILITY,
   TEAM_ZIP_ATTACHMENTS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
 import { sourceText } from "@openbot/i18n/source";
@@ -51,6 +54,7 @@ import { reportErrorBanner, reportNotification } from "../../error-reports";
 import { deviceSendShortcut, sendShortcutAriaKey, sendShortcutHintKey } from "../../send-shortcut-preference";
 import { speechReading } from "../speech/speech-playback";
 import { stopSpokenReply } from "../speech/speech-replies";
+import { copyComposerSelection, readComposerCopy } from "./composer-clipboard";
 import { useConversationViewScope } from "./conversation-scope";
 
 // Module scope: the composer remounts on navigation, and a dismissed notice must stay dismissed.
@@ -84,12 +88,14 @@ export function ConversationComposer() {
     editingPendingSave,
     openAttachmentPicker,
     openAttachmentPickerFromKey,
+    pasteFiles,
     presentedQueueDeliveries,
     previewAttachment,
     props,
     quoteRequest,
     openQuote,
     queuePanelVisible,
+    releaseCutAttachments,
     removeAttachment,
     reorderPresentedQueue,
     replyTarget,
@@ -120,6 +126,8 @@ export function ConversationComposer() {
     channel,
     providerSilentMinutes,
     providerOffline,
+    agentProviderName,
+    sideThreadOpen,
   } = useConversationViewScope();
   const { t, format, sourceText: localizeSourceText } = useText();
   const messageLabel = () =>
@@ -192,9 +200,8 @@ export function ConversationComposer() {
   };
   /** Why the running turn has no reply: the computer is offline, or the provider sends nothing. */
   const providerWaitNotice = createMemo(() => {
-    const agent = props.agent;
-    if (!agent) return null;
-    const provider = providerDisplayName(agent.provider);
+    const provider = agentProviderName();
+    if (!provider) return null;
     if (providerOffline())
       return { title: t("composer.providerWait.offlineTitle"), body: t("composer.providerWait.offline", { provider }) };
     const minutes = providerSilentMinutes();
@@ -211,6 +218,10 @@ export function ConversationComposer() {
    * something asks the provider again. So the clock is part of the state, not only the percentage.
    */
   const [now, setNow] = createSignal(Date.now());
+  const agentAccountId = () => props.agent?.providerAccountId ?? DEFAULT_PROVIDER_ACCOUNT_ID;
+  /** A reading of another account of the same provider says nothing about the quota this agent uses. */
+  const agentUsageLimit = (limit: AccountUsageLimit) =>
+    limit.id === props.agent?.provider && (limit.accountId ?? DEFAULT_PROVIDER_ACCOUNT_ID) === agentAccountId();
   /**
    * The first plan window that is spent and has not ended yet. `usedPercent` is what the provider
    * reports, so it can pass 100 slightly. A spent plan does not say whether paid credits remain.
@@ -220,7 +231,7 @@ export function ConversationComposer() {
     // The usage of a provider that this build does not know has no notice.
     if (!provider || !isKnownAgentProvider(provider)) return null;
     for (const limit of props.accountUsage?.limits ?? []) {
-      if (limit.id !== provider) continue;
+      if (!agentUsageLimit(limit)) continue;
       // A provider that names quota groups limits each group apart: only the agent's model's group
       // can stop it, and a model that no group lists has no notice.
       const model = props.agent?.model;
@@ -241,11 +252,11 @@ export function ConversationComposer() {
     }
     return null;
   });
-  const usageNoticeAccount = () =>
-    JSON.stringify([
-      props.agent?.provider,
-      props.agentStatus.providers?.find((status) => status.id === props.agent?.provider)?.email,
-    ]);
+  const usageNoticeAccount = () => {
+    const status = props.agentStatus.providers?.find((provider) => provider.id === props.agent?.provider);
+    const email = status?.accounts?.find((account) => account.id === agentAccountId())?.email ?? status?.email;
+    return JSON.stringify([props.agent?.provider, agentAccountId(), email]);
+  };
   const usageNotice = () => {
     const spent = usageExhausted();
     return spent &&
@@ -262,7 +273,7 @@ export function ConversationComposer() {
       account: usageNoticeAccount(),
       spent: usageExhausted(),
       loaded: props.accountUsage?.limits.some(
-        (limit) => limit.id === props.agent?.provider && (limit.primary !== null || limit.secondary !== null),
+        (limit) => agentUsageLimit(limit) && (limit.primary !== null || limit.secondary !== null),
       ),
     }),
     ({ account, spent, loaded }) => {
@@ -291,6 +302,7 @@ export function ConversationComposer() {
       eml: local || capabilities.includes(TEAM_EML_ATTACHMENTS_CAPABILITY),
       media: local || capabilities.includes(TEAM_MEDIA_ATTACHMENTS_CAPABILITY),
       zip: local || capabilities.includes(TEAM_ZIP_ATTACHMENTS_CAPABILITY),
+      mp4: local || capabilities.includes(TEAM_MP4_ATTACHMENTS_CAPABILITY),
     })
       .map((extension) => `.${extension}`)
       .join(",");
@@ -359,7 +371,7 @@ export function ConversationComposer() {
   );
   function ComposerBody() {
     return (
-      <div class="composer-wrap">
+      <div class={["composer-wrap", { "conversation-covered": sideThreadOpen() }]} inert={sideThreadOpen()}>
         {channel ? <channel.AboveComposer /> : null}
         <Show when={speaking() && props.agent}>
           {(agent) => (
@@ -386,6 +398,8 @@ export function ConversationComposer() {
                   title={channel ? t("chat.awaiting.subtasks") : undefined}
                   onDismiss={dismissAwaitingReplies}
                   onOpenAgent={props.onSelectAgent}
+                  // A channel's rows are its sub-tasks, not queued replies.
+                  onSteer={props.activeTurnId && !channel ? props.onSteerQueuedMessage : undefined}
                 />
               </Show>
               <Show when={waitsVisible() && props.onCancelWait}>
@@ -417,7 +431,7 @@ export function ConversationComposer() {
                     editingDeliveryId={editingDeliveryId()}
                     canSteer={Boolean(props.activeTurnId)}
                     onSteer={props.onSteerQueuedMessage}
-                    onRunAsTask={props.tasks?.onRunQueuedMessage}
+                    onRunAsTask={props.threads?.onRunQueuedMessage}
                     onCancel={props.onCancelQueuedMessage}
                     onEdit={editQueuedMessage}
                     onReorder={reorderPresentedQueue}
@@ -674,8 +688,14 @@ export function ConversationComposer() {
               sendShortcut={deviceSendShortcut(props.platform)}
               onPickerOpenChange={setPickerOpen}
               dictation={{ text: voiceLiveText(), final: voicePhase() === "transcribing" }}
-              onPasteFiles={(files) => {
-                if (props.runtime?.importFiles) void props.runtime.importFiles(files);
+              onPasteFiles={pasteFiles}
+              onCopyAttachments={(clipboard, text, attachments, remaining) => {
+                const copied = copyComposerSelection(clipboard, text, attachments, props.runtime?.previewAttachment);
+                if (remaining !== undefined) releaseCutAttachments(attachments, remaining, copied);
+              }}
+              onPasteAttachments={(clipboard, selection) => {
+                const copy = readComposerCopy(clipboard);
+                return copy ? pasteFiles(copy.files, selection, copy) : undefined;
               }}
               onOpenAttachment={(attachment) =>
                 canPreviewAttachment(attachment)

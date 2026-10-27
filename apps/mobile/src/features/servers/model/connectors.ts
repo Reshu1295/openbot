@@ -2,8 +2,9 @@ import type { MessagingConnection, MessagingPlatform } from "@openbot/contracts/
 import type { AppMobileMessages, MobileTextKey } from "@openbot/i18n/mobile";
 
 /**
- * The connectors of a joined server, in the order of desktop Server settings › Connectors. Bitwarden
- * runs only on the computer that runs OpenBot, so a phone shows it with no action.
+ * The connectors of a joined server, in the order of desktop Server settings › Connectors. A host
+ * without `bitwarden-connector-v1` connects Bitwarden only on its own computer, so a phone shows it
+ * with no action.
  */
 export const MOBILE_CONNECTOR_IDS = ["slack", "discord", "telegram", "github", "onepassword", "bitwarden"] as const;
 

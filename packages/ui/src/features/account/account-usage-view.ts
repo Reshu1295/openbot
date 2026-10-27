@@ -51,6 +51,8 @@ export interface AccountUsageProviderRow {
   ringWindows: AccountUsageWindowRow[];
   /** `false` for a provider that has no usage reading, so a missing amount is not a failure. */
   reportsUsage: boolean;
+  /** The provider whose plan quota this reading also counts, such as Grok for a merged Cursor plan. */
+  sharedQuotaWith: AgentProviderId | null;
 }
 
 /**
@@ -171,6 +173,7 @@ function usageRow(
     windows,
     ringWindows: ownWindows,
     reportsUsage: agentProviderDescriptor(provider).reportsUsage,
+    sharedQuotaWith: limit?.sharedQuotaWith ?? null,
   };
 }
 

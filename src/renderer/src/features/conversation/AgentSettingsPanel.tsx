@@ -198,31 +198,39 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
   // An effect runs again for an equal value, and each activity of the agent gives a new agent
   // object. The memo keeps an open view, such as a routine edit, until the agent changes.
   const currentAgentId = createMemo(() => props.agent.id);
-  createEffect(currentAgentId, (agentId) => {
-    setDraft((state) => {
-      state.tables.open = false;
-      state.memories.open = false;
-      state.routines.open = false;
-      state.files.open = false;
-      state.skills.open = false;
-      state.skills.reopenAfterMarketplace = false;
-    });
-    if (untrack(() => !props.remoteClient || props.tablesVisible !== false)) {
-      void tableCalls()
-        .listTables()
-        .catch(() => [])
-        .then((items) => {
-          setDraft((state) => {
-            state.tables.count = items.length;
+  createEffect(
+    () => ({
+      agentId: currentAgentId(),
+      // Read here, not in the callback: a prop can be a compiled memo, and the callback has no owner.
+      remoteClient: untrack(() => props.remoteClient === true),
+      tablesVisible: untrack(() => props.tablesVisible !== false),
+    }),
+    ({ agentId, remoteClient, tablesVisible }) => {
+      setDraft((state) => {
+        state.tables.open = false;
+        state.memories.open = false;
+        state.routines.open = false;
+        state.files.open = false;
+        state.skills.open = false;
+        state.skills.reopenAfterMarketplace = false;
+      });
+      if (!remoteClient || tablesVisible) {
+        void tableCalls()
+          .listTables()
+          .catch(() => [])
+          .then((items) => {
+            setDraft((state) => {
+              state.tables.count = items.length;
+            });
           });
-        });
-    }
-    void untrack(() => loadSkillsCount(agentId));
-    if (!props.remoteClient) {
-      loadMemoriesCount(agentId);
-      untrack(() => loadRoutinesCount(routinesPort()));
-    }
-  });
+      }
+      void untrack(() => loadSkillsCount(agentId));
+      if (!remoteClient) {
+        loadMemoriesCount(agentId);
+        untrack(() => loadRoutinesCount(routinesPort()));
+      }
+    },
+  );
 
   // The counts follow a memory or routine change, also one that the agent makes in a turn.
   createEffect(
@@ -295,11 +303,14 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
   }
 
   createEffect(
-    () => props.skillsMarketplaceOpen === true,
-    (open) => {
+    () => ({
+      open: props.skillsMarketplaceOpen === true,
+      // Read here, not in the callback: the prop can be a compiled memo, and the callback has no owner.
+      covered: untrack(() => props.workspaceCovered === true),
+    }),
+    ({ open, covered }) => {
       if (lastSkillsMarketplaceOpen && !open && untrack(() => draft.skills.reopenAfterMarketplace)) {
         // The Marketplace page can close for another page. The skills dialog then stays closed.
-        const covered = untrack(() => props.workspaceCovered === true);
         setDraft((state) => {
           state.skills.reopenAfterMarketplace = false;
           state.skills.open = !covered;

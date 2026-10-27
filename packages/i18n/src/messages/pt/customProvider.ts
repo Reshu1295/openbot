@@ -66,8 +66,7 @@ export const messages = {
   "customProvider.field.baseUrl": "URL base",
   "customProvider.field.apiKey": "Chave de API",
   "customProvider.field.apiKeyHint": "Opcional. Deixe em branco se você gerencia a autenticação por cabeçalhos.",
-  "customProvider.field.apiKeyKeptHint":
-    "Há uma chave salva. Deixe em branco para manter a chave e os cabeçalhos salvos.",
+  "customProvider.field.apiKeyKeptHint": "Há uma chave salva. Deixe em branco para mantê-la.",
   "customProvider.models": "Modelos",
   "customProvider.model.id": "ID do modelo {number}",
   "customProvider.model.name": "Nome de exibição do modelo {number}",
@@ -78,6 +77,7 @@ export const messages = {
   "customProvider.header.name": "Nome do cabeçalho {number}",
   "customProvider.header.value": "Valor do cabeçalho {number}",
   "customProvider.header.valuePlaceholder": "valor",
+  "customProvider.header.keptPlaceholder": "Salvo. Deixe em branco para manter.",
   "customProvider.header.remove": "Remover cabeçalho {number}",
   "customProvider.header.add": "Adicionar cabeçalho",
   "customProvider.submit": "Enviar",

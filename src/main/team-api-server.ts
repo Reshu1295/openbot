@@ -34,6 +34,7 @@ import { AGENT_HIDDEN_CAPABILITY } from "@openbot/contracts/team-protocol/agent-
 import { AGENT_SESSION_SETTINGS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-session-settings-v1";
 import { AGENT_TASK_LIMIT_CAPABILITY } from "@openbot/contracts/team-protocol/agent-task-limit-v1";
 import { AGENT_TASKS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-tasks-v1";
+import { AGENT_THREADS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-threads-v1";
 import { BROWSER_PAGE_STATE_CAPABILITY } from "@openbot/contracts/team-protocol/browser-page-state-v1";
 import { BROWSER_PROFILES_CAPABILITY } from "@openbot/contracts/team-protocol/browser-profiles-v1";
 import { BROWSER_USER_CONTROL_CAPABILITY } from "@openbot/contracts/team-protocol/browser-user-control-v1";
@@ -97,6 +98,8 @@ import {
   TEAM_SUBAGENTS_CAPABILITY,
   TEAM_UI_BLOCKS_CAPABILITY,
   type TeamCurrentCapability,
+  VAULT_CAPABILITY,
+  VAULT_IMPORT_CAPABILITY,
   WEBHOOK_TESTS_CAPABILITY,
   WORKFLOWS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
@@ -184,6 +187,7 @@ import { routeAgentMemoryLimit } from "./team-api/route-agent-memory-limit";
 import { routeAgentPublish } from "./team-api/route-agent-publish";
 import { routeAgentSessionSettings } from "./team-api/route-agent-session-settings";
 import { routeAgentTasks } from "./team-api/route-agent-tasks";
+import { routeAgentThreads } from "./team-api/route-agent-threads";
 import { routeAgents } from "./team-api/route-agents";
 import { routeBitwardenConnector } from "./team-api/route-bitwarden-connector";
 import { routeBrowser } from "./team-api/route-browser";
@@ -222,6 +226,8 @@ import { routeSignInRelay } from "./team-api/route-sign-in-relay";
 import { routeSkillsAdmin } from "./team-api/route-skills-admin";
 import { routeStorage } from "./team-api/route-storage";
 import { routeTeam } from "./team-api/route-team";
+import { routeVault } from "./team-api/route-vault";
+import { routeVaultImport } from "./team-api/route-vault-import";
 import { routeWorkflows } from "./team-api/route-workflows";
 import { routeWorkspaceDirectory } from "./team-api/route-workspace-directory";
 import { TeamStoreError } from "./team-store";
@@ -847,6 +853,8 @@ export class TeamApiServer {
       if ((await routeDiscordAccess(context, this.#options.connectors)) === "handled") return;
       if ((await routeOnePasswordConnector(context, this.#options.onePasswordConnector)) === "handled") return;
       if ((await routeBitwardenConnector(context, this.#options.bitwardenConnector)) === "handled") return;
+      if ((await routeVault(context, this.#options.vault)) === "handled") return;
+      if ((await routeVaultImport(context, this.#options.vault)) === "handled") return;
       if ((await routeProviderHostSignIn(context, this.#options.providerHostSignIns)) === "handled") return;
       if ((await routeProviderAccounts(context, this.#options.providerAccounts)) === "handled") return;
       if ((await routeProviderUsageReset(context, this.#options.providerUsageResets)) === "handled") return;
@@ -865,6 +873,7 @@ export class TeamApiServer {
       if ((await routeAgentSessionSettings(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeAgentHidden(context, this.#options.hiddenAgents, hidden)) === "handled") return;
       if ((await routeAgentTasks(context, this.#options.agentTasks, hidden)) === "handled") return;
+      if ((await routeAgentThreads(context, this.#options.agentTasks, hidden)) === "handled") return;
       if ((await routeSkillsAdmin(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeSharedTables(context, this.#options.admin)) === "handled") return;
       if ((await routeAgentInstall(context, this.#options.admin, hidden, newAgentHidden)) === "handled") return;
@@ -1898,6 +1907,8 @@ export class TeamApiServer {
         if (capability === DISCORD_ACCESS_CAPABILITY) return this.#options.connectors !== undefined;
         if (capability === ONEPASSWORD_CONNECTOR_CAPABILITY) return this.#options.onePasswordConnector !== undefined;
         if (capability === BITWARDEN_CONNECTOR_CAPABILITY) return this.#options.bitwardenConnector !== undefined;
+        if (capability === VAULT_CAPABILITY) return this.#options.vault !== undefined;
+        if (capability === VAULT_IMPORT_CAPABILITY) return this.#options.vault !== undefined;
         if (capability === PROVIDER_HOST_SIGN_IN_CAPABILITY) return this.#options.providerHostSignIns !== undefined;
         if (capability === PROVIDER_ACCOUNTS_CAPABILITY) return this.#options.providerAccounts !== undefined;
         if (capability === PROVIDER_USAGE_RESET_CAPABILITY) return this.#options.providerUsageResets !== undefined;
@@ -1909,6 +1920,7 @@ export class TeamApiServer {
         if (capability === AGENT_SESSION_SETTINGS_CAPABILITY) return this.#options.admin?.sessionSettings !== undefined;
         if (capability === AGENT_HIDDEN_CAPABILITY) return this.#options.hiddenAgents !== undefined;
         if (capability === AGENT_TASKS_CAPABILITY) return this.#options.agentTasks !== undefined;
+        if (capability === AGENT_THREADS_CAPABILITY) return this.#options.agentTasks !== undefined;
         if (capability === AGENT_HOST_SETTINGS_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_BACKUP_MODELS_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_TASK_LIMIT_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
@@ -2110,6 +2122,7 @@ function eventCapability(event: AgentEvent): TeamCurrentCapability | null {
   if (event.type === "skills-changed") return SKILLS_EVENTS_CAPABILITY;
   if (event.type === "routine-flows-changed") return ROUTINE_FLOWS_CAPABILITY;
   if (event.type === "workflows-changed") return WORKFLOWS_CAPABILITY;
+  if (event.type === "vault-changed") return VAULT_CAPABILITY;
   if (event.type === "turn-progress") return TEAM_AGENT_ACTIVITY_CAPABILITY;
   if (event.type === "runtime-snapshot") return "agent-runtime-snapshots";
   if (event.type === "sidebar-layout-changed") return "sidebar-layout";

@@ -33,7 +33,13 @@ import { Deferred, Effect, Exit, Result, Schema, Scope, Semaphore } from "effect
 import { startAcpAuthentication } from "./../acp-sign-in";
 import { type AgentClient, AgentProcessExitError, type AgentProvider } from "./../agent-client";
 import { CodexAppServerClient } from "./../app-server-client";
-import { type AgentCliInfo, type BundledProviderExecutables, CodexCliError, cliPathEnvironment } from "./../cli";
+import {
+  type AgentCliInfo,
+  type BundledProviderExecutables,
+  CodexCliError,
+  cliPathEnvironment,
+  cliSpawnTarget,
+} from "./../cli";
 import { readCursorUsage } from "./../cursor-usage";
 import { causeHelpers } from "../effect-boundary";
 import { McpHandoffLog } from "./../mcp-handoff-log";
@@ -1381,15 +1387,17 @@ export class ProviderRuntime implements ProviderPort {
           .start(provider, (cli) =>
             Effect.gen(function* () {
               const browser = onHost ? yield* captureBrowser(openExternal) : {};
+              const target = cliSpawnTarget(cli.executable, signIn.command.argv);
               const child = yield* Effect.acquireRelease(
                 Effect.try({
                   try: () =>
-                    spawn(cli.executable, [...signIn.command.argv], {
+                    spawn(target.command, target.args, {
                       cwd: process.cwd(),
                       env: { ...process.env, ...signIn.command.env(cli), ...browser },
                       stdio: "ignore",
                       shell: false,
                       windowsHide: process.platform === "win32",
+                      windowsVerbatimArguments: target.windowsVerbatimArguments,
                     }),
                   catch: (cause) => new CliLoginFailed({ cause }),
                 }),
@@ -2037,8 +2045,8 @@ export class ProviderRuntime implements ProviderPort {
           this.#hooks.onProviderResumed(provider);
         }),
     );
-    // A provider that runs this CLI, such as Inception or DeepSeek on Pi, moves to the new binary when its own
-    // turns end. One with no process, such as one that found no CLI, is checked again now.
+    // A provider that runs this CLI, such as Inception, DeepSeek or OpenRouter on Pi, moves to the new binary
+    // when its own turns end. One with no process, such as one that found no CLI, is checked again now.
     for (const driver of BUILT_IN_PROVIDER_DRIVERS) {
       if (driver.cliProvider !== provider || this.#off.has(driver.id)) continue;
       yield* (
@@ -2081,6 +2089,30 @@ export class ProviderRuntime implements ProviderPort {
   }
 
   /**
+   * Stops the agent's own process, after a start that is still running. The process runs in the
+   * agent's workspace, and Windows refuses to remove a folder that a live process uses (`EBUSY`).
+   */
+  readonly stopAgentProcess = Effect.fn("ProviderRuntime.stopAgentProcess")(function* (
+    this: ProviderRuntime,
+    agentId: string,
+  ) {
+    yield* this.#awaitConfinedStart(agentId);
+    const confined = this.#confined.get(agentId);
+    if (confined) yield* this.#stopConfined(agentId, confined);
+  }, Effect.uninterruptible).bind(this);
+
+  /** Waits until no start of the agent's own process is running. */
+  readonly #awaitConfinedStart = Effect.fn("ProviderRuntime.awaitConfinedStart")(function* (
+    this: ProviderRuntime,
+    agentId: string,
+  ) {
+    for (let pending = this.#confinedStarts.get(agentId); pending; pending = this.#confinedStarts.get(agentId)) {
+      const currentStart = pending;
+      yield* Deferred.await(currentStart).pipe(Effect.ignore);
+    }
+  });
+
+  /**
    * Like `requireReadyClient`, for the process that runs this agent's turns. An agent's own process
    * does not need the shared one, so its turn can still be interrupted while the shared one restarts.
    */
@@ -2116,10 +2148,7 @@ export class ProviderRuntime implements ProviderPort {
   ) {
     const provider = providerForAgent(agent);
     yield* this.ensureProvider(provider);
-    for (let pending = this.#confinedStarts.get(agent.id); pending; pending = this.#confinedStarts.get(agent.id)) {
-      const currentStart = pending;
-      yield* Deferred.await(currentStart).pipe(Effect.ignore);
-    }
+    yield* this.#awaitConfinedStart(agent.id);
     if (provider === "acp" && this.#removingCustomRuntime)
       return yield* new ProviderOperationFailed({ cause: new Error(sourceText("error.provider.registryRemoveBusy")) });
     const own = this.#ownProcessFor(agent);
@@ -2821,9 +2850,11 @@ export class ProviderRuntime implements ProviderPort {
           ? sourceText("error.provider.inceptionSignIn")
           : provider === "deepseek"
             ? sourceText("error.provider.deepseekSignIn")
-            : provider === "endpoint"
-              ? sourceText("error.provider.endpointSignIn")
-              : agentProviderDescriptor(provider).signInMessage;
+            : provider === "openrouter"
+              ? sourceText("error.provider.openrouterSignIn")
+              : provider === "endpoint"
+                ? sourceText("error.provider.endpointSignIn")
+                : agentProviderDescriptor(provider).signInMessage;
   }
 
   #clearProviderConnectionState(provider: AgentProvider): void {

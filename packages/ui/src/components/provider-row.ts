@@ -52,6 +52,8 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
   const runtimeReady = () => (runtimeStatus()?.phase ?? "ready") === "ready";
   /** Connect opens this computer's browser, and the row follows that sign-in. */
   const browserConnect = () => connectKind() === "browser";
+  /** A key-only provider's Connect opens the key dialog, on this computer and on a server. */
+  const keyConnect = () => isKeyOnlyProvider(option().id) && Boolean(host.onSignInProvider);
   /**
    * Connect opens a dialog that the user finishes there, or on another device.
    *
@@ -160,7 +162,9 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
    * waits, the badge says so and the action names the version it installs; otherwise the same
    * action checks for one.
    */
-  const updateOffered = () => Boolean(host.onUpdateProvider) && (runtimeStatus()?.phase === "ready" || updatable());
+  // A provider that is off gets no update offer from main, so a check there could only say "up to date".
+  const updateOffered = () =>
+    Boolean(host.onUpdateProvider) && !off() && (runtimeStatus()?.phase === "ready" || updatable());
   const restartOffered = () =>
     Boolean(host.onRestartProvider) && (option().restartPending || (available() && !connecting()));
   const diagnosticsOffered = () => Boolean(option().lastError && option().diagnostics);
@@ -222,6 +226,7 @@ export function createProviderRow(option: () => ProviderPickerOption, host: Prov
     connectKind,
     runtimeReady,
     browserConnect,
+    keyConnect,
     dialogConnect,
     alternative,
     connectOptional,

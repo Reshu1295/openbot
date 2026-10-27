@@ -170,6 +170,10 @@ export const messages = {
   "provider.deepseekKey.description":
     "Zapisz klucz API DeepSeek na tym komputerze, aby używać modeli DeepSeek. OpenBot uruchamia je w pobranym Pi CLI.",
   "provider.deepseekKey.label": "Klucz API DeepSeek",
+  "provider.openrouterKey.title": "Klucz API OpenRouter",
+  "provider.openrouterKey.description":
+    "Zapisz klucz API OpenRouter na tym komputerze, aby używać modeli z OpenRouter. OpenBot uruchamia je w pobranym Pi CLI.",
+  "provider.openrouterKey.label": "Klucz API OpenRouter",
 
   "provider.openCodeKey.title": "Zaloguj się do OpenCode Go",
   "provider.openCodeKey.description": "Darmowe modele nie wymagają konta. Klucz odblokowuje płatne modele Go.",
@@ -225,4 +229,24 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 godzina",
   "provider.settings.promptCacheDefault": "Domyślne Claude Code",
   "provider.settings.promptCacheLoadFailed": "Nie udało się wczytać czasu pamięci podręcznej promptów tego serwera.",
+  "provider.settings.download": "Pobrane",
+  "provider.settings.downloadedCli": "CLI {name}",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 wersja · {size}",
+    few: "{version} · {count} wersje · {size}",
+    many: "{version} · {count} wersji · {size}",
+    other: "{version} · {count} wersji · {size}",
+  },
+  "provider.settings.downloadVersions": {
+    one: "1 wersja · {size}",
+    few: "{count} wersje · {size}",
+    many: "{count} wersji · {size}",
+    other: "{count} wersji · {size}",
+  },
+  "provider.settings.downloadAgain": "Gdy włączysz {name}, OpenBot pobierze CLI ponownie.",
+  "provider.settings.removeDownloadConfirm": "Usunąć {size}?",
+  "provider.settings.removeDownloadKeeps": "Konta, logowania i agenci zostają.",
+  "provider.settings.removeDownload": "Usuń pobrane",
+  "provider.settings.removingDownload": "Usuwanie…",
+  "provider.settings.removeDownloadFailed": "Nie udało się usunąć pobranych plików.",
 } as const satisfies PartialTranslation<typeof source>;

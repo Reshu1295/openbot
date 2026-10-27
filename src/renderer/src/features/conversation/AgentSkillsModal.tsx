@@ -1,5 +1,10 @@
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
-import type { FilePreview, InstalledSkill, MarketplaceSkillDetail } from "@openbot/contracts/ipc";
+import {
+  type FilePreview,
+  type InstalledSkill,
+  isHomeSkillId,
+  type MarketplaceSkillDetail,
+} from "@openbot/contracts/ipc";
 import type { AppTranslate } from "@openbot/i18n";
 import {
   Button,
@@ -736,9 +741,10 @@ function isEnabled(skill: InstalledSkill): boolean {
   return skill.enabled !== false;
 }
 
+/** A home skill comes with the `$` list that the read-only view reads; it is not in the agent's workspace. */
 function userAssignedSkills(skills: InstalledSkill[]): InstalledSkill[] {
   return skills
-    .filter((skill) => !isBuiltInSkill(skill))
+    .filter((skill) => !isBuiltInSkill(skill) && !isHomeSkillId(skill.skillId))
     .slice()
     .sort((left, right) => left.name.localeCompare(right.name));
 }

@@ -1,18 +1,18 @@
-import type { AgentApproval, AgentEvent } from "@openbot/contracts/ipc";
+import type { AgentApproval } from "@openbot/contracts/ipc";
 import type { AgentProfile } from "@openbot/ui/data";
 import type { SidebarApproval, SidebarAttention } from "@openbot/ui/features/sidebar/sidebar-agent-states";
-
-type AttentionEvent = Extract<AgentEvent, { type: "prompt" } | { type: "browser-takeover-requested" }>;
+import { attentionAgentId, type PendingAttentionPrompts } from "./agent-runtime-snapshot";
 
 export interface AgentThreadAttentionInput {
   agents: readonly Pick<AgentProfile, "id" | "threadId">[];
-  pendingPrompts: Record<string, AttentionEvent | undefined>;
+  /** By `attentionKey`. */
+  pendingPrompts: PendingAttentionPrompts;
   approvals: readonly AgentApproval[];
 }
 
 /**
- * The prompts and approvals of each agent's own thread. A wait in a channel or task thread stays
- * out, because the agent's chat cannot answer it.
+ * The prompts and approvals of each agent's own thread, by agent. A wait in a channel or side
+ * thread stays out, because the agent's chat cannot answer it.
  */
 export function agentThreadAttention(input: AgentThreadAttentionInput): {
   pendingPrompts: Record<string, SidebarAttention | undefined>;
@@ -23,8 +23,11 @@ export function agentThreadAttention(input: AgentThreadAttentionInput): {
     threadId !== undefined && agentThreads.get(agentId) === threadId;
   return {
     pendingPrompts: Object.fromEntries(
-      Object.entries(input.pendingPrompts).filter(([agentId, event]) =>
-        inAgentThread(agentId, event?.type === "prompt" ? event.threadId : event?.request.threadId),
+      Object.values(input.pendingPrompts).flatMap((event) =>
+        event &&
+        inAgentThread(attentionAgentId(event), event.type === "prompt" ? event.threadId : event.request.threadId)
+          ? [[attentionAgentId(event), event] as const]
+          : [],
       ),
     ),
     pendingApprovals: Object.fromEntries(

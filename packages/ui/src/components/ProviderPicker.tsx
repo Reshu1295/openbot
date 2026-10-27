@@ -458,6 +458,7 @@ export function ProviderPicker(props: ProviderPickerProps) {
                 connectOptional,
                 runtimeAction,
                 browserConnect,
+                keyConnect,
                 codeFallbackOffered,
                 signInAlternative,
                 connectError,
@@ -676,7 +677,7 @@ export function ProviderPicker(props: ProviderPickerProps) {
                           {t("provider.action.install")}
                         </Button>
                       </Show>
-                      <Show when={!runtimeStatus() && browserConnect()}>
+                      <Show when={!runtimeStatus() && (browserConnect() || keyConnect())}>
                         <Button
                           type="button"
                           variant={providerAction(state(), connecting()) === "connect" ? "default" : "outline"}

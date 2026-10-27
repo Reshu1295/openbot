@@ -18,7 +18,7 @@ import { createOpenBotLogger } from "@openbot/logging";
 import { Cause, Effect, Fiber, Schema, type Scope } from "effect";
 import { startAcpAuthentication } from "./../acp-sign-in";
 import type { AgentClient } from "./../agent-client";
-import { type AgentCliInfo, cliPathEnvironment } from "./../cli";
+import { type AgentCliInfo, cliPathEnvironment, cliSpawnTarget } from "./../cli";
 import type { AccountReadResult } from "./../protocol";
 import { ProviderSignInError } from "../provider-client-effects";
 import { type ProviderAccountSupport, requireProviderDriver } from "./../provider-drivers";
@@ -236,9 +236,10 @@ export class ProviderAccounts {
           return yield* login.done;
         }
         const browser = onHost ? yield* captureBrowser(openExternal) : {};
+        const target = cliSpawnTarget(cli.executable, command.argv);
         const child = yield* Effect.acquireRelease(
           Effect.sync(() =>
-            spawn(cli.executable, [...command.argv], {
+            spawn(target.command, target.args, {
               cwd: process.cwd(),
               env: {
                 ...process.env,
@@ -250,6 +251,7 @@ export class ProviderAccounts {
               stdio: "ignore",
               shell: false,
               windowsHide: process.platform === "win32",
+              windowsVerbatimArguments: target.windowsVerbatimArguments,
             }),
           ),
           (child) => stopProcessTree(child).pipe(Effect.ignore),
@@ -630,14 +632,16 @@ export class ProviderAccounts {
     if (!command || !cli || isKeyAccount(account)) return;
     yield* Effect.scoped(
       Effect.gen({ self: this }, function* () {
+        const target = cliSpawnTarget(cli.executable, command.argv);
         const child = yield* Effect.acquireRelease(
           Effect.sync(() =>
-            spawn(cli.executable, [...command.argv], {
+            spawn(target.command, target.args, {
               cwd: process.cwd(),
               env: { ...process.env, ...cliPathEnvironment(cli), ...command.env(cli), ...this.environment(account) },
               stdio: "ignore",
               shell: false,
               windowsHide: process.platform === "win32",
+              windowsVerbatimArguments: target.windowsVerbatimArguments,
             }),
           ),
           (child) => stopProcessTree(child).pipe(Effect.ignore),

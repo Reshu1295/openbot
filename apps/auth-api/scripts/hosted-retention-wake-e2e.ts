@@ -1,8 +1,9 @@
 // Runs the real account server hosted-server service on a migrated SQLite database, with a boat API
 // that starts and stops sandboxes. boat deletes the disk of a sandbox 14 days after its stop, so the
 // cron must start an idle server with no use for 10 days, and the idle rule must stop it again when no
-// client connects. One start goes in each 10 minutes of cron time, and a start that boat failed goes
-// again later. A server with less sleep, a disk that boat deleted, a due deletion, or a plan that
+// client connects. One start goes in each 10 minutes of cron time, and a start that boat failed or
+// refused goes again later, also after a refused start for a routine run. A sandbox that boat deleted
+// keeps its error. A server with less sleep, a disk that boat deleted, a due deletion, or a plan that
 // ended must not start.
 //
 // Run: bun run test:hosted-retention-wake
@@ -73,6 +74,7 @@ async function run() {
   const calls: string[] = [];
   const running = new Set<string>();
   let flakyFaults = 1;
+  let refusals = 0;
   const boatFetch = async (input: string, init: RequestInit) => {
     const path = new URL(input).pathname.replace("/api/v1", "");
     const method = init.method ?? "GET";
@@ -83,6 +85,11 @@ async function run() {
         flakyFaults -= 1;
         return Response.json({ ok: false, code: "internal_error" }, { status: 500 });
       }
+      if ((sandboxId === "bx_refused" || sandboxId === "bx_routine") && refusals > 0) {
+        refusals -= 1;
+        return Response.json({ ok: false, code: "billing_required" }, { status: 402 });
+      }
+      if (sandboxId === "bx_gone") return Response.json({ ok: false, code: "sandbox_not_found" }, { status: 404 });
       running.add(sandboxId);
       return Response.json({ ok: true, status: "resuming" });
     }
@@ -212,6 +219,50 @@ async function run() {
   check("a server whose plan ended never starts", resumes("ended") === 0, calls);
   check("a server whose disk is older than 14 days never starts", resumes("expired") === 0, calls);
   check("a server with a due deletion never starts", resumes("deleting") === 0, calls);
+
+  // A 4xx refusal, such as an empty boat wallet, must not leave the server in `error`: no cron path
+  // starts it from there, so boat would delete its disk.
+  const refusedAt = t0 + 10 * DAY + 20 * MINUTE;
+  server("refused", "idle", refusedAt - 11 * DAY);
+  refusals = 1;
+  await tick(refusedAt);
+  const refused = row("refused");
+  check(
+    "after a boat refusal the server sleeps again with its last use",
+    resumes("refused") === 1 &&
+      refused?.desired_state === "idle" &&
+      refused.observed_state === "stopped" &&
+      refused.observed_error === null &&
+      refused.last_active_at === refusedAt - 11 * DAY,
+    { calls, row: refused },
+  );
+  for (let slot = 1; slot <= 3; slot += 1) await tick(refusedAt + slot * 10 * MINUTE);
+  check("a later slot starts the server again after the boat refusal", resumes("refused") === 2, calls);
+
+  // The start for a routine run has the same rule. The oldest change goes first, so `gone` takes the slot.
+  const routineAt = refusedAt + 40 * MINUTE;
+  server("routine", "idle", routineAt - 3 * DAY, { nextRunAt: routineAt + 5 * MINUTE });
+  server("gone", "idle", routineAt - 11 * DAY);
+  refusals = 1;
+  await tick(routineAt);
+  const routine = row("routine");
+  check(
+    "after a refused start for a routine run the server sleeps again with its last use",
+    resumes("routine") === 1 &&
+      routine?.desired_state === "idle" &&
+      routine.observed_state === "stopped" &&
+      routine.observed_error === null &&
+      routine.last_active_at === routineAt - 3 * DAY,
+    { calls, row: routine },
+  );
+  const gone = row("gone");
+  check(
+    "a sandbox that boat deleted keeps its error and is not started again",
+    resumes("gone") === 1 && gone?.observed_state === "error" && gone.observed_error === "provider_error",
+    { calls, row: gone },
+  );
+  await tick(routineAt + 10 * MINUTE);
+  check("the next slot does not start the deleted sandbox", resumes("gone") === 1, calls);
   database.close();
 }
 

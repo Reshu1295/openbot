@@ -3,6 +3,7 @@ import {
   type AgentModelId,
   type AgentProviderId,
   type AgentReasoningEffort,
+  type AgentStatus,
   type AppSetupState,
   type ClientAgentModelOption,
   defaultProviderModel,
@@ -33,7 +34,13 @@ export interface DevelopmentCreation {
 /**
  * The provider and model a new-agent draft starts on: the saved setup choice when the live
  * catalog still lists it, else that provider's default when listed, else its first listed model,
- * else the first provider in picker order with any model. `null` while the catalog is empty.
+ * else the first provider in picker order with any model. `null` while the catalog is empty, or
+ * when no listed provider can run: the draft then keeps what it has.
+ *
+ * Codex and Claude list built-in models before their CLI answers, signed in or not. So, as the
+ * backend's `startingChoice` does, a provider other than the saved one is a start only while
+ * `status` reports it available. A check in progress counts, so a re-check of a signed-in provider
+ * does not move the draft; a provider with no status row counts by its models, as the picker does.
  *
  * Seeding from the saved choice matters because the form always submits a pair: a hard-coded
  * default would bypass the backend's saved-provider default and fail outright after onboarding
@@ -46,6 +53,7 @@ export interface DevelopmentCreation {
 export function resolveCreationModel(
   setup: CreationPreference | null,
   modelOptions: ClientAgentModelOption[],
+  status: AgentStatus | null | undefined,
   development: DevelopmentCreation | null = null,
 ): CreationModelChoice | null {
   const preferred = setup?.preferredProvider ?? null;
@@ -60,8 +68,13 @@ export function resolveCreationModel(
   const ordered: AgentProviderId[] = preferred
     ? [preferred, ...PICKER_PROVIDERS.filter((provider) => provider !== preferred)]
     : [...PICKER_PROVIDERS];
+  const runnable = (provider: AgentProviderId) => {
+    const row = status?.providers?.find((item) => item.id === provider);
+    return !row || row.state === "available" || row.state === "checking";
+  };
   for (const provider of ordered) {
     if (developmentStart && !development?.providerAvailable(provider)) continue;
+    if (provider !== preferred && !runnable(provider)) continue;
     const options = modelOptions.filter((option) => option.provider === provider);
     if (options.length === 0) continue;
     if (provider === preferred && setup?.preferredModel) {

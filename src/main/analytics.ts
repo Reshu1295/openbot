@@ -1,3 +1,4 @@
+import { isKeyOnlyProvider } from "@openbot/contracts/agent-providers";
 import {
   AGENT_PROVIDERS,
   AGENT_REASONING_EFFORTS,
@@ -1199,7 +1200,9 @@ function isRoutineRunFinished(status: RoutineRunConversationEventStatus): boolea
 function reportedModel(value: string): string {
   const separator = value.indexOf("/");
   if (separator < 0) return value;
-  return isOneOf(AGENT_PROVIDERS, value.slice(0, separator)) ? value : "custom";
+  // A key-only provider never puts its own id before a model id, so that prefix comes from OpenCode.
+  const prefix = value.slice(0, separator);
+  return isOneOf(AGENT_PROVIDERS, prefix) && !isKeyOnlyProvider(prefix) ? value : "custom";
 }
 
 function hostedSiteFailureCode(value: string): string {

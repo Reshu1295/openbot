@@ -42,7 +42,12 @@ export function WorkspaceRoutineFlows() {
   const { createAgentInPlace } = useAgentActions();
   /** A new agent starts on the model the agent form would pick, and the user can change it. */
   const newAgentModels = createMemo((): DiagramModelChoice | undefined => {
-    const initial = resolveCreationModel(serverSetupChoice() ?? setupState(), modelOptions(), developmentCreation());
+    const initial = resolveCreationModel(
+      serverSetupChoice() ?? setupState(),
+      modelOptions(),
+      agentStatus(),
+      developmentCreation(),
+    );
     return initial
       ? {
           options: modelOptions(),

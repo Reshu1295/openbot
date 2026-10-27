@@ -154,6 +154,10 @@ export const messages = {
   "provider.deepseekKey.description":
     "DeepSeek 모델을 사용하려면 이 컴퓨터에 DeepSeek API 키를 저장하세요. OpenBot은 다운로드한 Pi CLI에서 모델을 실행해요.",
   "provider.deepseekKey.label": "DeepSeek API 키",
+  "provider.openrouterKey.title": "OpenRouter API 키",
+  "provider.openrouterKey.description":
+    "OpenRouter 모델을 사용하려면 이 컴퓨터에 OpenRouter API 키를 저장하세요. OpenBot은 다운로드한 Pi CLI에서 모델을 실행해요.",
+  "provider.openrouterKey.label": "OpenRouter API 키",
 
   "provider.openCodeKey.title": "OpenCode Go에 로그인",
   "provider.openCodeKey.description": "무료 모델은 계정이 필요 없어요. 키가 있으면 유료 Go 모델을 사용할 수 있어요.",
@@ -247,6 +251,16 @@ export const messages = {
   "provider.settings.turnOnFirst": "먼저 {name}을(를) 켜세요.",
   "provider.settings.makeDefault": "기본으로 지정",
   "provider.settings.useTitle": "{name} 사용",
+  "provider.settings.download": "다운로드",
+  "provider.settings.downloadedCli": "{name} CLI",
+  "provider.settings.downloadDetail": { other: "{version} · 버전 {count}개 · {size}" },
+  "provider.settings.downloadVersions": { other: "버전 {count}개 · {size}" },
+  "provider.settings.downloadAgain": "{name}을 켜면 OpenBot이 CLI를 다시 다운로드해요.",
+  "provider.settings.removeDownloadConfirm": "{size}를 삭제할까요?",
+  "provider.settings.removeDownloadKeeps": "계정, 로그인, 에이전트는 유지돼요.",
+  "provider.settings.removeDownload": "다운로드 삭제",
+  "provider.settings.removingDownload": "삭제 중…",
+  "provider.settings.removeDownloadFailed": "다운로드를 삭제하지 못했어요.",
   "provider.settings.endpoints": "엔드포인트",
   "provider.settings.noEndpoints": "엔드포인트가 없어요.",
   "provider.settings.endpointModels": { other: "{url} · 모델 {count}개" },

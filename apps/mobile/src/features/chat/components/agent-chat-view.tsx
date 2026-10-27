@@ -107,6 +107,7 @@ export function MobileChatView({
   );
   const messages = useMemo(() => withFailureReasons(projected, queue.deliveries), [projected, queue.deliveries]);
   const [historyLoadFailed, setHistoryLoadFailed] = useState(false);
+  const [catchingUp, setCatchingUp] = useState(false);
   // The message from search, until the chat shows it. `loaded` is set when its page is in the store.
   const [focus, setFocus] = useState(focusMessageId ? { messageId: focusMessageId, loaded: false } : null);
   const focusRef = useRef(focus);
@@ -132,8 +133,15 @@ export function MobileChatView({
         setFocus((current) => (current?.messageId === messageId ? { messageId, loaded: true } : current));
       // Events keep a loaded chat up to date while the connection stays, so it opens without a read.
       if (conversationStore.isUpToDate(agent.id)) return;
-      // A latest page that meets the window around the message joins the two.
-      await loadConversation(agent.id, agent.serverId);
+      // The chat shows the messages that the phone kept while the latest page loads.
+      const kept = Boolean(conversationStore.get(agent.id));
+      if (kept) setCatchingUp(true);
+      try {
+        // A latest page that meets the window around the message joins the two.
+        await loadConversation(agent.id, agent.serverId);
+      } finally {
+        if (kept && request.current === id) setCatchingUp(false);
+      }
     };
     void load().catch(() => {
       if (request.current !== id) return;
@@ -154,6 +162,8 @@ export function MobileChatView({
     fetchHistory();
     return () => {
       request.current += 1;
+      // A run that ends after this cleanup does not clear the flag.
+      setCatchingUp(false);
     };
   }, [fetchHistory]);
   const detached = conversation?.detached ?? false;
@@ -192,6 +202,19 @@ export function MobileChatView({
     showsOnline(server) && !viewOnly,
     respondToPrompt,
   );
+  const workActivity = workChannel ? liveActivity : undefined;
+  // One element while its inputs stay, so a new render of this screen does not draw the list again.
+  const activityAccessory = useMemo(
+    () => (
+      <>
+        {workChannel && workActivity ? (
+          <ChatChannelWorkRow channel={workChannel} activity={workActivity} serverId={agent.serverId} />
+        ) : null}
+        <ChatTaskRows tasks={tasks} serverId={agent.serverId} />
+      </>
+    ),
+    [workChannel, workActivity, tasks, agent.serverId],
+  );
   return (
     <ChatView
       target={target}
@@ -210,14 +233,7 @@ export function MobileChatView({
       activeTurnId={conversation?.activeTurnId ?? null}
       stopTurn={stopTurn}
       questionForm={questionForm}
-      activityAccessory={
-        <>
-          {workChannel && liveActivity ? (
-            <ChatChannelWorkRow channel={workChannel} activity={liveActivity} serverId={agent.serverId} />
-          ) : null}
-          <ChatTaskRows tasks={tasks} serverId={agent.serverId} />
-        </>
-      }
+      activityAccessory={activityAccessory}
       threadId={threadId}
       approvals={approvals}
       readBoundary={latest ? `${latest.id}:${latest.status}` : null}
@@ -230,6 +246,7 @@ export function MobileChatView({
       focusMessageId={focus?.messageId ?? null}
       // Offline, the chat shows what the phone has and moves to the message when its page loads.
       holdOpening={focus !== null && online}
+      catchingUp={catchingUp}
       onFocusPlaced={clearFocus}
       detached={detached}
       showLatestMessages={showLatestMessages}

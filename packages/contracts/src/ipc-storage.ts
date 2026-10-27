@@ -147,6 +147,13 @@ export interface OldRuntimeVersions {
   bytes: number;
 }
 
+/** The downloaded versions of one provider CLI that OpenBot can remove now. */
+export interface ProviderRuntimeDownload {
+  bytes: number;
+  /** How many versions of the CLI those bytes hold. */
+  versions: number;
+}
+
 export interface OpenStorageLocationInput {
   agentId: string;
 }
@@ -217,6 +224,14 @@ export function parseOpenStorageLocationInput(value: unknown): OpenStorageLocati
 
 export function decodeOldRuntimeVersions(value: unknown): OldRuntimeVersions {
   return { bytes: byteCount(record(value, "old runtime versions").bytes, "old runtime versions") };
+}
+
+export function decodeProviderRuntimeDownload(value: unknown): ProviderRuntimeDownload {
+  const download = record(value, "provider runtime download");
+  return {
+    bytes: byteCount(download.bytes, "provider runtime download"),
+    versions: byteCount(download.versions, "provider runtime download"),
+  };
 }
 
 function decodeBreakdown(value: unknown): StorageBreakdown {

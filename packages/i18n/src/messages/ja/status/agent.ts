@@ -32,4 +32,6 @@ export const messages = {
   "status.agent.skillUsing": "スキル {name} を使用しています…",
   "status.agent.skillReading": "スキルを読み込んでいます…",
   "status.agent.memoryChanges": "メモリー: {saved} 件保存、{updated} 件更新、{forgotten} 件忘却。",
+  "status.agent.memoryChangesWithConflicts":
+    "メモリー: {saved} 件保存、{updated} 件更新、{forgotten} 件忘却、{notChanged} 件は別のスレッドが先に変更したため未変更。",
 } as const satisfies PartialTranslation<typeof source>;

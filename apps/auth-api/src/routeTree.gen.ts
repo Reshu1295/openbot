@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppPreviewRouteImport } from './routes/app-preview'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as CommercialLicenseRouteImport } from './routes/commercial-license'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
@@ -25,6 +26,8 @@ import { Route as DotwellKnownAppleAppSiteAssociationRouteImport } from './route
 import { Route as DotwellKnownJwksDotjsonRouteImport } from './routes/[.]well-known/jwks[.]json'
 import { Route as AgentsTemplateIdRouteImport } from './routes/agents/$templateId'
 import { Route as BillingReturnRouteImport } from './routes/billing/return'
+import { Route as BrandIndexRouteImport } from './routes/brand/index'
+import { Route as BrandFileRouteImport } from './routes/brand/$file'
 import { Route as CompareIndexRouteImport } from './routes/compare/index'
 import { Route as CompareSlugRouteImport } from './routes/compare/$slug'
 import { Route as CompareRssDotxmlRouteImport } from './routes/compare/rss[.]xml'
@@ -184,6 +187,11 @@ const ChangelogRoute = ChangelogRouteImport.update({
   path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommercialLicenseRoute = CommercialLicenseRouteImport.update({
+  id: '/commercial-license',
+  path: '/commercial-license',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -243,6 +251,16 @@ const AgentsTemplateIdRoute = AgentsTemplateIdRouteImport.update({
 const BillingReturnRoute = BillingReturnRouteImport.update({
   id: '/billing/return',
   path: '/billing/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandIndexRoute = BrandIndexRouteImport.update({
+  id: '/brand/',
+  path: '/brand/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BrandFileRoute = BrandFileRouteImport.update({
+  id: '/brand/$file',
+  path: '/brand/$file',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareIndexRoute = CompareIndexRouteImport.update({
@@ -995,6 +1013,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
   '/changelog': typeof ChangelogRoute
+  '/commercial-license': typeof CommercialLicenseRoute
   '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
@@ -1007,6 +1026,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
   '/agents/$templateId': typeof AgentsTemplateIdRoute
   '/billing/return': typeof BillingReturnRoute
+  '/brand/$file': typeof BrandFileRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/compare/rss.xml': typeof CompareRssDotxmlRoute
   '/discord/connect': typeof DiscordConnectRoute
@@ -1025,6 +1045,7 @@ export interface FileRoutesByFullPath {
   '/slack/connect': typeof SlackConnectRoute
   '/v1/contact': typeof V1ContactRoute
   '/v1/me': typeof V1MeRouteWithChildren
+  '/brand/': typeof BrandIndexRoute
   '/compare/': typeof CompareIndexRoute
   '/download/': typeof DownloadIndexRoute
   '/guides/': typeof GuidesIndexRoute
@@ -1151,6 +1172,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
   '/changelog': typeof ChangelogRoute
+  '/commercial-license': typeof CommercialLicenseRoute
   '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
@@ -1163,6 +1185,7 @@ export interface FileRoutesByTo {
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
   '/agents/$templateId': typeof AgentsTemplateIdRoute
   '/billing/return': typeof BillingReturnRoute
+  '/brand/$file': typeof BrandFileRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/compare/rss.xml': typeof CompareRssDotxmlRoute
   '/discord/connect': typeof DiscordConnectRoute
@@ -1181,6 +1204,7 @@ export interface FileRoutesByTo {
   '/slack/connect': typeof SlackConnectRoute
   '/v1/contact': typeof V1ContactRoute
   '/v1/me': typeof V1MeRouteWithChildren
+  '/brand': typeof BrandIndexRoute
   '/compare': typeof CompareIndexRoute
   '/download': typeof DownloadIndexRoute
   '/guides': typeof GuidesIndexRoute
@@ -1308,6 +1332,7 @@ export interface FileRoutesById {
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
   '/changelog': typeof ChangelogRoute
+  '/commercial-license': typeof CommercialLicenseRoute
   '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
@@ -1320,6 +1345,7 @@ export interface FileRoutesById {
   '/.well-known/jwks.json': typeof DotwellKnownJwksDotjsonRoute
   '/agents/$templateId': typeof AgentsTemplateIdRoute
   '/billing/return': typeof BillingReturnRoute
+  '/brand/$file': typeof BrandFileRoute
   '/compare/$slug': typeof CompareSlugRoute
   '/compare/rss.xml': typeof CompareRssDotxmlRoute
   '/discord/connect': typeof DiscordConnectRoute
@@ -1338,6 +1364,7 @@ export interface FileRoutesById {
   '/slack/connect': typeof SlackConnectRoute
   '/v1/contact': typeof V1ContactRoute
   '/v1/me': typeof V1MeRouteWithChildren
+  '/brand/': typeof BrandIndexRoute
   '/compare/': typeof CompareIndexRoute
   '/download/': typeof DownloadIndexRoute
   '/guides/': typeof GuidesIndexRoute
@@ -1466,6 +1493,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app-preview'
     | '/changelog'
+    | '/commercial-license'
     | '/contact'
     | '/join'
     | '/llms.txt'
@@ -1478,6 +1506,7 @@ export interface FileRouteTypes {
     | '/.well-known/jwks.json'
     | '/agents/$templateId'
     | '/billing/return'
+    | '/brand/$file'
     | '/compare/$slug'
     | '/compare/rss.xml'
     | '/discord/connect'
@@ -1496,6 +1525,7 @@ export interface FileRouteTypes {
     | '/slack/connect'
     | '/v1/contact'
     | '/v1/me'
+    | '/brand/'
     | '/compare/'
     | '/download/'
     | '/guides/'
@@ -1622,6 +1652,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app-preview'
     | '/changelog'
+    | '/commercial-license'
     | '/contact'
     | '/join'
     | '/llms.txt'
@@ -1634,6 +1665,7 @@ export interface FileRouteTypes {
     | '/.well-known/jwks.json'
     | '/agents/$templateId'
     | '/billing/return'
+    | '/brand/$file'
     | '/compare/$slug'
     | '/compare/rss.xml'
     | '/discord/connect'
@@ -1652,6 +1684,7 @@ export interface FileRouteTypes {
     | '/slack/connect'
     | '/v1/contact'
     | '/v1/me'
+    | '/brand'
     | '/compare'
     | '/download'
     | '/guides'
@@ -1778,6 +1811,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app-preview'
     | '/changelog'
+    | '/commercial-license'
     | '/contact'
     | '/join'
     | '/llms.txt'
@@ -1790,6 +1824,7 @@ export interface FileRouteTypes {
     | '/.well-known/jwks.json'
     | '/agents/$templateId'
     | '/billing/return'
+    | '/brand/$file'
     | '/compare/$slug'
     | '/compare/rss.xml'
     | '/discord/connect'
@@ -1808,6 +1843,7 @@ export interface FileRouteTypes {
     | '/slack/connect'
     | '/v1/contact'
     | '/v1/me'
+    | '/brand/'
     | '/compare/'
     | '/download/'
     | '/guides/'
@@ -1935,6 +1971,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRoute
   AppPreviewRoute: typeof AppPreviewRoute
   ChangelogRoute: typeof ChangelogRoute
+  CommercialLicenseRoute: typeof CommercialLicenseRoute
   ContactRoute: typeof ContactRoute
   JoinRoute: typeof JoinRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
@@ -1947,6 +1984,7 @@ export interface RootRouteChildren {
   DotwellKnownJwksDotjsonRoute: typeof DotwellKnownJwksDotjsonRoute
   AgentsTemplateIdRoute: typeof AgentsTemplateIdRoute
   BillingReturnRoute: typeof BillingReturnRoute
+  BrandFileRoute: typeof BrandFileRoute
   CompareSlugRoute: typeof CompareSlugRoute
   CompareRssDotxmlRoute: typeof CompareRssDotxmlRoute
   DiscordConnectRoute: typeof DiscordConnectRoute
@@ -1965,6 +2003,7 @@ export interface RootRouteChildren {
   SlackConnectRoute: typeof SlackConnectRoute
   V1ContactRoute: typeof V1ContactRoute
   V1MeRoute: typeof V1MeRouteWithChildren
+  BrandIndexRoute: typeof BrandIndexRoute
   CompareIndexRoute: typeof CompareIndexRoute
   DownloadIndexRoute: typeof DownloadIndexRoute
   GuidesIndexRoute: typeof GuidesIndexRoute
@@ -2097,6 +2136,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof ChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/commercial-license': {
+      id: '/commercial-license'
+      path: '/commercial-license'
+      fullPath: '/commercial-license'
+      preLoaderRoute: typeof CommercialLicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
@@ -2179,6 +2225,20 @@ declare module '@tanstack/solid-router' {
       path: '/billing/return'
       fullPath: '/billing/return'
       preLoaderRoute: typeof BillingReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brand/': {
+      id: '/brand/'
+      path: '/brand'
+      fullPath: '/brand/'
+      preLoaderRoute: typeof BrandIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/brand/$file': {
+      id: '/brand/$file'
+      path: '/brand/$file'
+      fullPath: '/brand/$file'
+      preLoaderRoute: typeof BrandFileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare/': {
@@ -3289,6 +3349,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRoute,
   AppPreviewRoute: AppPreviewRoute,
   ChangelogRoute: ChangelogRoute,
+  CommercialLicenseRoute: CommercialLicenseRoute,
   ContactRoute: ContactRoute,
   JoinRoute: JoinRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
@@ -3302,6 +3363,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotwellKnownJwksDotjsonRoute: DotwellKnownJwksDotjsonRoute,
   AgentsTemplateIdRoute: AgentsTemplateIdRoute,
   BillingReturnRoute: BillingReturnRoute,
+  BrandFileRoute: BrandFileRoute,
   CompareSlugRoute: CompareSlugRoute,
   CompareRssDotxmlRoute: CompareRssDotxmlRoute,
   DiscordConnectRoute: DiscordConnectRoute,
@@ -3320,6 +3382,7 @@ const rootRouteChildren: RootRouteChildren = {
   SlackConnectRoute: SlackConnectRoute,
   V1ContactRoute: V1ContactRoute,
   V1MeRoute: V1MeRouteWithChildren,
+  BrandIndexRoute: BrandIndexRoute,
   CompareIndexRoute: CompareIndexRoute,
   DownloadIndexRoute: DownloadIndexRoute,
   GuidesIndexRoute: GuidesIndexRoute,

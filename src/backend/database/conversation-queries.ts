@@ -43,13 +43,18 @@ export interface ConversationMarkerExclusions {
 }
 
 /**
- * A channel gives each of its members a thread of its own, and a task has one too, under the same
+ * A channel gives each of its members a thread of its own, and a side thread has one too, under the same
  * agent id as the normal chat. A search result carries an agent id and a message, and opening one
  * shows the normal conversation of that agent, where a channel or task message does not exist. These
- * threads stay out of the search until a result can name the channel or task it belongs to.
+ * threads stay out of the search until a result can name the channel or task it belongs to. A message
+ * search that asks for side threads names the thread of each result.
  */
-const SIDE_THREAD_EXCLUSION = `AND message.thread_id NOT IN (SELECT thread_id FROM projection_channel_contexts)
-             AND message.thread_id NOT IN (SELECT thread_id FROM projection_agent_tasks)`;
+const CHANNEL_THREAD_EXCLUSION = "AND message.thread_id NOT IN (SELECT thread_id FROM projection_channel_contexts)";
+const SIDE_THREAD_EXCLUSION = `${CHANNEL_THREAD_EXCLUSION}
+             AND message.thread_id NOT IN (SELECT thread_id FROM projection_agent_threads)`;
+/** An archived side thread does not show, so its messages stay out of the search. */
+const ARCHIVED_SIDE_THREAD_EXCLUSION = `${CHANNEL_THREAD_EXCLUSION}
+             AND message.thread_id NOT IN (SELECT thread_id FROM projection_agent_threads WHERE archived_at IS NOT NULL)`;
 
 /**
  * Every read of a thread's messages: the whole snapshot, one anchored page, a page's supported
@@ -354,6 +359,7 @@ export class ConversationQueries {
     agentId?: string,
     cursor?: string,
     requestedLimit = 100,
+    includeSideThreads = false,
   ): ConversationSearchPage {
     const normalized = query.trim().replace(/\s+/g, " ").toLocaleLowerCase();
     if (!normalized) return { results: [], total: 0, nextCursor: null };
@@ -391,10 +397,11 @@ export class ConversationQueries {
                AND COALESCE(message.item_type, '') NOT LIKE '${HOSTED_SITE_EVENT_ITEM_TYPE_PREFIX}%'
                AND COALESCE(message.item_type, '') NOT LIKE '${MARKETPLACE_SUGGESTION_ITEM_TYPE_PREFIX}%'
                AND json_extract(message.message_json, '$.routine') IS NULL
-               ${SIDE_THREAD_EXCLUSION}
+               ${includeSideThreads ? ARCHIVED_SIDE_THREAD_EXCLUSION : SIDE_THREAD_EXCLUSION}
                ${filter}
            )
-           SELECT counted.count, page.agent_id, message.message_json
+           SELECT counted.count, page.agent_id, message.message_json,
+             COALESCE(side.legacy_task_id, side.thread_id) AS task_id
            FROM (SELECT COUNT(*) AS count FROM matches) counted
            LEFT JOIN (
              SELECT * FROM matches
@@ -402,6 +409,7 @@ export class ConversationQueries {
              LIMIT ? OFFSET ?
            ) page
            LEFT JOIN projection_thread_messages message ON message.rowid = page.message_rowid
+           LEFT JOIN projection_agent_threads side ON side.thread_id = message.thread_id
            ORDER BY page.created_at DESC, page.ordinal DESC, page.message_id DESC`,
         )
         .all(...parameters, limit, offset),
@@ -410,9 +418,15 @@ export class ConversationQueries {
     // An empty page is one row with the count only.
     const results = rows.flatMap((row) => {
       const messageJson = optionalStringColumn(row, "message_json");
-      return messageJson === null
-        ? []
-        : [{ agentId: requiredStringColumn(row, "agent_id"), message: decodeConversationMessageJson(messageJson) }];
+      if (messageJson === null) return [];
+      const taskId = optionalStringColumn(row, "task_id");
+      return [
+        {
+          agentId: requiredStringColumn(row, "agent_id"),
+          message: decodeConversationMessageJson(messageJson),
+          ...(taskId === null ? {} : { taskId }),
+        },
+      ];
     });
     const nextOffset = offset + results.length;
     return {

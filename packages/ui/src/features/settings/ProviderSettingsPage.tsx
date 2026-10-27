@@ -13,6 +13,7 @@ import {
   PROMPT_CACHE_TTLS,
   type PromptCacheTtl,
   type ProviderAccountState,
+  type ProviderRuntimeDownload,
   type ProviderUsageResetOutcome,
   type ProviderUsageResets,
 } from "@openbot/contracts/ipc";
@@ -114,6 +115,10 @@ export interface ProviderSettingsPageProps extends ProviderRowHost {
   onCancelProviderRestart?: ((provider: AgentProviderId) => void | Promise<void>) | undefined;
   /** Turns a provider on or off. A provider that an agent uses stays on and names its agents. */
   onSetProviderOn?: ((provider: AgentProviderId, on: boolean) => void | Promise<void>) | undefined;
+  /** The downloaded CLI of a provider that is off, which `onRemoveProviderDownload` frees. */
+  onMeasureProviderDownload?: ((provider: AgentProviderId) => Promise<ProviderRuntimeDownload>) | undefined;
+  /** Removes the downloaded CLI of a provider that is off. This computer only. */
+  onRemoveProviderDownload?: ((provider: AgentProviderId) => Promise<void>) | undefined;
   /** The usage readings of each account. An account that is low shows a badge with its limits. */
   usage?: readonly AccountUsageProviderRow[] | undefined;
   /** The dialog element that the menus and the select portal into. */
@@ -293,7 +298,7 @@ function ProviderList(props: ProviderSettingsPageProps & { onOpen: (id: PageId) 
   );
 }
 
-/** A row that opens a page. The whole row is the button, as on the Connectors list. */
+/** A row that opens a page. The whole row is the button. */
 function NavRow(props: { logo: JSX.Element; name: string; summary: string; end?: JSX.Element; onOpen: () => void }) {
   const { t } = useText();
   return (
@@ -518,6 +523,7 @@ function ProviderPage(props: PageProps) {
         </Show>
       </Show>
       <UseSection {...props} row={row} />
+      <DownloadSection {...props} row={row} />
     </>
   );
 }
@@ -1040,7 +1046,7 @@ function SignInSection(props: SectionProps & { keyShown: boolean }) {
                 {t("provider.action.install")}
               </Button>
             </Show>
-            <Show when={!row().runtimeStatus() && row().browserConnect()}>
+            <Show when={!row().runtimeStatus() && (row().browserConnect() || row().keyConnect())}>
               <Button
                 type="button"
                 variant={browserAction() === "connect" ? "default" : "outline"}
@@ -1447,6 +1453,168 @@ function UseSection(props: SectionProps) {
                 />
               </ItemActions>
             </Item>
+          </Show>
+        </ItemGroup>
+      </SettingsSection>
+    </Show>
+  );
+}
+
+/**
+ * The downloaded CLI of a provider that is off, with the action that removes it. The confirmation
+ * stays in the card: a removal names its size there, and the provider downloads the CLI again later.
+ */
+function DownloadSection(props: SectionProps) {
+  const { t, format, errorMessage } = useText();
+  const [download, setDownload] = createStore<{
+    bytes: number;
+    versions: number;
+    confirming: boolean;
+    removing: boolean;
+    /** Set by a removal on this page. An off provider can run a CLI the user installed instead. */
+    removed: boolean;
+    error: string | null;
+  }>({ bytes: 0, versions: 0, confirming: false, removing: false, removed: false, error: null });
+  let reads = 0;
+  const measure = (provider: AgentProviderId, read: ProviderSettingsPageProps["onMeasureProviderDownload"]) => {
+    const serial = ++reads;
+    const apply = (measured: ProviderRuntimeDownload) => {
+      if (serial === reads)
+        setDownload((state) => {
+          state.bytes = measured.bytes;
+          state.versions = measured.versions;
+        });
+    };
+    if (read) void read(provider).then(apply, () => apply({ bytes: 0, versions: 0 }));
+    else apply({ bytes: 0, versions: 0 });
+  };
+  const offered = () => props.row.off() && Boolean(props.onRemoveProviderDownload);
+  // Measured again when the provider is turned off. A provider that is off downloads nothing, and
+  // a removal measures again itself.
+  createEffect(
+    () => ({ provider: props.option.id, read: offered() ? props.onMeasureProviderDownload : undefined }),
+    ({ provider, read }) => {
+      setDownload((state) => {
+        state.removed = false;
+      });
+      measure(provider, read);
+    },
+  );
+  const detail = () => {
+    const values = { count: download.versions, size: format.fileSize(download.bytes) };
+    const version = props.option.runtimeStatus?.version;
+    return version
+      ? t("provider.settings.downloadDetail", { ...values, version })
+      : t("provider.settings.downloadVersions", values);
+  };
+  async function remove() {
+    setDownload((state) => {
+      state.removing = true;
+      state.error = null;
+    });
+    try {
+      await props.onRemoveProviderDownload?.(props.option.id);
+      setDownload((state) => {
+        state.confirming = false;
+        state.removed = true;
+      });
+    } catch (error) {
+      setDownload((state) => {
+        state.error = errorMessage(error, t("provider.settings.removeDownloadFailed"));
+      });
+    } finally {
+      setDownload((state) => {
+        state.removing = false;
+      });
+    }
+    measure(props.option.id, props.onMeasureProviderDownload);
+  }
+  return (
+    <Show when={offered() && (download.bytes > 0 || download.removed)}>
+      <SettingsSection title={t("provider.settings.download")}>
+        <ItemGroup class="settings-modal-card">
+          <Show
+            when={download.bytes > 0}
+            fallback={
+              <Item class="settings-modal-row">
+                <ItemContent>
+                  <ItemTitle>{t("provider.status.notDownloaded")}</ItemTitle>
+                  <ItemDescription>{t("provider.settings.downloadAgain", { name: props.option.name })}</ItemDescription>
+                </ItemContent>
+              </Item>
+            }
+          >
+            <Item class="settings-modal-row">
+              <ItemContent>
+                <ItemTitle>{t("provider.settings.downloadedCli", { name: props.option.name })}</ItemTitle>
+                <ItemDescription>{detail()}</ItemDescription>
+              </ItemContent>
+              <Show when={!download.confirming}>
+                <ItemActions>
+                  <Button
+                    type="button"
+                    variant="destructive-ghost"
+                    size="sm"
+                    disabled={props.disabled}
+                    onClick={() =>
+                      setDownload((state) => {
+                        state.error = null;
+                        state.confirming = true;
+                      })
+                    }
+                  >
+                    <Trash2 aria-hidden="true" />
+                    {t("provider.settings.removeDownload")}
+                  </Button>
+                </ItemActions>
+              </Show>
+            </Item>
+            <Show when={download.confirming}>
+              <Item class="settings-modal-row">
+                <ItemContent>
+                  <ItemTitle>
+                    {t("provider.settings.removeDownloadConfirm", { size: format.fileSize(download.bytes) })}
+                  </ItemTitle>
+                  <Show
+                    when={download.error}
+                    fallback={<ItemDescription>{t("provider.settings.removeDownloadKeeps")}</ItemDescription>}
+                  >
+                    {(message) => (
+                      <ItemDescription class="provider-settings-error" role="alert">
+                        {message()}
+                      </ItemDescription>
+                    )}
+                  </Show>
+                </ItemContent>
+                <ItemActions>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={download.removing}
+                    onClick={() =>
+                      setDownload((state) => {
+                        state.confirming = false;
+                        state.error = null;
+                      })
+                    }
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    loading={download.removing}
+                    loadingLabel={t("provider.settings.removingDownload")}
+                    disabled={props.disabled}
+                    onClick={() => void remove()}
+                  >
+                    {t("common.remove")}
+                  </Button>
+                </ItemActions>
+              </Item>
+            </Show>
           </Show>
         </ItemGroup>
       </SettingsSection>

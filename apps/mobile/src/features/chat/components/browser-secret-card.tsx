@@ -9,6 +9,7 @@ import X from "lucide-react-native/icons/x";
 import { type ReactNode, useState } from "react";
 import { Pressable, TextInput, View, type ViewStyle } from "react-native";
 import { haptics } from "@/shared/lib/haptics";
+import { selectionColorProps } from "@/shared/lib/selection-color";
 import { useText } from "@/shared/lib/text";
 
 /**
@@ -257,7 +258,7 @@ export function BrowserSecretComposer({
             accessibilityLabel={title}
             placeholder={title}
             placeholderTextColor={String(muted)}
-            selectionColor={foreground}
+            {...selectionColorProps(foreground)}
             className="min-w-0 flex-1 font-sans text-foreground"
             style={{ fontSize: 16 }}
             secureTextEntry

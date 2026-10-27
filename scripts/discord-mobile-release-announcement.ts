@@ -13,7 +13,7 @@
 
 import { readFileSync } from "node:fs";
 import { ANDROID_PLAY_STORE_URL } from "../packages/ui/src/features/mobile-app/android-play-store";
-import { IOS_TESTFLIGHT_URL } from "../packages/ui/src/features/mobile-app/ios-testflight";
+import { IOS_APP_STORE_URL } from "../packages/ui/src/features/mobile-app/ios-app-store";
 import {
   announcementFileProblems,
   LONGEST_ROLE_ID,
@@ -58,7 +58,7 @@ function announcementMessage(highlights: readonly unknown[], version: string, ro
     "",
     // Masked links keep the footer on one line. The angle brackets stop Discord from adding a preview of each page.
     [
-      `[iOS (TestFlight)](<${IOS_TESTFLIGHT_URL}>)`,
+      `[iOS](<${IOS_APP_STORE_URL}>)`,
       `[Android](<${ANDROID_PLAY_STORE_URL}>)`,
       `[Full Changelog](<${changelogUrl(version)}>)`,
     ].join(" · "),

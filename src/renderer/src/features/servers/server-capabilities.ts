@@ -41,6 +41,7 @@ export function serverSupportsCapability(
       capability === "connectors-v1" ||
       capability === "onepassword-connector-v1" ||
       capability === "bitwarden-connector-v1" ||
+      capability === "vault-v1" ||
       capability === "provider-host-sign-in-v1" ||
       capability === "storage-v1" ||
       capability === "storage-disk-v1" ||
@@ -81,6 +82,7 @@ export function serverSupportsCapability(
       capability === "instance-transfer-v1" ||
       capability === "agent-hidden-v1" ||
       capability === "agent-tasks-v1" ||
+      capability === "agent-threads-v1" ||
       capability === "side-question-v1") &&
     server?.kind === "remote"
   ) {

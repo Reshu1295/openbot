@@ -77,7 +77,7 @@ export function WebAgentSettings(props: {
       if (draft.modelTouched && selected) return;
       // As in the desktop app. The web client does not know the host's saved setup choice, so
       // only the server's provider step names a provider.
-      const resolved = resolveCreationModel(props.preference ?? null, models);
+      const resolved = resolveCreationModel(props.preference ?? null, models, status);
       if (resolved) {
         draft.draft.provider = resolved.provider;
         draft.draft.model = resolved.model;

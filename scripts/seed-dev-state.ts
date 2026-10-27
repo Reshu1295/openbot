@@ -1025,7 +1025,7 @@ async function seedConversations(
           "",
           "```mermaid",
           "flowchart LR",
-          "  QA[Product QA] --> Evidence[Evidence review]",
+          '  QA[Product QA] --> Evidence["Evidence<br/>review"]',
           "  Evidence --> Release{Release ready?}",
           "  Release -- yes --> Publish[Publish]",
           "  Release -- no --> Rollback[Rollback]",

@@ -31,7 +31,7 @@ import {
 import { createSignal, For, Show } from "solid-js";
 import { useText } from "../../text";
 import { ANDROID_PLAY_STORE_URL } from "../mobile-app/android-play-store";
-import { IOS_TESTFLIGHT_URL } from "../mobile-app/ios-testflight";
+import { IOS_APP_STORE_URL } from "../mobile-app/ios-app-store";
 import { RemoteNetworkRouteChoice } from "./RemoteNetworkRouteChoice";
 import type { SettingsMobileConnectStore } from "./stores/mobile-connect-store";
 
@@ -64,16 +64,12 @@ const MOBILE_APPS: readonly MobileAppGuide[] = [
   {
     platform: "ios",
     tab: IPHONE_LABEL,
-    url: IOS_TESTFLIGHT_URL,
+    url: IOS_APP_STORE_URL,
     title: "settings.mobileConnect.iosApp.title",
     badge: "settings.mobileConnect.iosApp.badge",
     description: "settings.mobileConnect.iosApp.description",
     qrLabel: "settings.mobileConnect.iosApp.qrLabel",
-    steps: [
-      "settings.mobileConnect.iosApp.step.testFlight",
-      "settings.mobileConnect.iosApp.step.invite",
-      "settings.mobileConnect.iosApp.step.install",
-    ],
+    steps: ["settings.mobileConnect.iosApp.step.scan", "settings.mobileConnect.iosApp.step.install"],
   },
   {
     platform: "android",

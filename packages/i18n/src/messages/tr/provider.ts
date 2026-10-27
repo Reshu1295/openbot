@@ -154,6 +154,10 @@ export const messages = {
   "provider.deepseekKey.description":
     "DeepSeek modellerini kullanmak için bu bilgisayara bir DeepSeek API anahtarı kaydedin. OpenBot bunları indirdiği Pi CLI'da çalıştırır.",
   "provider.deepseekKey.label": "DeepSeek API anahtarı",
+  "provider.openrouterKey.title": "OpenRouter API anahtarı",
+  "provider.openrouterKey.description":
+    "OpenRouter modellerini kullanmak için bu bilgisayara bir OpenRouter API anahtarı kaydedin. OpenBot bunları indirdiği Pi CLI'da çalıştırır.",
+  "provider.openrouterKey.label": "OpenRouter API anahtarı",
   "provider.openCodeKey.title": "OpenCode Go'da oturum açın",
   "provider.openCodeKey.description":
     "Ücretsiz modeller hesap gerektirmez. Bir anahtar, ücretli Go modellerinin kilidini açar.",
@@ -202,4 +206,17 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 saat",
   "provider.settings.promptCacheDefault": "Claude Code varsayılanı",
   "provider.settings.promptCacheLoadFailed": "Bu sunucunun istem önbelleği süresi yüklenemedi.",
+  "provider.settings.download": "İndirme",
+  "provider.settings.downloadedCli": "{name} CLI",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 sürüm · {size}",
+    other: "{version} · {count} sürüm · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 sürüm · {size}", other: "{count} sürüm · {size}" },
+  "provider.settings.downloadAgain": "{name} açıldığında OpenBot CLI'yi yeniden indirir.",
+  "provider.settings.removeDownloadConfirm": "{size} kaldırılsın mı?",
+  "provider.settings.removeDownloadKeeps": "Hesaplar, oturumlar ve ajanlar kalır.",
+  "provider.settings.removeDownload": "İndirmeyi kaldır",
+  "provider.settings.removingDownload": "Kaldırılıyor…",
+  "provider.settings.removeDownloadFailed": "İndirme kaldırılamadı.",
 } as const satisfies PartialTranslation<typeof source>;

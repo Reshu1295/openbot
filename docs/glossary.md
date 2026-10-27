@@ -43,6 +43,12 @@ table, IPC channel or product string, or when a term in the code disagrees with 
 - **thread**: durable `projection_threads` record. **conversation**: its read projection, with no
   separate table. **provider session**: private CLI resume state (`projection_provider_sessions`).
   **team session**: authenticated remote connection. **turn**: one exchange in a thread.
+- **side thread**: a second conversation of one agent next to its own chat, the **main thread**
+  (`projection_agent_threads`, `AgentThreadRecord`). The UI calls both a thread. Code and the
+  `agent-tasks-v1` wire still call a side thread a **task** (`AgentTask`, `taskId`), and its task id
+  is `legacy_task_id ?? thread_id`. **archive** hides a side thread from the tabs and lists it under
+  "Archived"; it is the task close (`closed`, `archived_at`). A **tab** is a device-local view of a
+  thread; closing it does not change the thread.
 - **role**: a custom role of a server that sets which agents its members can use, and at which
   level (`AgentAccessRole`, `agent-access-v1`, `openbot-agent-access-v1.json`). The **Everyone** role
   applies to every member. It is not the team role (`TeamRole`: owner, admin, member), which the UI

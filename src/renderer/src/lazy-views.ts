@@ -65,9 +65,6 @@ export const WorkflowsPage = lazy(() =>
 export const ScheduleView = lazy(() =>
   import("./features/schedule/SchedulePanel").then((module) => ({ default: module.ScheduleView })),
 );
-export const TasksView = lazy(() =>
-  import("./features/tasks/TasksView").then((module) => ({ default: module.TasksView })),
-);
 export const ServerOnboarding = lazy(() =>
   import("./features/onboarding/ServerOnboarding").then((module) => ({ default: module.ServerOnboarding })),
 );
