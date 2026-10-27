@@ -3,7 +3,8 @@
 // turn of its own: that turn reaches only its store, the session's `updatedAt` in `session/list`
 // changes, and `session/load` replays it (#3406). This fake keeps each session's history the same way.
 //
-// A prompt with `narrate` writes text, calls a tool, and writes the answer. A prompt with
+// A prompt with `steps` writes text, calls a tool, and then writes the answer in two steps, each a
+// message of its own with no tool call between them, as OpenCode 2.2.0 can. A prompt with
 // `background` also starts a subagent that stays running. Its turn comes in parts, each at a
 // `session/list`: first a tool call that runs, then, after the test creates the file named after the
 // session in the folder `FAKE_RELEASE`, the tool's end and an answer with no text yet. The answer's
@@ -164,11 +165,13 @@ serveFakeAcpAgent({
       messageId: `${turn}_user`,
       content: { type: "text", text: prompt },
     });
-    if (prompt.includes("narrate")) {
+    if (prompt.includes("steps")) {
       send(peer, session, [
         text(`${turn}_a`, "I will check the file."),
         ...tool(`${turn}_tool`, "completed"),
         text(`${turn}_b`, "The file is fine."),
+        text(`${turn}_c`, ""),
+        text(`${turn}_c`, "Nothing to change."),
       ]);
     } else if (prompt.includes("background")) {
       send(peer, session, [

@@ -178,8 +178,9 @@ interface AcpTurn {
   reportedCost: number | null;
   /** The agent started this turn for a finished background task. OpenBot replays it from `session/load`. */
   unprompted: boolean;
-  /** The ACP `messageId` of the text in `text`. Text of another message is a message of its own. */
+  /** The ACP `messageId` of the last text in `text`, and where that message's text starts in it. */
   textMessageId: string | null;
+  textMessageStart: number;
 }
 
 /** The parts of a `session/load` request that open this session as it was opened. */
@@ -1874,6 +1875,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       reportedCost: null,
       unprompted,
       textMessageId: null,
+      textMessageStart: 0,
     };
     thread.activeTurn = turn;
     this.#threads.holdForTurn(thread);
@@ -2044,12 +2046,21 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         return;
       }
       if (update.content.text) this.#completeThought(thread, turn);
-      // The text of an earlier ACP message is not the answer. Joined with the next one, the text of two
-      // steps showed as one line.
+      // The text of two steps stays one answer, as two paragraphs. Joined as it came, it showed as one line.
       const messageId = contentMessageId(update);
-      if (this.#flavor.messagePerId && messageId && turn.textMessageId && messageId !== turn.textMessageId)
-        this.#completeMessage(thread, turn, "commentary");
-      if (messageId) turn.textMessageId = messageId;
+      let text = update.content.text;
+      if (
+        this.#flavor.messagePerId &&
+        text &&
+        messageId &&
+        turn.textMessageId &&
+        messageId !== turn.textMessageId &&
+        turn.text
+      ) {
+        text = `${turn.text.endsWith("\n\n") ? "" : turn.text.endsWith("\n") ? "\n" : "\n\n"}${text}`;
+        turn.textMessageStart = turn.text.length + text.length - update.content.text.length;
+      }
+      if (messageId && (text || !turn.textMessageId)) turn.textMessageId = messageId;
       if (update.content.text.trim()) {
         turn.receivedOutput = true;
         turn.interruptedAnswer = null;
@@ -2057,7 +2068,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       // An agent can keep session/prompt open while background tasks run (Antigravity). Its text must
       // not wait for that response. A later tool/thought boundary can still classify it as commentary.
       // Text after an SDK failure is the failure, which the turn reports when it ends.
-      if (this.#flavor.streamAnswerBeforePromptReturns && update.content.text && turn.sdkFailureAt === null) {
+      if (this.#flavor.streamAnswerBeforePromptReturns && text && turn.sdkFailureAt === null) {
         if (!turn.text)
           this.emit("notification", {
             method: "item/started",
@@ -2069,10 +2080,10 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
           });
         this.emit("notification", {
           method: "item/agentMessage/delta",
-          params: { threadId: thread.id, turnId: turn.id, itemId: turn.itemId, delta: update.content.text },
+          params: { threadId: thread.id, turnId: turn.id, itemId: turn.itemId, delta: text },
         });
       }
-      turn.text += update.content.text;
+      turn.text += text;
       return;
     }
     if (update.sessionUpdate === "agent_thought_chunk" && update.content.type === "text") {
@@ -2142,6 +2153,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     this.emit("notification", { method: "item/completed", params: { threadId: thread.id, turnId: turn.id, item } });
     turn.text = "";
     turn.textMessageId = null;
+    turn.textMessageStart = 0;
     turn.itemId = `${turn.id}:assistant:${turn.messages.length}`;
   }
 
@@ -2377,7 +2389,8 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     // The text that the turn shows last can still grow, while no tool call or other message ends it.
     const growing = open?.textMessageId ?? null;
     const grown = growing ? replayedText(updates, growing) : "";
-    const added = open && grown.startsWith(open.text) ? grown.slice(open.text.length) : "";
+    const shown = open ? open.text.slice(open.textMessageStart) : "";
+    const added = open && grown.startsWith(shown) ? grown.slice(shown.length) : "";
     if (fresh.size === 0 && !open?.toolItems.size && !added) return;
     const turn = open ?? this.#beginTurn(thread, randomUUID(), { unprompted: true, answerOptional: true });
     if (growing && added)

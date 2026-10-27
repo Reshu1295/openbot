@@ -387,9 +387,12 @@ background subagent ends, OpenCode answers its result in a turn of its own (a `s
 The watch is in memory. A background task that ends while OpenBot is closed, or after OpenBot
 loaded the session again, shows only in OpenCode's own store.
 
-For OpenCode (`messagePerId`), the text of an earlier ACP `messageId` in a turn ends as commentary,
-as text before a tool call does. Only the turn's last text is its answer, and the text of two steps
-does not show as one line.
+#### Text of two steps
+
+OpenCode 2.2.0 gives the message of each step its own ACP `messageId`. With `messagePerId`, text of a
+new `messageId` with no tool call before it starts a new paragraph of the same answer, so the text
+of two steps does not show as one line. As for every ACP agent, text before a tool call is
+commentary, which the chat folds into the turn's thinking.
 
 Provider session IDs remain in `projection_provider_sessions`; migration 17 adds OpenCode while
 preserving turn links. Provider switches keep the same agent, workspace, and local thread.

@@ -132,18 +132,18 @@ try {
   clients.push(client);
   client.start();
 
-  // Text before a tool call is thinking, and only the last text is the answer.
+  // Text before a tool call is thinking. The text of the last steps is one answer, in paragraphs.
   const first = await startThread(client, { cwd: workspace });
   const one = record(client, first);
-  assert.equal((await runTurn(client, first, { text: "narrate" })).status, "completed");
-  const narrated = one.items(lastTurnId(one.events));
+  assert.equal((await runTurn(client, first, { text: "steps" })).status, "completed");
+  const stepped = one.items(lastTurnId(one.events));
   assert.deepEqual(
-    narrated.filter((item) => item?.type === "agentMessage").map((item) => [item?.phase, item?.text]),
+    stepped.filter((item) => item?.type === "agentMessage").map((item) => [item?.phase, item?.text]),
     [
       ["commentary", "I will check the file."],
-      ["final_answer", "The file is fine."],
+      ["final_answer", "The file is fine.\n\nNothing to change."],
     ],
-    "The text before the tool call is thinking, and the last text is the answer.",
+    "The text before the tool call is thinking, and the answer keeps the text of both last steps.",
   );
 
   // A background subagent's turn shows from `session/load`, as a turn of the agent's own.
