@@ -1,6 +1,6 @@
 import { constants } from "node:fs";
 import { lstat, open, realpath } from "node:fs/promises";
-import { isAbsolute } from "node:path";
+import { basename, isAbsolute } from "node:path";
 import { sortConversationMessages } from "@openbot/contracts/conversation-order";
 import type { AgentEvent, ConversationSnapshot } from "@openbot/contracts/ipc";
 import { Deferred, Effect, Result } from "effect";
@@ -42,6 +42,9 @@ export interface AttachmentSourceScope {
 }
 
 const WORKSPACE_OR_SHARED: AttachmentSourceScope = { allowAnyReadablePath: false };
+
+/** A file that an answer only names is attached up to this size; a larger one stays a path. */
+const ANSWER_FILE_BYTES = 25 * 1024 * 1024;
 
 export interface AttachmentGatewayOptions {
   conversation: ConversationRuntime;
@@ -106,6 +109,73 @@ export class AttachmentGateway {
   ): Effect.Effect<GeneratedAttachmentSource[], AttachmentOperationError> {
     return this.#openSources(agentId, paths, scope);
   }
+
+  /**
+   * Attaches the files that a finished answer names by path to that answer, as if the agent had attached
+   * them. Each path gets the attachment checks on its own: a path outside the permitted folders, a
+   * folder, a missing or large file is skipped, not an error. A name that the turn already attached is
+   * skipped too. The caller saves and publishes the conversation after this.
+   */
+  readonly attachAnswerFiles = Effect.fn("AttachmentGateway.attachAnswerFiles")(function* (
+    this: AttachmentGateway,
+    agentId: string,
+    snapshot: ConversationSnapshot,
+    answer: ConversationSnapshot["messages"][number],
+    paths: string[],
+  ) {
+    const attachedNames = new Set(
+      snapshot.messages
+        .filter((message) => message.turnId === answer.turnId)
+        .flatMap((message) => (message.attachments ?? []).map((attachment) => attachment.name)),
+    );
+    const candidates = paths.filter((path) => !attachedNames.has(basename(path)));
+    if (candidates.length === 0) return;
+    const opened = yield* Effect.forEach(candidates, (path) =>
+      Effect.result(this.#openSourceEffect(agentId, path, WORKSPACE_OR_SHARED)),
+    );
+    const sources: GeneratedAttachmentSource[] = [];
+    const skipped: GeneratedAttachmentSource[] = [];
+    for (const result of opened) {
+      if (Result.isFailure(result)) continue;
+      const source = result.success;
+      const metadata = yield* Effect.result(attachmentCall(() => source.handle.stat()));
+      const keep =
+        Result.isSuccess(metadata) &&
+        metadata.success.size <= ANSWER_FILE_BYTES &&
+        !sources.some((kept) => kept.path === source.path);
+      (keep ? sources : skipped).push(source);
+    }
+    yield* attachmentCall(() => Promise.allSettled(skipped.map((source) => source.handle.close())));
+    if (sources.length === 0) return;
+    yield* Effect.gen({ self: this }, function* () {
+      const attachments = yield* this.#mailbox
+        .stageGeneratedAttachments({ sources, ownerAgentId: agentId, ownerThreadId: snapshot.threadId })
+        .pipe(Effect.mapError((failure) => attachmentFailure(failure.cause)));
+      const previous = answer.attachments;
+      answer.attachments = [...(previous ?? []), ...attachments];
+      try {
+        const persisted = this.#mailbox.persistGeneratedAttachmentsWithConversation(
+          snapshot,
+          "response.path-attachments-added",
+          { turnId: answer.turnId, messageId: answer.id, attachmentCount: attachments.length },
+          attachments.map((attachment) => attachment.id),
+        );
+        snapshot.revision = persisted.revision;
+        this.#conversation.rememberConversationSignature(snapshot);
+      } catch (error) {
+        if (previous) answer.attachments = previous;
+        else delete answer.attachments;
+        yield* this.#mailbox
+          .discardStagedGeneratedAttachments(attachments.map((attachment) => attachment.id))
+          .pipe(Effect.mapError((failure) => attachmentFailure(failure.cause)));
+        return yield* attachmentFailure(error);
+      }
+    }).pipe(
+      Effect.ensuring(
+        attachmentCall(() => Promise.allSettled(sources.map((source) => source.handle.close()))).pipe(Effect.orDie),
+      ),
+    );
+  }, Effect.uninterruptible).bind(this);
 
   pendingCommands(): Effect.Effect<OpenBotToolResponse, AttachmentOperationError>[] {
     return [...this.#inFlight.values()].map(Deferred.await);

@@ -1324,6 +1324,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
               ),
             );
         },
+        attachAnswerFiles: (agentId, snapshot, answer, paths) =>
+          this.#attachments
+            .attachAnswerFiles(agentId, snapshot, answer, paths)
+            .pipe(
+              Effect.catch((failure) =>
+                Effect.sync(() => this.#emitError("answer_attachments_failed", failure.cause, agentId)),
+              ),
+            ),
         taskForThread: (threadId) => this.#tasks.taskForThread(threadId),
         taskOpen: (taskId) => this.#tasks.threadId(taskId) !== null,
         taskFailed: (taskId, message) => this.#tasks.failed(taskId, this.#mcp.redact(message)),

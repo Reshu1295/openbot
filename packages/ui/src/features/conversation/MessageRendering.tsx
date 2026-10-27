@@ -347,11 +347,12 @@ export function MessageBody(props: {
     );
   });
   /* The image files that a finished agent message names show under it like attached images. A
-     file that the message also attaches shows once, as the attachment. */
+     file that the message also shows as an attachment shows once, as the attachment. An attachment
+     that the text names by path does not show on its own, so its image shows here. */
   const namedImageFiles = createMemo(
     () => {
       if (props.message.author !== "agent" || props.message.streaming || !props.loadImageFile) return [];
-      const attached = new Set((props.message.attachments ?? []).map((attachment) => attachment.name));
+      const attached = new Set(standaloneAttachments().map((attachment) => attachment.name));
       const texts = messageContentBlocks(props.message.body, false).flatMap((block) =>
         block.type === "text" ? [block.text] : [],
       );
