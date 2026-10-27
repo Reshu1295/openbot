@@ -1,7 +1,8 @@
 // The Vault of a server: logins, payment cards and contact info that every agent can fill into a
-// page. A list answer never carries a password, a card number or a security code: the renderer gets
-// one of them only from `vault:reveal`, when the user asks for it. A joined server answers through
-// `vault-v1`, to an owner or admin only.
+// page, and API keys that every agent reads from a file. A list answer never carries a password, a card
+// number, a security code or an API key: the renderer gets one of them only from `vault:reveal`, when
+// the user asks for it. A joined server answers through `vault-v2`, or `vault-v1` without API keys, to
+// an owner or admin only.
 
 import {
   decodeList,
@@ -13,7 +14,7 @@ import {
 } from "./ipc-decoding";
 import { type DynamicRecord, isOneOf, isString } from "./runtime-values";
 
-export type VaultItemKind = "login" | "card" | "contact";
+export type VaultItemKind = "login" | "card" | "contact" | "apiKey";
 
 /** The name of the agent that added an item, as it was then. Absent when the user added it. */
 export interface VaultItemOrigin {
@@ -32,7 +33,7 @@ export function cardBrand(number: string): VaultCardBrand | null {
 }
 
 /** A value that the list never returns. */
-export type VaultSecretField = "password" | "number" | "securityCode";
+export type VaultSecretField = "password" | "number" | "securityCode" | "key";
 
 export interface VaultLoginSummary extends VaultItemOrigin {
   id: string;
@@ -79,7 +80,16 @@ export interface VaultContactSummary extends VaultContactFields, VaultItemOrigin
   kind: "contact";
 }
 
-export type VaultItemSummary = VaultLoginSummary | VaultCardSummary | VaultContactSummary;
+export interface VaultApiKeySummary extends VaultItemOrigin {
+  id: string;
+  kind: "apiKey";
+  /** The environment variable that a program reads, such as `OPENAI_API_KEY`. Unique in the Vault. */
+  name: string;
+  notes: string;
+  hasKey: boolean;
+}
+
+export type VaultItemSummary = VaultLoginSummary | VaultCardSummary | VaultContactSummary | VaultApiKeySummary;
 
 /**
  * - `ready`: the items can be read and changed.
@@ -116,7 +126,8 @@ export type VaultSaveInput =
       /** The approved sites to keep. A site can only be removed here; omitted keeps them all. */
       fillSites?: string[] | undefined;
     }
-  | ({ kind: "contact"; id: string | null } & VaultContactFields);
+  | ({ kind: "contact"; id: string | null } & VaultContactFields)
+  | { kind: "apiKey"; id: string | null; name: string; notes: string; key: string | null };
 
 export interface VaultSecretRequest {
   id: string;
@@ -133,6 +144,9 @@ export const VAULT_TEXT_LIMIT = 512;
 export const VAULT_FILL_SITE_LIMIT = 100;
 export const VAULT_NOTES_LIMIT = 4096;
 export const VAULT_PASSWORD_LIMIT = 1024;
+export const VAULT_API_KEY_LIMIT = 8192;
+/** An environment variable name, which is also the file name of an API key. */
+export const API_KEY_NAME_PATTERN = /^[A-Z][A-Z0-9_]{0,63}$/u;
 
 /** The countries that the Vault's contact form offers, as ISO 3166-1 alpha-2 codes. */
 export const VAULT_COUNTRY_CODES = [
@@ -165,7 +179,7 @@ export interface VaultHostImportResult {
 
 const VAULT_STATUSES: readonly VaultStatus[] = ["ready", "unavailable", "unreadable"];
 const VAULT_CARD_BRANDS: readonly VaultCardBrand[] = ["visa", "mastercard", "amex", "discover"];
-const VAULT_SECRET_KEYS = ["password", "number", "securityCode"] as const;
+const VAULT_SECRET_KEYS = ["password", "number", "securityCode", "key"] as const;
 
 function hostAddedBy(item: DynamicRecord): VaultItemOrigin {
   if (item.addedBy === undefined) return {};
@@ -223,12 +237,21 @@ function hostVaultItem(item: DynamicRecord): VaultItemSummary {
         phone: requiredString(item, "phone"),
         email: requiredString(item, "email"),
       };
+    case "apiKey":
+      return {
+        id,
+        ...hostAddedBy(item),
+        kind: "apiKey",
+        name: requiredString(item, "name"),
+        notes: requiredString(item, "notes"),
+        hasKey: requiredBoolean(item, "hasKey"),
+      };
     default:
       throw new Error("Invalid Vault response.");
   }
 }
 
-/** The Vault of a joined server (`vault-v1`). Throws for an item that carries a secret. */
+/** The Vault of a joined server (`vault-v2` or `vault-v1`). Throws for an item that carries a secret. */
 export function decodeHostVaultState(value: unknown): VaultState {
   const state = decodeRecord(value, "Vault response");
   if (!isOneOf(VAULT_STATUSES, state.status)) throw new Error("Invalid Vault response.");
@@ -241,7 +264,7 @@ export function decodeHostVaultImport(value: unknown): VaultHostImportResult {
   return { imported: requiredNumber(answer, "imported"), skipped: requiredNumber(answer, "skipped") };
 }
 
-/** The secret that a joined server answers to `reveal` (`vault-v1`). */
+/** The secret that a joined server answers to `reveal` (`vault-v2` or `vault-v1`). */
 export function decodeHostVaultSecret(value: unknown): string {
   const answer = decodeRecord(value, "Vault response");
   return requiredString(answer, "value");

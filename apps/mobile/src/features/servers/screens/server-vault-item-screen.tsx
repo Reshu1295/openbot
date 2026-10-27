@@ -1,4 +1,5 @@
 import {
+  VAULT_API_KEY_LIMIT,
   VAULT_NOTES_LIMIT,
   VAULT_PASSWORD_LIMIT,
   VAULT_TEXT_LIMIT,
@@ -37,9 +38,12 @@ import { SheetSaveAction } from "@/shared/components/sheet-save-action";
 import { haptics } from "@/shared/lib/haptics";
 import { useText } from "@/shared/lib/text";
 
-const KINDS: readonly VaultItemKind[] = ["login", "card", "contact"];
+const KINDS: readonly VaultItemKind[] = ["login", "card", "contact", "apiKey"];
 // An address, the same in each language.
 const WEBSITE_PLACEHOLDER = "https://example.com";
+// A variable name, the same in each language.
+const VARIABLE_NAME_PLACEHOLDER = "OPENAI_API_KEY";
+const VARIABLE_NAME_LIMIT = 64;
 
 /** Short fields side by side, each with an equal share of the width. */
 function FieldRow({ children }: { children: ReactNode }) {
@@ -68,7 +72,7 @@ export function ServerVaultItemScreen() {
   const { serverId, itemId, kind } = useLocalSearchParams<{ serverId: string; itemId?: string; kind?: string }>();
   const vault = useServerVault(serverId);
   const saved = itemId ? vault.query.data?.items.find((item) => item.id === itemId) : undefined;
-  const itemKind = saved?.kind ?? (isKind(kind) ? kind : undefined);
+  const itemKind = saved?.kind ?? (isKind(kind) && (kind !== "apiKey" || vault.canManageApiKeys) ? kind : undefined);
   if (!vault.server || !vault.canManage || !itemKind || (itemId && !saved))
     return (
       <SettingsContent>
@@ -204,7 +208,7 @@ function VaultItemForm({
     />
   );
   /** A secret field: empty for a saved item, which keeps its secret until a new one is typed. */
-  const secret = (key: "password" | "number" | "securityCode", label: string, props: FieldProps) =>
+  const secret = (key: "password" | "number" | "securityCode" | "key", label: string, props: FieldProps) =>
     field(key, label, {
       autoCapitalize: "none",
       isRequired: !saved && key !== "securityCode",
@@ -217,13 +221,17 @@ function VaultItemForm({
       ? vaultLoginTitle(saved)
       : saved.kind === "card"
         ? vaultCardTitle(saved, t)
-        : vaultContactTitle(saved, t)
+        : saved.kind === "apiKey"
+          ? saved.name
+          : vaultContactTitle(saved, t)
     : t(
         kind === "login"
           ? "mobile.server.vault.newLogin"
           : kind === "card"
             ? "mobile.server.vault.newCard"
-            : "mobile.server.vault.newContact",
+            : kind === "apiKey"
+              ? "mobile.server.vault.newApiKey"
+              : "mobile.server.vault.newContact",
       );
   const failure = action.error
     ? errorMessage(action.error, t(saved ? "mobile.server.vault.saveFailed" : "mobile.server.vault.addFailed"))
@@ -297,6 +305,22 @@ function VaultItemForm({
                 </Typography.Paragraph>
               </View>
             </View>
+          </>
+        ) : kind === "apiKey" ? (
+          <>
+            {field("name", t("mobile.server.vault.variableName"), {
+              isRequired: true,
+              autoCapitalize: "characters",
+              maxLength: VARIABLE_NAME_LIMIT,
+              placeholder: VARIABLE_NAME_PLACEHOLDER,
+              hint: t("mobile.server.vault.variableNameHint"),
+            })}
+            {secret("key", t("mobile.server.vault.apiKey"), {
+              secureTextEntry: true,
+              maxLength: VAULT_API_KEY_LIMIT,
+              hint: t("mobile.server.vault.secretHint", { host }),
+            })}
+            {field("notes", t("mobile.server.vault.notes"), { multiline: true, maxLength: VAULT_NOTES_LIMIT })}
           </>
         ) : (
           <>

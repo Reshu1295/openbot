@@ -60,6 +60,14 @@ const ITEMS: VaultItemSummary[] = [
     email: "ada@example.com",
     addedBy: "Atlas",
   },
+  {
+    id: "key-openai",
+    kind: "apiKey",
+    name: "OPENAI_API_KEY",
+    notes: "Project billing account",
+    hasKey: true,
+  },
+  { id: "key-stripe", kind: "apiKey", name: "STRIPE_SECRET_KEY", notes: "", hasKey: true },
 ];
 
 const meta = {
@@ -67,6 +75,7 @@ const meta = {
   component: VaultPanel,
   args: {
     state: { status: "ready", items: ITEMS },
+    apiKeys: true,
     onSave: fn(async () => undefined),
     onDelete: fn(async () => undefined),
     onReveal: fn(async () => "correct-horse-battery"),
@@ -81,7 +90,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Logins, cards and contact info, with the filter tabs and search. */
+/** Logins, cards, contact info and API keys, with the filter tabs and search. */
 export const Ready: Story = {};
 
 /** Nothing is saved yet. */
@@ -95,3 +104,12 @@ export const Unreadable: Story = { args: { state: { status: "unreadable", items:
 
 /** A joined server, for its owner or admin: the New item menu has no CSV import. */
 export const JoinedServer: Story = { args: { onImportCsv: undefined } };
+
+/** A joined server without `vault-v2`: it cannot keep API keys, so the kind and its tab are not offered. */
+export const OlderJoinedServer: Story = {
+  args: {
+    onImportCsv: undefined,
+    apiKeys: false,
+    state: { status: "ready", items: ITEMS.filter((item) => item.kind !== "apiKey") },
+  },
+};

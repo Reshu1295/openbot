@@ -1,4 +1,5 @@
 import type {
+  VaultApiKeySummary,
   VaultCardSummary,
   VaultContactSummary,
   VaultHostImportResult,
@@ -46,8 +47,9 @@ async function readPickedCsv(): Promise<string | null> {
 
 /**
  * Server settings › Vault of a joined server (`vault-v1`), for an owner or admin. It lists the logins,
- * cards and contact info that the host's agents fill, adds and opens items, and imports a CSV password
- * export. The host never sends a password, a card number or a security code, so none shows here.
+ * cards and contact info that the host's agents fill, and with `vault-v2` the API keys that they read,
+ * adds and opens items, and imports a CSV password export. The host never sends a password, a card
+ * number, a security code or an API key, so none shows here.
  */
 export function ServerVaultScreen() {
   const { t, errorMessage } = useText();
@@ -56,7 +58,7 @@ export function ServerVaultScreen() {
   const { importVaultCsv } = useMobileWorkspaceActions();
   const [importResult, setImportResult] = useState<VaultHostImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  const { server, canManage, canImport, query, action, perform } = vault;
+  const { server, canManage, canImport, canManageApiKeys, query, action, perform } = vault;
   if (!server || !canManage)
     return (
       <SettingsContent>
@@ -99,7 +101,8 @@ export function ServerVaultScreen() {
   const logins = state.items.filter((item): item is VaultLoginSummary => item.kind === "login");
   const cards = state.items.filter((item): item is VaultCardSummary => item.kind === "card");
   const contacts = state.items.filter((item): item is VaultContactSummary => item.kind === "contact");
-  const open = (params: { itemId: string } | { kind: "login" | "card" | "contact" }) =>
+  const apiKeys = state.items.filter((item): item is VaultApiKeySummary => item.kind === "apiKey");
+  const open = (params: { itemId: string } | { kind: "login" | "card" | "contact" | "apiKey" }) =>
     router.push({ pathname: "/server-settings/vault-item", params: { serverId, ...params } });
   const addedBy = (name: string | undefined) => (name ? t("mobile.server.vault.addedBy", { name }) : undefined);
 
@@ -188,6 +191,26 @@ export function ServerVaultScreen() {
           <Typography.Paragraph className="text-accent">{t("mobile.server.vault.addContact")}</Typography.Paragraph>
         </SettingsRow>
       </SettingsSection>
+      {canManageApiKeys ? (
+        <SettingsSection
+          title={t("mobile.server.vault.apiKeys")}
+          footer={t("mobile.server.vault.apiKeysFooter", { host })}
+        >
+          {apiKeys.length === 0 ? empty : null}
+          {apiKeys.map((apiKey) => (
+            <SettingsRow
+              key={apiKey.id}
+              supportingText={apiKey.notes || undefined}
+              onPress={() => open({ itemId: apiKey.id })}
+            >
+              <Typography.Paragraph numberOfLines={1}>{apiKey.name}</Typography.Paragraph>
+            </SettingsRow>
+          ))}
+          <SettingsRow disclosure={false} onPress={() => open({ kind: "apiKey" })}>
+            <Typography.Paragraph className="text-accent">{t("mobile.server.vault.addApiKey")}</Typography.Paragraph>
+          </SettingsRow>
+        </SettingsSection>
+      ) : null}
       {/* A host with the Vault but without the import keeps its CSV import on the host. */}
       {canImport ? (
         <SettingsSection footer={importFooter}>

@@ -45,6 +45,12 @@ export function createMockVault(): OpenBotDesktopApi["vault"] {
       const number = saved.number ?? "";
       return { ...card, id, brand: brandOf(number), last4: number.slice(-4), fillSites };
     }
+    if (input.kind === "apiKey") {
+      if (input.key !== null) saved.key = input.key;
+      secrets.set(id, saved);
+      const { key: _key, ...apiKey } = input;
+      return { ...apiKey, id, hasKey: Boolean(saved.key) };
+    }
     return { ...input, id };
   };
   const save = async (input: VaultSaveInput) => {

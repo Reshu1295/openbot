@@ -3,7 +3,8 @@
 // mailbox and the browser are small in-memory stand-ins that record each call, so a check can show
 // that a refused request did not reach them. The checks cover the protocol and auth gates, sign-in
 // and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`, the
-// host's Vault (`vault-v1`, and the CSV import of `vault-import-v1`) over the real service and store,
+// host's Vault (`vault-v1`, its API keys through `vault-v2`, and the CSV import of `vault-import-v1`)
+// over the real service and store,
 // a password that an admin saves from the secure card (`browser-secret-vault-v1`),
 // direct-message isolation, agents hidden from an older
 // protocol, the queue routes, the attachment and file routes with their size limits, and the error
@@ -77,6 +78,7 @@ import {
 } from "@openbot/contracts/team-protocol/v1";
 import { VAULT_IMPORT_CAPABILITY, VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY, VAULT_V2_ROUTES } from "@openbot/contracts/team-protocol/vault-v2";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect } from "effect";
@@ -549,6 +551,7 @@ const vaultFile = join(root, "openbot-vault-v1.json");
 const vault = new VaultService({ store: new VaultStore(vaultFile, fakeCipher), canPersist: () => true });
 await Effect.runPromise(vault.load());
 const VAULT_PASSWORD = "e2e-vault-password-7f3c";
+const VAULT_API_KEY = "e2e-vault-api-key-91d2";
 /** Resolves with the first status after a host sign-in started (`connecting`) and then ended. */
 function bitwardenSettled(connector: BitwardenConnectorService): Promise<BitwardenConnectorStatus> {
   return new Promise((resolveStatus) => {
@@ -2250,6 +2253,95 @@ try {
         reset.status === 200 &&
         isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
       [summary(unreadable), summary(reset)],
+    );
+  }
+
+  // ---- API keys in the host's Vault (vault-v2), and vault-v1 on the same host ----
+  {
+    const v1Call = (token: string, path: string, json: unknown = {}) =>
+      call("POST", path, { token, json, capabilities: [VAULT_CAPABILITY] });
+    const v2Call = (token: string, path: string, json: unknown = {}) =>
+      call("POST", path, { token, json, capabilities: [VAULT_V2_CAPABILITY] });
+    /** The kind of each listed item, in order. */
+    const kinds = (body: Json | undefined) => {
+      const items = field(body, "items");
+      return Array.isArray(items) ? items.map((item) => field(item, "kind")) : undefined;
+    };
+    const apiKey = { kind: "apiKey", id: null, name: "OPENAI_API_KEY", notes: "Billing", key: VAULT_API_KEY };
+    const login = {
+      kind: "login",
+      id: null,
+      website: "https://shop.example.com",
+      username: "ada@example.com",
+      notes: "",
+      password: VAULT_PASSWORD,
+    };
+    const unsupported = await v1Call(adaToken, VAULT_V2_ROUTES.list);
+    const memberSave = await v2Call(bobToken, VAULT_V2_ROUTES.save, apiKey);
+    check(
+      "the vault-v2 routes need vault-v2 and an owner or admin",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(memberSave, 403, sourceText("error.team.adminRequired")) &&
+        vault.state().items.length === 0,
+      [summary(unsupported), summary(memberSave)],
+    );
+    const saved = await v2Call(adaToken, VAULT_V2_ROUTES.save, apiKey);
+    const keyId = field(saved.body, "items", 0, "id");
+    check(
+      "an admin adds an API key; the answer lists its name with no key",
+      saved.status === 200 &&
+        field(saved.body, "items", 0, "kind") === "apiKey" &&
+        field(saved.body, "items", 0, "name") === "OPENAI_API_KEY" &&
+        field(saved.body, "items", 0, "hasKey") === true &&
+        typeof keyId === "string" &&
+        !saved.text.includes(VAULT_API_KEY) &&
+        !readFileSync(vaultFile, "utf8").includes(VAULT_API_KEY),
+      summary(saved),
+    );
+    assert.ok(typeof keyId === "string", "the vault-v2 save did not answer an item id.");
+    const duplicate = await v2Call(adaToken, VAULT_V2_ROUTES.save, apiKey);
+    const badName = await v2Call(adaToken, VAULT_V2_ROUTES.save, { ...apiKey, name: "openai key" });
+    const v1ApiKey = await v1Call(adaToken, VAULT_ROUTES.save, apiKey);
+    check(
+      "a second key of the same name and a name that is not a variable are refused; vault-v1 cannot add a key",
+      errorIs(duplicate, 400, sourceText("error.vault.apiKeyNameTaken")) &&
+        errorIs(badName, 400, sourceText("error.vault.apiKeyNameInvalid")) &&
+        v1ApiKey.status === 400 &&
+        vault.state().items.length === 1,
+      [summary(duplicate), summary(badName), summary(v1ApiKey)],
+    );
+    const v1Login = await v1Call(adaToken, VAULT_ROUTES.save, login);
+    const v1List = await v1Call(adaToken, VAULT_ROUTES.list);
+    const v1Delete = await v1Call(adaToken, VAULT_ROUTES.delete, { id: keyId });
+    const v1Reveal = await v1Call(adaToken, VAULT_ROUTES.reveal, { id: keyId, field: "key" });
+    check(
+      "vault-v1 on the same host lists no API key, keeps it when it saves a login, and cannot delete or reveal it",
+      v1Login.status === 200 &&
+        isDeepStrictEqual(kinds(v1List.body), ["login"]) &&
+        errorIs(v1Delete, 400, sourceText("error.vault.itemMissing")) &&
+        v1Reveal.status === 400 &&
+        !v1Reveal.text.includes(VAULT_API_KEY) &&
+        vault.state().items.some((item) => item.id === keyId),
+      [summary(v1Login), summary(v1List), summary(v1Delete), summary(v1Reveal)],
+    );
+    const v2List = await v2Call(adaToken, VAULT_V2_ROUTES.list);
+    const revealed = await v2Call(adaToken, VAULT_V2_ROUTES.reveal, { id: keyId, field: "key" });
+    check(
+      "vault-v2 lists the login and the API key, and reveals the key to an admin only from reveal",
+      isDeepStrictEqual(kinds(v2List.body), ["login", "apiKey"]) &&
+        !v2List.text.includes(VAULT_API_KEY) &&
+        isDeepStrictEqual(revealed.body, { value: VAULT_API_KEY }),
+      [summary(v2List), { status: revealed.status }],
+    );
+    const loginId = field(v1Login.body, "items", 0, "id");
+    const deletedKey = await v2Call(adaToken, VAULT_V2_ROUTES.delete, { id: keyId });
+    const deletedLogin = await v2Call(adaToken, VAULT_V2_ROUTES.delete, { id: loginId });
+    check(
+      "an admin deletes the API key and the login through vault-v2",
+      deletedKey.status === 200 &&
+        isDeepStrictEqual(deletedLogin.body, { status: "ready", items: [] }) &&
+        vault.state().items.length === 0,
+      [summary(deletedKey), summary(deletedLogin)],
     );
   }
 

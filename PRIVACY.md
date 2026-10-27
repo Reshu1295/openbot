@@ -594,18 +594,24 @@ is not included in analytics; provider output uses the application's secret reda
   computer that sent it does not keep it, and no answer from the server carries it.
 - The Vault (Server settings › Vault) is kept in
   `~/Library/Application Support/OpenBot/openbot-vault-v1.json`, encrypted by the operating system's
-  secret storage. It holds the logins, payment cards (number, expiry, security code, name) and
-  contact info that the user saves. On a computer with no secret storage, such as Linux with no
+  secret storage. It holds the logins, payment cards (number, expiry, security code, name), contact
+  info and API keys (variable name, key, notes) that the user saves. On a computer with no secret storage, such as Linux with no
   keyring, the Vault saves nothing. The file never leaves this computer. An owner or admin of a joined
   server can open that server's Vault in Server settings, from the desktop app or the web app: the
-  list goes over the encrypted connection with no password, card number or security code, and one of
+  list goes over the encrypted connection with no password, card number, security code or API key, and one of
   those goes to them only when they show or copy it. The iPhone app shows the same list and never
-  asks for a password, a card number or a security code: a new one that the owner or admin types on
+  asks for a password, a card number, a security code or an API key: a new one that the owner or admin types on
   the phone goes once to the server, and the phone does not keep it. Other team members cannot read it. An agent gets the login sites and usernames, the card names with their last
   four digits and expiry, and the contact info; it never gets a password, a card number, a security
   code or login notes. An agent can add and change contact info, change the username of a login (not
   its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
-  chat shows each change, and an item that an agent adds keeps the agent's name. A password that the
+  chat shows each change, and an item that an agent adds keeps the agent's name. Agents cannot see,
+  add, change or delete a Vault API key as an item. When an agent lists its API keys, OpenBot writes
+  each Vault key, readable only by the user, to
+  `~/Library/Application Support/OpenBot/agent-api-keys/.vault/<NAME>`, outside every workspace, and
+  gives the agent the path; every agent on the server can read these files in its commands. A changed
+  key is written again, and a deleted key or a Vault that cannot be read removes its file, also at
+  start. API keys are redacted from logs, exports and diagnostics. A password that the
   user types into the secure sign-in card goes to the Vault only while Save to Vault is checked. On a
   joined server, only an owner or admin can check it, the box starts unchecked, and the password goes
   to that server's Vault, not to the Vault of the computer where it was typed. The

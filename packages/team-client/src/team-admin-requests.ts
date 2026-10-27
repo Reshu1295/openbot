@@ -220,6 +220,7 @@ import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
 import { VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_ROUTES } from "@openbot/contracts/team-protocol/vault-v2";
 import { WEBHOOK_TESTS_ROUTES } from "@openbot/contracts/team-protocol/webhook-tests-v1";
 import { Effect, Schema } from "effect";
 import { bytesToBase64 } from "./base64";
@@ -1217,28 +1218,43 @@ export function bitwardenConnectorRequest(
   );
 }
 
-/** The host's Vault (`vault-v1`). No list item carries a password, a card number or a security code. */
-export function listHostVault(request: TeamApiRequest): Effect.Effect<VaultState, TeamAdminRequestError> {
-  return adminCall(() => request("POST", VAULT_ROUTES.list, decodeHostVaultState, {}));
+/** The routes of `vault-v2` when the host serves it, else of `vault-v1`, which has no API keys. */
+function vaultRoutes(v2: boolean) {
+  return v2 ? VAULT_V2_ROUTES : VAULT_ROUTES;
+}
+
+/**
+ * The host's Vault (`vault-v2`, or `vault-v1` without API keys). No list item carries a password, a
+ * card number, a security code or an API key.
+ */
+export function listHostVault(request: TeamApiRequest, v2: boolean): Effect.Effect<VaultState, TeamAdminRequestError> {
+  return adminCall(() => request("POST", vaultRoutes(v2).list, decodeHostVaultState, {}));
 }
 
 /** Adds or changes one item of the host's Vault. A null secret keeps the saved one; a new one goes to the host once. */
 export function saveHostVaultItem(
   request: TeamApiRequest,
   input: VaultSaveInput,
+  v2: boolean,
 ): Effect.Effect<VaultState, TeamAdminRequestError> {
   // Only a card has approved sites, and an absent list keeps them all.
   const { fillSites, ...item } = { fillSites: undefined, ...input };
   return adminCall(() =>
-    request("POST", VAULT_ROUTES.save, decodeHostVaultState, fillSites === undefined ? item : { ...item, fillSites }),
+    request(
+      "POST",
+      vaultRoutes(v2).save,
+      decodeHostVaultState,
+      fillSites === undefined ? item : { ...item, fillSites },
+    ),
   );
 }
 
 export function deleteHostVaultItem(
   request: TeamApiRequest,
   id: string,
+  v2: boolean,
 ): Effect.Effect<VaultState, TeamAdminRequestError> {
-  return adminCall(() => request("POST", VAULT_ROUTES.delete, decodeHostVaultState, { id }));
+  return adminCall(() => request("POST", vaultRoutes(v2).delete, decodeHostVaultState, { id }));
 }
 
 /** Adds the logins of a CSV password export (`vault-import-v1`). The answer has only the counts. */

@@ -65,6 +65,7 @@ import { SKILLS_ADMIN_CODECS } from "./skills-admin-v1";
 import { STORAGE_DISK_CODECS } from "./storage-disk-v1";
 import { VAULT_IMPORT_CODECS } from "./vault-import-v1";
 import { VAULT_CODECS } from "./vault-v1";
+import { VAULT_V2_CODECS } from "./vault-v2";
 import { WEBHOOK_TESTS_CODECS } from "./webhook-tests-v1";
 import { WORKFLOWS_CODECS } from "./workflows-v1";
 import { WORKSPACE_DIRECTORY_CODECS } from "./workspace-directory-v1";
@@ -138,6 +139,7 @@ const CODECS: ReadonlyMap<string, OptionalRouteCodec> = new Map([
   ...VAULT_CODECS,
   ...BROWSER_SECRET_VAULT_CODECS,
   ...VAULT_IMPORT_CODECS,
+  ...VAULT_V2_CODECS,
 ]);
 
 export function optionalRouteCodec(path: string): OptionalRouteCodec | undefined {

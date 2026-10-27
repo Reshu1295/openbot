@@ -60,18 +60,30 @@ const contactSchema = Schema.Struct({
   addedBy,
 });
 
+const apiKeySchema = Schema.Struct({
+  id: Schema.String,
+  /** An environment variable name, unique in the Vault. */
+  name: Schema.String,
+  key: Schema.String,
+  notes: Schema.String,
+  addedBy,
+});
+
 const recordSchema = Schema.Struct({
   logins: Schema.Array(loginSchema),
   cards: Schema.Array(cardSchema),
   contacts: Schema.Array(contactSchema),
+  // Absent in a file that a build before API keys wrote. Such a build drops the key on its next write.
+  apiKeys: Schema.Array(apiKeySchema).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
 });
 
 export type StoredLogin = typeof loginSchema.Type;
 export type StoredCard = typeof cardSchema.Type;
 export type StoredContact = typeof contactSchema.Type;
+export type StoredApiKey = typeof apiKeySchema.Type;
 export type VaultRecord = typeof recordSchema.Type;
 
-const EMPTY_VAULT_RECORD: VaultRecord = { logins: [], cards: [], contacts: [] };
+const EMPTY_VAULT_RECORD: VaultRecord = { logins: [], cards: [], contacts: [], apiKeys: [] };
 
 /** `version` is checked: an envelope that this build cannot read is reported as unreadable. */
 const envelopeSchema = Schema.Struct({ version: Schema.Literal(1), record: Schema.String });

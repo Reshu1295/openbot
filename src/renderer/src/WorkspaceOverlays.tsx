@@ -1,6 +1,7 @@
 import type { CentralAuthUser, RoutineFields, ServerSummary } from "@openbot/contracts/ipc";
 import { BROWSER_PROFILES_CAPABILITY } from "@openbot/contracts/team-protocol/browser-profiles-v1";
 import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
 import { classifyFailure } from "@openbot/telemetry";
 import { isAgentAccount } from "@openbot/ui/components/provider-accounts";
 import type { AcpRegistrySettingsApi } from "@openbot/ui/features/custom-providers/AcpRegistrySettings";
@@ -437,8 +438,12 @@ function ServerSettings() {
   const vault = createMemo(() => {
     const serverId = vaultServerId();
     if (serverId === undefined) return undefined;
-    const local = untrack(serverSettingsTarget)?.kind === "local";
-    return { store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)) };
+    const target = untrack(serverSettingsTarget);
+    const local = target?.kind === "local";
+    return {
+      store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)),
+      apiKeys: serverCanAdminister(target, VAULT_V2_CAPABILITY),
+    };
   });
   // The workspace belongs to the selected server. For another server, the switch comes first and
   // the agent is published for the scope it lands in; a message there opens as its agent's chat.

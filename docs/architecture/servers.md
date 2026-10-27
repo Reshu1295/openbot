@@ -401,10 +401,11 @@ host advertises a capability only when its `TeamApiAdmin` member exists.
 | `routine-results-v1` | List the messaging connections and their places; read and set where an agent routine sends its answers. Deliveries stay on the host | none: only the mobile app sends it |
 | `webhook-tests-v1` | Send one signed test event to a webhook routine | `events` |
 | `vault-v1` | The host's Vault: list, add, change and delete logins, cards and contact info; show one saved password, card number or security code; reset a Vault that the host cannot read. No CSV import. A change sends `vault-changed` with no data, so a client reads the list again | `vault` |
+| `vault-v2` | All of `vault-v1`, under `/v1/admin/vault/v2/`, and API keys as a fourth item kind: list each key's variable name and notes, add, change and delete keys, and show one saved key. The host leaves API keys out of every `vault-v1` answer, and `vault-v1` cannot delete or show one, so an older client keeps a valid list. It uses the `vault-changed` event of `vault-v1` | `vault` |
 | `vault-import-v1` | A CSV password export that an owner or admin sends as text, at most 256 KiB, below the JSON body limit. The host adds its logins as from its own file dialog and answers only the counts. The iPhone app uses it; the phone never calls the `vault-v1` reveal or reset | none: only the mobile app sends it |
 
 These IPC groups take a required server id and route with `scopedHandler`. A key travels only towards
-the host; no response carries one, except the `vault-v1` reveal: it answers the one secret that the
+the host; no response carries one, except the `vault-v1` and `vault-v2` reveal: it answers the one secret that the
 admin asked to show or copy. `providers-v1` has no progress event, so the renderer reads runtime
 status again every second while a host download runs. Publishing, macOS permissions, the browser
 sign-in and folder import stay on the host.

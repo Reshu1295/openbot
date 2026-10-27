@@ -1,6 +1,7 @@
 // The Vault of this computer, for Server settings of the local server. Main opens the CSV file dialog
 // and writes the clipboard, so a copied secret does not pass through the renderer. The `host*`
-// endpoints do the same for one server: a joined server answers through `vault-v1`.
+// endpoints do the same for one server: a joined server answers through `vault-v2`, or through
+// `vault-v1` without API keys when it is older.
 
 import { readFile, stat } from "node:fs/promises";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@openbot/contracts/ipc";
 import type { TeamCurrentCapability } from "@openbot/contracts/team-protocol/current";
 import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY, VAULT_V2_ROUTES } from "@openbot/contracts/team-protocol/vault-v2";
 import type { AppTranslate } from "@openbot/i18n";
 import { sourceText } from "@openbot/i18n/source";
 import { registerSecretValue } from "@openbot/logging";
@@ -49,19 +51,24 @@ export function vaultIpcHandlers({
 }: VaultIpcDependencies): Pick<IpcGroupHandlers, "vault"> {
   function post<T>(
     serverId: string,
-    path: string,
+    route: keyof typeof VAULT_ROUTES,
     decode: ResponseDecoder<T>,
     body: VaultSaveInput | VaultSecretRequest | { id: string } | Record<string, never> = {},
   ): Promise<T> {
-    if (!remoteServers.supportsCapability(serverId, VAULT_CAPABILITY))
-      throw new Error(sourceText("error.team.vaultUnsupported"));
-    return runCauseEffect(remoteServers.request(serverId, path, decode, { method: "POST", body }));
+    const routes = remoteServers.supportsCapability(serverId, VAULT_V2_CAPABILITY)
+      ? VAULT_V2_ROUTES
+      : remoteServers.supportsCapability(serverId, VAULT_CAPABILITY)
+        ? VAULT_ROUTES
+        : null;
+    if (!routes) throw new Error(sourceText("error.team.vaultUnsupported"));
+    return runCauseEffect(remoteServers.request(serverId, routes[route], decode, { method: "POST", body }));
   }
   // A secret from a joined server is redacted from logs here as well, as on its host. The security
   // code is not: a three-digit pattern would remove numbers from every log line.
   const remoteReveal = async (request: VaultSecretRequest, serverId: string): Promise<string> => {
-    const secret = await post(serverId, VAULT_ROUTES.reveal, decodeHostVaultSecret, request);
-    if (request.field !== "securityCode") registerSecretValue(secret, { allowShort: request.field === "password" });
+    const secret = await post(serverId, "reveal", decodeHostVaultSecret, request);
+    if (request.field !== "securityCode")
+      registerSecretValue(secret, { allowShort: request.field === "password" || request.field === "key" });
     return secret;
   };
 
@@ -96,21 +103,22 @@ export function vaultIpcHandlers({
       reset: handler(() => runCauseEffect(vault.reset())),
       hostList: scopedQueryHandler({
         local: () => vault.state(),
-        remote: (serverId) => post(serverId, VAULT_ROUTES.list, decodeHostVaultState),
+        remote: (serverId) => post(serverId, "list", decodeHostVaultState),
       }),
       hostSave: scopedHandler(decodeVaultSaveInput, {
         local: (input) => runCauseEffect(vault.save(input)),
         remote: (input, serverId) => {
-          // A new password or card number crosses this computer too, so it is redacted here as well.
+          // A new password, card number or API key crosses this computer too, so it is redacted here as well.
           if (input.kind === "login" && input.password !== null)
             registerSecretValue(input.password, { allowShort: true });
           if (input.kind === "card" && input.number !== null) registerSecretValue(input.number);
-          return post(serverId, VAULT_ROUTES.save, decodeHostVaultState, input);
+          if (input.kind === "apiKey" && input.key !== null) registerSecretValue(input.key, { allowShort: true });
+          return post(serverId, "save", decodeHostVaultState, input);
         },
       }),
       hostDelete: scopedHandler(stringPayload("id", 64), {
         local: (id) => runCauseEffect(vault.delete(id)),
-        remote: (id, serverId) => post(serverId, VAULT_ROUTES.delete, decodeHostVaultState, { id }),
+        remote: (id, serverId) => post(serverId, "delete", decodeHostVaultState, { id }),
       }),
       hostReveal: scopedHandler(decodeVaultSecretRequest, {
         local: (request) => vault.reveal(request),
@@ -126,7 +134,7 @@ export function vaultIpcHandlers({
       }),
       hostReset: scopedQueryHandler({
         local: () => runCauseEffect(vault.reset()),
-        remote: (serverId) => post(serverId, VAULT_ROUTES.reset, decodeHostVaultState),
+        remote: (serverId) => post(serverId, "reset", decodeHostVaultState),
       }),
     },
   };

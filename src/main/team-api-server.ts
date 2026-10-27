@@ -102,6 +102,7 @@ import {
   type TeamCurrentCapability,
   VAULT_CAPABILITY,
   VAULT_IMPORT_CAPABILITY,
+  VAULT_V2_CAPABILITY,
   WEBHOOK_TESTS_CAPABILITY,
   WORKFLOWS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
@@ -1914,6 +1915,7 @@ export class TeamApiServer {
         if (capability === VAULT_CAPABILITY) return this.#options.vault !== undefined;
         if (capability === BROWSER_SECRET_VAULT_CAPABILITY) return this.#options.vault !== undefined;
         if (capability === VAULT_IMPORT_CAPABILITY) return this.#options.vault !== undefined;
+        if (capability === VAULT_V2_CAPABILITY) return this.#options.vault !== undefined;
         if (capability === PROVIDER_HOST_SIGN_IN_CAPABILITY) return this.#options.providerHostSignIns !== undefined;
         if (capability === PROVIDER_ACCOUNTS_CAPABILITY) return this.#options.providerAccounts !== undefined;
         if (capability === PROVIDER_USAGE_RESET_CAPABILITY) return this.#options.providerUsageResets !== undefined;

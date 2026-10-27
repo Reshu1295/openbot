@@ -1,5 +1,5 @@
 // What main answers for the Vault in Server settings. A list item never carries a password, a card
-// number or a security code: a summary that has one of those keys is refused, so a main-process bug
+// number, a security code or an API key: a summary that has one of those keys is refused, so a main-process bug
 // cannot put a secret in renderer state. Only `reveal` answers with a secret.
 
 import type {
@@ -22,7 +22,7 @@ import { type DynamicRecord, isOneOf, isString } from "@openbot/contracts/runtim
 
 const STATUSES: readonly VaultStatus[] = ["ready", "unavailable", "unreadable"];
 const BRANDS: readonly VaultCardBrand[] = ["visa", "mastercard", "amex", "discover"];
-const SECRET_KEYS = ["password", "number", "securityCode"] as const;
+const SECRET_KEYS = ["password", "number", "securityCode", "key"] as const;
 const decodeFillSites = guardedListDecoder(isString, "fillSites");
 
 function contactFields(item: DynamicRecord) {
@@ -81,6 +81,15 @@ function vaultItem(item: DynamicRecord): VaultItemSummary {
     }
     case "contact":
       return { id, ...addedBy(item), kind: "contact", ...contactFields(item) };
+    case "apiKey":
+      return {
+        id,
+        ...addedBy(item),
+        kind: "apiKey",
+        name: requiredString(item, "name"),
+        notes: requiredString(item, "notes"),
+        hasKey: requiredBoolean(item, "hasKey"),
+      };
     default:
       throw new Error("Invalid Vault item kind.");
   }

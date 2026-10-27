@@ -35,6 +35,7 @@ import { ROUTINE_RECOVERY_CAPABILITY } from "@openbot/contracts/team-protocol/ro
 import { SIDE_QUESTION_CAPABILITY } from "@openbot/contracts/team-protocol/side-question-v1";
 import { SIGN_IN_RELAY_CAPABILITY } from "@openbot/contracts/team-protocol/sign-in-relay-v1";
 import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
 import { WEBHOOK_TESTS_CAPABILITY } from "@openbot/contracts/team-protocol/webhook-tests-v1";
 import { runTeamEffect } from "@openbot/team-client";
 import { channelForThread } from "@openbot/team-client/channel-notifications";
@@ -1218,15 +1219,16 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     return store ? { store, listAgents: async () => workspace.profiles() } : undefined;
   });
   // The Vault section, for an owner or admin of a host with `vault-v1`. The store follows the host id.
+  // With `vault-v2` it also keeps API keys.
   const vaultHostId = createMemo(() => {
     const current = server();
     return serverCanAdminister(current, VAULT_CAPABILITY) ? current?.id : undefined;
   });
-  const vaultSettings = createMemo((): ServerVaultOptions | undefined =>
-    vaultHostId() === undefined
-      ? undefined
-      : { store: createVaultStore(webVaultCalls(() => hostRequest(), workspace.onHostEvent)) },
-  );
+  const vaultSettings = createMemo((): ServerVaultOptions | undefined => {
+    if (vaultHostId() === undefined) return undefined;
+    const v2 = serverCanAdminister(untrack(server), VAULT_V2_CAPABILITY);
+    return { store: createVaultStore(webVaultCalls(() => hostRequest(), workspace.onHostEvent, v2)), apiKeys: v2 };
+  });
   const openBrowserProfileSettings = (trigger: HTMLElement) => {
     const current = server();
     if (current) void openServerSettings(current.id, trigger, "browser-profiles");
