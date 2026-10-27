@@ -78,6 +78,7 @@ function modelsRow(server: DetectedModelServer, saved: CustomProviderSummary | u
     added: true,
     savedModels: saved.models.map((model) => ({ id: model.id, name: model.name })),
     keyStored: saved.hasApiKey,
+    savedHeaderNames: saved.headerNames ?? [],
   };
 }
 
@@ -290,7 +291,10 @@ export function createProviderDetectionStore(options: ProviderDetectionStoreOpti
     value: Parameters<DetectedProviderApi["save"]>[1],
   ): Promise<CustomProviderRestart> {
     if (value.kind === "agent") return options.agents.saveCustomAgent(customAgentInput(value.value));
-    if (provider.added) return options.endpoints.updateCustomProvider(customProviderUpdate(value.value));
+    if (provider.added) {
+      const saved = provider.kind === "models" ? provider.savedHeaderNames : undefined;
+      return options.endpoints.updateCustomProvider(customProviderUpdate(value.value, saved));
+    }
     return options.endpoints.saveCustomProvider(value.value);
   }
 

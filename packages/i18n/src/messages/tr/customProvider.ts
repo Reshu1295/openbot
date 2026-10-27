@@ -70,8 +70,7 @@ export const messages = {
   "customProvider.field.baseUrl": "Temel URL",
   "customProvider.field.apiKey": "API anahtarı",
   "customProvider.field.apiKeyHint": "İsteğe bağlı. Kimlik doğrulamasını başlıklarla yönetiyorsanız boş bırakın.",
-  "customProvider.field.apiKeyKeptHint":
-    "Bir anahtar kayıtlı. Bunu ve kayıtlı başlıkları korumak için burayı boş bırakın.",
+  "customProvider.field.apiKeyKeptHint": "Bir anahtar kayıtlı. Korumak için burayı boş bırakın.",
   "customProvider.models": "Modeller",
   "customProvider.model.id": "{number}. model kimliği",
   "customProvider.model.name": "{number}. model görünen adı",
@@ -82,6 +81,7 @@ export const messages = {
   "customProvider.header.name": "{number}. başlık adı",
   "customProvider.header.value": "{number}. başlık değeri",
   "customProvider.header.valuePlaceholder": "değer",
+  "customProvider.header.keptPlaceholder": "Kaydedildi. Korumak için boş bırakın.",
   "customProvider.header.remove": "{number}. başlığı kaldır",
   "customProvider.header.add": "Başlık ekle",
   "customProvider.submit": "Gönder",

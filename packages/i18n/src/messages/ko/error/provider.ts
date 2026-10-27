@@ -99,6 +99,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "헤더 이름이 너무 길어요.",
   "error.provider.headerNameDuplicate": "헤더 두 개의 이름이 같아요.",
   "error.provider.headerValueInvalid": "헤더 값이 없거나 너무 길어요.",
+  "error.provider.headerValueMissing": "헤더 {name}의 값을 입력하세요.",
   "error.provider.apiKeyTooLong": "API 키가 너무 길어요.",
   "error.provider.localOnly": "제공자는 에이전트를 실행하는 컴퓨터에서만 변경할 수 있어요.",
   "error.provider.keyRequired": "제공자 키가 필요해요.",

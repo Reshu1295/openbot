@@ -7,7 +7,12 @@ import {
   type SaveCustomProviderInput,
 } from "@openbot/contracts/ipc";
 import type { AcpAgentCheck, CustomAcpAgentDraft } from "./custom-acp-agent-form";
-import type { CustomProviderDraft, CustomProviderEndpoint, DiscoveredModel } from "./custom-provider-form";
+import {
+  type CustomProviderDraft,
+  type CustomProviderEndpoint,
+  type DiscoveredModel,
+  savedHeaderDrafts,
+} from "./custom-provider-form";
 
 interface DetectedBase {
   /** The detection key that Hide stores: `models:<endpoint key>` or `agent:<command path>`. */
@@ -26,8 +31,10 @@ export type DetectedProvider =
       models: readonly DiscoveredModel[];
       /** For a saved endpoint: the models the user chose, which Edit opens with. */
       savedModels?: readonly DiscoveredModel[] | undefined;
-      /** For a saved endpoint: main holds a key or headers, which a blank key field keeps. */
+      /** For a saved endpoint: main holds a key, which a blank key field keeps. */
       keyStored?: boolean | undefined;
+      /** For a saved endpoint: the names of its saved headers, whose values an empty field keeps. */
+      savedHeaderNames?: readonly string[] | undefined;
     })
   | (DetectedBase & {
       kind: "agent";
@@ -94,7 +101,7 @@ export function detectedModelsDraft(provider: Extract<DetectedProvider, { kind: 
     baseUrl: provider.baseUrl,
     apiKey: "",
     models: models.length > 0 ? models : [{ id: "", name: "" }],
-    headers: [{ name: "", value: "" }],
+    headers: savedHeaderDrafts(provider.added ? provider.savedHeaderNames : undefined),
   };
 }
 

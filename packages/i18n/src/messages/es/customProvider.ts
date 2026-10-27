@@ -66,8 +66,7 @@ export const messages = {
   "customProvider.field.baseUrl": "URL base",
   "customProvider.field.apiKey": "Clave de API",
   "customProvider.field.apiKeyHint": "Opcional. Déjalo vacío si gestionas la autenticación mediante cabeceras.",
-  "customProvider.field.apiKeyKeptHint":
-    "Hay una clave guardada. Déjalo vacío para conservarla junto con las cabeceras guardadas.",
+  "customProvider.field.apiKeyKeptHint": "Hay una clave guardada. Déjalo vacío para conservarla.",
   "customProvider.models": "Modelos",
   "customProvider.model.id": "ID del modelo {number}",
   "customProvider.model.name": "Nombre para mostrar del modelo {number}",
@@ -78,6 +77,7 @@ export const messages = {
   "customProvider.header.name": "Nombre de la cabecera {number}",
   "customProvider.header.value": "Valor de la cabecera {number}",
   "customProvider.header.valuePlaceholder": "valor",
+  "customProvider.header.keptPlaceholder": "Guardado. Déjalo vacío para conservarlo.",
   "customProvider.header.remove": "Eliminar cabecera {number}",
   "customProvider.header.add": "Añadir cabecera",
   "customProvider.submit": "Enviar",

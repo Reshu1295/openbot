@@ -23,6 +23,8 @@ export interface CustomModelDraft {
 export interface CustomHeaderDraft {
   name: string;
   value: string;
+  /** The name of a saved header. Main holds its value, which an empty field keeps. */
+  savedName?: string;
 }
 
 export interface CustomProviderDraft {
@@ -57,9 +59,16 @@ export function emptyCustomProviderDraft(): CustomProviderDraft {
   };
 }
 
+/** The header rows of a saved endpoint: each saved name, with an empty value that keeps the saved one. */
+export function savedHeaderDrafts(names: readonly string[] | undefined): CustomHeaderDraft[] {
+  return names && names.length > 0
+    ? names.map((name) => ({ name, value: "", savedName: name }))
+    : [{ name: "", value: "" }];
+}
+
 /**
- * The form for a saved endpoint. The key and the headers stay in main, so their fields open blank,
- * and blank fields keep them (`customProviderUpdate`).
+ * The form for a saved endpoint. The key and the header values stay in main, so their fields open
+ * blank, and blank fields keep them (`customProviderUpdate`).
  */
 export function savedCustomProviderDraft(provider: CustomProviderSummary): CustomProviderDraft {
   return {
@@ -71,7 +80,7 @@ export function savedCustomProviderDraft(provider: CustomProviderSummary): Custo
       provider.models.length > 0
         ? provider.models.map((model) => ({ id: model.id, name: model.name }))
         : [{ id: "", name: "" }],
-    headers: [{ name: "", value: "" }],
+    headers: savedHeaderDrafts(provider.headerNames),
   };
 }
 
@@ -82,6 +91,11 @@ function blankModel(model: CustomModelDraft): boolean {
 
 function blankHeader(header: CustomHeaderDraft): boolean {
   return !header.name.trim() && !header.value.trim();
+}
+
+/** A saved header whose value the user left empty. Main fills it in. */
+export function keepsHeaderValue(header: CustomHeaderDraft): boolean {
+  return header.savedName !== undefined && header.name.trim() === header.savedName && !header.value.trim();
 }
 
 /**
@@ -165,7 +179,8 @@ export function validateCustomProvider(
     else if (!isCustomProviderHeaderName(name)) errors.headerRows[index] = t("customProvider.error.headerNameInvalid");
     else if (headerNames.has(name.toLowerCase()))
       errors.headerRows[index] = t("customProvider.error.headerDuplicate", { name });
-    else if (!header.value.trim()) errors.headerRows[index] = t("customProvider.error.headerValueRequired");
+    else if (!header.value.trim() && !keepsHeaderValue(header))
+      errors.headerRows[index] = t("customProvider.error.headerValueRequired");
     else headerNames.add(name.toLowerCase());
   });
   if (draft.headers.filter((header) => !blankHeader(header)).length > CUSTOM_PROVIDER_LIMITS.headers) {
@@ -219,7 +234,10 @@ export function hasCustomProviderError(errors: CustomProviderErrors): boolean {
   );
 }
 
-/** The wire payload: trimmed, with the blank placeholder rows dropped. */
+/**
+ * The wire payload: trimmed, with the blank placeholder rows dropped. A kept saved header has an
+ * empty value, which only `customProviderUpdate` sends.
+ */
 export function customProviderValue(draft: CustomProviderDraft): SaveCustomProviderInput {
   const models = draft.models
     .filter((model) => !blankModel(model))
@@ -239,17 +257,24 @@ export function customProviderValue(draft: CustomProviderDraft): SaveCustomProvi
 }
 
 /**
- * An edit of a saved endpoint sends only what the user typed: a blank key and no headers keep the
- * stored ones. There is no way to clear them here, which is the rule of `customProviders.update`.
+ * An edit of a saved endpoint: a blank key keeps the stored one, and an empty header value keeps the
+ * saved value of that name. The header list replaces the saved one, so a removed row removes its
+ * header. With no rows and no saved names, the headers are not sent: main keeps what it holds, also
+ * when it cannot read them. There is no way to clear the key here, which is the rule of
+ * `customProviders.update`.
  */
-export function customProviderUpdate(value: SaveCustomProviderInput): UpdateCustomProviderInput {
+export function customProviderUpdate(
+  value: SaveCustomProviderInput,
+  savedHeaderNames: readonly string[] = [],
+): UpdateCustomProviderInput {
+  const headers = value.headers.map((header) => ({ name: header.name, value: header.value || null }));
   return {
     id: value.id,
     name: value.name,
     baseUrl: value.baseUrl,
     models: value.models,
     ...(value.apiKey === null ? {} : { apiKey: value.apiKey }),
-    ...(value.headers.length === 0 ? {} : { headers: value.headers }),
+    ...(headers.length === 0 && savedHeaderNames.length === 0 ? {} : { headers }),
   };
 }
 

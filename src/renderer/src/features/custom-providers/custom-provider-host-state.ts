@@ -110,7 +110,7 @@ export function createCustomProviderHostState(options: CustomProviderHostOptions
       current.note = null;
     });
     try {
-      const update = state.editing ? customProviderUpdate(value) : null;
+      const update = state.editing ? customProviderUpdate(value, state.editing.headerNames) : null;
       const restart = update ? await options.onUpdate?.(update) : await options.onAdd?.(value);
       setState((current) => {
         current.open = false;

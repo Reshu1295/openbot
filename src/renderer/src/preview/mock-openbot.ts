@@ -583,6 +583,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         name: "House Router",
         baseUrl: "https://models.example.com/v1",
         hasApiKey: true,
+        headerNames: ["X-Team"],
         models: [{ id: "glm-5-air", name: "GLM-5 Air" }],
       },
     ],
@@ -1298,6 +1299,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
             name: input.name,
             baseUrl: input.baseUrl,
             hasApiKey: input.apiKey !== null,
+            headerNames: input.headers.map((header) => header.name),
             models: input.models.map((model) => ({ id: model.id, name: model.name })),
           },
         ];
@@ -1309,12 +1311,22 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         emitAgentEvent({ type: "status", status: clone(agentStatus) });
         return { providers: clone(customProviders), restart: "restarted" };
       },
-      /** The same keep rule as the real store: a key that is not sent stays, but not for a new origin. */
+      /**
+       * The same keep rule as the real store: a key that is not sent, or a header value that is null,
+       * stays, but not for a new origin.
+       */
       update: async (input) => {
         const stored = customProviders.find((provider) => provider.id === input.id);
         if (!stored) throw new Error("This endpoint is not saved.");
+        const savedNames = stored.headerNames ?? [];
+        const headerNames = input.headers?.map((header) => header.name) ?? savedNames;
+        const missing = input.headers?.find((header) => header.value === null && !savedNames.includes(header.name));
+        if (missing) throw new Error(`Enter a value for ${missing.name}.`);
         const keepsKey = input.apiKey === undefined && stored.hasApiKey;
-        if (keepsKey && !sameCustomProviderOrigin(stored.baseUrl, input.baseUrl)) {
+        const keepsHeader = input.headers
+          ? input.headers.some((header) => header.value === null)
+          : savedNames.length > 0;
+        if ((keepsKey || keepsHeader) && !sameCustomProviderOrigin(stored.baseUrl, input.baseUrl)) {
           throw new Error("Enter the API key again for the new address.");
         }
         customProviders = customProviders.map((provider) =>
@@ -1324,6 +1336,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
                 name: input.name,
                 baseUrl: input.baseUrl,
                 hasApiKey: input.apiKey !== undefined || keepsKey,
+                headerNames,
                 models: input.models.map((model) => ({ id: model.id, name: model.name })),
               }
             : provider,
