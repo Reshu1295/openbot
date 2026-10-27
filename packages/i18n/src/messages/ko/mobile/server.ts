@@ -610,6 +610,9 @@ export const messages = {
   "mobile.server.settings.providers": "제공자",
   "mobile.server.settings.providersConnected": { other: "{count}개 연결됨" },
   "mobile.server.providers.description": "이 서버를 실행하는 컴퓨터의 AI 제공자예요.",
+  "mobile.server.providers.defaultProvider": "기본 제공자",
+  "mobile.server.providers.defaultProviderHint":
+    "이 서버의 새 에이전트는 이 제공자로 시작해요. 나중에 에이전트마다 바꿀 수 있어요.",
   "mobile.server.providers.loading": "제공자 불러오는 중…",
   "mobile.server.providers.loadFailed": "이 서버의 제공자를 불러오지 못했어요.",
   "mobile.server.providers.runtimesFailed": "이 서버의 다운로드 목록을 불러오지 못했어요.",

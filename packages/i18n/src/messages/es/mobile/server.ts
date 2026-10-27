@@ -654,6 +654,9 @@ export const messages = {
   "mobile.server.settings.providers": "Proveedores",
   "mobile.server.settings.providersConnected": { one: "{count} conectado", other: "{count} conectados" },
   "mobile.server.providers.description": "Los proveedores de IA del equipo que ejecuta este servidor.",
+  "mobile.server.providers.defaultProvider": "Proveedor predeterminado",
+  "mobile.server.providers.defaultProviderHint":
+    "Un agente nuevo en este servidor empieza con este proveedor. Puedes cambiarlo para cada agente más tarde.",
   "mobile.server.providers.loading": "Cargando proveedores…",
   "mobile.server.providers.loadFailed": "No se pudieron cargar los proveedores de este servidor.",
   "mobile.server.providers.runtimesFailed": "No se pudieron cargar las descargas de este servidor.",

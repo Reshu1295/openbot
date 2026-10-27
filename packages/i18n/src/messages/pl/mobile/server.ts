@@ -723,6 +723,9 @@ export const messages = {
     other: "{count} połączonego",
   },
   "mobile.server.providers.description": "Dostawcy AI komputera, na którym działa ten serwer.",
+  "mobile.server.providers.defaultProvider": "Domyślny dostawca",
+  "mobile.server.providers.defaultProviderHint":
+    "Nowy agent na tym serwerze startuje z tym dostawcą. Później możesz go zmienić dla każdego agenta.",
   "mobile.server.providers.loading": "Wczytywanie dostawców…",
   "mobile.server.providers.loadFailed": "Nie udało się wczytać dostawców tego serwera.",
   "mobile.server.providers.runtimesFailed": "Nie udało się wczytać pobrań tego serwera.",

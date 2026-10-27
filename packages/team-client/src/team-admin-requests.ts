@@ -25,22 +25,24 @@ import { HOST_MEMBER_UPDATE_ROUTES } from "@openbot/contracts/team-protocol/host
 import { HOST_RELEASE_ROUTES } from "@openbot/contracts/team-protocol/host-release-v1";
 import { HOST_TIMEZONE_ROUTES } from "@openbot/contracts/team-protocol/host-timezone-v1";
 import { PROMPT_CACHE_TTL_ROUTES } from "@openbot/contracts/team-protocol/prompt-cache-ttl-v1";
+import { PROVIDER_DEFAULT_ROUTES } from "@openbot/contracts/team-protocol/provider-default-v1";
 import type { PROVIDERS_V5_ROUTES } from "@openbot/contracts/team-protocol/providers-v5";
 import { PROVIDERS_V8_ROUTES } from "@openbot/contracts/team-protocol/providers-v8";
 // Admin requests to one host: agent settings and skills, shared tables, agent share links, the server name and logo,
-// the server timezone, the agent memory limit, the prompt cache time, the Discord roles that can use OpenBot, the app update, MCP servers, storage, hosted sites and providers.
+// the server timezone, the agent memory limit, the prompt cache time, the default provider, the Discord roles that can use OpenBot, the app update, MCP servers, storage, hosted sites and providers.
 //
 // The desktop sends the same routes from the main process. The web client and the mobile app send
 // them through their own transport, so the path, body and decoding of each request are here once.
 // The host answers only an owner or admin; a member gets a refusal, which the transport rejects.
 
-import type { ManagedProviderId } from "@openbot/contracts/agent-providers";
+import { type AgentProviderRef, isAgentProviderRef, type ManagedProviderId } from "@openbot/contracts/agent-providers";
 import { parseHostedSiteList } from "@openbot/contracts/hosted-sites";
 import {
   type AccountUsage,
   type AddedAgent,
   type AddMessagingOrchestratorResult,
   type AgentAdminSettings,
+  type AgentModelId,
   type AgentProviderId,
   type AgentStatus,
   type AgentTemplatePreview,
@@ -113,6 +115,7 @@ import {
   type InstallMarketplaceAgentInput,
   type InstallSkillInput,
   isAddMessagingOrchestratorResult,
+  isAgentModel,
   isAgentStatus,
   isSharedTable,
   type McpServerConfig,
@@ -610,6 +613,37 @@ export function setHostPromptCacheTtl(
   ttl: PromptCacheTtl,
 ): Effect.Effect<PromptCacheTtlSetting, TeamAdminRequestError> {
   return adminCall(() => request("POST", PROMPT_CACHE_TTL_ROUTES.update, decodePromptCacheTtlSetting, { ttl }));
+}
+
+/** `provider-default-v1`: the provider that a new agent of the host starts on. A newer host can name a provider this build does not know. */
+export interface HostProviderDefault {
+  provider: AgentProviderRef | null;
+  model: AgentModelId | null;
+}
+
+function decodeHostProviderDefault(value: unknown): HostProviderDefault {
+  const record = decodeRecord(value, "default provider");
+  const { provider, model } = record;
+  if (provider !== null && !isAgentProviderRef(provider)) throw new Error("Invalid default provider.");
+  if (model !== null && !isAgentModel(model)) throw new Error("Invalid default model.");
+  return { provider, model };
+}
+
+export function getHostProviderDefault(
+  request: TeamApiRequest,
+): Effect.Effect<HostProviderDefault, TeamAdminRequestError> {
+  return adminCall(() => request("POST", PROVIDER_DEFAULT_ROUTES.settings, decodeHostProviderDefault, {}));
+}
+
+/** A null model is the provider's own default model. */
+export function setHostProviderDefault(
+  request: TeamApiRequest,
+  provider: AgentProviderId,
+  model: AgentModelId | null,
+): Effect.Effect<HostProviderDefault, TeamAdminRequestError> {
+  return adminCall(() =>
+    request("POST", PROVIDER_DEFAULT_ROUTES.update, decodeHostProviderDefault, { provider, model }),
+  );
 }
 
 /** The one MCP read route, and the only one the host answers to a GET. */

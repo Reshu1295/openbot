@@ -614,6 +614,9 @@ export const messages = {
   "mobile.server.settings.providers": "Aanbieders",
   "mobile.server.settings.providersConnected": { one: "{count} verbonden", other: "{count} verbonden" },
   "mobile.server.providers.description": "De AI-aanbieders van de computer waarop deze server draait.",
+  "mobile.server.providers.defaultProvider": "Standaardaanbieder",
+  "mobile.server.providers.defaultProviderHint":
+    "Een nieuwe agent op deze server start met deze aanbieder. Je kunt dit later per agent wijzigen.",
   "mobile.server.providers.loading": "Aanbieders laden…",
   "mobile.server.providers.loadFailed": "Kan de aanbieders van deze server niet laden.",
   "mobile.server.providers.runtimesFailed": "Kan de downloads van deze server niet laden.",

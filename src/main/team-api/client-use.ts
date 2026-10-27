@@ -20,6 +20,7 @@ import { HOST_UPDATE_ROUTES } from "@openbot/contracts/team-protocol/host-update
 import { HOSTED_SITES_ROUTES } from "@openbot/contracts/team-protocol/hosted-sites-v1";
 import { LIVE_ACTIVITY_PUSH_ROUTES } from "@openbot/contracts/team-protocol/live-activity-push-v1";
 import { PROMPT_CACHE_TTL_ROUTES } from "@openbot/contracts/team-protocol/prompt-cache-ttl-v1";
+import { PROVIDER_DEFAULT_ROUTES } from "@openbot/contracts/team-protocol/provider-default-v1";
 import { PROVIDERS_ADMIN_ROUTES } from "@openbot/contracts/team-protocol/providers-v1";
 import { PROVIDERS_RUNTIMES_V2_ROUTES } from "@openbot/contracts/team-protocol/providers-v2";
 import { ANDROID_PUSH_NOTIFICATIONS_ROUTES } from "@openbot/contracts/team-protocol/push-notifications-android-v1";
@@ -53,6 +54,7 @@ const PASSIVE_ROUTES: ReadonlySet<string> = new Set([
   HOST_TIMEZONE_ROUTES.settings,
   AGENT_MEMORY_LIMIT_ROUTES.settings,
   PROMPT_CACHE_TTL_ROUTES.settings,
+  PROVIDER_DEFAULT_ROUTES.settings,
   DISCORD_ACCESS_ROUTES.access,
   LIVE_ACTIVITY_PUSH_ROUTES.register,
   LIVE_ACTIVITY_PUSH_ROUTES.remove,

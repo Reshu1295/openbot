@@ -647,6 +647,9 @@ export const messages = {
   "mobile.server.settings.providers": "Fournisseurs",
   "mobile.server.settings.providersConnected": { one: "{count} connecté", other: "{count} connectés" },
   "mobile.server.providers.description": "Les fournisseurs d’IA de l’ordinateur qui exécute ce serveur.",
+  "mobile.server.providers.defaultProvider": "Fournisseur par défaut",
+  "mobile.server.providers.defaultProviderHint":
+    "Un nouvel agent de ce serveur démarre avec ce fournisseur. Vous pourrez le changer pour chaque agent plus tard.",
   "mobile.server.providers.loading": "Chargement des fournisseurs…",
   "mobile.server.providers.loadFailed": "Impossible de charger les fournisseurs de ce serveur.",
   "mobile.server.providers.runtimesFailed": "Impossible de charger les téléchargements de ce serveur.",

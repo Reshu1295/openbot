@@ -719,6 +719,9 @@ export const messages = {
     other: "{count} подключено",
   },
   "mobile.server.providers.description": "ИИ-провайдеры компьютера, на котором работает этот сервер.",
+  "mobile.server.providers.defaultProvider": "Провайдер по умолчанию",
+  "mobile.server.providers.defaultProviderHint":
+    "Новый агент на этом сервере запускается с этим провайдером. Позже его можно изменить для каждого агента.",
   "mobile.server.providers.loading": "Загрузка провайдеров…",
   "mobile.server.providers.loadFailed": "Не удалось загрузить провайдеров этого сервера.",
   "mobile.server.providers.runtimesFailed": "Не удалось получить загрузки этого сервера.",

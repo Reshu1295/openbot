@@ -18,6 +18,7 @@ import { isDeepStrictEqual } from "node:util";
 import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import {
   AGENT_PROVIDERS,
+  type AgentModelId,
   type AgentProviderId,
   type AgentStatus,
   type AgentSummary,
@@ -52,6 +53,10 @@ import {
   BROWSER_SECRET_VAULT_CAPABILITY,
   BROWSER_SECRET_VAULT_ROUTES,
 } from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
+import {
+  PROVIDER_DEFAULT_CAPABILITY,
+  PROVIDER_DEFAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/provider-default-v1";
 import {
   PROVIDER_USAGE_RESET_CAPABILITY,
   PROVIDER_USAGE_RESET_ROUTES,
@@ -151,6 +156,11 @@ const routineResultOptions: RoutineResultConnectionOption[] = [
   },
 ];
 let routineDestination: RoutineResultDestination | null = null;
+// The setup choice of the host: Codex with its own default model.
+let providerDefault: { provider: AgentProviderId | null; model: AgentModelId | null } = {
+  provider: "codex",
+  model: null,
+};
 
 function check(name: string, passed: boolean, detail: unknown = null): void {
   checks.push({ name, passed, detail });
@@ -631,6 +641,16 @@ try {
         busyMessageMode: { get: () => ({ mode: "queue" }) },
         agentDefaults: { get: () => DEFAULT_AGENT_DEFAULTS },
       }),
+      // The setup file in memory. The host writes it and tells the agent service, as `saveSetup` does.
+      defaultProvider: {
+        get: () => Effect.sync(() => providerDefault),
+        set: (input) =>
+          Effect.sync(() => {
+            record("setDefaultProvider", input);
+            providerDefault = { provider: input.preferredProvider, model: input.preferredModel };
+            return providerDefault;
+          }),
+      },
       // A routine results service over one agent routine. The host's own name of the connection wins.
       routineResults: {
         options: () => Effect.succeed(routineResultOptions),
@@ -1561,6 +1581,96 @@ try {
         errorIs(hiddenSet, 404, sourceText("error.team.agentNotFound")) &&
         callsOf("updateAgent").length === writes + 2,
       [summary(hiddenRead), summary(hiddenSet)],
+    );
+  }
+
+  // ---- Default provider (provider-default-v1) ----
+  {
+    const capabilities = [PROVIDER_DEFAULT_CAPABILITY];
+    const compatibility = await call("GET", TEAM_API_ROUTES.compatibility, { protocol: 7 });
+    check(
+      "the host advertises provider-default-v1",
+      list(field(compatibility.body, "capabilities")).includes(PROVIDER_DEFAULT_CAPABILITY),
+      summary(compatibility),
+    );
+    const adminRead = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, { token: adaToken, json: {}, capabilities });
+    check(
+      "an admin reads the default provider of the host",
+      adminRead.status === 200 && isDeepStrictEqual(adminRead.body, { provider: "codex", model: null }),
+      summary(adminRead),
+    );
+    const unsupported = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, { token: adaToken, json: {} });
+    check(
+      "the default-provider routes without the capability get 400 providerDefaultUnsupported",
+      errorIs(unsupported, 400, sourceText("error.team.providerDefaultUnsupported")),
+      summary(unsupported),
+    );
+    const writes = callsOf("setDefaultProvider").length;
+    const memberRead = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, {
+      token: bobToken,
+      json: {},
+      capabilities,
+    });
+    const memberSet = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: bobToken,
+      json: { provider: "claude", model: null },
+      capabilities,
+    });
+    check(
+      "a member cannot read or set the default provider",
+      errorIs(memberRead, 403, sourceText("error.team.adminRequired")) &&
+        errorIs(memberSet, 403, sourceText("error.team.adminRequired")) &&
+        callsOf("setDefaultProvider").length === writes,
+      [summary(memberRead), summary(memberSet)],
+    );
+    const unknownProvider = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "not-a-provider", model: null },
+      capabilities,
+    });
+    const badModel = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "claude", model: "bad model" },
+      capabilities,
+    });
+    check(
+      "the host refuses an unknown provider or an invalid model, and writes nothing",
+      unknownProvider.status === 400 && badModel.status === 400 && callsOf("setDefaultProvider").length === writes,
+      [summary(unknownProvider), summary(badModel)],
+    );
+    const hiddenSet = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "deepseek", model: null },
+      capabilities,
+    });
+    check(
+      "a protocol 7 admin cannot set DeepSeek, which that protocol does not show",
+      hiddenSet.status === 400 && callsOf("setDefaultProvider").length === writes,
+      summary(hiddenSet),
+    );
+    const adminSet = await call("POST", PROVIDER_DEFAULT_ROUTES.update, {
+      token: adaToken,
+      json: { provider: "deepseek", model: null },
+      capabilities,
+      protocol: 8,
+    });
+    const readBack = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, {
+      token: adaToken,
+      json: {},
+      capabilities,
+      protocol: 8,
+    });
+    const oldRead = await call("POST", PROVIDER_DEFAULT_ROUTES.settings, { token: adaToken, json: {}, capabilities });
+    check(
+      "a protocol 8 admin sets DeepSeek as the default and reads it back; protocol 7 reads no default",
+      adminSet.status === 200 &&
+        isDeepStrictEqual(adminSet.body, { provider: "deepseek", model: null }) &&
+        isDeepStrictEqual(readBack.body, { provider: "deepseek", model: null }) &&
+        isDeepStrictEqual(oldRead.body, { provider: null, model: null }) &&
+        isDeepStrictEqual(callsOf("setDefaultProvider").at(-1), [
+          { preferredProvider: "deepseek", preferredModel: null },
+        ]),
+      [summary(adminSet), summary(readBack), summary(oldRead)],
     );
   }
 

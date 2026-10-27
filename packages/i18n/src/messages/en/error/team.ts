@@ -89,6 +89,7 @@ export const messages = defineMessages("error.team", {
   "error.team.routineResultsUnsupported": "Routine destinations are not supported by this connection.",
   "error.team.agentMemoryLimitUnsupported": "The agent memory limit is not supported by this connection.",
   "error.team.promptCacheTtlUnsupported": "The prompt cache time is not supported by this connection.",
+  "error.team.providerDefaultUnsupported": "The default provider is not supported by this connection.",
   "error.team.agentAccessUnsupported": "Roles are not supported by this connection.",
   "error.team.agentAccessStale": "Someone changed the roles. Open them again and make your change.",
   "error.team.agentViewOnly": "You can only view this agent.",

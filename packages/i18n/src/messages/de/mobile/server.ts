@@ -660,6 +660,9 @@ export const messages = {
   "mobile.server.settings.providers": "Anbieter",
   "mobile.server.settings.providersConnected": { one: "{count} verbunden", other: "{count} verbunden" },
   "mobile.server.providers.description": "Die KI-Anbieter des Computers, auf dem dieser Server läuft.",
+  "mobile.server.providers.defaultProvider": "Standardanbieter",
+  "mobile.server.providers.defaultProviderHint":
+    "Ein neuer Agent auf diesem Server startet mit diesem Anbieter. Du kannst ihn später für jeden Agenten ändern.",
   "mobile.server.providers.loading": "Anbieter werden geladen…",
   "mobile.server.providers.loadFailed": "Die Anbieter dieses Servers konnten nicht geladen werden.",
   "mobile.server.providers.runtimesFailed": "Die Downloads dieses Servers konnten nicht geladen werden.",

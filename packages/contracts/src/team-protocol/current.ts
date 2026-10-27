@@ -58,6 +58,7 @@ import { PROMPT_CACHE_TTL_CAPABILITY } from "./prompt-cache-ttl-v1";
 import { TEAM_PROMPT_MULTI_SELECT_CAPABILITY } from "./prompt-multi-select-v1";
 import { PROVIDER_ACCOUNT_RELAY_CAPABILITY } from "./provider-account-relay-v1";
 import { PROVIDER_ACCOUNTS_CAPABILITY } from "./provider-accounts-v1";
+import { PROVIDER_DEFAULT_CAPABILITY } from "./provider-default-v1";
 import { PROVIDER_HOST_SIGN_IN_CAPABILITY } from "./provider-host-sign-in-v1";
 import { PROVIDER_USAGE_RESET_CAPABILITY } from "./provider-usage-reset-v1";
 import { PROVIDERS_ADMIN_CAPABILITY } from "./providers-v1";
@@ -167,6 +168,7 @@ export {
   PROMPT_CACHE_TTL_CAPABILITY,
   PROVIDER_ACCOUNT_RELAY_CAPABILITY,
   PROVIDER_ACCOUNTS_CAPABILITY,
+  PROVIDER_DEFAULT_CAPABILITY,
   PROVIDER_HOST_SIGN_IN_CAPABILITY,
   PROVIDER_USAGE_RESET_CAPABILITY,
   PROVIDERS_ADMIN_CAPABILITY,
@@ -305,6 +307,7 @@ export const TEAM_CURRENT_CAPABILITIES = [
   PROVIDER_ACCOUNT_RELAY_CAPABILITY,
   STORAGE_DISK_CAPABILITY,
   PROMPT_CACHE_TTL_CAPABILITY,
+  PROVIDER_DEFAULT_CAPABILITY,
   CLAUDE_API_KEY_CAPABILITY,
   WORKFLOWS_CAPABILITY,
   AGENT_THREADS_CAPABILITY,
@@ -426,6 +429,7 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== PROVIDER_ACCOUNT_RELAY_CAPABILITY &&
     capability !== STORAGE_DISK_CAPABILITY &&
     capability !== PROMPT_CACHE_TTL_CAPABILITY &&
+    capability !== PROVIDER_DEFAULT_CAPABILITY &&
     capability !== CLAUDE_API_KEY_CAPABILITY &&
     capability !== WORKFLOWS_CAPABILITY &&
     capability !== AGENT_THREADS_CAPABILITY &&
@@ -491,6 +495,7 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== PROVIDER_ACCOUNT_RELAY_CAPABILITY &&
       capability !== STORAGE_DISK_CAPABILITY &&
       capability !== PROMPT_CACHE_TTL_CAPABILITY &&
+      capability !== PROVIDER_DEFAULT_CAPABILITY &&
       capability !== CLAUDE_API_KEY_CAPABILITY &&
       capability !== WORKFLOWS_CAPABILITY &&
       capability !== AGENT_THREADS_CAPABILITY &&

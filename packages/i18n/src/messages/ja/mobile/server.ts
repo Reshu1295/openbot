@@ -603,6 +603,9 @@ export const messages = {
   "mobile.server.settings.providers": "プロバイダー",
   "mobile.server.settings.providersConnected": { other: "{count} 件接続済み" },
   "mobile.server.providers.description": "このサーバーを実行しているコンピューターの AI プロバイダーです。",
+  "mobile.server.providers.defaultProvider": "デフォルトのプロバイダー",
+  "mobile.server.providers.defaultProviderHint":
+    "このサーバーの新しいエージェントは、このプロバイダーで始まります。後からエージェントごとに変更できます。",
   "mobile.server.providers.loading": "プロバイダーを読み込み中…",
   "mobile.server.providers.loadFailed": "このサーバーのプロバイダーを読み込めませんでした。",
   "mobile.server.providers.runtimesFailed": "このサーバーのダウンロードを読み込めませんでした。",

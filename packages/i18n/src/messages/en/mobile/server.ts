@@ -746,6 +746,9 @@ export const messages = defineMessages("mobile.server", {
   "mobile.server.settings.providersConnected": { one: "{count} connected", other: "{count} connected" },
   // The AI providers of the computer that runs the server. Owners and admins manage them from the phone.
   "mobile.server.providers.description": "The AI providers of the computer that runs this server.",
+  "mobile.server.providers.defaultProvider": "Default provider",
+  "mobile.server.providers.defaultProviderHint":
+    "A new agent on this server starts on this provider. You can change it for each agent later.",
   "mobile.server.providers.loading": "Loading providers…",
   "mobile.server.providers.loadFailed": "Could not load the providers of this server.",
   "mobile.server.providers.runtimesFailed": "Could not load the downloads of this server.",
