@@ -648,6 +648,8 @@ export const messages = {
   "mobile.server.settings.providers": "Provedores",
   "mobile.server.settings.providersConnected": { one: "{count} conectado", other: "{count} conectados" },
   "mobile.server.providers.description": "Os provedores de IA do computador que executa este servidor.",
+  "mobile.server.providers.connectedTitle": "Conectado",
+  "mobile.server.providers.otherTitle": "Não conectado",
   "mobile.server.providers.defaultProvider": "Provedor padrão",
   "mobile.server.providers.defaultProviderHint":
     "Um novo agente neste servidor começa com este provedor. Você pode alterá-lo para cada agente depois.",

@@ -719,6 +719,8 @@ export const messages = {
     other: "{count} подключено",
   },
   "mobile.server.providers.description": "ИИ-провайдеры компьютера, на котором работает этот сервер.",
+  "mobile.server.providers.connectedTitle": "Подключено",
+  "mobile.server.providers.otherTitle": "Не подключено",
   "mobile.server.providers.defaultProvider": "Провайдер по умолчанию",
   "mobile.server.providers.defaultProviderHint":
     "Новый агент на этом сервере запускается с этим провайдером. Позже его можно изменить для каждого агента.",

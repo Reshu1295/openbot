@@ -641,6 +641,8 @@ export const messages = {
   "mobile.server.settings.providers": "Sağlayıcılar",
   "mobile.server.settings.providersConnected": { one: "{count} bağlı", other: "{count} bağlı" },
   "mobile.server.providers.description": "Bu sunucuyu çalıştıran bilgisayarın yapay zekâ sağlayıcıları.",
+  "mobile.server.providers.connectedTitle": "Bağlandı",
+  "mobile.server.providers.otherTitle": "Bağlı değil",
   "mobile.server.providers.defaultProvider": "Varsayılan sağlayıcı",
   "mobile.server.providers.defaultProviderHint":
     "Bu sunucudaki yeni bir ajan bu sağlayıcıyla başlar. Daha sonra her ajan için değiştirebilirsiniz.",

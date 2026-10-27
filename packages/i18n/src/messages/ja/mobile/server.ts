@@ -603,6 +603,8 @@ export const messages = {
   "mobile.server.settings.providers": "プロバイダー",
   "mobile.server.settings.providersConnected": { other: "{count} 件接続済み" },
   "mobile.server.providers.description": "このサーバーを実行しているコンピューターの AI プロバイダーです。",
+  "mobile.server.providers.connectedTitle": "接続済み",
+  "mobile.server.providers.otherTitle": "未接続",
   "mobile.server.providers.defaultProvider": "デフォルトのプロバイダー",
   "mobile.server.providers.defaultProviderHint":
     "このサーバーの新しいエージェントは、このプロバイダーで始まります。後からエージェントごとに変更できます。",

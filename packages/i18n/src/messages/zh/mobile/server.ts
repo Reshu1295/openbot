@@ -594,6 +594,8 @@ export const messages = {
   "mobile.server.settings.providersConnected": { other: "已连接 {count} 个" },
   // The AI providers of the computer that runs the server. Owners and admins manage them from the phone.
   "mobile.server.providers.description": "运行该服务器的电脑上的 AI 服务商。",
+  "mobile.server.providers.connectedTitle": "已连接",
+  "mobile.server.providers.otherTitle": "未连接",
   "mobile.server.providers.defaultProvider": "默认服务商",
   "mobile.server.providers.defaultProviderHint": "此服务器上的新智能体会使用此服务商。之后你可以为每个智能体单独更改。",
   "mobile.server.providers.loading": "正在加载服务商…",

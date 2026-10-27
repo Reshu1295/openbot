@@ -723,6 +723,8 @@ export const messages = {
     other: "{count} połączonego",
   },
   "mobile.server.providers.description": "Dostawcy AI komputera, na którym działa ten serwer.",
+  "mobile.server.providers.connectedTitle": "Połączono",
+  "mobile.server.providers.otherTitle": "Nie połączono",
   "mobile.server.providers.defaultProvider": "Domyślny dostawca",
   "mobile.server.providers.defaultProviderHint":
     "Nowy agent na tym serwerze startuje z tym dostawcą. Później możesz go zmienić dla każdego agenta.",

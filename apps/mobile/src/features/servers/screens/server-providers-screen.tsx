@@ -56,36 +56,48 @@ export function ServerProvidersScreen() {
         </SettingsNote>
       </SettingsContent>
     );
+  // The connected providers first, then the others; a group with no provider is not shown.
+  const connected = rows.filter((row) => row.status?.state === "available");
+  const sections = [
+    { title: t("mobile.server.providers.connectedTitle"), rows: connected },
+    { title: t("mobile.server.providers.otherTitle"), rows: rows.filter((row) => !connected.includes(row)) },
+  ].filter((section) => section.rows.length > 0);
   return (
     <SettingsContent>
       {admin?.defaultProvider ? (
         <DefaultProviderSection serverId={serverId} setting={admin.defaultProvider} rows={rows} />
       ) : null}
-      <SettingsSection
-        footer={
-          runtimes.isError
-            ? errorMessage(runtimes.error, t("mobile.server.providers.runtimesFailed"))
-            : t("mobile.server.providers.description")
-        }
-      >
-        {rows.map((row) => (
-          <SettingsRow
-            key={row.id}
-            supportingText={row.status?.email ?? undefined}
-            leading={
-              <View className="py-1.5 pr-1">
-                <ProviderMark provider={row.id} size={22} />
-              </View>
-            }
-            trailing={<TrailingValue value={providerStatusLabel(row, text)} />}
-            onPress={() =>
-              router.push({ pathname: "/server-settings/provider", params: { serverId, provider: row.id } })
-            }
-          >
-            <Typography.Paragraph numberOfLines={1}>{row.name}</Typography.Paragraph>
-          </SettingsRow>
-        ))}
-      </SettingsSection>
+      {sections.map((section, index) => (
+        <SettingsSection
+          key={section.title}
+          title={section.title}
+          footer={
+            index < sections.length - 1
+              ? undefined
+              : runtimes.isError
+                ? errorMessage(runtimes.error, t("mobile.server.providers.runtimesFailed"))
+                : t("mobile.server.providers.description")
+          }
+        >
+          {section.rows.map((row) => (
+            <SettingsRow
+              key={row.id}
+              supportingText={row.status?.email ?? undefined}
+              leading={
+                <View className="py-1.5 pr-1">
+                  <ProviderMark provider={row.id} size={22} />
+                </View>
+              }
+              trailing={<TrailingValue value={providerStatusLabel(row, text)} />}
+              onPress={() =>
+                router.push({ pathname: "/server-settings/provider", params: { serverId, provider: row.id } })
+              }
+            >
+              <Typography.Paragraph numberOfLines={1}>{row.name}</Typography.Paragraph>
+            </SettingsRow>
+          ))}
+        </SettingsSection>
+      ))}
       {/* Only a host that downloads runtimes has updates to check. */}
       {runtimes.data && admin ? (
         <SettingsSection footer={checkResult ?? undefined}>
