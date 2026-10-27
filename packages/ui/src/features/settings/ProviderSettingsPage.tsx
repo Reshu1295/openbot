@@ -199,11 +199,7 @@ function ProviderList(props: ProviderSettingsPageProps & { onOpen: (id: PageId) 
   const needle = () => query().trim().toLowerCase();
   /** The line under a provider's name. Problems come first, so the list shows what needs the user. */
   const summary = (option: ProviderPickerOption) => {
-    if (option.off) {
-      return option.runtimeStatus?.phase === "not-downloaded"
-        ? t("provider.status.offNotDownloaded")
-        : t("provider.status.off");
-    }
+    if (option.off) return t("provider.status.off");
     if (option.runtimeStatus?.phase === "not-downloaded") return t("provider.status.notDownloaded");
     if (option.connectionState === "connecting") return t("provider.status.connecting");
     if (option.state !== "available") return providerStatusLabel(t, format, option.state);
@@ -1469,8 +1465,10 @@ function DownloadSection(props: SectionProps) {
     versions: number;
     confirming: boolean;
     removing: boolean;
+    /** Set by a removal on this page. An off provider can run a CLI the user installed instead. */
+    removed: boolean;
     error: string | null;
-  }>({ bytes: 0, versions: 0, confirming: false, removing: false, error: null });
+  }>({ bytes: 0, versions: 0, confirming: false, removing: false, removed: false, error: null });
   let reads = 0;
   const measure = (provider: AgentProviderId, read: ProviderSettingsPageProps["onMeasureProviderDownload"]) => {
     const serial = ++reads;
@@ -1485,16 +1483,17 @@ function DownloadSection(props: SectionProps) {
     else apply({ bytes: 0, versions: 0 });
   };
   const offered = () => props.row.off() && Boolean(props.onRemoveProviderDownload);
-  // Measured again when the provider is turned off or its download changes.
+  // Measured again when the provider is turned off. A provider that is off downloads nothing, and
+  // a removal measures again itself.
   createEffect(
-    () => ({
-      provider: props.option.id,
-      read: offered() ? props.onMeasureProviderDownload : undefined,
-      phase: props.option.runtimeStatus?.phase,
-    }),
-    ({ provider, read }) => measure(provider, read),
+    () => ({ provider: props.option.id, read: offered() ? props.onMeasureProviderDownload : undefined }),
+    ({ provider, read }) => {
+      setDownload((state) => {
+        state.removed = false;
+      });
+      measure(provider, read);
+    },
   );
-  const notDownloaded = () => props.option.runtimeStatus?.phase === "not-downloaded";
   const detail = () => {
     const values = { count: download.versions, size: format.fileSize(download.bytes) };
     const version = props.option.runtimeStatus?.version;
@@ -1511,6 +1510,7 @@ function DownloadSection(props: SectionProps) {
       await props.onRemoveProviderDownload?.(props.option.id);
       setDownload((state) => {
         state.confirming = false;
+        state.removed = true;
       });
     } catch (error) {
       setDownload((state) => {
@@ -1524,7 +1524,7 @@ function DownloadSection(props: SectionProps) {
     measure(props.option.id, props.onMeasureProviderDownload);
   }
   return (
-    <Show when={offered() && (download.bytes > 0 || notDownloaded())}>
+    <Show when={offered() && (download.bytes > 0 || download.removed)}>
       <SettingsSection title={t("provider.settings.download")}>
         <ItemGroup class="settings-modal-card">
           <Show

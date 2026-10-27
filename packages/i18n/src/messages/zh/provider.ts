@@ -34,7 +34,6 @@ export const messages = {
   "provider.status.unavailable": "不可用",
   "provider.status.checking": "检查中",
   "provider.status.off": "已关闭",
-  "provider.status.offNotDownloaded": "已关闭 · 未下载",
   "provider.gemini.hostSignIn":
     "要连接 Gemini，请在主机上打开 OpenBot，然后在“设置 > 服务商”中选择“连接”。Google 登录需要该主机上有浏览器，不支持远程登录。",
 

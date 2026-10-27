@@ -217,8 +217,11 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
   /** What each running download installs, so a cancel removes the right partial file. */
   readonly #transfers = new Map<ManagedRuntimeId, RuntimeSpec>();
   readonly #stages = new Map<ManagedRuntimeId, RuntimeTaskStage>();
-  /** Running removals of a provider's download. A download that starts meanwhile waits for one. */
-  readonly #removals = new Map<ManagedProviderId, Fiber.Fiber<void>>();
+  /**
+   * Running removals of a provider's download, each with whether it removed every version it chose.
+   * A download that starts meanwhile waits for one.
+   */
+  readonly #removals = new Map<ManagedProviderId, Fiber.Fiber<boolean>>();
   /**
    * When this instance last stamped each version directory. A stamp on disk no later than this one
    * is this instance's own, so no sibling has used the version since.
@@ -388,20 +391,19 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
         return yield* new ProviderRuntimeFailure({
           cause: new Error(sourceText("error.provider.removeWhileDownloading")),
         });
-      const running = this.#removals.get(provider);
-      if (running) {
-        yield* Fiber.join(running);
-        return this.getStatus();
+      let removal = this.#removals.get(provider);
+      if (!removal) {
+        // Registered without an await after the checks above, so a download that starts now waits.
+        removal = yield* Effect.forkIn(
+          this.#removeVersionsEffect(provider, target).pipe(
+            Effect.ensuring(Effect.sync(() => this.#removals.delete(provider))),
+          ),
+          this.#scope,
+        );
+        this.#removals.set(provider, removal);
       }
-      // Registered without an await after the checks above, so a download that starts now waits.
-      const removal = yield* Effect.forkIn(
-        this.#removeVersionsEffect(provider, target).pipe(
-          Effect.ensuring(Effect.sync(() => this.#removals.delete(provider))),
-        ),
-        this.#scope,
-      );
-      this.#removals.set(provider, removal);
-      yield* Fiber.join(removal);
+      if (!(yield* Fiber.join(removal)))
+        return yield* new ProviderRuntimeFailure({ cause: new Error(sourceText("error.provider.removeIncomplete")) });
       return this.getStatus();
     });
   }
@@ -542,9 +544,19 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
   }
 
   /** Sends the update offers again after the user turns a provider on or off. */
-  providerUseChanged(): void {
-    this.#revision += 1;
-    this.emit("status", this.getStatus());
+  providerUseChanged(): Effect.Effect<void> {
+    return Effect.gen({ self: this }, function* () {
+      // This instance does not stamp a provider that is off, so a sibling may have collected its
+      // version meanwhile. A provider turned on reads the store again when that version is gone.
+      for (const provider of PROVIDERS) {
+        const executable = this.executablePath(provider);
+        if (this.#statuses[provider].phase !== "ready" || !executable || this.#tasks.has(provider)) continue;
+        if (!this.#cliInUse(provider) || (yield* pathExists(executable))) continue;
+        yield* this.#inspectEffect(provider).pipe(Effect.ignore);
+      }
+      this.#revision += 1;
+      this.emit("status", this.getStatus());
+    });
   }
 
   /** The managed copy of every provider CLI, in the shape the agent service takes. */
@@ -718,7 +730,10 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
    */
   ensureKeyProviderCli(provider: AgentProviderRef): Effect.Effect<void, ProviderRuntimeFailure> {
     if (!isKeyOnlyProvider(provider)) return Effect.void;
-    return resolvePiCli({ bundledExecutable: this.executablePath("pi") }).pipe(
+    // A removal of Pi's download that runs now would take away the CLI that this finds.
+    const removal = this.#removals.get("pi");
+    return (removal ? Fiber.await(removal) : Effect.void).pipe(
+      Effect.andThen(resolvePiCli({ bundledExecutable: this.executablePath("pi") })),
       Effect.asVoid,
       Effect.catch(() => this.downloadAndWait("pi")),
     );
@@ -744,6 +759,7 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
       this.#checkTimer = null;
       for (const controller of this.#controllers.values()) controller.abort();
       yield* Effect.forEach(this.#tasks.values(), Fiber.await, { concurrency: "unbounded", discard: true });
+      yield* Effect.forEach(this.#removals.values(), Fiber.await, { concurrency: "unbounded", discard: true });
       yield* Scope.close(this.#scope, Exit.void);
     });
   }
@@ -1498,22 +1514,35 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
     );
   }
 
-  #removeVersionsEffect(provider: ManagedProviderId, target: RuntimeTarget): Effect.Effect<void> {
+  /**
+   * Removes the versions `#removableVersionPathsEffect` chooses, and answers whether every one went.
+   *
+   * Each version is moved aside before it is deleted. A version that a program holds open refuses
+   * the move on Windows and stays whole, and a deletion that stops part-way leaves only the moved
+   * copy, which the staging sweep collects. Neither leaves a version directory without its files.
+   */
+  #removeVersionsEffect(provider: ManagedProviderId, target: RuntimeTarget): Effect.Effect<boolean> {
     return Effect.gen({ self: this }, function* () {
       const paths = yield* this.#removableVersionPathsEffect(provider, target);
-      yield* Effect.forEach(
+      const removed = yield* Effect.forEach(
         paths,
         (path) =>
           Effect.gen({ self: this }, function* () {
             // Again just before the removal: a sibling may have stamped it since the listing.
-            if (yield* this.#stampedBySiblingEffect(path)) return;
-            // A version that a sibling still runs refuses to be removed on Windows, and is kept.
-            yield* runtimeIO(() => rm(path, { recursive: true, force: true })).pipe(Effect.ignore);
-            if (yield* pathExists(path)) return;
+            if (yield* this.#stampedBySiblingEffect(path)) return true;
+            const aside = join(
+              this.#runtimeRoot(provider),
+              `.replaced-${target}-${basename(path)}-${randomBytes(4).toString("hex")}`,
+            );
+            if (!(yield* renameIfPresent(path, aside).pipe(Effect.orElseSucceed(() => null)))) {
+              return !(yield* pathExists(path));
+            }
             this.#ownStamps.delete(path);
             yield* runtimeIO(() => rm(verificationRecordPath(path), { force: true })).pipe(Effect.ignore);
+            yield* runtimeIO(() => rm(aside, { recursive: true, force: true })).pipe(Effect.ignore);
+            return true;
           }),
-        { concurrency: "unbounded", discard: true },
+        { concurrency: "unbounded" },
       );
       const prefix = `${provider}-${target}-`;
       const downloads = yield* runtimeIO(async () => await readdir(this.#downloadRoot()).catch(() => []));
@@ -1526,7 +1555,8 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
         Effect.catch(() => Effect.succeed(this.#statuses[provider])),
       );
       this.#setStatus(provider, status);
-    }).pipe(Effect.catch(() => Effect.void));
+      return removed.every(Boolean);
+    }).pipe(Effect.catch(() => Effect.succeed(false)));
   }
 }
 

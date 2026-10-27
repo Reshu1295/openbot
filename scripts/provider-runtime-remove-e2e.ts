@@ -2,12 +2,13 @@
 // with no network (#3321). Checks that the downloaded CLI of a provider that is off is removed with
 // its partial downloads and verification records, and reads as not downloaded after; that a provider
 // that is on, whose CLI path the user set, or Pi while a key-only provider that runs on it is on, is
-// refused; that this instance does not stamp a provider that is off; and that a version another
+// refused; that a version a program holds stays whole and the removal reports it; that this
+// instance does not stamp a provider that is off; and that a version another
 // instance stamped after this one is kept.
 // `bun scripts/provider-runtime-remove-e2e.ts`.
 // Writes .openbot-build/provider-runtime-remove-e2e/report.json.
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, rm, stat, utimes, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import type { AgentProviderId, ManagedProviderId } from "@openbot/contracts/agent-providers";
@@ -31,6 +32,8 @@ const CONFIGURED: ManagedProviderId = "claude";
 const CONFIGURED_ENV = `OPENBOT_${CONFIGURED.toUpperCase()}_PATH`;
 /** Off, but DeepSeek, which is on, runs on its CLI. */
 const PI: ManagedProviderId = "pi";
+/** Off, but its versions cannot be moved: a program holds them, as Windows does with an open CLI. */
+const HELD: ManagedProviderId = "muse";
 
 interface Report {
   passed: boolean;
@@ -44,6 +47,8 @@ interface Report {
   configuredKept?: boolean;
   piRefused?: string;
   piKept?: boolean;
+  heldRefused?: string;
+  heldWhole?: boolean;
   siblingKept?: boolean;
   turnedOffRemoved?: boolean;
   sharedKept?: boolean;
@@ -53,7 +58,7 @@ const root = await mkdtemp(join(tmpdir(), "openbot-provider-runtime-remove-e2e-"
 const store = join(root, "provider-runtimes");
 const downloads = join(root, "downloads");
 const report: Report = { passed: false };
-const off = new Set<AgentProviderId>([OFF, SIBLING, CONFIGURED, PI]);
+const off = new Set<AgentProviderId>([OFF, SIBLING, CONFIGURED, PI, HELD]);
 const previousConfigured = process.env[CONFIGURED_ENV];
 
 const manager = new ProviderRuntimeManager({
@@ -118,6 +123,7 @@ try {
   const sharedVersion = await install(SHARED, "0.0.1", old);
   const configuredVersion = await install(CONFIGURED, "0.0.1", old);
   const piVersion = await install(PI, "0.0.1", old);
+  const heldVersion = await install(HELD, "0.0.1", old);
 
   await runCauseEffect(manager.initialize());
   // A provider that is on is stamped at start: the one older version is its working fallback.
@@ -171,6 +177,18 @@ try {
   report.piRefused = await refusal(PI);
   report.piKept = await exists(piVersion);
   assert.ok(report.piKept, "the Pi CLI that DeepSeek runs on stays");
+
+  // A directory that refuses the move stays whole, and the removal says that it did not finish.
+  await chmod(targetRoot(HELD), 0o555);
+  try {
+    report.heldRefused = await refusal(HELD);
+  } finally {
+    await chmod(targetRoot(HELD), 0o755);
+  }
+  const heldExecutable = manager.executablePath(HELD);
+  report.heldWhole =
+    Boolean(heldExecutable) && (await exists(join(heldVersion, "bin", basename(heldExecutable ?? ""))));
+  assert.ok(report.heldWhole, "a version that cannot be moved keeps its executable");
 
   await runCauseEffect(manager.removeDownload(SIBLING));
   report.siblingKept = await exists(siblingVersion);

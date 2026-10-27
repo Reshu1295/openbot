@@ -33,7 +33,6 @@ export const messages = defineMessages("provider", {
   "provider.status.unavailable": "Unavailable",
   "provider.status.checking": "Checking",
   "provider.status.off": "Off",
-  "provider.status.offNotDownloaded": "Off · Not downloaded",
   "provider.gemini.hostSignIn":
     "To connect Gemini, open OpenBot on the host and select Connect in Settings > Providers. Google sign-in needs a browser on that host. Remote sign-in is not supported.",
 

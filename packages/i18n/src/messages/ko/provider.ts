@@ -31,7 +31,6 @@ export const messages = {
   "provider.status.unavailable": "사용 불가",
   "provider.status.checking": "확인 중",
   "provider.status.off": "꺼짐",
-  "provider.status.offNotDownloaded": "꺼짐 · 다운로드 안 됨",
   "provider.gemini.hostSignIn":
     "Gemini를 연결하려면 호스트에서 OpenBot을 열고 설정 > 제공자에서 연결을 선택하세요. Google 로그인에는 해당 호스트의 브라우저가 필요해요. 원격 로그인은 지원하지 않아요.",
 

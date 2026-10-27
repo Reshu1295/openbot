@@ -46,7 +46,6 @@ export const messages = {
   "provider.status.unavailable": "Недоступно",
   "provider.status.checking": "Проверка",
   "provider.status.off": "Выключено",
-  "provider.status.offNotDownloaded": "Выключен · Не загружен",
   "provider.gemini.hostSignIn":
     "Чтобы подключить Gemini, откройте OpenBot на хосте и нажмите «Подключить» в разделе «Настройки» > «Провайдеры». Для входа в Google на этом хосте нужен браузер. Удалённый вход не поддерживается.",
 

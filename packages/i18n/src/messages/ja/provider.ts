@@ -32,7 +32,6 @@ export const messages = {
   "provider.status.unavailable": "利用できません",
   "provider.status.checking": "確認中",
   "provider.status.off": "オフ",
-  "provider.status.offNotDownloaded": "オフ · 未ダウンロード",
   "provider.gemini.hostSignIn":
     "Gemini を接続するには、ホストで OpenBot を開き、「設定」>「プロバイダー」で「接続」を選択してください。Google へのサインインには、そのホストのブラウザーが必要です。リモートでのサインインには対応していません。",
 

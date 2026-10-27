@@ -32,7 +32,6 @@ export const messages = {
   "provider.status.checking": "Denetleniyor",
 
   "provider.status.off": "Kapalı",
-  "provider.status.offNotDownloaded": "Kapalı · İndirilmedi",
   "provider.gemini.hostSignIn":
     "Gemini'yi bağlamak için ana makinede OpenBot'u açın ve Ayarlar > Sağlayıcılar bölümünde Bağlan'ı seçin. Google ile oturum açmak için o ana makinede bir tarayıcı gerekir. Uzaktan oturum açma desteklenmez.",
   "provider.key.free": "Ücretsiz",

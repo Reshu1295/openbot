@@ -38,7 +38,6 @@ export const messages = {
   "provider.status.checking": "Vérification",
 
   "provider.status.off": "Désactivé",
-  "provider.status.offNotDownloaded": "Désactivé · Non téléchargé",
   "provider.gemini.hostSignIn":
     "Pour connecter Gemini, ouvrez OpenBot sur l’hôte et sélectionnez « Connecter » dans Réglages > Fournisseurs. La connexion Google nécessite un navigateur sur cet hôte. La connexion à distance n’est pas prise en charge.",
   // Which account tier the OpenCode row runs on. It shows only while it adds to the runtime

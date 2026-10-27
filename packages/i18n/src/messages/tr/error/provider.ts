@@ -60,6 +60,7 @@ export const messages = {
   "error.provider.closing": "OpenBot kapanıyor.",
   "error.provider.removeWhileOn": "İndirmesini kaldırmadan önce sağlayıcıyı kapatın.",
   "error.provider.removeWhileDownloading": "İndirmenin bitmesini bekleyin, sonra kaldırın.",
+  "error.provider.removeIncomplete": "Bir program bu CLI'nin dosyalarını kullanıyor. Kapatın ve yeniden deneyin.",
   "error.provider.cliOverride": "OpenBot'ta güncelleme yapmadan önce açık CLI yolu geçersiz kılmasını kaldırın.",
   "error.provider.runtimeUpdateIncomplete": "Çalışma zamanı güncellemesi tamamlanmadı.",
   "error.provider.downloadHttp": "Çalışma zamanı indirmesi HTTP {status} ile başarısız oldu.",

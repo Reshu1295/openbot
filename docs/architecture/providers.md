@@ -231,7 +231,12 @@ age rule keeps a version another instance stamped, with one change: the manager 
 last stamp of each directory, and a directory whose mtime is not later than that stamp counts as
 unstamped. Otherwise the stamps this instance wrote before the user turned the provider off would
 keep it for hours. A sibling stamp older than this instance's last one is hidden by it until the
-sibling's next check stamps again. Turning the provider on later downloads the CLI as on first use.
+sibling's next check stamps again. Each version is moved aside before it is deleted, so a version a
+program holds open stays whole, and the removal then reports that it did not finish. The manager
+stamps the version it activates, so an install it made in the same session is its own. Because a
+provider that is off is not stamped, a sibling can collect its version; turning the provider on
+reads the store again when that version is gone. Turning the provider on later downloads the CLI as
+on first use.
 
 ### Managed provider updates
 

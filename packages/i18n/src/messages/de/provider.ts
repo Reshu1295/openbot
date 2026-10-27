@@ -39,7 +39,6 @@ export const messages = {
   "provider.status.unavailable": "Nicht verfügbar",
   "provider.status.checking": "Wird geprüft",
   "provider.status.off": "Aus",
-  "provider.status.offNotDownloaded": "Aus · Nicht heruntergeladen",
   "provider.gemini.hostSignIn":
     "Um Gemini zu verbinden, öffne OpenBot auf dem Host und wähle „Verbinden“ unter Einstellungen > Anbieter. Die Google-Anmeldung benötigt einen Browser auf diesem Host. Eine Remote-Anmeldung wird nicht unterstützt.",
   "provider.key.free": "Kostenlos",
