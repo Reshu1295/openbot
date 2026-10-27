@@ -8,7 +8,7 @@ import { sourceText } from "@openbot/i18n/source";
 import { redactText } from "@openbot/logging";
 import { Effect, Exit, Schema, Scope, Semaphore } from "effect";
 import { secretElicitationField } from "./agent/prompts";
-import { type AgentClient, type DiagnosticOrigin, RequestTimeoutError } from "./agent-client";
+import { type AgentClient, type DiagnosticOrigin, MissingPiSessionError, RequestTimeoutError } from "./agent-client";
 import { type AgentCliInfo, cliPathEnvironment, cliSpawnTarget } from "./cli";
 import { runCauseEffect } from "./effect-boundary";
 import { type DynamicToolNamespace, LocalMcpBridge, type LocalMcpSession } from "./local-mcp-bridge";
@@ -406,10 +406,9 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     if (resume && requestedId) {
       const live = this.#threads.get(requestedId);
       if (live) return live;
-      if (!isAbsolute(requestedId))
-        return yield* providerFailure(new Error(sourceText("error.provider.piSessionMissing")));
+      if (!isAbsolute(requestedId)) return yield* providerFailure(new MissingPiSessionError());
       yield* providerCall(() => access(requestedId)).pipe(
-        Effect.mapError(() => providerFailure(new Error(sourceText("error.provider.piSessionMissing")))),
+        Effect.mapError(() => providerFailure(new MissingPiSessionError())),
       );
     }
     const cwd = yield* providerSync(() => requiredString(params, "cwd"));
