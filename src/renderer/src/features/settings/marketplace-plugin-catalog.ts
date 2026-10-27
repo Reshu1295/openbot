@@ -45,7 +45,7 @@ const AAVE: MarketplacePluginDetail = {
   description:
     "Aave helps users explore live Aave V3 and V4 markets, review wallet positions and DAO governance, simulate lending actions, and prepare non-custodial transactions. Every transaction is returned unsigned: the plugin reads the markets and writes the call, and the wallet stays with the user.",
   category: "data-analytics",
-  creatorName: "avara.xyz",
+  creatorName: "Avara",
   iconUrl: "https://aave.com/images/icon-aave.png",
   version: "1.0.0",
   prompts: [
@@ -84,7 +84,7 @@ const CANVA: MarketplacePluginDetail = {
   description:
     "Canva lets users create and edit designs in words, search their own design library, upload and organize assets, export in the format a channel needs, and leave comments where the work is. Each user signs in to their own Canva account, and the agent can do what that account can do.",
   category: "design",
-  creatorName: "canva.com",
+  creatorName: "Canva",
   iconUrl: "https://static.canva.com/static/images/apple-touch-icon-180x180.png",
   version: "1.0.0",
   prompts: [
@@ -125,7 +125,7 @@ const LINEAR: MarketplacePluginDetail = {
   description:
     "Linear lets agents list assigned issues, triage the backlog, update statuses, and draft new issues in the workspace the signed-in account belongs to. Each user signs in to their own Linear account through the browser.",
   category: "coding",
-  creatorName: "linear.app",
+  creatorName: "Linear",
   iconUrl: "https://linear.app/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -166,7 +166,7 @@ const NOTION: MarketplacePluginDetail = {
   description:
     "Notion lets agents read and write pages, search the workspace, and keep meeting notes and specs where the team already works. Each user signs in to their own Notion account through the browser.",
   category: "productivity",
-  creatorName: "notion.so",
+  creatorName: "Notion",
   iconUrl: "https://www.notion.so/images/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -199,6 +199,143 @@ const NOTION: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/notion",
 };
 
+const OBSIDIAN: MarketplacePluginDetail = {
+  id: "plugin-obsidian",
+  slug: "obsidian",
+  name: "Obsidian",
+  tagline: "Notes in your vault",
+  description:
+    "Obsidian lets agents search, read and write the notes in your vault, so the vault can be their memory. The local server connects to the Local REST API plugin in the Obsidian app on this computer. The plugin's API key is passed to the local server as one environment variable. Keep Obsidian open while agents use it.",
+  category: "productivity",
+  creatorName: "Obsidian",
+  iconUrl: "https://obsidian.md/favicon.ico",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-recall", text: "What do my notes say about the decisions on this project?" },
+    { id: "prompt-save", text: "Save this decision as a new note in my vault." },
+    { id: "prompt-log", text: "Add a summary of today's work to my Work log note." },
+  ],
+  apps: [
+    {
+      id: "app-obsidian-mcp",
+      name: "Obsidian",
+      description: "Note search, reading and editing, over a local MCP server with the Local REST API plugin key.",
+      iconUrl: "https://obsidian.md/favicon.ico",
+      server: {
+        name: "obsidian",
+        transport: "stdio",
+        command: "npx",
+        args: ["-y", "obsidian-mcp-server@3.7.2"],
+        auth: [
+          {
+            id: "obsidian-key",
+            kind: "key",
+            label: "API key",
+            fields: [
+              {
+                id: "token",
+                label: "API key",
+                env: "OBSIDIAN_API_KEY",
+                hint: 'In Obsidian, open Settings > Local REST API. Copy the API key and turn on "Enable non-encrypted (HTTP) server".',
+              },
+            ],
+            docsUrl: "https://github.com/coddingtonbear/obsidian-local-rest-api",
+            docsLabel: "Get a key",
+          },
+        ],
+      },
+    },
+  ],
+  websiteUrl: "https://obsidian.md",
+  privacyPolicyUrl: "https://obsidian.md/privacy",
+  termsUrl: "https://obsidian.md/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/obsidian",
+};
+
+const ATLASSIAN: MarketplacePluginDetail = {
+  id: "plugin-atlassian",
+  slug: "atlassian",
+  name: "Atlassian",
+  tagline: "Jira work items and Confluence pages",
+  description:
+    "Atlassian lets agents search and read Jira work items, Confluence pages and Bitbucket pull requests, and create or update work items, pages and comments. Each user signs in to their own Atlassian account through the browser and approves the access on a consent screen. Agents get the same permissions as the user: they can change work items and pages, change page permissions, and merge pull requests. Tools that delete Jira data stay off until an organization admin turns them on. Each tool call uses Rovo credits.",
+  category: "productivity",
+  creatorName: "Atlassian",
+  iconUrl: "https://www.atlassian.com/favicon.ico",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-assigned", text: "Which open Jira work items are assigned to me?" },
+    { id: "prompt-release-page", text: "Find the Confluence page about our release process and summarize it." },
+    { id: "prompt-new-item", text: "Create a Jira work item for the login bug with steps to reproduce." },
+  ],
+  apps: [
+    {
+      id: "app-atlassian-mcp",
+      name: "Atlassian",
+      description: "Jira, Confluence, and Bitbucket, over Atlassian's MCP server with browser sign-in.",
+      iconUrl: "https://www.atlassian.com/favicon.ico",
+      server: {
+        name: "atlassian",
+        transport: "http",
+        url: "https://mcp.atlassian.com/v2/mcp",
+        auth: [{ id: "atlassian-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://www.atlassian.com",
+  privacyPolicyUrl: "https://www.atlassian.com/legal/privacy-policy",
+  termsUrl: "https://www.atlassian.com/legal/atlassian-customer-agreement",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/atlassian",
+};
+
+const TODOIST: MarketplacePluginDetail = {
+  id: "plugin-todoist",
+  slug: "todoist",
+  name: "Todoist",
+  tagline: "Tasks, projects and reminders",
+  description:
+    "Todoist lets agents find tasks by date, text, label or filter, add and reschedule tasks, and manage projects, sections, labels, comments and reminders. Each user signs in to their own Todoist account through the browser. Agents get read and write access: they can change, complete and delete tasks, projects and other items.",
+  category: "productivity",
+  creatorName: "Doist",
+  iconUrl: "https://www.todoist.com/static/apple-touch-icon.png",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-today", text: "Which Todoist tasks are due today?" },
+    { id: "prompt-capture", text: "Add these action items to my Todoist Inbox." },
+    { id: "prompt-overdue", text: "Move my overdue Todoist tasks to tomorrow." },
+  ],
+  apps: [
+    {
+      id: "app-todoist-mcp",
+      name: "Todoist",
+      description: "Tasks, projects, and reminders, over Todoist's MCP server with browser sign-in.",
+      iconUrl: "https://www.todoist.com/static/apple-touch-icon.png",
+      server: {
+        name: "todoist",
+        transport: "http",
+        url: "https://ai.todoist.net/mcp",
+        auth: [{ id: "todoist-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://www.todoist.com",
+  privacyPolicyUrl: "https://www.todoist.com/privacy",
+  termsUrl: "https://www.todoist.com/terms-of-service",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/todoist",
+};
+
 const COBRAIN: MarketplacePluginDetail = {
   id: "plugin-cobrain",
   slug: "cobrain",
@@ -207,7 +344,7 @@ const COBRAIN: MarketplacePluginDetail = {
   description:
     "Cobrain is a Markdown memory that every AI you connect can read and write. Agents load the context of a client or project before working, search past notes and decisions, and save what they learn so the next thread starts where the last one ended. Each user signs in to their own Cobrain account.",
   category: "productivity",
-  creatorName: "cobrain.space",
+  creatorName: "Cobrain",
   iconUrl: "https://cobrain.space/apple-icon.png",
   version: "1.0.0",
   prompts: [
@@ -247,7 +384,7 @@ const FIGMA: MarketplacePluginDetail = {
   description:
     "Figma lets agents read design files, inspect components, styles and variables, and hand production specs to engineers. It connects to the MCP server in the Figma desktop app, on this computer. The server can read designs only; write support is in progress.",
   category: "design",
-  creatorName: "figma.com",
+  creatorName: "Figma",
   iconUrl: "https://static.figma.com/app/icon/1/favicon.ico",
   version: "1.1.0",
   prompts: [
@@ -302,9 +439,9 @@ const PAPER: MarketplacePluginDetail = {
   description:
     "Paper lets agents read and write the design file that is open in Paper Desktop: inspect artboards, selections, computed styles, JSX and tokens, and create or change frames, text and styles. Install Paper Desktop, open it once, and open a file before you start. OpenBot starts the Paper CLI that Paper Desktop installs. Paper needs no key. Write tools change the open file, so review each write before you approve it.",
   category: "design",
-  creatorName: "paper.design",
-  iconUrl: "https://paper.design/favicon.ico",
-  version: "1.0.0",
+  creatorName: "Paper",
+  iconUrl: "https://paper.design/apple-touch-icon.png",
+  version: "1.0.1",
   prompts: [
     { id: "prompt-implement", text: "Implement the selected Paper frame in this codebase, with our code conventions." },
     { id: "prompt-code-to-design", text: "Use the styles in this repository and design a settings page in Paper." },
@@ -316,7 +453,7 @@ const PAPER: MarketplacePluginDetail = {
       name: "Paper",
       description:
         "Reads and writes the open Paper Desktop file, over the local MCP server that the Paper CLI relays. Needs Paper Desktop with a file open.",
-      iconUrl: "https://paper.design/favicon.ico",
+      iconUrl: "https://paper.design/apple-touch-icon.png",
       server: { name: "paper", transport: "stdio", command: "~/.paper/bin/paper", args: ["mcp"] },
     },
   ],
@@ -338,7 +475,7 @@ const APPLE_APPS: MarketplacePluginDetail = {
   description:
     "Apple apps lets agents use Mail, Calendar, Contacts, Reminders, Notes, Messages and Safari on this Mac. It works on macOS only. OpenBot starts mcp-icloud, a community server that is not made by Apple or OpenBot. The server controls the apps through AppleScript, on this computer, and needs no account and no key. The first time an agent uses an app, macOS asks if OpenBot can control it. To change this later, open System Settings › Privacy & Security › Automation. Agents can send email and iMessages, and change or delete events, contacts and reminders, so review each write before you approve it. What the tools read, such as email text, goes to the model provider of the agent.",
   category: "productivity",
-  creatorName: "github.com/MrGo2",
+  creatorName: "MrGo2",
   iconUrl: "https://www.apple.com/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -377,7 +514,7 @@ const SENTRY: MarketplacePluginDetail = {
   description:
     "Sentry lets agents search recent errors, inspect stack traces and affected releases, and summarize what broke after a deploy. Each user signs in to their own Sentry account through the browser.",
   category: "coding",
-  creatorName: "sentry.io",
+  creatorName: "Sentry",
   iconUrl: "https://sentry.io/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -417,7 +554,7 @@ const VERCEL: MarketplacePluginDetail = {
   description:
     "Vercel lets agents list projects and recent deployments, read build and runtime logs, and find why a build failed. Each user signs in to their own Vercel account through the browser and chooses the teams that agents can use. In those teams, agents get the same rights as the user's account. They can also change environment variables, domains, DNS records and deployments, and buy domains.",
   category: "coding",
-  creatorName: "vercel.com",
+  creatorName: "Vercel",
   iconUrl: "https://vercel.com/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -458,9 +595,9 @@ const CLOUDFLARE: MarketplacePluginDetail = {
   description:
     "Cloudflare lets agents list and manage Workers, DNS records, R2, D1 and KV through the Cloudflare API, query Workers logs, and search the Cloudflare docs. Each user signs in to their own Cloudflare account through the browser. On Cloudflare's consent page, choose Read only: the default, Minimal, does not let agents see Workers, logs or DNS records. With write permissions, agents can deploy and delete Workers, change DNS records and change other account settings.",
   category: "coding",
-  creatorName: "cloudflare.com",
-  iconUrl: "https://www.cloudflare.com/favicon.ico",
-  version: "1.0.0",
+  creatorName: "Cloudflare",
+  iconUrl: "https://developers.cloudflare.com/favicon.png",
+  version: "1.0.1",
   prompts: [
     { id: "prompt-workers", text: "Which Workers are deployed in my Cloudflare account?" },
     { id: "prompt-errors", text: "Which Cloudflare Workers logged errors in the last hour?" },
@@ -471,7 +608,7 @@ const CLOUDFLARE: MarketplacePluginDetail = {
       id: "app-cloudflare-mcp",
       name: "Cloudflare",
       description: "Workers, DNS, storage, and logs, over Cloudflare's API MCP server with browser sign-in.",
-      iconUrl: "https://www.cloudflare.com/favicon.ico",
+      iconUrl: "https://developers.cloudflare.com/favicon.png",
       server: {
         name: "cloudflare",
         transport: "http",
@@ -498,7 +635,7 @@ const SUPABASE: MarketplacePluginDetail = {
   description:
     "Supabase lets agents list projects, run SQL, read table schemas and logs, check security and performance advisors, manage edge functions and branches, and search the Supabase docs. Each user signs in to their own Supabase account through the browser and chooses an organization. Agents get full access: they can run SQL that changes or deletes data, apply migrations, deploy edge functions, and create or pause projects.",
   category: "coding",
-  creatorName: "supabase.com",
+  creatorName: "Supabase",
   iconUrl: "https://supabase.com/favicon/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -530,6 +667,170 @@ const SUPABASE: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/supabase",
 };
 
+const NEON: MarketplacePluginDetail = {
+  id: "plugin-neon",
+  slug: "neon",
+  name: "Neon",
+  tagline: "Postgres projects, branches and migrations",
+  description:
+    "Neon lets agents list projects and branches, run SQL, read table schemas, test schema changes on a temporary branch, find slow queries, and search the Neon docs. Each user signs in to their own Neon account through the browser and can choose read-only access when they authorize. With full access, agents can run SQL that changes or deletes data, and create, reset or delete branches, databases and projects. Neon recommends its MCP server for development and testing, not for production databases.",
+  category: "coding",
+  creatorName: "Neon",
+  iconUrl: "https://neon.com/apple-touch-icon.png",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-projects", text: "Which projects and branches are in my Neon account?" },
+    { id: "prompt-slow-queries", text: "Which queries are the slowest on my Neon database, and why?" },
+    {
+      id: "prompt-migration",
+      text: "Add an index on the orders table in a temporary branch, and show me the result before you apply it.",
+    },
+  ],
+  apps: [
+    {
+      id: "app-neon-mcp",
+      name: "Neon",
+      description: "Postgres projects, branches, SQL, and migrations, over Neon's MCP server with browser sign-in.",
+      iconUrl: "https://neon.com/apple-touch-icon.png",
+      server: {
+        name: "neon",
+        transport: "http",
+        url: "https://mcp.neon.tech/mcp",
+        auth: [{ id: "neon-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://neon.com",
+  privacyPolicyUrl: "https://www.databricks.com/legal/privacynotice",
+  termsUrl: "https://neon.com/platform-terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/neon",
+};
+
+const PRISMA: MarketplacePluginDetail = {
+  id: "plugin-prisma",
+  slug: "prisma",
+  name: "Prisma",
+  tagline: "Postgres databases, backups and Compute apps",
+  description:
+    "Prisma lets agents list and create Prisma Postgres databases, read schemas, run SQL, list backups and restore them to a new database, manage Object Storage buckets, read Compute builds and logs, and search the Prisma docs. Each user signs in to their own Prisma account through the browser and selects a workspace. Agents get full access: they can run SQL that changes or deletes data, update schemas, delete databases and buckets, and stop, roll back or delete Compute deployments.",
+  category: "coding",
+  creatorName: "Prisma",
+  iconUrl: "https://www.prisma.io/apple-icon.png",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-databases", text: "Which databases are in my Prisma workspace?" },
+    { id: "prompt-backups", text: "Show me all available backups of my database." },
+    { id: "prompt-logs", text: "Show the runtime logs of my latest Compute deployment." },
+  ],
+  apps: [
+    {
+      id: "app-prisma-mcp",
+      name: "Prisma",
+      description: "Databases, SQL, backups, and Compute apps, over Prisma's MCP server with browser sign-in.",
+      iconUrl: "https://www.prisma.io/apple-icon.png",
+      server: {
+        name: "prisma",
+        transport: "http",
+        url: "https://mcp.prisma.io/mcp",
+        auth: [{ id: "prisma-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://www.prisma.io",
+  privacyPolicyUrl: "https://www.prisma.io/legal/privacy",
+  termsUrl: "https://www.prisma.io/legal/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/prisma",
+};
+
+const NETLIFY: MarketplacePluginDetail = {
+  id: "plugin-netlify",
+  slug: "netlify",
+  name: "Netlify",
+  tagline: "Projects, deploys and request logs",
+  description:
+    "Netlify lets agents list projects and deploys, read edge request logs, create projects, and deploy code to an existing project. Each user signs in to their own Netlify account through the browser. Agents get the same access as the user's account: they can change environment variables, forms and visitor access, install or remove extensions, and delete form submissions and environment variables.",
+  category: "coding",
+  creatorName: "Netlify",
+  iconUrl: "https://www.netlify.com/favicon/apple-touch-icon.png",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-latest-deploy", text: "What is the status of the latest deploy of each of my Netlify projects?" },
+    { id: "prompt-errors", text: "Which URLs of my site returned server errors in the last day?" },
+    { id: "prompt-deploy", text: "Deploy this folder to my existing Netlify project." },
+  ],
+  apps: [
+    {
+      id: "app-netlify-mcp",
+      name: "Netlify",
+      description:
+        "Projects, deploys, request logs, and site settings, over Netlify's MCP server with browser sign-in.",
+      iconUrl: "https://www.netlify.com/favicon/apple-touch-icon.png",
+      server: {
+        name: "netlify",
+        transport: "http",
+        url: "https://netlify-mcp.netlify.app/mcp",
+        auth: [{ id: "netlify-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://www.netlify.com",
+  privacyPolicyUrl: "https://www.netlify.com/privacy/",
+  termsUrl: "https://www.netlify.com/pdf/self-serve-subscription-agreement.pdf",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/netlify",
+};
+
+const RAILWAY: MarketplacePluginDetail = {
+  id: "plugin-railway",
+  slug: "railway",
+  name: "Railway",
+  tagline: "Projects, services and deployments",
+  description:
+    "Railway lets agents list projects and services, create projects, redeploy services, and manage feature flags. Agents can also give multi-step work to the Railway Agent, which reads logs, finds why a deploy failed, creates services and sets variables. Each user signs in to their own Railway account through the browser and chooses the workspaces and projects that agents can use. Agents get full access in those projects: they can deploy staged changes, delete feature flags, and change services, variables, databases and networking through the Railway Agent.",
+  category: "coding",
+  creatorName: "Railway",
+  iconUrl: "https://railway.com/apple-touch-icon.png",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-projects", text: "Which projects and services are in my Railway workspace?" },
+    { id: "prompt-crash", text: "Why does my backend service on Railway crash on deploy?" },
+    { id: "prompt-redeploy", text: "Redeploy the API service in my Railway project." },
+  ],
+  apps: [
+    {
+      id: "app-railway-mcp",
+      name: "Railway",
+      description: "Projects, services, and deployments, over Railway's MCP server with browser sign-in.",
+      iconUrl: "https://railway.com/apple-touch-icon.png",
+      server: {
+        name: "railway",
+        transport: "http",
+        url: "https://mcp.railway.com",
+        auth: [{ id: "railway-oauth", kind: "link", label: "Sign in" }],
+      },
+    },
+  ],
+  websiteUrl: "https://railway.com",
+  privacyPolicyUrl: "https://railway.com/legal/privacy",
+  termsUrl: "https://railway.com/legal/terms",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/railway",
+};
+
 const CONTEXT7: MarketplacePluginDetail = {
   id: "plugin-context7",
   slug: "context7",
@@ -538,7 +839,7 @@ const CONTEXT7: MarketplacePluginDetail = {
   description:
     "Context7 fetches current documentation and API references for libraries and frameworks, so answers use the version the project actually runs. It needs no account and no key.",
   category: "research",
-  creatorName: "context7.com",
+  creatorName: "Upstash",
   iconUrl: "https://context7.com/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -565,6 +866,41 @@ const CONTEXT7: MarketplacePluginDetail = {
   shareUrl: "https://openbot.run/plugins/context7",
 };
 
+const HUGGINGFACE: MarketplacePluginDetail = {
+  id: "plugin-huggingface",
+  slug: "huggingface",
+  name: "Hugging Face",
+  tagline: "Models, datasets and papers on the Hub",
+  description:
+    "Hugging Face lets agents search models, datasets, Spaces, collections and papers on the Hugging Face Hub, read model cards and repository files, preview datasets, and search the Hugging Face documentation. It uses public Hub data and needs no account and no key. The tools only read: agents cannot create repositories or run jobs.",
+  category: "research",
+  creatorName: "Hugging Face",
+  iconUrl: "https://huggingface.co/favicon.ico",
+  version: "1.0.0",
+  prompts: [
+    { id: "prompt-models", text: "Find small open models for speech recognition on Hugging Face." },
+    { id: "prompt-papers", text: "Which papers are trending on Hugging Face today?" },
+    { id: "prompt-dataset", text: "Find a dataset of weather time series and show its columns." },
+  ],
+  apps: [
+    {
+      id: "app-huggingface-mcp",
+      name: "Hugging Face",
+      description: "Model, dataset, Space, paper, and docs search, over Hugging Face's MCP server with no sign-in.",
+      iconUrl: "https://huggingface.co/favicon.ico",
+      server: { name: "huggingface", transport: "http", url: "https://huggingface.co/mcp" },
+    },
+  ],
+  websiteUrl: "https://huggingface.co",
+  privacyPolicyUrl: "https://huggingface.co/privacy",
+  termsUrl: "https://huggingface.co/terms-of-service",
+  skills: [],
+  installs: 0,
+  featured: false,
+  updatedAt: "2026-09-30T00:00:00.000Z",
+  shareUrl: "https://openbot.run/plugins/huggingface",
+};
+
 const STRIPE: MarketplacePluginDetail = {
   id: "plugin-stripe",
   slug: "stripe",
@@ -573,7 +909,7 @@ const STRIPE: MarketplacePluginDetail = {
   description:
     "Stripe lets agents look up payments, customers, and invoices, and draft payment links, in the account the signed-in user can reach. Each user signs in to their own Stripe account through the browser.",
   category: "other",
-  creatorName: "stripe.com",
+  creatorName: "Stripe",
   iconUrl: "https://stripe.com/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -613,7 +949,7 @@ const POSTHOG: MarketplacePluginDetail = {
   description:
     "PostHog lets agents query events and funnels, inspect feature flags, and summarize what changed after a release. A personal API key from the project settings goes into one Authorization header.",
   category: "data-analytics",
-  creatorName: "posthog.com",
+  creatorName: "PostHog",
   iconUrl: "https://app.posthog.com/static/icons/apple-touch-icon.png",
   version: "1.0.0",
   prompts: [
@@ -671,9 +1007,9 @@ const AIRTABLE: MarketplacePluginDetail = {
   description:
     "Airtable lets agents list bases, read and update records, and summarize table contents. An API key from the account page is passed to the local server as one environment variable.",
   category: "data-analytics",
-  creatorName: "airtable.com",
-  iconUrl: "https://airtable.com/favicon.ico",
-  version: "1.0.0",
+  creatorName: "Airtable",
+  iconUrl: "https://static.airtable.com/images/favicon/baymax/apple-touch-icon.png",
+  version: "1.0.1",
   prompts: [
     { id: "prompt-bases", text: "What bases do I have access to?" },
     { id: "prompt-records", text: "Summarize the launch tracker table." },
@@ -684,7 +1020,7 @@ const AIRTABLE: MarketplacePluginDetail = {
       id: "app-airtable-mcp",
       name: "Airtable",
       description: "Base listing and record access, over a local MCP server with an Airtable API key.",
-      iconUrl: "https://airtable.com/favicon.ico",
+      iconUrl: "https://static.airtable.com/images/favicon/baymax/apple-touch-icon.png",
       server: {
         name: "airtable",
         transport: "stdio",
@@ -721,7 +1057,7 @@ const FIRECRAWL: MarketplacePluginDetail = {
   description:
     "Firecrawl lets agents scrape pages, extract structured data, and search the web through one API. An API key from the Firecrawl dashboard is passed to the local server as one environment variable.",
   category: "research",
-  creatorName: "firecrawl.dev",
+  creatorName: "Firecrawl",
   iconUrl: "https://www.firecrawl.dev/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -779,7 +1115,7 @@ const BRAVE_SEARCH: MarketplacePluginDetail = {
   description:
     "Brave Search lets agents search the web and local results without tracking. An API key from the Brave Search API dashboard is passed to the local server as one environment variable.",
   category: "research",
-  creatorName: "brave.com",
+  creatorName: "Brave",
   iconUrl: "https://brave.com/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -831,7 +1167,7 @@ const RESEND: MarketplacePluginDetail = {
   description:
     "Resend lets agents send transactional email and check delivery through one API. An API key from the Resend dashboard is passed to the local server as one environment variable.",
   category: "automation",
-  creatorName: "resend.com",
+  creatorName: "Resend",
   iconUrl: "https://resend.com/static/favicons/favicon.ico",
   version: "1.0.0",
   prompts: [
@@ -883,7 +1219,7 @@ const COMPOSIO: MarketplacePluginDetail = {
   description:
     "Composio connects agents to Gmail, Slack, GitHub, and hundreds of other apps through one MCP server. Connect the apps you want in your Composio account, then paste its MCP URL and API key here.",
   category: "automation",
-  creatorName: "composio.dev",
+  creatorName: "Composio",
   iconUrl: "https://composio.dev/favicon.ico",
   version: "1.1.0",
   prompts: [
@@ -944,6 +1280,9 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   CANVA,
   LINEAR,
   NOTION,
+  OBSIDIAN,
+  ATLASSIAN,
+  TODOIST,
   COBRAIN,
   FIGMA,
   PAPER,
@@ -952,7 +1291,12 @@ export const MARKETPLACE_PLUGINS: MarketplacePluginDetail[] = [
   VERCEL,
   CLOUDFLARE,
   SUPABASE,
+  NEON,
+  PRISMA,
+  NETLIFY,
+  RAILWAY,
   CONTEXT7,
+  HUGGINGFACE,
   STRIPE,
   POSTHOG,
   AIRTABLE,

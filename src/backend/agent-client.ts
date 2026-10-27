@@ -1,4 +1,5 @@
 import type { AgentProviderId, AgentSessionSettingsSnapshot, AgentSessionSettingValue } from "@openbot/contracts/ipc";
+import { sourceText } from "@openbot/i18n/source";
 import type { Effect } from "effect";
 import type { AppServerNotification, AppServerRequest, RequestId, ResponseDecoder, RpcError } from "./protocol";
 import type { ProviderClientOperationError } from "./provider-client-effects";
@@ -115,6 +116,17 @@ export class MissingClaudeSessionError extends Error {
   constructor(threadId: string) {
     super(`Claude session not found: ${threadId}`);
     this.name = "MissingClaudeSessionError";
+  }
+}
+
+/**
+ * The Pi session file that the thread names is not on this computer: it was moved or deleted. Nothing
+ * ran, so `isMissingProviderSessionError` reads it as a missing session and the caller opens a new one.
+ */
+export class MissingPiSessionError extends Error {
+  constructor() {
+    super(sourceText("error.provider.piSessionMissing"));
+    this.name = "MissingPiSessionError";
   }
 }
 

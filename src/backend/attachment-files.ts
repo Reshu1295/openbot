@@ -407,6 +407,11 @@ export class AttachmentFiles {
             );
           if (metadata.size > MAX_FILE_BYTES)
             return yield* attachmentFailure(new Error(`${basename(source.path)} exceeds the 100 MB limit.`));
+          // SVG is not an attachment type (see `attachmentMimeTypeForName`), but the chat shows a named one.
+          if (extname(source.path).toLowerCase() === ".svg")
+            return yield* attachmentFailure(
+              new Error(sourceText("error.backend.attachSvg", { name: basename(source.path) })),
+            );
           yield* attachmentSync(() => assertSupportedAttachmentName(source.path));
           return { ...source, size: metadata.size };
         }),

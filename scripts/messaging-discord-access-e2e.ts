@@ -283,6 +283,7 @@ async function boot<T>(use: (services: Booted) => Promise<T>): Promise<T> {
     interrupt: unused,
     forgetThread: () => Effect.void,
     ownChat: () => false,
+    contextSession: () => null,
   });
   const messaging = new MessagingService({
     threads,

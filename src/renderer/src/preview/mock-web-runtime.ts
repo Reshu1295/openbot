@@ -113,6 +113,7 @@ export function mockWebRuntimeFor(mock: MockOpenBotControls, events: WebRuntimeE
     setAvatar: async (agentId, image) => {
       await agent.setAvatar({ agentId, image });
     },
+    agentAvatar: async (_agentId, avatarUrl) => avatarUrl,
     models: () => agent.listModels(),
     status: () => agent.getStatus(),
     accountUsage: () => agent.getUsage(),

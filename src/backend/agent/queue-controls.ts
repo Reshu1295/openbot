@@ -26,7 +26,10 @@ import { providerForAgent } from "./thread-items";
 export interface QueueControlsHooks {
   /** The channel task that owns a delivery. Read late: the channel service is built after this. */
   channelAssignment(deliveryId: string): ChannelAssignment | null;
-  /** The thread of the open task that a delivery runs in, or null for the agent's own chat. */
+  /**
+   * The thread of the task that a delivery runs in, or null for the agent's own chat. It throws for a
+   * deleted task.
+   */
   taskThreadId(deliveryId: string): string | null;
 }
 

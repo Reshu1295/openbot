@@ -1635,11 +1635,10 @@ export async function createApplicationServices({
     offProviders: providerUse.off(),
     providerAccounts,
     saveProviderUse: (provider, on) =>
-      providerUse
-        .set(provider, on)
-        .pipe(
-          Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
-        ),
+      providerUse.set(provider, on).pipe(
+        Effect.tap(() => Effect.sync(() => providerRuntimes.providerUseChanged())),
+        Effect.mapError((error) => new AgentLifecycleFailed({ operation: "saveProviderUse", cause: error.cause })),
+      ),
     preferredProvider: setupState.preferredProvider ?? "codex",
     bundledExecutables: providerRuntimes.bundledExecutables(),
     prepareAgentWorkspace: (agent) =>

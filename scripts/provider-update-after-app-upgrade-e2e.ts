@@ -1,7 +1,8 @@
 // Starts the real `ProviderRuntimeManager` the way main does after an app upgrade (#3164), with an
 // older managed copy of some provider CLIs on disk and no network. Checks that the first update check
 // starts the update of each managed CLI with no offer shown first, leaves a CLI the user installed
-// and an off provider alone, and that a start with no upgrade only offers the update. Also checks
+// and an off provider alone, and that a start with no upgrade only offers the update. An off provider
+// gets no offer until it is turned on, and loses it when it is turned off again (#3319). Also checks
 // that the stored app version that decides "upgrade" is read back.
 // `bun scripts/provider-update-after-app-upgrade-e2e.ts`.
 // Writes .openbot-build/provider-update-after-app-upgrade-e2e/report.json.
@@ -33,11 +34,19 @@ interface Report {
     offeredBeforeUpdate: boolean;
     systemOffer: string | null;
   };
-  noUpgrade?: { phases: Record<string, string[]>; offer: string | null };
+  noUpgrade?: {
+    phases: Record<string, string[]>;
+    offer: string | null;
+    offOffer: string | null;
+    offerAfterOn: string | null;
+    offerAfterOff: string | null;
+  };
 }
 
 const root = await mkdtemp(join(tmpdir(), "openbot-provider-update-after-app-upgrade-e2e-"));
 const report: Report = { passed: false };
+/** Whether the user turned `OFF` on, as the provider switch file says. */
+let offTurnedOn = false;
 
 /** The first status that `check` accepts, or a failure after `WAIT_MS`. */
 function nextStatus(
@@ -61,7 +70,7 @@ function nextStatus(
 async function startManager(name: string, providers: ManagedProviderId[]) {
   const manager = new ProviderRuntimeManager({
     root: join(root, name),
-    isProviderOn: (provider) => provider !== OFF,
+    isProviderOn: (provider) => provider !== OFF || offTurnedOn,
     availableDiskBytes: async () => Number.MAX_SAFE_INTEGER,
     fetchImpl: async () => {
       throw new TypeError("fetch failed");
@@ -136,17 +145,31 @@ try {
   assert.ok(!upgraded.phases[OFF]?.includes("downloading"), "an off provider is left alone");
   assert.notEqual(upgraded.systemOffer, null, "a CLI the user installed keeps its offer");
 
-  const noUpgrade = await startManager("no-upgrade", [MANAGED]);
+  const noUpgrade = await startManager("no-upgrade", [MANAGED, OFF]);
   managers.push(noUpgrade.manager);
   noUpgrade.manager.startUpdateChecks();
   await runCauseEffect(noUpgrade.manager.checkForUpdates()).catch(() => undefined);
+  const offOffer = noUpgrade.manager.getStatus().providers[OFF].availableVersion ?? null;
+  // Main sends the offers again when the user turns a provider on or off, as `saveProviderUse` does.
+  offTurnedOn = true;
+  noUpgrade.manager.providerUseChanged();
+  const offerAfterOn = noUpgrade.snapshots.at(-1)?.providers[OFF].availableVersion ?? null;
+  offTurnedOn = false;
+  noUpgrade.manager.providerUseChanged();
+  const offerAfterOff = noUpgrade.snapshots.at(-1)?.providers[OFF].availableVersion ?? null;
   const notUpgraded = {
     phases: phases(noUpgrade.snapshots),
     offer: noUpgrade.manager.getStatus().providers[MANAGED].availableVersion ?? null,
+    offOffer,
+    offerAfterOn,
+    offerAfterOff,
   };
   report.noUpgrade = notUpgraded;
   assert.ok(!notUpgraded.phases[MANAGED]?.includes("downloading"), "with no upgrade nothing downloads");
   assert.notEqual(notUpgraded.offer, null, "with no upgrade the update is offered");
+  assert.equal(notUpgraded.offOffer, null, "an off provider is not offered an update");
+  assert.notEqual(notUpgraded.offerAfterOn, null, "turning the provider on offers the update at once");
+  assert.equal(notUpgraded.offerAfterOff, null, "turning it off again takes the offer back at once");
 
   report.passed = true;
 } finally {

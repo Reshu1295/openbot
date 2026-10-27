@@ -202,6 +202,8 @@ export class ThreadLifecycle {
    * its own thread and a channel execution thread at the same time.
    */
   readonly #pendingStarts = new Map<string, number>();
+  /** The starts of `#pendingStarts` that are not in a side thread: they hold the agent's own chat. */
+  readonly #pendingMainStarts = new Map<string, number>();
 
   constructor(options: ThreadLifecycleOptions) {
     this.#store = options.store;
@@ -308,6 +310,20 @@ export class ThreadLifecycle {
     );
   }, Effect.uninterruptible).bind(this);
 
+  /**
+   * Closes the provider session of a thread that is about to be deleted, and waits for the close, so
+   * its process and MCP servers do not stay alive. A failure is logged: the delete goes on.
+   */
+  readonly releaseDeletedSession = Effect.fn("ThreadLifecycle.releaseDeletedSession")(function* (
+    this: ThreadLifecycle,
+    externalThreadId: string,
+  ) {
+    const client = this.#conversation.openClientFor(externalThreadId);
+    if (!client) return;
+    yield* this.#releaseProviderSession(externalThreadId, client);
+    this.#conversation.unloadThread(externalThreadId);
+  }, Effect.uninterruptible).bind(this);
+
   readonly deleteProviderSessionFiles = Effect.fn("ThreadLifecycle.deleteProviderSessionFiles")(function* (
     this: ThreadLifecycle,
     sessionId: string,
@@ -355,6 +371,7 @@ export class ThreadLifecycle {
     this.#pendingHandoffs.clear();
     this.#pendingRuntimeRefreshes.clear();
     this.#pendingStarts.clear();
+    this.#pendingMainStarts.clear();
   }
 
   readonly ensureThread = Effect.fn("ThreadLifecycle.ensureThread")(function* (
@@ -421,17 +438,21 @@ export class ThreadLifecycle {
    * For the callers that await the provider between reading the session and using it. The refresh
    * closes the session in the client and drops the routing to it, so one spent in that wait leaves
    * a live start on a session whose events reach nobody. The mark is kept, and the next drain of
-   * this agent applies it. Calling the returned function twice counts once.
+   * this agent applies it. Calling the returned function twice counts once. A start in a side thread
+   * does not hold a context change of the agent's own chat.
    */
-  holdRuntimeRefresh(agentId: string): () => void {
-    this.#pendingStarts.set(agentId, (this.#pendingStarts.get(agentId) ?? 0) + 1);
+  holdRuntimeRefresh(agentId: string, sideThread = false): () => void {
+    const counts = sideThread ? [this.#pendingStarts] : [this.#pendingStarts, this.#pendingMainStarts];
+    for (const count of counts) count.set(agentId, (count.get(agentId) ?? 0) + 1);
     let released = false;
     return () => {
       if (released) return;
       released = true;
-      const remaining = (this.#pendingStarts.get(agentId) ?? 1) - 1;
-      if (remaining > 0) this.#pendingStarts.set(agentId, remaining);
-      else this.#pendingStarts.delete(agentId);
+      for (const count of counts) {
+        const remaining = (count.get(agentId) ?? 1) - 1;
+        if (remaining > 0) count.set(agentId, remaining);
+        else count.delete(agentId);
+      }
     };
   }
 
@@ -443,7 +464,7 @@ export class ThreadLifecycle {
     reason?: "configuration-change" | "missing-session",
   ) {
     return yield* Effect.acquireUseRelease(
-      Effect.sync(() => this.holdRuntimeRefresh(agent.id)),
+      Effect.sync(() => this.holdRuntimeRefresh(agent.id, this.#conversation.isTaskThread(publicThreadId))),
       () => this.#startProviderThread(agent, client, publicThreadId, reason),
       (release) => Effect.sync(release),
     );
@@ -563,6 +584,7 @@ export class ThreadLifecycle {
         section,
         this.#computerUseInOwnChat(owner, publicThreadId),
         yield* this.#homeSkills(agent, client),
+        this.#conversation.isTaskThread(publicThreadId),
       ),
       serviceName: "openbot",
       dynamicTools: VISIBLE_DYNAMIC_TOOLS,
@@ -1003,10 +1025,12 @@ export class ThreadLifecycle {
     section = this.#sectionTeammates(agent.id),
     computerUseInOwnChat = false,
     homeSkills: readonly HomeSkill[] = [],
+    sideThread = false,
   ): DynamicRecord {
     const memories = this.#memories.essentialFor(agent.id);
     const options = {
       computerUseInOwnChat,
+      sideThread,
       passwordVault: this.#passwordVaultConnected(),
       vaultItems: this.#vaultItems(),
       serverHost: this.#serverHost,
@@ -1080,6 +1104,7 @@ export class ThreadLifecycle {
         this.#sectionTeammates(agent.id),
         computerUseInOwnChat,
         yield* this.#homeSkills(agent, client),
+        this.#conversation.isTaskThread(publicThreadId),
       ),
       ...(client.provider === "codex" ? {} : { dynamicTools: VISIBLE_DYNAMIC_TOOLS }),
       ...(yield* this.codexConfigEffect(
@@ -1268,6 +1293,22 @@ export class ThreadLifecycle {
   providerContextBusy(agent: AgentSummary): boolean {
     if (!this.#compaction.mayDrain(agent.id) || this.#pendingStarts.has(agent.id)) return true;
     if (this.#mailbox.startingDeliveriesForAgent(agent.id).length > 0) return true;
+    return agent.threadId !== null && this.#activeTurnOf(agent.id, agent.threadId) !== null;
+  }
+
+  /**
+   * As `providerContextBusy`, for the agent's own chat alone: a side thread that starts a turn or
+   * compacts its own session does not hold a change to the chat's context.
+   */
+  mainContextBusy(agent: AgentSummary): boolean {
+    if (this.#pendingMainStarts.has(agent.id)) return true;
+    const mainCompacts = this.#compaction
+      .heldThreads(agent.id)
+      .some(
+        (externalThreadId) =>
+          !this.#conversation.isTaskThread(this.#conversation.publicThreadId(agent.id, externalThreadId)),
+      );
+    if (mainCompacts || this.#mailbox.startingDeliveriesForAgent(agent.id, null).length > 0) return true;
     return agent.threadId !== null && this.#activeTurnOf(agent.id, agent.threadId) !== null;
   }
 

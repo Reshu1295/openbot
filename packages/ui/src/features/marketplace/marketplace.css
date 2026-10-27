@@ -2,45 +2,18 @@
 
 /* ---------------------------------------------------------------- window */
 
-.skills-marketplace-backdrop {
-  z-index: var(--openbot-layer-dialog-host);
-  padding: var(--openbot-space-4);
-}
-
+/* A page of the window: the window card draws the surface, the line and the corner. */
 .skills-marketplace {
   /* One inset for the whole window: the top bar title and the body start on it. */
   --marketplace-inset: var(--openbot-space-6);
   display: grid;
+  /* The side panel has the width of the settings page nav. The top row is above both columns. */
+  grid-template-columns: max(var(--left-panel-width, 280px), 220px) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
-  width: min(1040px, calc(100vw - 32px));
-  height: min(704px, calc(100vh - 32px));
-  overflow: hidden;
-  border: 1px solid var(--openbot-border-grouped);
-  border-radius: var(--openbot-radius-card);
-  background: var(--openbot-bg-sidebar);
-  color: var(--openbot-text-primary);
-}
-
-/* As a page, the window card draws the surface, the line and the corner. */
-.skills-marketplace-page {
   width: 100%;
   height: 100%;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .skills-marketplace {
-    transition:
-      opacity var(--openbot-duration-normal) cubic-bezier(0.23, 1, 0.32, 1),
-      transform var(--openbot-duration-normal) cubic-bezier(0.23, 1, 0.32, 1);
-  }
-
-  .skills-marketplace[data-closed] {
-    opacity: 0;
-    transform: scale(0.98);
-  }
+  overflow: hidden;
+  color: var(--openbot-text-primary);
 }
 
 /* Menus and the connect and confirm dialogs open over the window. */
@@ -48,7 +21,7 @@
   z-index: calc(var(--openbot-layer-dialog-host) + 1);
 }
 
-body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wizard-dialog) {
+body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wizard-dialog):not([data-nested]) {
   z-index: calc(var(--openbot-layer-dialog-host) + 1);
 }
 
@@ -57,27 +30,132 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
   align-items: center;
   justify-content: space-between;
   gap: var(--openbot-space-3);
+  grid-column: 1 / -1;
   min-height: 48px;
   padding: var(--openbot-space-2) var(--openbot-space-2) var(--openbot-space-2) var(--marketplace-inset);
   border-bottom: 1px solid var(--openbot-border);
 }
 
-.skills-marketplace-topbar-actions {
+/* ---------------------------------------------------------------- side panel */
+
+/* As the settings page nav: the title and the kinds, then the apps that the user connected. */
+.marketplace-nav {
   display: flex;
-  flex: 0 0 auto;
-  align-items: center;
+  grid-row: 2;
+  grid-column: 1;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
   gap: var(--openbot-space-1);
+  overflow-y: auto;
+  padding: var(--openbot-space-4) var(--openbot-space-3) var(--openbot-space-3);
+  border-right: 1px solid var(--openbot-border);
+}
+
+.marketplace-nav-title {
+  margin: 0 0 var(--openbot-space-3);
+  padding: 0 var(--openbot-space-2);
+  color: var(--openbot-text-primary);
+  font-size: var(--openbot-text-lg);
+  font-weight: var(--openbot-weight-semibold);
+  line-height: var(--openbot-leading-lg);
+}
+
+/* The title takes the focus when the page opens, only so a screen reader reads it. */
+.marketplace-nav-title:focus {
+  outline: none;
+}
+
+.marketplace-nav-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The icon column holds an app logo, which has its own margin, so it is one step bigger than a line icon. The kind
+   icons stay at their size in its center, so all names start at the same place. */
+.marketplace-nav-item {
+  grid-template-columns: var(--openbot-icon-lg) minmax(0, 1fr) auto;
+}
+
+/* A row is a shared Button: it keeps the text of a settings row, not the larger text of a button. */
+.ui-button.marketplace-nav-item {
+  font: inherit;
+  font-size: var(--openbot-text-md);
+  white-space: normal;
+}
+
+.ui-button.marketplace-nav-item[aria-current] {
+  font-weight: var(--openbot-weight-medium);
+}
+
+/* The kind that holds the open page is selected, as the page itself is. */
+.marketplace-nav-item[aria-current="location"] {
+  background: var(--openbot-bg-control-hover);
+  color: var(--openbot-text-primary);
+  font-weight: var(--openbot-weight-medium);
+}
+
+.marketplace-nav-item > svg:first-child {
+  justify-self: center;
+}
+
+.marketplace-nav-count {
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-sm);
+  font-weight: var(--openbot-weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+.marketplace-nav-heading {
+  margin: var(--openbot-space-4) 0 var(--openbot-space-1);
+  padding: 0 var(--openbot-space-2);
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-sm);
+  font-weight: var(--openbot-weight-medium);
+  line-height: var(--openbot-leading-sm);
+}
+
+.marketplace-nav-mark {
+  display: grid;
+  width: var(--openbot-icon-lg);
+  height: var(--openbot-icon-lg);
+  place-items: center;
+  overflow: hidden;
+  border-radius: var(--openbot-radius-xs);
+}
+
+.marketplace-nav-mark > :is(svg, img) {
+  width: 100%;
+  height: 100%;
+}
+
+.marketplace-nav-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketplace-nav-item > .marketplace-nav-warning {
+  color: var(--openbot-warning-text);
 }
 
 .skills-marketplace-body {
   position: relative;
+  grid-row: 2;
+  grid-column: 2;
   overflow: auto;
   scrollbar-gutter: stable;
 }
 
-/* The body uses the window inset, so the page lines up with the top bar title. */
+/* Each list and page has one width, so the content does not move when a page opens. */
 .marketplace-frame {
   padding: var(--openbot-space-6) var(--marketplace-inset) var(--openbot-space-8);
+}
+
+.marketplace-frame > * {
+  width: min(100%, 880px);
+  margin-inline: auto;
 }
 
 .skills-marketplace-error {
@@ -106,13 +184,13 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
   white-space: nowrap;
 }
 
-/* ---------------------------------------------------------------- crumbs */
+/* ---------------------------------------------------------------- heading */
 
-.marketplace-crumbs {
+.marketplace-heading {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: var(--openbot-space-2);
+  gap: var(--openbot-space-1-5);
   min-width: 0;
 }
 
@@ -129,32 +207,34 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
 }
 
 /*
- * The parent crumb is a ghost button. Its type takes the title's values. Negative margins on both sides
- * cancel the hover chip's padding and border, so each crumb text is one gap from each separator.
+ * A parent in the path is plain text until the pointer is on it: then it shows the outline button chip, as the parent
+ * in the path did before. The start margin cancels the chip's padding and border, so the text stays on the inset. The
+ * end margin cancels less, so the chip does not touch the separator.
  */
 .skills-marketplace .marketplace-crumb-parent {
   flex: 0 1 auto;
   min-width: 0;
-  height: auto;
-  margin-block: calc(-1 * var(--openbot-space-1));
-  margin-inline: calc(-1 * var(--openbot-space-2) - 1px);
-  padding: var(--openbot-space-1) var(--openbot-space-2);
+  margin-inline: calc(-1 * var(--openbot-space-2) - 1px) calc(-1 * var(--openbot-space-1));
   overflow: hidden;
-  border: 1px solid transparent;
-  border-radius: var(--openbot-radius-md);
+  border-color: transparent;
   background: transparent;
   color: var(--openbot-text-muted);
-  font-size: var(--openbot-text-lg);
-  font-weight: var(--openbot-weight-semibold);
-  line-height: var(--openbot-leading-lg);
+  font-size: var(--openbot-text-md);
+  font-weight: var(--openbot-weight-medium);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.skills-marketplace .marketplace-crumb-parent:focus-visible {
+  border-color: var(--openbot-border);
+  background: var(--openbot-bg-control);
+  color: var(--openbot-text-primary);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .skills-marketplace .marketplace-crumb-parent:hover:not(:disabled) {
-    border-color: var(--openbot-border-strong);
-    background: var(--openbot-bg-control-hover);
+    border-color: var(--openbot-border);
+    background: var(--openbot-bg-control);
     color: var(--openbot-text-primary);
   }
 }
@@ -216,24 +296,40 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
   font-size: var(--openbot-text-sm);
 }
 
-/* Tabs, search and the filter share one row. */
+/* The head of a list: its title and one line, then the search and the filter on one row. */
+.marketplace-browse {
+  gap: var(--openbot-space-8);
+}
+
+.marketplace-browse-head {
+  display: grid;
+  gap: var(--openbot-space-6);
+}
+
+.marketplace-browse-copy {
+  display: grid;
+  gap: var(--openbot-space-1);
+}
+
+.marketplace-browse-copy > p {
+  margin: 0;
+}
+
+.marketplace-browse-title {
+  margin: 0;
+  font-size: var(--openbot-text-3xl);
+}
+
 .marketplace-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--openbot-space-3);
+  gap: var(--openbot-space-2);
 }
 
 .marketplace-search {
   position: relative;
-  flex: 0 1 240px;
+  flex: 1;
   min-width: 0;
-  margin-left: auto;
-}
-
-.marketplace-count {
-  margin-left: var(--openbot-space-1-5);
-  color: var(--openbot-text-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .marketplace-install-menu {
@@ -255,10 +351,6 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-}
-
-.marketplace-tab-slot {
-  padding-top: var(--openbot-space-4);
 }
 
 .marketplace-block {
@@ -377,14 +469,6 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
   height: 60%;
 }
 
-/* An app icon fills its tile. */
-.skills-marketplace .integration-logo-tile > img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-}
-
 /* ---------------------------------------------------------------- cards */
 
 .marketplace-grid {
@@ -498,8 +582,9 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
 }
 
 .marketplace-done > svg {
-  width: 14px;
-  height: 14px;
+  width: var(--marketplace-done-icon, 14px);
+  height: var(--marketplace-done-icon, 14px);
+  color: var(--marketplace-done-mark, currentColor);
 }
 
 /* ---------------------------------------------------------------- rows */
@@ -526,6 +611,127 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
   gap: var(--openbot-space-0-5);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- app list */
+
+.marketplace-app-group {
+  display: grid;
+  gap: var(--openbot-space-3);
+  padding-top: var(--openbot-space-4);
+  border-top: 1px solid var(--openbot-border);
+}
+
+.marketplace-app-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--openbot-space-2);
+  margin: 0;
+  color: var(--openbot-text-primary);
+  font-size: var(--openbot-text-lg);
+  font-weight: var(--openbot-weight-semibold);
+}
+
+.marketplace-app-group-count {
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-md);
+  font-weight: var(--openbot-weight-regular);
+  font-variant-numeric: tabular-nums;
+}
+
+.marketplace-app-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  column-gap: var(--openbot-space-6);
+  row-gap: var(--openbot-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The row opens the app page; the status control sits above the hit area. */
+.marketplace-app-row {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--openbot-space-3);
+  padding: var(--openbot-space-2);
+  border-radius: var(--openbot-radius-lg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .marketplace-app-row:hover {
+    background: var(--openbot-bg-control-hover);
+  }
+
+  /* The row hover has the color of the Connect button, so on a hovered row the button is one step lighter. */
+  .marketplace-app-row:hover .marketplace-app-action[data-variant="secondary"]:not([data-disabled]) {
+    background: var(--openbot-bg-control-active);
+  }
+}
+
+.skills-marketplace .marketplace-app-row-hit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border-radius: inherit;
+  background: transparent;
+}
+
+/* The row draws the hover. The shared ghost hover would cover the text above the hit area. */
+.skills-marketplace .marketplace-app-row-hit:hover:not(:disabled) {
+  background: transparent;
+}
+
+/* A little bigger than the settings tile, so that a logo with its own margin still reads. */
+.marketplace-app-row > .integration-logo-tile {
+  --integration-tile: 40px;
+  pointer-events: none;
+}
+
+.marketplace-app-row-copy {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: var(--openbot-space-0-5);
+  pointer-events: none;
+}
+
+.marketplace-app-row-name {
+  overflow: hidden;
+  color: var(--openbot-text-primary);
+  font-size: var(--openbot-text-lg);
+  font-weight: var(--openbot-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketplace-app-row-tagline {
+  overflow: hidden;
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketplace-app-row-status {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+/* As tall as a button, so the rows keep one height. The check has the success color; the word stays quiet. */
+.marketplace-app-row-status > .marketplace-done {
+  height: var(--openbot-control-md);
+  gap: var(--openbot-space-1-5);
+  padding-inline: var(--openbot-space-2);
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-md);
+  --marketplace-done-icon: var(--openbot-icon-md);
+  --marketplace-done-mark: var(--openbot-success);
 }
 
 /* ---------------------------------------------------------------- pages */
@@ -573,6 +779,8 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
 .skills-marketplace .marketplace-link {
   height: auto;
   padding: 0;
+  /* The size of the other values in the list. */
+  font-size: var(--openbot-text-md);
 }
 
 /* The skill-preview card, with room for more than one request. */
@@ -619,12 +827,6 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
   margin-bottom: 0;
 }
 
-/* The app page is the page of the app in Settings, at the Settings content width. */
-.marketplace-app-page {
-  width: min(100%, 720px);
-  margin-inline: auto;
-}
-
 /* ---------------------------------------------------------------- no results */
 
 .marketplace-empty {
@@ -655,6 +857,37 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
 
 /* ---------------------------------------------------------------- narrow */
 
+/* A narrow window puts the kinds in a row above the list. The connected apps are in the list. */
+@media (max-width: 720px) {
+  .skills-marketplace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .marketplace-nav {
+    grid-row: 2;
+    overflow-x: auto;
+    padding: var(--openbot-space-2) var(--openbot-space-3);
+    border-right: 0;
+    border-bottom: 1px solid var(--openbot-border);
+  }
+
+  .marketplace-nav-title,
+  .marketplace-nav-group {
+    display: none;
+  }
+
+  .marketplace-nav-list {
+    grid-auto-columns: max-content;
+    grid-auto-flow: column;
+  }
+
+  .skills-marketplace-body {
+    grid-row: 3;
+    grid-column: 1;
+  }
+}
+
 @media (max-width: 860px) {
   .skills-marketplace {
     --marketplace-inset: var(--openbot-space-4);
@@ -681,4 +914,9 @@ body:has(.skills-marketplace) :is(.integration-dialog-backdrop, .integration-wiz
 .marketplace-search > svg {
   width: 16px;
   height: 16px;
+}
+
+/* After the icon size rule, so that the warning color wins. */
+.marketplace-app-action[data-status="attention"] > svg {
+  color: var(--openbot-warning-text);
 }

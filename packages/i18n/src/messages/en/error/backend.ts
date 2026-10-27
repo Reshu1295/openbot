@@ -129,6 +129,8 @@ export const messages = defineMessages("error.backend", {
   "error.backend.recipientHidden": "This agent is hidden. Restore it to send messages.",
   "error.backend.attachBetween": "Attach between 1 and {limit} files.",
   "error.backend.attachmentNotFile": "Attachment is not a file: {path}",
+  "error.backend.attachSvg":
+    "{name} is an SVG file and cannot be attached. Write its absolute path in your answer: the chat shows the image there.",
   "error.backend.generatedImageTooLarge": "Generated image exceeds the 100 MB limit.",
   "error.backend.attachmentNotRegularFile": "Only regular files can be attached: {name}",
   "error.backend.attachmentCopyFailed": "OpenBot could not copy {name}.",
@@ -311,6 +313,15 @@ export const messages = defineMessages("error.backend", {
   "error.backend.taskNotFound": "This task is not available.",
   "error.backend.taskClosed": "This task is closed. Open it again to send a message.",
   "error.backend.taskStillRunning": "This task still runs. Wait until it stops, then close it.",
+  // Side threads. Hosts before side threads send the task texts above, so those keys stay.
+  "error.backend.threadNotFound": "This thread is not available.",
+  "error.backend.threadStillRunning": "This thread still runs. Stop it, then try again.",
+  "error.backend.threadArchived": "This thread is archived. Restore it to send a message.",
+  "error.backend.threadTitleRequired": "Give the thread a short title.",
+  "error.backend.threadOpenLimitReached":
+    "This agent has {count} open threads. Archive a thread, then start or restore another one.",
+  "error.backend.threadRemoteUnsupported": "Threads are only available for agents on this computer.",
+  "error.backend.threadMoveRefused": "Only a message that you sent to this agent alone can run in a new thread.",
   "error.backend.taskTitleRequired": "Give the task a short title.",
   "error.backend.taskToolInvalid": "Give the task a title of at most 120 characters and a brief that says what to do.",
   "error.backend.taskOwnChatOnly":

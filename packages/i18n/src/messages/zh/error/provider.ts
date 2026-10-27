@@ -94,6 +94,7 @@ export const messages = {
   "error.provider.headerNameTooLong": "某个请求头名称过长。",
   "error.provider.headerNameDuplicate": "有两个请求头的名称相同。",
   "error.provider.headerValueInvalid": "某个请求头的值为空或过长。",
+  "error.provider.headerValueMissing": "请填写请求头 {name} 的值。",
   "error.provider.apiKeyTooLong": "API 密钥过长。",
   "error.provider.localOnly": "只能在运行助手的电脑上更改服务商。",
   "error.provider.keyRequired": "需要服务商密钥。",

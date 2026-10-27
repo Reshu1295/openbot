@@ -7,6 +7,7 @@ import { isGlobalSearchShortcut } from "../../global-search-shortcut";
 import { useNavigation } from "../../navigation";
 import { createSimpleContext } from "../../simple-context";
 import { useAuth } from "../account/account-context";
+import { useAgentThreads } from "../agent-threads/agent-threads-context";
 import { useAgents } from "../agents/agents-context";
 import { useBrowserTabs } from "../browser/browser-context";
 import { useChannels } from "../channels/channels-context";
@@ -47,8 +48,15 @@ const ServerScope = createSimpleContext({
     const { centralAuth } = useAuth();
     const { setupState } = useSetup();
     const { servers, activeServerId, initialServersReady, serverLoadRequest, serversLoaded } = useServers();
-    const { pendingAgentSelection, setPendingAgentSelection, pendingChannelSelection, setPendingChannelSelection } =
-      useServerSwitch();
+    const {
+      pendingAgentSelection,
+      setPendingAgentSelection,
+      pendingChannelSelection,
+      setPendingChannelSelection,
+      pendingThreadSelection,
+      setPendingThreadSelection,
+    } = useServerSwitch();
+    const agentThreads = useAgentThreads();
     const channels = useChannels();
     const { setTeamPresence } = usePresence();
     const {
@@ -303,6 +311,14 @@ const ServerScope = createSimpleContext({
         if (!agentId) return;
         setPendingAgentSelection(null);
         selectAgent(agentId);
+      },
+    );
+    createEffect(
+      () => pendingThreadSelection(),
+      (selection) => {
+        if (!selection) return;
+        setPendingThreadSelection(null);
+        void agentThreads.openConversation(selection.agentId, selection.threadId);
       },
     );
     createEffect(

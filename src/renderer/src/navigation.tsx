@@ -6,6 +6,7 @@ import { desktopAnalytics } from "./analytics";
 import { toAgentMessage } from "./app-message-projection";
 import { appPort } from "./app-port";
 import { type ChatHistoryEntry, chatHistoryShortcut, createChatHistory } from "./chat-history";
+import { useAgentThreads } from "./features/agent-threads/agent-threads-context";
 import { useAgents } from "./features/agents/agents-context";
 import { useChannels } from "./features/channels/channels-context";
 import { useConversation } from "./features/conversation/conversation-context";
@@ -45,6 +46,7 @@ const Navigation = createSimpleContext({
     } = useAgents();
     const { activeDirectMember, setDirectTyping, clearDirectSelection, openDirectConversation } = useDirectMessages();
     const channels = useChannels();
+    const agentThreads = useAgentThreads();
     const windowPage = useWindowPage();
     const scopeIsCurrent = createScopeGuard();
     const {
@@ -122,6 +124,10 @@ const Navigation = createSimpleContext({
       setGlobalSearchOpen(open);
     }
 
+    /** The side thread of each message that the last search found there, by agent and message id. */
+    const searchHitThreads = new Map<string, string>();
+    const searchHitKey = (agentId: string, messageId: string) => `${agentId}\n${messageId}`;
+
     async function searchGlobalMessages(
       query: string,
       cursor?: string,
@@ -132,7 +138,12 @@ const Navigation = createSimpleContext({
           query,
           ...(cursor === undefined ? {} : { cursor }),
           limit: 100,
+          includeSideThreads: true,
         });
+        if (cursor === undefined) searchHitThreads.clear();
+        for (const result of page.results) {
+          if (result.taskId) searchHitThreads.set(searchHitKey(result.agentId, result.message.id), result.taskId);
+        }
         // One search counts once, not once per page.
         if (cursor === undefined) {
           analytics.track("search_action", { scope: "global", result: "succeeded", result_count: page.total });
@@ -154,6 +165,14 @@ const Navigation = createSimpleContext({
     }
 
     function selectGlobalSearchMessage(agentId: string, messageId: string): void {
+      // A side thread loads its whole conversation in its tab. Its tab is written first, so a chat
+      // window that opens for the agent reads it.
+      const taskId = searchHitThreads.get(searchHitKey(agentId, messageId));
+      if (taskId) {
+        agentThreads.open(agentId, taskId);
+        selectAgent(agentId);
+        return;
+      }
       // The other window reads the chat when it opens. This one does not mark its messages read.
       if (!selectAgent(agentId) && platform.chatWindow) return;
       void openAgentMessage(agentId, messageId);
@@ -203,7 +222,7 @@ const Navigation = createSimpleContext({
     /** The index that Back or Forward opens. The chat records it when it opens; a refused open keeps it until then. */
     let historyTarget: number | null = null;
 
-    /** The chat that the sidebar marks as open. A page, the Tasks page or the new agent form has none. */
+    /** The chat that the sidebar marks as open. A page or the new agent form has none. */
     const openChat = (): ChatHistoryEntry | null => {
       if (windowPage.page() !== "agents" || agentSetupOpen()) return null;
       const channelId = channels.state.selectedId;

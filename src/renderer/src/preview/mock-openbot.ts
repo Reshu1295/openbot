@@ -583,6 +583,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         name: "House Router",
         baseUrl: "https://models.example.com/v1",
         hasApiKey: true,
+        headerNames: ["X-Team"],
         models: [{ id: "glm-5-air", name: "GLM-5 Air" }],
       },
     ],
@@ -708,7 +709,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
 
   function findTask(agentId: string, taskId: string): AgentTask {
     const task = tasks.get(agentId)?.find((candidate) => candidate.id === taskId);
-    if (!task) throw new Error(sourceText("error.backend.taskNotFound"));
+    if (!task) throw new Error(sourceText("error.backend.threadNotFound"));
     return task;
   }
 
@@ -734,7 +735,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         .find((line) => line.trim())
         ?.trim()
         .slice(0, 120) ?? "";
-    if (!title) throw new Error(sourceText("error.backend.taskTitleRequired"));
+    if (!title) throw new Error(sourceText("error.backend.threadTitleRequired"));
     const task: AgentTask = {
       id: `mock-task-${messageCounter++}`,
       agentId,
@@ -758,7 +759,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
 
   /** Runs one mock turn in a task: the user message, a progress line, then a short answer. */
   function runTaskTurn(task: AgentTask, text: string): QueuedMessageReceipt {
-    if (task.closedAt) throw new Error(sourceText("error.backend.taskClosed"));
+    if (task.closedAt) throw new Error(sourceText("error.backend.threadArchived"));
     const deliveryId = `mock-delivery-${messageCounter++}`;
     const turnId = `mock-turn-${messageCounter++}`;
     const conversation = taskConversation(task);
@@ -1298,6 +1299,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
             name: input.name,
             baseUrl: input.baseUrl,
             hasApiKey: input.apiKey !== null,
+            headerNames: input.headers.map((header) => header.name),
             models: input.models.map((model) => ({ id: model.id, name: model.name })),
           },
         ];
@@ -1309,12 +1311,22 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         emitAgentEvent({ type: "status", status: clone(agentStatus) });
         return { providers: clone(customProviders), restart: "restarted" };
       },
-      /** The same keep rule as the real store: a key that is not sent stays, but not for a new origin. */
+      /**
+       * The same keep rule as the real store: a key that is not sent, or a header value that is null,
+       * stays, but not for a new origin.
+       */
       update: async (input) => {
         const stored = customProviders.find((provider) => provider.id === input.id);
         if (!stored) throw new Error("This endpoint is not saved.");
+        const savedNames = stored.headerNames ?? [];
+        const headerNames = input.headers?.map((header) => header.name) ?? savedNames;
+        const missing = input.headers?.find((header) => header.value === null && !savedNames.includes(header.name));
+        if (missing) throw new Error(sourceText("error.provider.headerValueMissing", { name: missing.name }));
         const keepsKey = input.apiKey === undefined && stored.hasApiKey;
-        if (keepsKey && !sameCustomProviderOrigin(stored.baseUrl, input.baseUrl)) {
+        const keepsHeader = input.headers
+          ? input.headers.some((header) => header.value === null)
+          : savedNames.length > 0;
+        if ((keepsKey || keepsHeader) && !sameCustomProviderOrigin(stored.baseUrl, input.baseUrl)) {
           throw new Error("Enter the API key again for the new address.");
         }
         customProviders = customProviders.map((provider) =>
@@ -1324,6 +1336,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
                 name: input.name,
                 baseUrl: input.baseUrl,
                 hasApiKey: input.apiKey !== undefined || keepsKey,
+                headerNames,
                 models: input.models.map((model) => ({ id: model.id, name: model.name })),
               }
             : provider,
@@ -2542,6 +2555,21 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       reopenTask: async (input) => {
         const task = findTask(input.agentId, input.taskId);
         Object.assign(task, { state: "idle", closedAt: null, updatedAt: new Date().toISOString() });
+        emitTasks(input.agentId);
+      },
+      renameTask: async (input) => {
+        const task = findTask(input.agentId, input.taskId);
+        Object.assign(task, { title: input.title, updatedAt: new Date().toISOString() });
+        emitTasks(input.agentId);
+      },
+      deleteTask: async (input) => {
+        const task = findTask(input.agentId, input.taskId);
+        if (task.activeTurnId) throw new Error(sourceText("error.backend.threadStillRunning"));
+        tasks.set(
+          input.agentId,
+          (tasks.get(input.agentId) ?? []).filter((candidate) => candidate.id !== input.taskId),
+        );
+        taskConversations.delete(input.taskId);
         emitTasks(input.agentId);
       },
       acknowledgeFailedTurn: async () => undefined,

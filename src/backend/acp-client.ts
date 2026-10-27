@@ -1904,6 +1904,8 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     const turn = thread.activeTurn;
     if (!turn || turn.completing) return;
     if (update.sessionUpdate === "agent_message_chunk" && update.content.type === "text") {
+      // The agent's own transport error sent as answer text (Cursor, #3334).
+      if (this.#flavor.noiseChunk?.test(update.content.text)) return;
       // An exhausted quota sent as answer text, and a turn then ended as a success (Antigravity).
       const quota = this.#flavor.sdkHarness?.quota(update.content.text) ?? null;
       if (quota !== null) {
@@ -1919,6 +1921,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         turn.receivedOutput = true;
         turn.interruptedAnswer = [turn.text.trim() || turn.interruptedAnswer, error].filter(Boolean).join("\n\n");
         this.#completeThought(thread, turn);
+        this.#completeMessage(thread, turn, "commentary");
         this.#appendThought(thread, turn, error);
         this.#completeThought(thread, turn);
         return;
@@ -2017,7 +2020,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
   }
 
   #appendThought(thread: AcpThread, turn: AcpTurn, text: string): void {
-    this.#completeMessage(thread, turn, "commentary");
+    if (!this.#flavor.thoughtsInsideAnswer) this.#completeMessage(thread, turn, "commentary");
     /* A delta carries no phase, so the item has to be opened as `commentary` first — otherwise the
        thought lands in an ordinary agentMessage and renders as a chat bubble. */
     if (!turn.thoughtStarted) {

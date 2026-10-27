@@ -190,13 +190,12 @@ export const messages = defineMessages("settings", {
   "settings.mobileConnect.app.copyLink": "Copy link",
   "settings.mobileConnect.app.linkCopied": "Link copied",
   "settings.mobileConnect.iosApp.title": "OpenBot for iPhone",
-  "settings.mobileConnect.iosApp.badge": "Beta",
-  "settings.mobileConnect.iosApp.description": "Public beta on TestFlight. For iOS 16.4 or later.",
-  "settings.mobileConnect.iosApp.qrLabel": "TestFlight invite QR code",
-  "settings.mobileConnect.iosApp.step.testFlight": "On your iPhone, install TestFlight from the App Store.",
-  "settings.mobileConnect.iosApp.step.invite":
-    "Scan this QR code with the iPhone camera, or copy the invite link and open it on your iPhone.",
-  "settings.mobileConnect.iosApp.step.install": "In TestFlight, tap Accept, then Install.",
+  "settings.mobileConnect.iosApp.badge": "Available",
+  "settings.mobileConnect.iosApp.description": "On the App Store. For iOS 16.4 or later.",
+  "settings.mobileConnect.iosApp.qrLabel": "App Store QR code",
+  "settings.mobileConnect.iosApp.step.scan":
+    "Scan this QR code with the iPhone camera, or copy the link and open it on your iPhone.",
+  "settings.mobileConnect.iosApp.step.install": "On the App Store, tap Get.",
   "settings.mobileConnect.androidApp.title": "OpenBot for Android",
   "settings.mobileConnect.androidApp.badge": "Available",
   "settings.mobileConnect.androidApp.description": "On Google Play. For Android 7.0 or later.",
@@ -309,7 +308,7 @@ export const messages = defineMessages("settings", {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "My last six months with OpenBot",
-  "settings.profile.activity.title": "Activity",
+  "settings.profile.activity.title": "Activity on this computer",
   "settings.profile.activity.activeDays": {
     one: "{count} active day in the past year",
     other: "{count} active days in the past year",

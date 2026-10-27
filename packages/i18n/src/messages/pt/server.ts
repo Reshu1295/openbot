@@ -219,8 +219,6 @@ export const messages = {
   "server.settings.transferTitle": "Transferência",
   "server.settings.transferDescription":
     "Mova os agentes e as configurações deste servidor para um arquivo ou de um arquivo.",
-  "server.settings.connectorsTitle": "Conectores",
-  "server.settings.connectorsDescription": "Conecte contas que todos os agentes deste servidor podem usar.",
   "server.settings.routinesTitle": "Rotinas",
   "server.settings.routinesDescription": "Mostre o agendamento de rotinas deste computador em um app de calendário.",
   "server.routineFeed.title": "Feed de calendário",

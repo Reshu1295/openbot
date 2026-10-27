@@ -44,12 +44,10 @@ export const messages = {
   "customProvider.error.baseUrlProtocol": "Usa un URL http:// o https://.",
   "customProvider.error.baseUrlCredential": "Metti la credenziale in un header, non nell'URL.",
   "customProvider.saved.restarted": "Salvato. OpenBot sta caricando i modelli.",
-  "customProvider.saved.skippedBusy":
-    "Salvato. OpenCode legge l'elenco dopo la fine dell'attività in corso. Poi premi «Connetti».",
+  "customProvider.saved.skippedBusy": "Salvato. OpenCode legge l'elenco dopo la fine dell'attività in corso.",
   "customProvider.saved.notRunning": "Salvato. OpenCode legge l'elenco al prossimo avvio.",
   "customProvider.removed.restarted": "Rimosso. OpenBot sta caricando i modelli.",
-  "customProvider.removed.skippedBusy":
-    "Rimosso. OpenCode legge l'elenco dopo la fine dell'attività in corso. Poi premi «Connetti».",
+  "customProvider.removed.skippedBusy": "Rimosso. OpenCode legge l'elenco dopo la fine dell'attività in corso.",
   "customProvider.removed.notRunning": "Rimosso. OpenCode legge l'elenco al prossimo avvio.",
   "customProvider.saveFailed": "OpenBot non è riuscito a salvare questo endpoint.",
   "customProvider.removeFailed": "OpenBot non è riuscito a rimuovere {name}.",
@@ -67,8 +65,7 @@ export const messages = {
   "customProvider.field.baseUrl": "URL di base",
   "customProvider.field.apiKey": "Chiave API",
   "customProvider.field.apiKeyHint": "Facoltativa. Lasciala vuota se gestisci l'autenticazione con gli header.",
-  "customProvider.field.apiKeyKeptHint":
-    "Una chiave è già salvata. Lascia vuoto per mantenerla insieme agli header salvati.",
+  "customProvider.field.apiKeyKeptHint": "Una chiave è già salvata. Lascia vuoto per mantenerla.",
   "customProvider.models": "Modelli",
   "customProvider.model.id": "ID del modello {number}",
   "customProvider.model.name": "Nome visualizzato del modello {number}",
@@ -79,6 +76,7 @@ export const messages = {
   "customProvider.header.name": "Nome dell'header {number}",
   "customProvider.header.value": "Valore dell'header {number}",
   "customProvider.header.valuePlaceholder": "valore",
+  "customProvider.header.keptPlaceholder": "Salvato. Lascia vuoto per mantenerlo.",
   "customProvider.header.remove": "Rimuovi l'header {number}",
   "customProvider.header.add": "Aggiungi header",
   "customProvider.submit": "Invia",

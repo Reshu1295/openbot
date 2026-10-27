@@ -8,9 +8,14 @@ import type {
   McpServerConfig,
   SkillCategory,
 } from "@openbot/contracts/ipc";
+import type { McpConnectFlow } from "@openbot/contracts/mcp-connect-flows";
 import type { ConnectorDetail } from "../connectors/ConnectorDetailPanel";
 import type { ConnectorId } from "../connectors/connectors";
-import type { MarketplacePluginDetail, MarketplacePluginPrompt } from "../settings/marketplace-plugins";
+import type {
+  MarketplacePluginApp,
+  MarketplacePluginDetail,
+  MarketplacePluginPrompt,
+} from "../settings/marketplace-plugins";
 import type { CatalogList, MarketplaceHomeCache } from "./marketplace-listing";
 
 /** An agent of the user's that a skill can go to. */
@@ -33,14 +38,70 @@ interface AppBase {
   status: MarketplaceAppStatus;
 }
 
+/** What the host holds for one app of a catalog plugin. */
+export interface MarketplaceAppConnection {
+  /** The host holds a row for the app. */
+  held: boolean;
+  /** The server refused the row's stored sign-in, so the user must sign in again. */
+  signInNeeded: boolean;
+}
+
 /**
  * One row of the Apps tab: a catalog app, a connector that the server can run, or an MCP server
- * that the host holds and no catalog app claims. A connector's `id` is its `ConnectorId`.
+ * that the host holds and no catalog app claims. A connector's `id` is its `ConnectorId`. A
+ * plugin's `connections` are keyed by the id of each app in the listing.
  */
 export type MarketplaceApp =
-  | (AppBase & { kind: "plugin"; category: SkillCategory; plugin: MarketplacePluginDetail })
+  | (AppBase & {
+      kind: "plugin";
+      category: SkillCategory;
+      plugin: MarketplacePluginDetail;
+      connections: Readonly<Record<string, MarketplaceAppConnection>>;
+    })
   | (AppBase & { kind: "connector"; connector: ConnectorId; category: SkillCategory })
   | (AppBase & { kind: "custom"; server: McpServerConfig });
+
+/**
+ * How an app connects. The category says which page parts an app reuses: a channel shows its
+ * workspaces and agents, a vault its items, an account a browser sign-in, a key a saved credential,
+ * desktop an address on this computer, open nothing to sign in to, and custom the server's command
+ * or address.
+ */
+export type AppSetup = "channel" | "vault" | "account" | "key" | "desktop" | "open" | "custom";
+
+const CONNECTOR_SETUP = {
+  slack: "channel",
+  discord: "channel",
+  telegram: "channel",
+  onepassword: "vault",
+  bitwarden: "vault",
+  github: "account",
+} as const satisfies Record<ConnectorId, AppSetup>;
+
+const FLOW_SETUP = {
+  link: "account",
+  key: "key",
+  local: "desktop",
+} as const satisfies Record<McpConnectFlow["kind"], AppSetup>;
+
+/** The category of one app of a plugin, by the first way in that its listing gives. */
+export function pluginAppSetup(app: MarketplacePluginApp): AppSetup {
+  const flow = app.server.auth?.[0];
+  return flow ? FLOW_SETUP[flow.kind] : "open";
+}
+
+export function appSetup(app: MarketplaceApp): AppSetup {
+  switch (app.kind) {
+    case "connector":
+      return CONNECTOR_SETUP[app.connector];
+    case "plugin": {
+      const [first] = app.plugin.apps;
+      return first ? pluginAppSetup(first) : "open";
+    }
+    case "custom":
+      return "custom";
+  }
+}
 
 /** A connector that the server on screen can run: its page, and its one-click connect. */
 export interface MarketplaceConnector {
@@ -90,10 +151,19 @@ export interface MarketplaceModel {
   appBusy: (id: string) => boolean;
   /** Runs the connect step of a catalog app. False when the user closed it. */
   connectApp: (app: Extract<MarketplaceApp, { kind: "plugin" }>) => Promise<boolean>;
+  /**
+   * Runs the connect step of one app that the host holds, and saves the answer over the held row:
+   * a new key, a new sign-in, or a desktop app that is on again. False when the user closed it.
+   */
+  reconnectApp: (app: Extract<MarketplaceApp, { kind: "plugin" }>, appId: string) => Promise<boolean>;
+  /** The joined server that keeps an app's credential. Absent when this computer keeps it. */
+  appHostName?: string | undefined;
   /** Asks for a confirmation, then removes what the catalog app installed. */
   disconnectApp: (app: Extract<MarketplaceApp, { kind: "plugin" }>) => void;
   /** Removes a custom MCP server. */
   removeServer: (id: string) => Promise<boolean>;
+  /** Opens the form that adds a custom MCP server. Absent when the user cannot add one. */
+  addServer?: (() => void) | undefined;
   runPrompt?: ((prompt: MarketplacePluginPrompt) => void) | undefined;
   copyLink: (slug: string) => void;
   openUrl: (url: string) => void;

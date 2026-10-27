@@ -357,8 +357,9 @@ export class AgentMemories {
 
   /**
    * Commits a turn's staged mutations, or discards them when the turn did not complete. Answers the
-   * memories that the commit saved, updated and forgot, by agent. A mutation that the commit skipped
-   * is not in it.
+   * memories that the commit saved, updated and forgot, by agent. A mutation that another turn made
+   * stale, such as a change of a memory that a parallel thread changed first, is `notChanged`, so the
+   * thread that made it can show it. A mutation that its text already holds is not in it.
    */
   finishTurn(turnId: string, status: string): Map<string, ConversationMemoryChange[]> {
     const pending = this.#pending.get(turnId) ?? [];
@@ -433,6 +434,7 @@ export class AgentMemories {
           this.#memories.delete(mutation.agentId, mutation.memoryId, mutation.expectedUpdatedAt);
       } catch (error) {
         this.#emitError("memory_commit_failed", error, mutation.agentId);
+        addChanges(changes, mutation.agentId, this.#refusedChanges(mutation, previousMemory));
         continue;
       }
       for (const selection of this.#memories.listSelections(mutation.agentId)) {
@@ -447,14 +449,30 @@ export class AgentMemories {
         revisions.set(previous.revision, selection.revision);
         ownRevisions.set(key, revisions);
       }
-      if (this.#storedState(mutation.agentId) === before) continue;
+      if (this.#storedState(mutation.agentId) === before) {
+        addChanges(changes, mutation.agentId, this.#refusedChanges(mutation, previousMemory));
+        continue;
+      }
       affectedAgents.add(mutation.agentId);
-      const committed = changes.get(mutation.agentId) ?? [];
-      committed.push(...this.#committedChanges(mutation, previousMemory, previousIds));
-      changes.set(mutation.agentId, committed);
+      addChanges(changes, mutation.agentId, this.#committedChanges(mutation, previousMemory, previousIds));
     }
     for (const agentId of affectedAgents) this.stateChanged(agentId);
     return changes;
+  }
+
+  /**
+   * The change that a skipped mutation did not make. A save or update whose text the agent already
+   * holds, and a forget of a memory that is gone, lost nothing.
+   */
+  #refusedChanges(mutation: PendingMemoryMutation, previous: AgentMemory | null): ConversationMemoryChange[] {
+    if (mutation.type === "selection") return [];
+    if (mutation.type === "forget") {
+      if (!previous || !this.#memories.get(mutation.agentId, mutation.memoryId)) return [];
+      return [{ memoryId: previous.id, action: "notChanged", text: previous.text }];
+    }
+    if (this.#memories.list(mutation.agentId).some((memory) => memory.text === mutation.text)) return [];
+    const memoryId = mutation.memoryId ?? mutation.duplicate?.memoryId ?? `unsaved-${mutation.callId}`;
+    return [{ memoryId: memoryId.slice(0, INPUT_LIMITS.identifier), action: "notChanged", text: mutation.text }];
   }
 
   /** What one committed mutation did to the memory texts. A change of inclusion only is not shown. */
@@ -697,4 +715,13 @@ function memoryRecallResult(
     response: { success: true, contentItems: [{ type: "inputText", text: redact(JSON.stringify(result)) }] },
     count: result.memories.length,
   };
+}
+
+function addChanges(
+  changes: Map<string, ConversationMemoryChange[]>,
+  agentId: string,
+  added: readonly ConversationMemoryChange[],
+): void {
+  if (added.length === 0) return;
+  changes.set(agentId, [...(changes.get(agentId) ?? []), ...added]);
 }

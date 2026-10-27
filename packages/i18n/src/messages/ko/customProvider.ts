@@ -46,12 +46,10 @@ export const messages = {
 
   // The note after a save or a removal. It tells the user when OpenCode reads the new list.
   "customProvider.saved.restarted": "저장했어요. OpenBot이 모델을 불러오는 중이에요.",
-  "customProvider.saved.skippedBusy":
-    "저장했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요. 그때 연결을 눌러 주세요.",
+  "customProvider.saved.skippedBusy": "저장했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요.",
   "customProvider.saved.notRunning": "저장했어요. OpenCode는 다음에 시작할 때 목록을 읽어요.",
   "customProvider.removed.restarted": "제거했어요. OpenBot이 모델을 불러오는 중이에요.",
-  "customProvider.removed.skippedBusy":
-    "제거했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요. 그때 연결을 눌러 주세요.",
+  "customProvider.removed.skippedBusy": "제거했어요. OpenCode는 현재 작업이 끝난 후 목록을 읽어요.",
   "customProvider.removed.notRunning": "제거했어요. OpenCode는 다음에 시작할 때 목록을 읽어요.",
   "customProvider.saveFailed": "OpenBot이 이 엔드포인트를 저장하지 못했어요.",
   "customProvider.removeFailed": "OpenBot이 {name}을(를) 제거하지 못했어요.",
@@ -71,7 +69,7 @@ export const messages = {
   "customProvider.field.baseUrl": "기본 URL",
   "customProvider.field.apiKey": "API 키",
   "customProvider.field.apiKeyHint": "선택 사항이에요. 헤더로 인증을 관리한다면 비워 두세요.",
-  "customProvider.field.apiKeyKeptHint": "키가 저장되어 있어요. 키와 저장된 헤더를 유지하려면 비워 두세요.",
+  "customProvider.field.apiKeyKeptHint": "키가 저장되어 있어요. 유지하려면 비워 두세요.",
   "customProvider.models": "모델",
   "customProvider.model.id": "모델 {number} ID",
   "customProvider.model.name": "모델 {number} 표시 이름",
@@ -82,6 +80,7 @@ export const messages = {
   "customProvider.header.name": "헤더 {number} 이름",
   "customProvider.header.value": "헤더 {number} 값",
   "customProvider.header.valuePlaceholder": "값",
+  "customProvider.header.keptPlaceholder": "저장됨. 유지하려면 비워 두세요.",
   "customProvider.header.remove": "헤더 {number} 제거",
   "customProvider.header.add": "헤더 추가",
   "customProvider.submit": "제출",

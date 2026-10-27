@@ -81,6 +81,7 @@ export function serverSupportsCapability(
       capability === "instance-transfer-v1" ||
       capability === "agent-hidden-v1" ||
       capability === "agent-tasks-v1" ||
+      capability === "agent-threads-v1" ||
       capability === "side-question-v1") &&
     server?.kind === "remote"
   ) {

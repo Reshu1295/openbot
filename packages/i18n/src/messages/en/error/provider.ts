@@ -99,6 +99,7 @@ export const messages = defineMessages("error.provider", {
   "error.provider.headerNameTooLong": "A header name is too long.",
   "error.provider.headerNameDuplicate": "Two headers have the same name.",
   "error.provider.headerValueInvalid": "A header value is missing or too long.",
+  "error.provider.headerValueMissing": "The header {name} needs a value.",
   "error.provider.apiKeyTooLong": "The API key is too long.",
   "error.provider.localOnly": "Providers can only be changed on the computer that runs the agents.",
   "error.provider.keyRequired": "A provider key is required.",

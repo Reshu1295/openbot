@@ -111,6 +111,8 @@ export interface SidebarProps {
   onHideAgent?: ((agentId: string) => void) | undefined;
   /** Puts a hidden agent back in its section. Without it, a hidden agent's menu shows no restore item. */
   onRestoreAgent?: ((agentId: string) => void) | undefined;
+  /** Opens the agent's chat with a new thread. Without it, such as on a host without threads, the agent menu shows no new thread item. */
+  onNewAgentThread?: ((agentId: string) => void) | undefined;
   /** Opens the agent's chat in a window of its own. Without it, the agent menu shows no window item. */
   onOpenAgentWindow?: ((agentId: string) => void) | undefined;
   /** The agents whose chat is open in a window of its own. Their rows show a window mark. */

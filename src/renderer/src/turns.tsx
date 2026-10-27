@@ -11,7 +11,11 @@ import { currentText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, untrack } from "solid-js";
 import { desktopAnalytics } from "./analytics";
 import { useAnsweredPrompts } from "./answered-prompts";
-import { seededAttentionPrompts } from "./features/agents/agent-runtime-snapshot";
+import {
+  attentionKey,
+  type PendingAttentionPrompts,
+  seededAttentionPrompts,
+} from "./features/agents/agent-runtime-snapshot";
 import { useAgents } from "./features/agents/agents-context";
 import { agentConversationKey, promptRequestKey } from "./features/conversation/conversation-keys";
 import type { PromptAnswerOptions } from "./features/conversation/conversation-types";
@@ -25,7 +29,6 @@ import { turnsPort } from "./turns-port";
 type PromptEvent = Extract<AgentEvent, { type: "prompt" }>;
 /** `current` is false while a new list loads. */
 type RoutineSnapshot = { routines: RoutineFields[]; current: boolean };
-type BrowserTakeoverEvent = Extract<AgentEvent, { type: "browser-takeover-requested" }>;
 
 /**
  * What each agent is *doing*: the turn it is running, the queue behind it, and
@@ -103,9 +106,7 @@ const Turns = createSimpleContext({
       submittedPromptRequests,
       setSubmittedPromptRequests,
     } = useAnsweredPrompts().promptMarkersFor(scopeServerId);
-    const [pendingPrompts, setPendingPrompts] = createSignal<
-      Record<string, PromptEvent | BrowserTakeoverEvent | undefined>
-    >(
+    const [pendingPrompts, setPendingPrompts] = createSignal<PendingAttentionPrompts>(
       untrack(() =>
         seededAttentionPrompts(seed?.pendingPrompts, presentedPromptResolutions(), submittedPromptRequests()),
       ),
@@ -230,7 +231,7 @@ const Turns = createSimpleContext({
 
     async function answerPrompt(answers: Record<string, string[]>, options?: PromptAnswerOptions): Promise<boolean> {
       const agent = activeAgent();
-      const prompt = agent ? pendingPrompts()[agent.id] : undefined;
+      const prompt = agent ? pendingPrompts()[attentionKey(agent.id, agent.threadId)] : undefined;
       if (!agent || prompt?.type !== "prompt") return false;
       return submitPromptAnswers(agent.id, prompt, answers, options);
     }
@@ -314,12 +315,13 @@ const Turns = createSimpleContext({
 
     async function respondToBrowserTakeover(decision: "complete" | "cancel"): Promise<boolean> {
       const agent = activeAgent();
-      const event = agent ? pendingPrompts()[agent.id] : undefined;
-      if (!agent || event?.type !== "browser-takeover-requested") return false;
+      const key = agent ? attentionKey(agent.id, agent.threadId) : undefined;
+      const event = key ? pendingPrompts()[key] : undefined;
+      if (!agent || !key || event?.type !== "browser-takeover-requested") return false;
       const serverId = activeServerId();
       try {
         await turnsPort().agent.respondToBrowserTakeover({ requestId: event.request.requestId, decision });
-        setPendingPrompts((current) => ({ ...current, [agent.id]: undefined }));
+        setPendingPrompts((current) => ({ ...current, [key]: undefined }));
         return true;
       } catch (error) {
         appendUiError(agent.id, error, currentText().t("app.errorStatus.browserTakeover"), serverId);

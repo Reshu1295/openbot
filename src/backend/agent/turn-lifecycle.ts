@@ -10,6 +10,7 @@ import {
   CONVERSATION_PLAN_ITEM_TYPE,
   CONVERSATION_SUBAGENTS_ITEM_TYPE,
   type ConversationMemoryChange,
+  type ConversationMemoryChangeAction,
   type ConversationMessage,
   type ConversationPlan,
   type ConversationSnapshot,
@@ -136,6 +137,11 @@ export interface TurnHooks {
   emitError(code: string, error: unknown, agentId?: string, context?: FailureContext): void;
   emitRuntimeSnapshot(): void;
   scheduleDrain(agentId: string): void;
+  /**
+   * Takes a message from another agent into the recipient's running chat turn when the recipient's
+   * busy-message mode is "steer". Otherwise the message waits in the queue.
+   */
+  steerAgentMessage(recipientAgentId: string, deliveryId: string): Effect.Effect<void>;
   /** Closes a provider session the provider refuses; the next turn opens a new one with the transcript. */
   dropRefusedSession(agentId: string, externalThreadId: string): Effect.Effect<void, TurnOperationFailed>;
   listAgents(): AgentSummary[];
@@ -158,6 +164,8 @@ export interface TurnHooks {
   quietRoutineDelivery(deliveryId: string): boolean;
   /** The task whose thread this is, or null for any other thread. */
   taskForThread(threadId: string): string | null;
+  /** Whether this task's thread exists and is not archived. */
+  taskOpen(taskId: string): boolean;
   /** The error of a task turn. It shows in the task's panel, not in the agent's own chat. */
   taskFailed(taskId: string, message: string): void;
   /**
@@ -1353,12 +1361,16 @@ export class TurnLifecycle {
     )
       return;
 
-    yield* this.#mailbox
+    // A result for a request from a side thread runs in that thread, as an answer with send_message does.
+    const answerTaskId = this.#mailbox.answerTaskId(agentId, messageId, [recipientAgentId]);
+    const taskId = answerTaskId && this.#hooks.taskOpen(answerTaskId) ? answerTaskId : undefined;
+    const receipt = yield* this.#mailbox
       .enqueue({
         sender: { kind: "agent", agentId },
         recipientAgentIds: [recipientAgentId],
         text,
         replyToMessageId: messageId,
+        ...(taskId ? { taskId } : {}),
         // The requested result, not a new request. The chain-origin guard above already stops a
         // second relay; this is what tells the recipient it owes no acknowledgement for one.
         expectsReply: false,
@@ -1370,6 +1382,7 @@ export class TurnLifecycle {
       this.#mailboxSync.syncMailboxMessages(senderSnapshot);
       this.#conversation.emitConversation(senderSnapshot);
     }
+    for (const queued of receipt.deliveries) yield* this.#hooks.steerAgentMessage(recipientAgentId, queued.id);
     this.#mailboxSync.emitQueue(recipientAgentId);
     this.#hooks.scheduleDrain(recipientAgentId);
   }, Effect.uninterruptible);
@@ -1600,9 +1613,17 @@ function addMemoryChangesMessage(
     status: "completed",
     createdAt: new Date().toISOString(),
     itemType: CONVERSATION_MEMORY_CHANGES_ITEM_TYPE,
-    text: sourceText("status.agent.memoryChanges", countConversationMemoryChanges(memoryChanges)),
+    text: memoryChangesText(countConversationMemoryChanges(memoryChanges)),
     memoryChanges,
   });
+}
+
+/** The count of the changes. The older text stays for a turn whose changes all committed. */
+function memoryChangesText(counts: Record<ConversationMemoryChangeAction, number>): string {
+  const { notChanged, ...committed } = counts;
+  return notChanged > 0
+    ? sourceText("status.agent.memoryChangesWithConflicts", counts)
+    : sourceText("status.agent.memoryChanges", committed);
 }
 
 /** Which subagents a list holds and the state of each, without their steps. */

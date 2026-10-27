@@ -28,7 +28,14 @@ import { useSidebar } from "../sidebar/sidebar-context";
 import { readDictatedReplies } from "../speech/speech-replies";
 import { claimErrorToast, providerErrorTitle, readableAgentError } from "./agent-error-text";
 import { createAgentEventSounds } from "./agent-event-sounds";
-import { reconcileAttentionApprovals, reconcileAttentionPrompts } from "./agent-runtime-snapshot";
+import {
+  attentionAgentId,
+  attentionEventKey,
+  attentionKey,
+  reconcileAttentionApprovals,
+  reconcileAttentionPrompts,
+  withoutAttention,
+} from "./agent-runtime-snapshot";
 import { useAgents } from "./agents-context";
 import { agentsPort } from "./agents-port";
 
@@ -239,8 +246,10 @@ export function AgentEventBridge() {
           const next = queueAfterTurnCompleted(snapshot, event.turnId);
           return next === snapshot ? current : { ...current, [event.agentId]: next };
         });
+        // Only the wait of this turn's thread: another thread of the agent can still wait for the user.
         setPendingPrompts((current) => {
-          const pending = current[event.agentId];
+          const key = attentionKey(event.agentId, event.threadId);
+          const pending = current[key];
           const submittedRequestKey = submittedPromptRequests()[event.agentId];
           if (
             pending?.type === "prompt" &&
@@ -248,7 +257,7 @@ export function AgentEventBridge() {
           ) {
             return current;
           }
-          return { ...current, [event.agentId]: undefined };
+          return pending ? withoutAttention(current, (candidate) => attentionEventKey(candidate) === key) : current;
         });
         // Only the approvals of this turn's thread: a task of the agent can still wait for one.
         setApprovals((current) =>
@@ -260,18 +269,24 @@ export function AgentEventBridge() {
         }
         return;
       case "prompt":
-        setPendingPrompts((current) => ({ ...current, [event.agentId]: event }));
-        setPresentedPromptResolutions((current) => ({ ...current, [event.agentId]: undefined }));
-        setSubmittedPromptRequests((current) => ({ ...current, [event.agentId]: undefined }));
+        setPendingPrompts((current) => ({ ...current, [attentionEventKey(event)]: event }));
+        // The answer marks belong to the agent's own chat. A side thread's question keeps them.
+        if (agentList().some((agent) => agent.id === event.agentId && agent.threadId === event.threadId)) {
+          setPresentedPromptResolutions((current) => ({ ...current, [event.agentId]: undefined }));
+          setSubmittedPromptRequests((current) => ({ ...current, [event.agentId]: undefined }));
+        }
         return;
       case "agent-input-resolved":
         if (event.kind === "prompt") {
-          setPendingPrompts((current) => {
-            const prompt = current[event.agentId];
-            return prompt?.type === "prompt" && String(prompt.requestId) === String(event.requestId)
-              ? { ...current, [event.agentId]: undefined }
-              : current;
-          });
+          setPendingPrompts((current) =>
+            withoutAttention(
+              current,
+              (prompt) =>
+                prompt.type === "prompt" &&
+                prompt.agentId === event.agentId &&
+                String(prompt.requestId) === String(event.requestId),
+            ),
+          );
         } else {
           forgetApproval(event.agentId, event.requestId);
         }
@@ -291,18 +306,18 @@ export function AgentEventBridge() {
         applyAgentRuntimeSnapshot(event.snapshot);
         return;
       case "browser-takeover-requested":
-        setPendingPrompts((current) => ({
-          ...current,
-          [event.request.agentId]: event,
-        }));
+        setPendingPrompts((current) => ({ ...current, [attentionEventKey(event)]: event }));
         return;
       case "browser-takeover-resolved":
-        setPendingPrompts((current) => {
-          const pending = current[event.agentId];
-          return pending?.type === "browser-takeover-requested" && pending.request.requestId === event.requestId
-            ? { ...current, [event.agentId]: undefined }
-            : current;
-        });
+        setPendingPrompts((current) =>
+          withoutAttention(
+            current,
+            (pending) =>
+              pending.type === "browser-takeover-requested" &&
+              attentionAgentId(pending) === event.agentId &&
+              pending.request.requestId === event.requestId,
+          ),
+        );
         return;
       case "error": {
         // A provider reports an expired account as a 401 quoted inside the whole HTTP exchange, so

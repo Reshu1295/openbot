@@ -7,7 +7,6 @@ import { ChannelActivityIndicator } from "@openbot/ui/features/channels/ChannelA
 import { AgentActivityIndicator } from "@openbot/ui/features/conversation/AgentActivity";
 import { AgentChatEmptyState } from "@openbot/ui/features/conversation/AgentChatEmptyState";
 import { AgentStepsDisclosure, type AgentStepsTrace } from "@openbot/ui/features/conversation/AgentSteps";
-import { AgentTaskChips } from "@openbot/ui/features/conversation/AgentTasks";
 import { AttachmentCards } from "@openbot/ui/features/conversation/AttachmentCards";
 import { UsageLimitAskCard } from "@openbot/ui/features/conversation/BackupModels";
 import { ChatActionMarker } from "@openbot/ui/features/conversation/ChatActionMarker";
@@ -53,6 +52,7 @@ import type { ConversationProps } from "./conversation-types";
 import { agentSkillsMode } from "./installed-skills-source";
 import { MarketplaceSuggestionChatCard, marketplaceSuggestionKnown } from "./MarketplaceSuggestionChatCard";
 import { McpSignInChatCard } from "./McpSignInChatCard";
+import { createMessageImageFiles } from "./message-image-files";
 import { RoutineChatCard } from "./RoutineChatCard";
 import { createChatWebhookRoutines, RoutineWebhookChatCard } from "./RoutineWebhookChatCard";
 import { desktopChatEventRoutinesApi } from "./routine-webhooks-api";
@@ -187,9 +187,9 @@ export function ConversationTimeline() {
     followReaderScroll,
     setUnreadMessagesDividerElement,
     setVirtualRootElement,
-    openTaskPanel,
     shownSubagentId,
     toggleSubagentPanel,
+    sideThreadOpen,
   } = useConversationViewScope();
   const { t, format, sourceText } = useText();
   // A named function, not a ternary in the prop: the compiler wraps a ternary prop in a memo, and
@@ -260,7 +260,6 @@ export function ConversationTimeline() {
         toggleSpokenReply({ serverId: props.server?.id ?? "local", agentId, messageId: message.id }, message.body),
     };
   };
-  const openTasks = () => props.tasks?.snapshot?.tasks.filter((task) => task.state !== "closed") ?? [];
   const compaction = (): ContextCompactionView | null => {
     const state = props.contextState;
     if (state?.agentId !== props.agent?.id || state?.threadId !== props.agent?.threadId || !state?.compaction)
@@ -278,6 +277,8 @@ export function ConversationTimeline() {
   );
 
   const runtime = conversationRuntime(props);
+  // The browser client reads a host file whole, with no size limit, so a named image stays a chip there.
+  const loadImageFile = props.runtime ? undefined : createMessageImageFiles(runtime.agent);
   /** The agent that asks in a card: in a channel, the working agent whose card shows. */
   const interactionAgentName = () => (channel ? channel.interactionAgentName() : props.agent?.name);
   /**
@@ -547,11 +548,11 @@ export function ConversationTimeline() {
   return (
     <>
       <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {keyedPrompt()
+        {keyedPrompt() && !sideThreadOpen()
           ? t("prompt.inputRequiredAnnouncement", { question: keyedPrompt()?.prompt.questions[0]?.question ?? "" })
           : ""}
       </span>
-      <Show when={chatSearchOpen()}>
+      <Show when={chatSearchOpen() && !sideThreadOpen()}>
         <ChatSearch
           query={chatSearchQuery()}
           current={activeChatSearchIndex()}
@@ -564,7 +565,7 @@ export function ConversationTimeline() {
         />
       </Show>
 
-      <Show when={props.unreadCount > 0 && !unreadDividerVisible()}>
+      <Show when={props.unreadCount > 0 && !unreadDividerVisible() && !sideThreadOpen()}>
         <UnreadMessagesBanner
           count={props.unreadCount}
           busy={markingRead()}
@@ -574,7 +575,8 @@ export function ConversationTimeline() {
       </Show>
 
       <div
-        class={["conversation-scroll", scrollFades.classes()]}
+        class={["conversation-scroll", scrollFades.classes(), { "conversation-covered": sideThreadOpen() }]}
+        inert={sideThreadOpen()}
         ref={(element) => {
           setScrollElement(element);
           rail.ref(element);
@@ -1232,6 +1234,15 @@ export function ConversationTimeline() {
                             onOpenQuote={openQuote}
                             onDownload={(attachment) => attachmentAction(attachment, "download")}
                             mediaSource={runtime.attachmentMedia}
+                            loadImageFile={
+                              loadImageFile &&
+                              ((file) =>
+                                loadImageFile(file, {
+                                  serverId: props.server?.id ?? "local",
+                                  messageId: message()?.id ?? initialMessage.id,
+                                  agentId: workspaceAgentId(),
+                                }))
+                            }
                             actions={
                               <>
                                 <Show when={pending()}>
@@ -1389,16 +1400,6 @@ export function ConversationTimeline() {
                 </Show>
               </Show>
             </div>
-            <Show when={props.tasks}>
-              {(tasks) => (
-                <AgentTaskChips
-                  tasks={openTasks()}
-                  onOpen={openTaskPanel}
-                  onClose={(taskId) => tasks().onClose(taskId)}
-                  waitsForApproval={(task) => tasks().approval(task) !== undefined}
-                />
-              )}
-            </Show>
             <Show when={keyedPrompt()} keyed>
               {(entry) => {
                 const presentResolution = () =>

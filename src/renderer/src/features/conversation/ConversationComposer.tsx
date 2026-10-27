@@ -124,6 +124,7 @@ export function ConversationComposer() {
     providerSilentMinutes,
     providerOffline,
     agentProviderName,
+    sideThreadOpen,
   } = useConversationViewScope();
   const { t, format, sourceText: localizeSourceText } = useText();
   const messageLabel = () =>
@@ -361,7 +362,7 @@ export function ConversationComposer() {
   );
   function ComposerBody() {
     return (
-      <div class="composer-wrap">
+      <div class={["composer-wrap", { "conversation-covered": sideThreadOpen() }]} inert={sideThreadOpen()}>
         {channel ? <channel.AboveComposer /> : null}
         <Show when={speaking() && props.agent}>
           {(agent) => (
@@ -388,6 +389,8 @@ export function ConversationComposer() {
                   title={channel ? t("chat.awaiting.subtasks") : undefined}
                   onDismiss={dismissAwaitingReplies}
                   onOpenAgent={props.onSelectAgent}
+                  // A channel's rows are its sub-tasks, not queued replies.
+                  onSteer={props.activeTurnId && !channel ? props.onSteerQueuedMessage : undefined}
                 />
               </Show>
               <Show when={waitsVisible() && props.onCancelWait}>
@@ -419,7 +422,7 @@ export function ConversationComposer() {
                     editingDeliveryId={editingDeliveryId()}
                     canSteer={Boolean(props.activeTurnId)}
                     onSteer={props.onSteerQueuedMessage}
-                    onRunAsTask={props.tasks?.onRunQueuedMessage}
+                    onRunAsTask={props.threads?.onRunQueuedMessage}
                     onCancel={props.onCancelQueuedMessage}
                     onEdit={editQueuedMessage}
                     onReorder={reorderPresentedQueue}

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppPreviewRouteImport } from './routes/app-preview'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as CommercialLicenseRouteImport } from './routes/commercial-license'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
@@ -184,6 +185,11 @@ const AppPreviewRoute = AppPreviewRouteImport.update({
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommercialLicenseRoute = CommercialLicenseRouteImport.update({
+  id: '/commercial-license',
+  path: '/commercial-license',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -1007,6 +1013,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
   '/changelog': typeof ChangelogRoute
+  '/commercial-license': typeof CommercialLicenseRoute
   '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
@@ -1165,6 +1172,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
   '/changelog': typeof ChangelogRoute
+  '/commercial-license': typeof CommercialLicenseRoute
   '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
@@ -1324,6 +1332,7 @@ export interface FileRoutesById {
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
   '/changelog': typeof ChangelogRoute
+  '/commercial-license': typeof CommercialLicenseRoute
   '/contact': typeof ContactRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
@@ -1484,6 +1493,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app-preview'
     | '/changelog'
+    | '/commercial-license'
     | '/contact'
     | '/join'
     | '/llms.txt'
@@ -1642,6 +1652,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app-preview'
     | '/changelog'
+    | '/commercial-license'
     | '/contact'
     | '/join'
     | '/llms.txt'
@@ -1800,6 +1811,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/app-preview'
     | '/changelog'
+    | '/commercial-license'
     | '/contact'
     | '/join'
     | '/llms.txt'
@@ -1959,6 +1971,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRoute
   AppPreviewRoute: typeof AppPreviewRoute
   ChangelogRoute: typeof ChangelogRoute
+  CommercialLicenseRoute: typeof CommercialLicenseRoute
   ContactRoute: typeof ContactRoute
   JoinRoute: typeof JoinRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
@@ -2121,6 +2134,13 @@ declare module '@tanstack/solid-router' {
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/commercial-license': {
+      id: '/commercial-license'
+      path: '/commercial-license'
+      fullPath: '/commercial-license'
+      preLoaderRoute: typeof CommercialLicenseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -3329,6 +3349,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRoute,
   AppPreviewRoute: AppPreviewRoute,
   ChangelogRoute: ChangelogRoute,
+  CommercialLicenseRoute: CommercialLicenseRoute,
   ContactRoute: ContactRoute,
   JoinRoute: JoinRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,

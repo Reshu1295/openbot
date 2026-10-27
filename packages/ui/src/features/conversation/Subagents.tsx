@@ -275,7 +275,7 @@ export function SubagentPanel(props: SubagentPanelProps) {
           type="button"
           variant="ghost"
           class="browser-toolbar-button side-panel-pane-close"
-          aria-label={t("conversation.tasks.panel.closePanel")}
+          aria-label={t("conversation.sidePanel.closePanel")}
           onClick={() => props.onClosePanel()}
         >
           <X class="browser-toolbar-icon" />

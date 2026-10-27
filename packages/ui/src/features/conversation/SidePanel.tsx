@@ -5,7 +5,6 @@ import {
   buttonVariants,
   DropdownMenu,
   Folder,
-  ListChecks,
   Maximize2,
   MessageCircleQuestionMark,
   Minimize2,
@@ -26,12 +25,11 @@ import { For, flush, onSettled, Show } from "solid-js";
  * from the composer only, and a subagent from its row in the chat, so the launcher and Add do not
  * list them.
  */
-export type SidePanelPane = "browser" | "files" | "tasks" | "settings" | "question" | "voice" | "subagent";
+export type SidePanelPane = "browser" | "files" | "settings" | "question" | "voice" | "subagent";
 
 const PANE_LABELS: Record<SidePanelPane, AppTextKey> = {
   browser: "conversation.sidePanel.pane.browser",
   files: "conversation.sidePanel.pane.files",
-  tasks: "conversation.sidePanel.pane.tasks",
   settings: "conversation.sidePanel.pane.settings",
   question: "conversation.sidePanel.pane.question",
   voice: "conversation.sidePanel.pane.voice",
@@ -45,8 +43,6 @@ function PaneIcon(props: { pane: SidePanelPane }): JSX.Element {
       return <ComputerIcon />;
     case "files":
       return <Folder aria-hidden="true" />;
-    case "tasks":
-      return <ListChecks aria-hidden="true" />;
     case "settings":
       return <Settings aria-hidden="true" />;
     case "question":
@@ -62,21 +58,17 @@ export interface SidePanelToggleProps {
   open: boolean;
   /** The name of the agent that controls the browser now. */
   actingAgentName?: string | undefined;
-  /** The number of tasks that run now. */
-  running: number;
   onToggle: () => void;
 }
 
-/** The panel button at the end of the chat header. Its dots show browser control and running tasks. */
+/** The panel button at the end of the chat header. Its dot shows browser control. */
 export function SidePanelToggle(props: SidePanelToggleProps) {
   const { t } = useText();
   const label = () => {
     if (props.actingAgentName !== undefined)
       return t("conversation.header.browserActing", { name: props.actingAgentName });
     if (props.open) return t("conversation.sidePanel.close");
-    return props.running > 0
-      ? t("conversation.sidePanel.openRunning", { count: props.running })
-      : t("conversation.sidePanel.open");
+    return t("conversation.sidePanel.open");
   };
   return (
     <Button
@@ -94,9 +86,6 @@ export function SidePanelToggle(props: SidePanelToggleProps) {
       <PanelRight aria-hidden="true" class="size-[14px]" />
       <Show when={props.actingAgentName !== undefined}>
         <span class="computer-control-dot" aria-hidden="true" />
-      </Show>
-      <Show when={props.actingAgentName === undefined && props.running > 0}>
-        <span class="agent-tasks-trigger-dot" aria-hidden="true" />
       </Show>
     </Button>
   );

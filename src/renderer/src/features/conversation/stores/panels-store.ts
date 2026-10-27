@@ -41,11 +41,9 @@ export interface SidePanelState {
   maximized: boolean;
 }
 
-/** The side panel of each agent, the task in its Tasks pane, and the subagent in its Subagent pane. */
+/** The side panel of each agent, and the subagent in its Subagent pane. */
 export interface SidePanelsState {
   side: Record<string, SidePanelState>;
-  /** A task of null is a new task, until its first message starts it; an agent with no entry shows the task list. */
-  tasks: Record<string, string | null>;
   subagents: Record<string, string>;
 }
 
@@ -55,7 +53,6 @@ const SIDE_PANEL_EMPTY: SidePanelState = { panes: [], selected: null, maximized:
 export const SIDE_PANEL_MODES = {
   browser: "browser",
   files: "files",
-  tasks: "task",
   settings: "settings",
   question: "question",
   voice: "voice",
@@ -143,16 +140,6 @@ export function createPanelsStore(deps: PanelsStoreDeps) {
   }
   const settingsOpen = () => activeRightPanel() === "settings";
   const filesOpen = () => activeRightPanel() === "files";
-  const taskPanelOpen = () => activeRightPanel() === "task" && deps.props.tasks !== undefined;
-  const taskPanelTaskId = (): string | null => {
-    const agentId = conversationOwnerId(deps.props);
-    return agentId ? (panels.tasks[agentId] ?? null) : null;
-  };
-  /** The Tasks pane lists the tasks until the user opens one or starts a new one. */
-  const taskListOpen = () => {
-    const agentId = conversationOwnerId(deps.props);
-    return taskPanelOpen() && agentId !== undefined && !(agentId in panels.tasks);
-  };
   const panelSubagentId = (): string | null => {
     const agentId = conversationOwnerId(deps.props);
     return agentId ? (panels.subagents[agentId] ?? null) : null;
@@ -181,17 +168,6 @@ export function createPanelsStore(deps: PanelsStoreDeps) {
     }
   }
 
-  /** Opens a task in the side panel, or a new task when `taskId` is null. */
-  function openTaskPanel(taskId: string | null): void {
-    const agentId = conversationOwnerId(deps.props);
-    if (!agentId) return;
-    setPanels((draft) => {
-      draft.tasks[agentId] = taskId;
-    });
-    if (taskId) deps.props.tasks?.onOpen(taskId);
-    setActiveRightPanel("task", agentId);
-  }
-
   /** Opens the steps of a subagent of this chat in the side panel. */
   function openSubagentPanel(subagentId: string): void {
     const agentId = conversationOwnerId(deps.props);
@@ -200,16 +176,6 @@ export function createPanelsStore(deps: PanelsStoreDeps) {
       draft.subagents[agentId] = subagentId;
     });
     setActiveRightPanel("subagent", agentId);
-  }
-
-  /** The Tasks pane, at its list. */
-  function showTaskList(): void {
-    const agentId = conversationOwnerId(deps.props);
-    if (!agentId) return;
-    setPanels((draft) => {
-      delete draft.tasks[agentId];
-    });
-    setActiveRightPanel("task", agentId);
   }
 
   function openRoutineSettings(routine: { routineId: string; name: string } | "new"): void {
@@ -485,11 +451,6 @@ export function createPanelsStore(deps: PanelsStoreDeps) {
     activeRightPanel,
     settingsOpen,
     filesOpen,
-    taskPanelOpen,
-    taskPanelTaskId,
-    taskListOpen,
-    openTaskPanel,
-    showTaskList,
     panelSubagentId,
     openSubagentPanel,
     sidePanel,

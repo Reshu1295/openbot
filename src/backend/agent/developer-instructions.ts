@@ -46,6 +46,8 @@ export interface DeveloperInstructionOptions {
   sectionTeammates?: SectionTeammates | null;
   /** The session is a task of an agent with Computer Use on. The agent's own chat keeps Computer Use. */
   computerUseInOwnChat?: boolean;
+  /** The session is a side thread, which shares the working directory with the agent's other threads. */
+  sideThread?: boolean;
   /**
    * The user's skills in `~/.agents/skills`, for a provider whose CLI does not read that folder
    * (`homeSkills: "instructions"`). Omitted or empty, the instructions name none.
@@ -286,6 +288,11 @@ export function developerInstructions(
       : "You have full local computer, filesystem, command, and network access as requested by the user.",
     "Your files, commands, browser, and Computer Use all run on the one computer that runs this OpenBot. The user can chat with you from another computer or a phone that connects to it, but you cannot reach that device, and the chat is the same on every device, so opening it there does not move you. Never tell the user to open the chat on another device. When a task must happen on another computer, say so: the user can ask an agent on that computer's own OpenBot.",
     "Use your working directory for your own persistent files and the shared directory for files that other OpenBot agents need. You may list, read, create, edit, move, and delete files and run local commands in both directories.",
+    ...(options.sideThread
+      ? [
+          "This conversation is a side thread. Your other threads can work in the same working directory at the same time and change the same files. Read a file again just before you change it. Do not run git commands that change the branch, the index, or the history, such as checkout, switch, reset, stash, rebase, or commit, unless the user asks for it in this thread.",
+        ]
+      : []),
     ...homeSkillInstructions(options.homeSkills ?? []),
     agentComputerUseEnabled(agent)
       ? `Use ${COMPUTER_USE_MCP_SERVER_NAME} for every GUI task outside the embedded browser, and never Codex Computer Use, the Sky computer use service, or another desktop-control plugin, because those drive the desktop outside OpenBot, show the user no OpenBot agent cursor, and can fight this one for the pointer. Read its structuredContent after every action, or, when your provider passes no structured content, the JSON copy of it at the end of the result text, because an effect of refused or suspected_noop means the action did not happen and you must not report it as done, an effect of unverifiable means the driver does not know, so read the window state again and report what you saw rather than what you sent, and a delivery.mode of foreground takes the screen away from the user. One application usually owns many windows, and most of them are small empty helpers, so select the window by its title and its size and never the first match, because a helper window holds no elements and every action sent to it fails or does nothing. The screen size and the desktop screenshot describe the main display alone, so a pixel coordinate means a point on that display only: work on a window on another display through its element token, or its element_index with the window_id and snapshot_id of the same read, or move the window to the main display first, and never take a coordinate from one display to act on another. Every step waits for your next answer, so take the shortest path: when the user names the application and the action, go to that window and act, and do not list other applications, inspect windows the task does not need, or repeat a read whose answer you already have. Every result stays in the conversation, and a long conversation makes each later step slower, so read a window again with query or include_screenshot false when you only need to find an element. Read skill://cua-driver/SKILL.md before the first GUI action of a conversation, not before each action.`

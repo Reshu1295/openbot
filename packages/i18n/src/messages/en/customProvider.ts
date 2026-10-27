@@ -45,12 +45,10 @@ export const messages = defineMessages("customProvider", {
 
   // The note after a save or a removal. It tells the user when OpenCode reads the new list.
   "customProvider.saved.restarted": "Saved. OpenBot is loading the models.",
-  "customProvider.saved.skippedBusy":
-    "Saved. OpenCode reads the list after the current task stops. Press Connect then.",
+  "customProvider.saved.skippedBusy": "Saved. OpenCode reads the list after the current task stops.",
   "customProvider.saved.notRunning": "Saved. OpenCode reads the list when it next starts.",
   "customProvider.removed.restarted": "Removed. OpenBot is loading the models.",
-  "customProvider.removed.skippedBusy":
-    "Removed. OpenCode reads the list after the current task stops. Press Connect then.",
+  "customProvider.removed.skippedBusy": "Removed. OpenCode reads the list after the current task stops.",
   "customProvider.removed.notRunning": "Removed. OpenCode reads the list when it next starts.",
   "customProvider.saveFailed": "OpenBot could not save this endpoint.",
   "customProvider.removeFailed": "OpenBot could not remove {name}.",
@@ -70,7 +68,7 @@ export const messages = defineMessages("customProvider", {
   "customProvider.field.baseUrl": "Base URL",
   "customProvider.field.apiKey": "API key",
   "customProvider.field.apiKeyHint": "Optional. Leave empty if you manage auth via headers.",
-  "customProvider.field.apiKeyKeptHint": "A key is saved. Leave this empty to keep it and the saved headers.",
+  "customProvider.field.apiKeyKeptHint": "A key is saved. Leave this empty to keep it.",
   "customProvider.models": "Models",
   "customProvider.model.id": "Model {number} ID",
   "customProvider.model.name": "Model {number} display name",
@@ -81,6 +79,7 @@ export const messages = defineMessages("customProvider", {
   "customProvider.header.name": "Header {number} name",
   "customProvider.header.value": "Header {number} value",
   "customProvider.header.valuePlaceholder": "value",
+  "customProvider.header.keptPlaceholder": "Saved. Leave empty to keep it.",
   "customProvider.header.remove": "Remove header {number}",
   "customProvider.header.add": "Add header",
   "customProvider.submit": "Submit",

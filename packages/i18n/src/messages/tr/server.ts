@@ -225,8 +225,6 @@ export const messages = {
   "server.settings.transferTitle": "Aktarım",
   "server.settings.transferDescription":
     "Bu sunucunun ajanlarını ve sunucu ayarlarını bir dosyaya veya bir dosyadan taşıyın.",
-  "server.settings.connectorsTitle": "Bağlayıcılar",
-  "server.settings.connectorsDescription": "Bu sunucudaki her ajanın kullanabileceği hesapları bağlayın.",
   "server.settings.routinesTitle": "Rutinler",
   "server.settings.routinesDescription": "Bu bilgisayarın rutin programını bir takvim uygulamasında gösterin.",
   "server.routineFeed.title": "Takvim akışı",

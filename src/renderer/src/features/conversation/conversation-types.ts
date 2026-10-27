@@ -8,7 +8,6 @@ import type {
   AgentProviderId,
   AgentStatus,
   AgentTask,
-  AgentTasksSnapshot,
   AgentWait,
   AttachmentSummary,
   AvatarImageInput,
@@ -38,6 +37,7 @@ import type { AwaitingReplyItem } from "@openbot/ui/features/conversation/Awaiti
 import type { UsageLimitAskCardProps } from "@openbot/ui/features/conversation/BackupModels";
 import type { ChatMessageAuthor } from "@openbot/ui/features/conversation/ChatMessageRow";
 import type { UnloadedHistory } from "@openbot/ui/features/conversation/ChatScrollRail";
+import type { ThreadHeaderProps } from "@openbot/ui/features/conversation/threads/thread-types";
 import type { SidebarAgentWait } from "@openbot/ui/features/sidebar/sidebar-agent-states";
 import type { JSX } from "@solidjs/web";
 import type { ConnectorRegistry } from "../connectors/connector-registry";
@@ -225,8 +225,8 @@ export interface ConversationProps {
   queue: QueueSnapshot | undefined;
   /** The agent's open waits. Absent where the host does not keep them. */
   waits?: readonly AgentWait[] | undefined;
-  /** The agent's tasks. Absent where the host keeps no tasks. */
-  tasks?: ConversationTasks | undefined;
+  /** The agent's threads. Absent where the host keeps only the agent's own chat. */
+  threads?: ConversationThreads | undefined;
   browserTabs: BrowserTab[];
   activeBrowserTabId: string | null;
   browserVisibilitySuspended: boolean;
@@ -382,26 +382,31 @@ export type RightPanelMode =
   | "settings"
   | "file-preview"
   | "files"
-  | "task"
   | "question"
   | "voice"
   | "subagent";
 
 export type { SidePanelPane } from "@openbot/ui/features/conversation/SidePanel";
 
-/** The tasks of the active agent, and the task actions. Each action names the task, not the agent. */
-export interface ConversationTasks {
-  snapshot: AgentTasksSnapshot | undefined;
-  /** The conversation of a task, after `onOpen` read it. */
-  conversation: (taskId: string) => ConversationSnapshot | undefined;
-  onOpen: (taskId: string) => void;
-  onStart: (text: string) => Promise<AgentTask | null>;
-  onRunQueuedMessage: (deliveryId: string) => void;
-  onSend: (taskId: string, text: string) => Promise<boolean>;
-  onStop: (taskId: string) => void;
-  onClose: (taskId: string) => void;
-  onReopen: (taskId: string) => void;
-  /** The approval that the task's turn waits for. */
-  approval: (task: AgentTask) => AgentApproval | undefined;
-  onRespondApproval: (approval: AgentApproval, decision: "accept" | "decline") => Promise<boolean>;
+/**
+ * The threads of the active agent. A side thread is a task of the host; the agent's own chat is the
+ * main thread. Each action applies to the open thread.
+ */
+export interface ConversationThreads {
+  header: ThreadHeaderProps;
+  /** The open side thread, or null for a new thread. Undefined while the agent's own chat is open. */
+  open: AgentTask | null | undefined;
+  /** How many side threads of the agent can run at the same time. */
+  limit: number;
+  /** The side threads that run a turn now. */
+  running: number;
+  /** The conversation of the open side thread, when it loaded. */
+  conversation: ConversationSnapshot | undefined;
+  /** The approval that the open side thread's turn waits for. */
+  approval: AgentApproval | undefined;
+  onSend: (text: string) => Promise<boolean>;
+  onStop: () => void;
+  onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
+  /** Missing when the host cannot move a queued message to a new thread. */
+  onRunQueuedMessage?: ((deliveryId: string) => void) | undefined;
 }

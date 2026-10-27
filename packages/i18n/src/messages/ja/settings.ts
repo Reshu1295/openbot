@@ -161,13 +161,12 @@ export const messages = {
   "settings.mobileConnect.app.copyLink": "リンクをコピー",
   "settings.mobileConnect.app.linkCopied": "リンクをコピーしました",
   "settings.mobileConnect.iosApp.title": "OpenBot for iPhone",
-  "settings.mobileConnect.iosApp.badge": "ベータ",
-  "settings.mobileConnect.iosApp.description": "TestFlight で公開ベータ中。iOS 16.4 以降に対応。",
-  "settings.mobileConnect.iosApp.qrLabel": "TestFlight 招待の QR コード",
-  "settings.mobileConnect.iosApp.step.testFlight": "iPhone で App Store から TestFlight をインストールします。",
-  "settings.mobileConnect.iosApp.step.invite":
-    "iPhone のカメラでこの QR コードを読み取るか、招待リンクをコピーして iPhone で開きます。",
-  "settings.mobileConnect.iosApp.step.install": "TestFlight で「同意する」、次に「インストール」をタップします。",
+  "settings.mobileConnect.iosApp.badge": "公開中",
+  "settings.mobileConnect.iosApp.description": "App Store で配信中。iOS 16.4 以降に対応。",
+  "settings.mobileConnect.iosApp.qrLabel": "App Store の QR コード",
+  "settings.mobileConnect.iosApp.step.scan":
+    "iPhone のカメラでこの QR コードを読み取るか、リンクをコピーして iPhone で開きます。",
+  "settings.mobileConnect.iosApp.step.install": "App Store で「入手」をタップします。",
   "settings.mobileConnect.androidApp.title": "OpenBot for Android",
   "settings.mobileConnect.androidApp.badge": "公開中",
   "settings.mobileConnect.androidApp.description": "Google Play で配信中。Android 7.0 以降に対応。",
@@ -278,7 +277,7 @@ export const messages = {
   "settings.profile.share.fileName": "openbot-activity.png",
   // The text in the image to share.
   "settings.profile.share.caption": "OpenBot と過ごした直近 6 か月",
-  "settings.profile.activity.title": "アクティビティ",
+  "settings.profile.activity.title": "このコンピューターでのアクティビティ",
   "settings.profile.activity.activeDays": {
     other: "過去 1 年間のアクティブな日: {count} 日",
   },

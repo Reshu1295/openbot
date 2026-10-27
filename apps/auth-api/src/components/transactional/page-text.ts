@@ -60,8 +60,8 @@ export function messagingConnectText(t: AppTranslate, platform: WebMessagingInst
       failed: t("sitePage.connect.failure.failed", { name }),
     } satisfies Record<FailureKind, string>,
     restartHint: t("sitePage.connect.restartHint", {
-      serverSettings: t("server.rail.settings"),
-      connectors: t("server.settings.connectorsTitle"),
+      marketplace: t("marketplace.title"),
+      apps: t("marketplace.tab.apps"),
       name,
       connect,
     }),
