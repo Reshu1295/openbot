@@ -19,7 +19,14 @@ export function useServerVault(serverId: string) {
   const server = servers.find((candidate) => candidate.id === serverId);
   const canManage = canManageVault(serverId);
   const key = queryKeys.serverVault(queryScope, serverId);
-  const query = useQuery({ queryKey: key, enabled: canManage, retry: false, queryFn: () => loadVault(serverId) });
+  // An agent or another device can change the Vault, and the phone gets no event: each page reads it again.
+  const query = useQuery({
+    queryKey: key,
+    enabled: canManage,
+    retry: false,
+    staleTime: 0,
+    queryFn: () => loadVault(serverId),
+  });
   const locked = useRef(false);
   const action = useMutation({
     mutationFn: (operation: () => Promise<void>) => operation(),
