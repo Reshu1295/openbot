@@ -124,7 +124,7 @@ export interface AccountRateLimitResult {
   secondary?: AccountRateLimitWindowResult | null | undefined;
 }
 
-/** One named quota of the plan and the model names it covers. Antigravity only. */
+/** One named quota of the plan and the model names it covers. */
 export interface AccountRateLimitGroupResult {
   name: string;
   models: string[];
@@ -134,7 +134,7 @@ export interface AccountRateLimitGroupResult {
 
 export interface AccountRateLimitsReadResult {
   rateLimits?: AccountRateLimitResult | null | undefined;
-  /** Antigravity only: every quota group of the plan. `rateLimits` is one of them. */
+  /** Every named quota group of the plan. `rateLimits` is one of them. */
   groups?: AccountRateLimitGroupResult[] | undefined;
   /** Cursor only: the provider whose plan quota this reading also counts, such as Grok on a merged plan. */
   sharedQuotaWith?: AgentProviderId | undefined;

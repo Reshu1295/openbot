@@ -53,6 +53,19 @@ const KEY_EXTENSIONS = {
 }
 `,
   },
+  // Pi supplies the Z.ai model catalog. Pin its endpoint to the Coding Plan, and replace a key
+  // from Pi's auth.json so this provider always uses the key saved in OpenBot.
+  zai: {
+    variable: "OPENBOT_PI_ZAI_API_KEY",
+    source: `export default function (pi) {${readKey("zai", "OPENBOT_PI_ZAI_API_KEY")}
+  pi.registerProvider("zai", {
+    baseUrl: "https://api.z.ai/api/coding/paas/v4",
+    apiKey,
+    headers: { Authorization: "Bearer " + literal },
+  });
+}
+`,
+  },
   // Pi has a built-in OpenRouter provider with OpenRouter's model list (401 models in Pi 1.4.0). As for
   // DeepSeek, a registration with only the key keeps that list, and the Authorization header replaces a
   // key from Pi's auth.json or OPENROUTER_API_KEY. Pi sends Anthropic models to OpenRouter's Anthropic

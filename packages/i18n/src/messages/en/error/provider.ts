@@ -365,6 +365,8 @@ export const messages = defineMessages("error.provider", {
     "Muse authentication is not verified. Connect on the host computer, or set a Meta API key.",
   "error.provider.museSignIn": "Sign in to Muse on the host computer to continue.",
   "error.provider.inceptionSignIn": "Add an Inception API key to continue.",
+  "error.provider.zaiUsageFailed": "Could not read Z.ai usage.",
+  "error.provider.zaiSignIn": "Add a Z.ai Coding Plan key to continue.",
   "error.provider.deepseekSignIn": "Add a DeepSeek API key to continue.",
   "error.provider.openrouterSignIn": "Add an OpenRouter API key to continue.",
   "error.provider.terminalLoginFailed":

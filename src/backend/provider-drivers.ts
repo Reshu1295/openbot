@@ -77,6 +77,7 @@ import {
 } from "./process-confinement";
 import type { AccountReadResult, ModelListResponse } from "./protocol";
 import { type ProviderClientOperationError, providerCall, providerFailure } from "./provider-client-effects";
+import { readZaiUsage } from "./zai-usage";
 
 /** One command OpenBot runs against a provider's own CLI, waiting for the process to exit. */
 interface ProviderCliCommand {
@@ -521,6 +522,7 @@ function piClient(
       : {}),
     extraEnv: () => ({ ...context.agentEnvironment?.() }),
     ...piKeyProvider(provider, context),
+    ...(provider === "zai" ? { readRateLimits: () => readZaiUsage(context.apiKey("zai")) } : {}),
     ...(context.providerStateDirectory ? { providerStateDirectory: context.providerStateDirectory } : {}),
     mcpServers: context.mcpServers,
     ...(context.reportMcpDrops ? { reportMcpDrops: context.reportMcpDrops } : {}),
@@ -544,6 +546,7 @@ function piProfileClient(
     requestTimeoutMs: timeout,
     profileGeneration: true,
     ...piKeyProvider(provider, context),
+    ...(provider === "zai" ? { readRateLimits: () => readZaiUsage(context.apiKey("zai")) } : {}),
     ...(context.providerStateDirectory ? { providerStateDirectory: context.providerStateDirectory } : {}),
   });
 }
@@ -579,6 +582,17 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
     createClient: (cli, timeout, context, confinement) => piClient("deepseek", cli, timeout, context, confinement),
     createProfileClient: (cli, timeout, context) => piProfileClient("deepseek", cli, timeout, context),
     authState: (account) => ({ kind: "deepseek", email: account?.email ?? null }),
+    validateAccount: () => undefined,
+  },
+  {
+    id: "zai",
+    // The key is pasted into OpenBot. Pi's own sign-in stays on the Pi row.
+    signIn: { kind: "external" },
+    cliProvider: "pi",
+    resolveCli: resolvePiCli,
+    createClient: (cli, timeout, context, confinement) => piClient("zai", cli, timeout, context, confinement),
+    createProfileClient: (cli, timeout, context) => piProfileClient("zai", cli, timeout, context),
+    authState: (account) => ({ kind: "zai", email: account?.email ?? null }),
     validateAccount: () => undefined,
   },
   {

@@ -93,3 +93,11 @@ export const Muse: Story = {
 export const GeminiSaved: Story = {
   args: { provider: "antigravity", api: keyApi({ status: "saved" }), onReconnect: fn(() => Promise.resolve()) },
 };
+
+export const ZaiCodingPlan: Story = {
+  args: { provider: "zai" },
+};
+
+export const ZaiSaved: Story = {
+  args: { provider: "zai", api: keyApi({ status: "saved" }) },
+};

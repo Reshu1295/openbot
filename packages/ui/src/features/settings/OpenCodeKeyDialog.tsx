@@ -68,6 +68,12 @@ const KEY_TEXT = {
     description: "provider.deepseekKey.description",
     label: "provider.deepseekKey.label",
   },
+  zai: {
+    name: "Z.ai",
+    title: "provider.zaiKey.title",
+    description: "provider.zaiKey.description",
+    label: "provider.zaiKey.label",
+  },
   openrouter: {
     name: "OpenRouter",
     title: "provider.openrouterKey.title",

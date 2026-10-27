@@ -15,6 +15,7 @@ import { AgentStore } from "../src/backend/agent-store";
 import { runCauseEffect } from "../src/backend/effect-boundary";
 import { OpenBotDatabase } from "../src/backend/openbot-database";
 import { BUILT_IN_PROVIDER_DRIVERS, NO_PROVIDER_CREDENTIALS } from "../src/backend/provider-drivers";
+import { runZaiProviderE2e } from "./zai-provider-e2e";
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/pi-sign-in-watch-e2e");
 const WAIT_MS = 15_000;
@@ -179,3 +180,5 @@ try {
   await rm(root, { recursive: true, force: true });
 }
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+
+await runZaiProviderE2e();

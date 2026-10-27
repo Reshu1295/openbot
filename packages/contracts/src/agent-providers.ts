@@ -31,6 +31,7 @@ export const AGENT_PROVIDERS = [
   "muse",
   "inception",
   "deepseek",
+  "zai",
   "openrouter",
   "acp",
 ] as const;
@@ -419,6 +420,27 @@ const AGENT_PROVIDER_DESCRIPTOR_TABLE = {
     reportsUsage: false,
     approvalsInFullAccess: true,
   },
+  zai: {
+    id: "zai",
+    displayName: "Z.ai",
+    cliName: "Pi CLI",
+    onboardingDescription: "GLM models with a Z.ai Coding Plan key",
+    signInMessage: "Add a Z.ai Coding Plan key to continue.",
+    installGuideLink: null,
+    defaultModel: "glm-5.2",
+    legacyModelPrefix: null,
+    authKind: "zai",
+    pickerOrder: 12,
+    localCodeSignIn: null,
+    signInPageEnd: "callback",
+    skillFolders: [".agents/skills"],
+    homeSkills: "native",
+    workspaceEnforcement: "confined-process",
+    steer: "native",
+    concurrentTurns: true,
+    reportsUsage: true,
+    approvalsInFullAccess: true,
+  },
   // OpenRouter's models run in the Pi CLI that OpenBot downloads for Pi, which has a built-in OpenRouter
   // provider. The user saves the key here. Pi's own sign-in and models stay on the Pi row.
   openrouter: {
@@ -533,6 +555,7 @@ export const LOCAL_ONLY_PROVIDERS = [
   "muse",
   "inception",
   "deepseek",
+  "zai",
   "openrouter",
   "acp",
 ] as const satisfies readonly AgentProviderId[];
@@ -545,7 +568,12 @@ export function isLocalOnlyProvider(provider: AgentProviderId): boolean {
  * The providers that sign in only with an API key that the user saves in OpenBot. They run in the Pi
  * CLI, so their Connect and Reconnect open the key dialog.
  */
-export const KEY_ONLY_PROVIDERS = ["inception", "deepseek", "openrouter"] as const satisfies readonly AgentProviderId[];
+export const KEY_ONLY_PROVIDERS = [
+  "inception",
+  "deepseek",
+  "openrouter",
+  "zai",
+] as const satisfies readonly AgentProviderId[];
 export type KeyOnlyProviderId = (typeof KEY_ONLY_PROVIDERS)[number];
 
 export function isKeyOnlyProvider(provider: AgentProviderRef): provider is KeyOnlyProviderId {
