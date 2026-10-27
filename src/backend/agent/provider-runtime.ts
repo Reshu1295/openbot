@@ -1443,9 +1443,7 @@ export class ProviderRuntime implements ProviderPort {
                   }
                 : {}),
               privateTemp: temp && { ...temp, provider: providerLabel(provider) },
-              ...(provider === "antigravity" && (onHost || process.platform === "linux")
-                ? { openGoogleSignIn: openExternal }
-                : {}),
+              ...(provider === "antigravity" ? { openGoogleSignIn: openExternal } : {}),
             }).pipe(
               // A sign-in that stops after the sign-out leaves no account behind it.
               Effect.map((login) => ({
