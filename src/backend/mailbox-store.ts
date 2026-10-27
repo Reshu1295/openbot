@@ -3066,7 +3066,6 @@ function recordFinishedQueueEdit(delivery: StoredDelivery, editId: string, outco
   delivery.finishedEditOutcomes = { ...(delivery.finishedEditOutcomes ?? {}), [editId]: outcome };
 }
 
-/** An agent's answer to a request. A linked message that asks for a reply is a new request. */
 /** A message the person wrote in the agent's chat or a task, not one of a channel or a messaging app. */
 function isChatMessageFromPerson(message: StoredMessage): boolean {
   return (
@@ -3077,6 +3076,7 @@ function isChatMessageFromPerson(message: StoredMessage): boolean {
   );
 }
 
+/** An agent's answer to a request. A linked message that asks for a reply is a new request. */
 function isAnswer(
   message: StoredMessage,
 ): message is StoredMessage & { sender: { kind: "agent"; agentId: string }; replyToMessageId: string } {
