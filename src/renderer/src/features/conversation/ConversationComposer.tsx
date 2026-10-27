@@ -1,9 +1,11 @@
 import { isKnownAgentProvider } from "@openbot/contracts/agent-providers";
 import { supportedAttachmentExtensions } from "@openbot/contracts/attachment-files";
 import {
+  type AccountUsageLimit,
   type AgentWait,
   accountUsageCoversModel,
   canPreviewAttachment,
+  DEFAULT_PROVIDER_ACCOUNT_ID,
   type QueueSnapshot,
   usageQuotaForModel,
 } from "@openbot/contracts/ipc";
@@ -214,6 +216,10 @@ export function ConversationComposer() {
    * something asks the provider again. So the clock is part of the state, not only the percentage.
    */
   const [now, setNow] = createSignal(Date.now());
+  const agentAccountId = () => props.agent?.providerAccountId ?? DEFAULT_PROVIDER_ACCOUNT_ID;
+  /** A reading of another account of the same provider says nothing about the quota this agent uses. */
+  const agentUsageLimit = (limit: AccountUsageLimit) =>
+    limit.id === props.agent?.provider && (limit.accountId ?? DEFAULT_PROVIDER_ACCOUNT_ID) === agentAccountId();
   /**
    * The first plan window that is spent and has not ended yet. `usedPercent` is what the provider
    * reports, so it can pass 100 slightly. A spent plan does not say whether paid credits remain.
@@ -223,7 +229,7 @@ export function ConversationComposer() {
     // The usage of a provider that this build does not know has no notice.
     if (!provider || !isKnownAgentProvider(provider)) return null;
     for (const limit of props.accountUsage?.limits ?? []) {
-      if (limit.id !== provider) continue;
+      if (!agentUsageLimit(limit)) continue;
       // A provider that names quota groups limits each group apart: only the agent's model's group
       // can stop it, and a model that no group lists has no notice.
       const model = props.agent?.model;
@@ -244,11 +250,7 @@ export function ConversationComposer() {
     }
     return null;
   });
-  const usageNoticeAccount = () =>
-    JSON.stringify([
-      props.agent?.provider,
-      props.agentStatus.providers?.find((status) => status.id === props.agent?.provider)?.email,
-    ]);
+  const usageNoticeAccount = () => JSON.stringify([props.agent?.provider, agentAccountId()]);
   const usageNotice = () => {
     const spent = usageExhausted();
     return spent &&
@@ -265,7 +267,7 @@ export function ConversationComposer() {
       account: usageNoticeAccount(),
       spent: usageExhausted(),
       loaded: props.accountUsage?.limits.some(
-        (limit) => limit.id === props.agent?.provider && (limit.primary !== null || limit.secondary !== null),
+        (limit) => agentUsageLimit(limit) && (limit.primary !== null || limit.secondary !== null),
       ),
     }),
     ({ account, spent, loaded }) => {

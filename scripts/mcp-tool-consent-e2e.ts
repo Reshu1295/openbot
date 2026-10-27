@@ -630,15 +630,23 @@ try {
   });
   await rig.stop();
 
-  // Computer Use has its own switch, so its tool consent keeps the card.
+  // Full access covers Computer Use too; Ask first still shows its card.
   const computerUse = join(OUT, "codex-computer-use");
   await mkdir(computerUse, { recursive: true });
   await config(computerUse, { computer_use: script }, model.port);
   rig = await open(computerUse);
-  record("Computer Use tool, auto approve on: card", await rig.call("auto", "computer_use/echo_a", allowOnce), (o) => {
-    oneCard(o);
+  record("Computer Use tool, auto approve on: no card", await rig.call("auto", "computer_use/echo_a"), (o) => {
+    noCard(o);
     ran(o, "computer_use/echo_a");
   });
+  record(
+    "Computer Use tool, auto approve off: card",
+    await rig.call("manual", "computer_use/echo_b", allowOnce),
+    (o) => {
+      oneCard(o);
+      ran(o, "computer_use/echo_b");
+    },
+  );
   await rig.stop();
 
   await writeFile(
