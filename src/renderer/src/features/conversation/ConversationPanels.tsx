@@ -253,12 +253,13 @@ export function ConversationPanels(panelProps: { onOpenUsage?: ((trigger: HTMLBu
   createEffect(browserSidebarOpen, (open, previous) => {
     if (open && previous === false) onSettled(() => browserPreviewTrigger?.focus());
   });
+  const sidePanelSelected = createMemo(() => (activeRightPanel() === "side-panel" ? null : sidePanel().selected));
   return (
     <>
       <Show when={sidePanelOpen()}>
         <SidePanelHeader
           panes={sidePanel().panes}
-          selected={activeRightPanel() === "side-panel" ? null : sidePanel().selected}
+          selected={sidePanelSelected()}
           available={sidePanelPanes()}
           maximized={sidePanel().maximized}
           settingsLabel={channel ? t("channel.settings.title") : undefined}
