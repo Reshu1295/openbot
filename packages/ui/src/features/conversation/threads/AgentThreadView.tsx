@@ -1,9 +1,15 @@
-import type { AgentApproval, AgentTask, AgentTaskHold, AttachmentSummary } from "@openbot/contracts/ipc";
+import type {
+  AgentApproval,
+  AgentTask,
+  AgentTaskHold,
+  AttachmentSummary,
+  InstalledSkill,
+} from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import { isAgentTaskActive } from "@openbot/team-client/agent-tasks";
 import { ArrowUp, Button, Square } from "@openbot/ui";
 import { createScrollFades } from "@openbot/ui/components/createScrollFades";
-import type { AgentMessage, AgentProfile } from "@openbot/ui/data";
+import type { AgentMessage, AgentProfile, ComposerMcpServer } from "@openbot/ui/data";
 import { AgentActivityIndicator, nextAgentActivityLabel } from "@openbot/ui/features/conversation/AgentActivity";
 import { type ChatMessageAuthor, ChatMessageRow } from "@openbot/ui/features/conversation/ChatMessageRow";
 import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor";
@@ -58,6 +64,12 @@ export interface AgentThreadViewProps {
   agent: AgentProfile;
   agents: AgentProfile[];
   messages: readonly AgentMessage[];
+  /** The agent's skills, for the `$` picker and the skill tags in messages. */
+  skills?: InstalledSkill[] | undefined;
+  /** The last skill list request failed, so an empty picker says so instead of "no skills". */
+  skillsLoadFailed?: boolean;
+  /** The host's MCP servers, offered by the same `$` the skills answer. */
+  mcpServers?: ComposerMcpServer[] | undefined;
   /** The unsent text of this thread's message box. The host keeps it for each thread. */
   draft: string;
   onDraftChange: (text: string) => void;
@@ -165,6 +177,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                   message={message()}
                   author={author(message())}
                   agents={props.agents}
+                  skills={props.skills}
                   onSelectAgent={() => undefined}
                   onOpenLink={props.onOpenLink}
                   onPreview={props.onPreview}
@@ -237,6 +250,9 @@ export function AgentThreadView(props: AgentThreadViewProps) {
             <ComposerEditor
               agentId={props.agent.id}
               agents={props.agents}
+              skills={props.skills}
+              skillsLoadFailed={props.skillsLoadFailed}
+              mcpServers={props.mcpServers}
               value={props.draft}
               placeholder={placeholder()}
               ariaLabel={placeholder()}

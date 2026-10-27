@@ -12,8 +12,16 @@ import { currentConversationTarget } from "./stores/composer-store";
 
 /** The open side thread of the agent, in the place of the agent's own chat and its message box. */
 export function ConversationThread() {
-  const { props, openExternalMessageUrl, previewAttachment, attachmentAction, browserTakeoverResolution } =
-    useConversationViewScope();
+  const {
+    props,
+    openExternalMessageUrl,
+    previewAttachment,
+    attachmentAction,
+    browserTakeoverResolution,
+    installedSkills,
+    installedSkillsLoadFailed,
+    mcpServers,
+  } = useConversationViewScope();
   const { threadDrafts, setThreadDrafts } = useConversationController();
   /** Reconciled by id, so a stream chunk redraws only the message that changed. */
   const messages = createProjection<AgentMessage[]>(
@@ -63,6 +71,9 @@ export function ConversationThread() {
           agent={current().agent}
           agents={props.agents}
           messages={messages}
+          skills={installedSkills()}
+          skillsLoadFailed={installedSkillsLoadFailed()}
+          mcpServers={mcpServers()}
           draft={draft()}
           onDraftChange={(text) => setDraft(draftKey(), text)}
           onSend={(text) => send(current().threads, text)}
