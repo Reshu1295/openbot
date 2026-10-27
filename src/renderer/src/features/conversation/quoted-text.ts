@@ -10,9 +10,7 @@ let stopFileQuoteWatch: (() => void) | undefined;
 
 /** The text blocks of a sent message. A message with a table or a card has more than one. */
 export function messageTextBlocks(root: ParentNode, messageId: string): HTMLElement[] {
-  return Array.from(
-    root.querySelectorAll<HTMLElement>(`.message-copy[data-selection-message-id="${CSS.escape(messageId)}"]`),
-  );
+  return Array.from(root.querySelectorAll<HTMLElement>(`[data-selection-message-id="${CSS.escape(messageId)}"]`));
 }
 
 /**
