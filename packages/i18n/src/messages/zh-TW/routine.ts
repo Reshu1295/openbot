@@ -72,8 +72,8 @@ export const messages = {
   "routine.hours.repeat": "重複",
 
   "routine.problem.invalidDate": "請選擇一個真實存在的日期。",
-  "routine.problem.cronRequired": "請輸入 cron 表示式。",
-  "routine.problem.cronTooLong": "cron 表示式過長。",
+  "routine.problem.cronRequired": "請輸入 cron 運算式。",
+  "routine.problem.cronTooLong": "cron 運算式過長。",
 
   "routine.chip.select": "選擇",
 
@@ -99,7 +99,7 @@ export const messages = {
   "routine.picker.at": "於",
   "routine.picker.time": "時間",
   "routine.picker.dayOfMonth": "每月日期",
-  "routine.picker.cronExpression": "Cron 表示式",
+  "routine.picker.cronExpression": "Cron 運算式",
   "routine.picker.lateMonthDay": "在沒有 {day} 日的月份會跳過。",
   "routine.picker.cronHint": "五個欄位：分、時、日、月、星期。",
 
@@ -328,7 +328,7 @@ export const messages = {
   "routine.settings.instructionPlaceholderChannel": "描述這個頻道應該做什麼。",
   "routine.settings.instructionNoUpdateHint": "如果沒有需要彙報的內容就保持安靜：讓助理回答 [[no-update]]。",
   "routine.settings.limitPolicy": "帳號額度用盡時",
-  "routine.settings.limitPolicy.wait": "等待額度重置後再執行",
+  "routine.settings.limitPolicy.wait": "等待額度重設後再執行",
   "routine.settings.limitPolicy.skip": "跳過本次執行",
   "routine.settings.missedPolicy": "到點時 OpenBot 已關閉時",
   "routine.settings.missedPolicy.skip": "跳過本次執行",

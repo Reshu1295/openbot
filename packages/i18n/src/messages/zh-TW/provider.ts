@@ -56,7 +56,7 @@ export const messages = {
   "provider.action.signIn": "登入",
   "provider.action.apiKey": "API 金鑰",
   "provider.action.signInWithCode": "用驗證碼登入",
-  "provider.action.pasteAddress": "貼上地址",
+  "provider.action.pasteAddress": "貼上網址",
   "provider.aria.download": "下載 {name}",
   "provider.aria.cancel": "取消 {name}",
   "provider.aria.connect": "連線 {name}",
@@ -108,7 +108,7 @@ export const messages = {
   // A provider that only the OpenBot app can sign in, from a browser tab.
   "provider.useApp.title": "在 OpenBot 應用中連線 {name}",
   "provider.useApp.description":
-    "{name} 的登入結果會返回發起登入的電腦，瀏覽器標籤頁無法接收。請在 OpenBot 應用中連線 {name}，應用會自動完成登入。",
+    "{name} 的登入結果會返回發起登入的電腦，瀏覽器分頁無法接收。請在 OpenBot 應用中連線 {name}，應用會自動完成登入。",
   "provider.useApp.download": "取得應用",
 
   // The agent model picker.
@@ -193,17 +193,17 @@ export const messages = {
   "provider.account.finishSignIn": "請在瀏覽器中完成登入。",
   "provider.account.remove": "移除帳號",
   "provider.account.actionFailed": "無法更改 {name} 帳號。",
-  "provider.account.resetUsage": "重置用量",
-  "provider.account.resetUsageTitle": "重置 {name} 的用量？",
+  "provider.account.resetUsage": "重設用量",
+  "provider.account.resetUsageTitle": "重設 {name} 的用量？",
   "provider.account.resetUsageDescription": {
-    other: "這會用掉你 {count} 次用量重置次數中的 1 次。該帳號已用完的使用額度會從現在起重新計算。該操作無法撤銷。",
+    other: "這會用掉你 {count} 次用量重設次數中的 1 次。該帳號已用完的使用額度會從現在起重新計算。該操作無法撤銷。",
   },
-  "provider.account.resetUsagePending": "正在重置…",
+  "provider.account.resetUsagePending": "正在重設…",
   "provider.account.resetUsageDone": "{name} 的使用額度已從現在起重新計算。",
-  "provider.account.resetUsageNothing": "{name} 沒有已用完的使用額度，未使用重置次數。",
-  "provider.account.resetUsageNoCredit": "{name} 沒有剩餘的用量重置次數。",
-  "provider.account.resetUsageAlreadyRedeemed": "{name} 的這次重置機會已被使用。",
-  "provider.account.resetUsageFailed": "無法重置 {name} 的用量。",
+  "provider.account.resetUsageNothing": "{name} 沒有已用完的使用額度，未使用重設次數。",
+  "provider.account.resetUsageNoCredit": "{name} 沒有剩餘的用量重設次數。",
+  "provider.account.resetUsageAlreadyRedeemed": "{name} 的這次重設機會已被使用。",
+  "provider.account.resetUsageFailed": "無法重設 {name} 的用量。",
 
   // Settings > Providers: a list of providers, and one page for each provider.
   "provider.settings.connected": "已連線",

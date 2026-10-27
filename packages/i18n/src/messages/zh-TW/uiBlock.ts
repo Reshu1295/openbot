@@ -15,7 +15,7 @@ export const messages = {
   "uiBlock.confirm.autoActionLabel": "{action} · {seconds} 秒",
   "uiBlock.confirm.previewLabel": "預覽",
   "uiBlock.confirm.showFullPreview": "顯示全部",
-  "uiBlock.confirm.hideFullPreview": "收起",
+  "uiBlock.confirm.hideFullPreview": "收合",
   "uiBlock.choice.submit": "傳送",
   "uiBlock.choice.shortcutHint": "按 {first} 到 {last} 選擇",
   "uiBlock.choice.selectedCount": { one: "已選 {count} 項", other: "已選 {count} 項" },

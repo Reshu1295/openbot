@@ -4,7 +4,7 @@ import type { messages as source } from "../../en/error/workflow";
 export const messages = {
   "error.workflow.missing": "該工作流已不存在。",
   "error.workflow.versionMissing": "該版本的工作流已不存在。",
-  "error.workflow.annotation": "文字、便籤和形狀不能有連線。",
+  "error.workflow.annotation": "文字、便利貼和形狀不能有連線。",
   "error.workflow.port": "該步驟不能接收這種類型的輸入。",
   "error.workflow.branch": "只有條件可以有「是」和「否」連線。",
   "error.workflow.conditionBranch": "條件發出的每個連線都必須是「是」或「否」。",

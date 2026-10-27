@@ -37,7 +37,7 @@ export const messages = {
   "mobile.appLock.lock.waitSeconds": { other: "嘗試次數過多，請在 {count} 秒後重試。" },
   "mobile.appLock.lock.waitMinutes": { other: "嘗試次數過多，請在 {count} 分鐘後重試。" },
   "mobile.appLock.lock.checkFailed": "無法驗證 PIN，請重試。",
-  "mobile.appLock.lock.pinMissing": "這台手機上沒有 OpenBot 的 PIN。請登出以重置應用鎖。",
+  "mobile.appLock.lock.pinMissing": "這台手機上沒有 OpenBot 的 PIN。請登出以重設應用鎖。",
   "mobile.appLock.lock.loadFailed": "無法讀取應用鎖設定。",
   "mobile.appLock.lock.retry": "重試",
   "mobile.appLock.lock.forgotPin": "忘記 PIN？",

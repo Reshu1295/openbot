@@ -6,15 +6,15 @@ export const messages = {
     "該請求的歷史記錄不可用，請重新讀取最近的歷史，或在頻道工作中使用 channel_history。",
   "error.agent.toolRequestInvalid": "工具發現參數無效。請使用宣告的 schema 和原始的完整工具名。",
   // Agent errors that the main process and the backend send.
-  "error.agent.approvalWhileDeleting": "助理正在刪除中，無法授予批准。",
+  "error.agent.approvalWhileDeleting": "助理正在刪除中，無法授予核准。",
   "error.agent.accessLocalOnly": "助理存取權限只能在執行該助理的電腦上更改。",
   "error.agent.duplicateCleanupFailed": "助理複製失敗，且無法移除不完整的副本。",
-  "error.agent.commitEffectsFailed": "事務已提交，但儲存的副作用執行失敗。",
+  "error.agent.commitEffectsFailed": "交易已提交，但儲存的副作用執行失敗。",
   "error.agent.settingsLocalOnly": "助理設定只能在執行該助理的電腦上更改。",
   "error.agent.skillsLocalOnly": "技能只能在執行該助理的電腦上更改。",
   "error.agent.addLocalOnly": "助理只能在執行它們的電腦上新增。",
   "error.agent.joinedServerUpdate": "無法從這裡更新已加入伺服器上的助理。",
-  "error.agent.searchQueryRequired": "需要提供搜尋關鍵詞。",
+  "error.agent.searchQueryRequired": "需要提供搜尋關鍵字。",
   "error.agent.messageTooLong": "訊息過長。",
   "error.agent.messageOrAttachmentRequired": "需要提供訊息或附件。",
   "error.agent.promptAnswersTooLong": "提示詞回答過長。",
@@ -68,7 +68,7 @@ export const messages = {
   "error.agent.deletionBusy": "助理正在刪除中。",
   "error.agent.stopBeforeDelete": "請先停止該助理並取消它的排隊訊息，再刪除它。",
   "error.agent.deleteIncomplete": "助理資料未能完全移除，請重試刪除。",
-  "error.agent.duplicationBusy": "該助理正在被複制。",
+  "error.agent.duplicationBusy": "該助理正在被複製。",
   "error.agent.waitBeforeDuplicate": "請等該助理結束並清空佇列後再複製。",
   "error.agent.saveOtherAgent": "該儲存操作屬於另一個助理。",
   "error.agent.savedGone": "已儲存的助理已不存在。",
@@ -105,15 +105,15 @@ export const messages = {
   "error.agent.mcpServerDeclined": "使用者未允許這次 MCP 伺服器更改，未做任何更改。",
   "error.agent.mcpServerNotSaved": "該 MCP 伺服器沒有回應，因此未儲存。{error}",
   "error.agent.mcpServerKeysMove":
-    "MCP 伺服器 {name} 儲存著目前伺服器的金鑰。請讓使用者在「伺服器設定 → MCP」中更改它的地址、命令、參數或傳輸方式。",
+    "MCP 伺服器 {name} 儲存著目前伺服器的金鑰。請讓使用者在「伺服器設定 → MCP」中更改它的網址、命令、參數或傳輸方式。",
   "error.agent.mcpServerUnknown": "沒有名為 {name} 的 MCP 伺服器。請呼叫 list_mcp_servers 檢視名稱。",
   "error.agent.screenCaptureWindowMissing": "該視窗目前未開啟，請呼叫 list_capture_sources 取得目前視窗 ID。",
   "error.agent.screenCaptureDisplayMissing": "該顯示器目前未連線，請呼叫 list_capture_sources 取得目前顯示器 ID。",
   "error.agent.screenCaptureRegionOutside":
     "該區域不在任何單個顯示器內，請使用某個顯示器範圍內的桌面座標（來自 list_capture_sources）。",
   "error.agent.screenCapturePermissionMissing":
-    "OpenBot 沒有螢幕錄製權限。請讓使用者開啟「系統設定 > 隱私與安全性 > 螢幕與系統音訊錄製」，允許 OpenBot，然後結束並重新開啟 OpenBot。",
+    "OpenBot 沒有螢幕錄製權限。請讓使用者開啟「系統設定 > 隱私權與安全性 > 螢幕與系統音訊錄製」，允許 OpenBot，然後結束並重新開啟 OpenBot。",
   "error.agent.screenCaptureEmptyWindows":
-    "Windows 返回了空影象。請讓使用者解鎖電腦並關閉受保護的內容；組織策略也可能阻止截圖。",
+    "Windows 返回了空影像。請讓使用者解鎖電腦並關閉受保護的內容；組織策略也可能阻止截圖。",
   "error.agent.screenCaptureFailed": "截圖失敗，請重試。",
 } as const satisfies PartialTranslation<typeof source>;

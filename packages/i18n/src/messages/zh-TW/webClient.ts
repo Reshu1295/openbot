@@ -57,7 +57,7 @@ export const messages = {
   "webClient.error.linkBlocked": "無法開啟該連結。",
   "webClient.error.fileTransfer": "檔案傳輸失敗。",
   "webClient.error.noLocks": "該瀏覽器無法保護伺服器連線，請使用較新的桌面瀏覽器。",
-  "webClient.error.otherTab": "該伺服器已在另一個標籤頁中開啟，請先關閉那個連線再重試。",
+  "webClient.error.otherTab": "該伺服器已在另一個分頁中開啟，請先關閉那個連線再重試。",
   "webClient.error.connectionClosed": "瀏覽器連線已關閉。",
   "webClient.error.hostChanged": "所選伺服器已更改。",
   "webClient.error.requestIncomplete": "伺服器無法完成該請求，請重新整理後重試。",

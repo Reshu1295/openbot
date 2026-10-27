@@ -5,7 +5,7 @@ export const messages = {
   // Marketplace > Apps > GitHub: the built-in GitHub connection.
   "connector.github.title": "GitHub",
   "connector.github.description":
-    "這台電腦上的每個助理都可以使用你的 GitHub 儲存庫、Issue 和拉取請求，以及 gh 和 git。",
+    "這台電腦上的每個助理都可以使用你的 GitHub 儲存庫、Issue 和拉取要求，以及 gh 和 git。",
   "connector.github.connect": "連線 GitHub",
   "connector.github.pendingTitle": "在 GitHub 上輸入該驗證碼",
   "connector.github.pendingDescription": "GitHub 已在瀏覽器中開啟，在那裡輸入驗證碼即可完成連線。",
@@ -65,7 +65,7 @@ export const messages = {
   "connector.github.disconnectEffectKept": "聊天、檔案和助理記憶仍保留在這台電腦上。",
   // The same text for the connection of a joined server. {host} is the server name, such as Studio.
   "connector.github.descriptionHost":
-    "{host} 上的每個助理都可以使用你的 GitHub 儲存庫、Issue 和拉取請求，以及 gh 和 git。",
+    "{host} 上的每個助理都可以使用你的 GitHub 儲存庫、Issue 和拉取要求，以及 gh 和 git。",
   "connector.github.connectedSummaryHost": {
     one: "{count} 個儲存庫 · {host} 上的所有助理",
     other: "{count} 個儲存庫 · {host} 上的所有助理",
@@ -82,7 +82,7 @@ export const messages = {
   // Marketplace > Apps > Slack: a workspace installs the one OpenBot app, and the Slack
   // Orchestrator agent receives each request, asks the team and answers.
   "connector.slack.title": "Slack",
-  "connector.slack.description": "人們在 Slack 中提及 @OpenBot 或給它發私信，Slack 排程助理會找到合適的助理來回答。",
+  "connector.slack.description": "人們在 Slack 中提及 @OpenBot 或給它發私訊，Slack 排程助理會找到合適的助理來回答。",
   "connector.slack.statusConnected": "已連線",
   "connector.slack.statusAttention": "需要關注",
   // {workspace} is the Slack workspace name.
@@ -97,7 +97,7 @@ export const messages = {
   "connector.slack.addAgent": "新增助理",
   "connector.slack.actionFailed": "Slack 沒有接受該更改",
   "connector.slack.workspaceTitle": "工作區",
-  "connector.slack.workspaceDescription": "人們提及 @OpenBot 或給它發私信。",
+  "connector.slack.workspaceDescription": "人們提及 @OpenBot 或給它發私訊。",
   "connector.slack.disconnectWorkspace": "斷開連線",
   "connector.slack.disconnectAllTitle": "斷開 Slack",
   "connector.slack.disconnectAllSummary": "所有工作區都將斷開，其他人無法再透過 @OpenBot 聯絡你的助理。",
@@ -136,7 +136,7 @@ export const messages = {
   "connector.slack.orchestratorDoesAnswer": "把答案發到 Slack 話題中",
   "connector.slack.orchestratorModel": "模型",
   "connector.slack.doneTitle": "OpenBot 已加入 {workspace}",
-  "connector.slack.doneDescription": "在任意公開頻道中提及 @OpenBot，或給它發私信。",
+  "connector.slack.doneDescription": "在任意公開頻道中提及 @OpenBot，或給它發私訊。",
   "connector.slack.done": "完成",
   "connector.slack.disconnectTitle": "斷開 {workspace}？",
   "connector.slack.disconnectDescription": "OpenBot 將停止在 {workspace} 中回答，並從這台電腦刪除其 Slack 權杖。",
@@ -353,13 +353,13 @@ export const messages = {
   "connector.onePassword.checkAgain": "重新檢查",
   "connector.onePassword.stepVaultTitle": "建立共享保險庫",
   "connector.onePassword.stepVaultDescription":
-    "OpenBot 會建立「Shared with OpenBot」保險庫和一個只能讀取它的服務帳號。1Password 會請求你批准。",
+    "OpenBot 會建立「Shared with OpenBot」保險庫和一個只能讀取它的服務帳號。1Password 會請求你核准。",
   "connector.onePassword.useTokenDescription": "不走這些步驟，改為貼上 1Password.com 上的服務帳號權杖。",
   "connector.onePassword.useTokenAction": "使用權杖",
   "connector.onePassword.tokenLabel": "服務帳號權杖",
   "connector.onePassword.tokenPlaceholder": "ops_…",
   "connector.onePassword.connectWithToken": "連線",
-  "connector.onePassword.approveInApp": "請在 1Password 應用中批准該請求",
+  "connector.onePassword.approveInApp": "請在 1Password 應用中核准該請求",
   "connector.onePassword.cancel": "取消",
   "connector.onePassword.chooseAccountTitle": "選擇帳號",
   "connector.onePassword.chooseAccountDescription": "OpenBot 會在你選擇的帳號中建立共享保險庫。",
@@ -403,12 +403,12 @@ export const messages = {
   "connector.bitwarden.actionFailed": "OpenBot 無法更改 Bitwarden 連線。",
   "connector.bitwarden.descriptionHost": "在 {host} 上用 Bitwarden 或 Vaultwarden 填充瀏覽器登入資訊。",
   "connector.bitwarden.setupHost":
-    "{host} 使用自己的 Bitwarden CLI 登入。請在你的保險庫中建立一個名為 Shared with OpenBot 的資料夾，只把允許助理使用的登入資訊放進去。在網頁版保險庫中開啟「設定 › 安全 › 金鑰」，檢視你的 API 金鑰。然後在下方填寫伺服器地址、client_id、client_secret 和你的主密碼。",
+    "{host} 使用自己的 Bitwarden CLI 登入。請在你的保險庫中建立一個名為 Shared with OpenBot 的資料夾，只把允許助理使用的登入資訊放進去。在網頁版保險庫中開啟「設定 › 安全 › 金鑰」，檢視你的 API 金鑰。然後在下方填寫伺服器網址、client_id、client_secret 和你的主密碼。",
   "connector.bitwarden.scopeHost":
     "{host} 上的所有助理都可以使用 Shared with OpenBot 中符合的登入資訊。OpenBot 只按精確的 HTTPS 來源符合，不會使用需要主密碼提示或自訂 URI 符合規則的條目。",
   "connector.bitwarden.sessionHost":
-    "{host} 會加密儲存 API 金鑰和主密碼，因此重啟後可以再次解鎖。這台電腦不儲存它們。斷開連線會把它們從 {host} 上移除。{host} 必須能透過 HTTPS 存取該伺服器地址。",
-  "connector.bitwarden.serverUrl": "伺服器地址",
+    "{host} 會加密儲存 API 金鑰和主密碼，因此重啟後可以再次解鎖。這台電腦不儲存它們。斷開連線會把它們從 {host} 上移除。{host} 必須能透過 HTTPS 存取該伺服器網址。",
+  "connector.bitwarden.serverUrl": "伺服器網址",
   "connector.bitwarden.folderTitle": "共享資料夾",
   "connector.bitwarden.folderDescription": "在 Bitwarden 中把登入資訊移入該資料夾，助理即可用它登入。移出後即停止。",
   "connector.bitwarden.folderName": "Shared with OpenBot",

@@ -13,13 +13,13 @@ export const messages = {
   "status.messaging.delegated": "團隊成員正在處理，回答會發到這裡。",
   "status.messaging.stopped": "已停止。",
   "status.messaging.stop": "停止",
-  "status.messaging.approvalTitle": "OpenBot 請求批准以繼續。",
+  "status.messaging.approvalTitle": "OpenBot 請求核准以繼續。",
   "status.messaging.approvalCommand": "執行命令",
   "status.messaging.approvalFileChange": "修改檔案",
   "status.messaging.approvalPermissions": "取得更多權限",
-  "status.messaging.approve": "批准",
+  "status.messaging.approve": "核准",
   "status.messaging.deny": "拒絕",
-  "status.messaging.approvedBy": "已由 {user} 批准。",
+  "status.messaging.approvedBy": "已由 {user} 核准。",
   "status.messaging.deniedBy": "已由 {user} 拒絕。",
   "status.messaging.answeredOnHost": "已在 OpenBot 主機上回答。",
   "status.messaging.requestInactive": "該請求已失效。",
@@ -36,7 +36,7 @@ export const messages = {
   // The sidebar section that OpenBot puts the Slack Orchestrator in. The user can rename it.
   "status.messaging.integrationsSection": "整合",
   // The page a development Slack install ends on.
-  "status.messaging.signInReceived": "OpenBot 已收到 Slack 安裝請求，你可以關閉該標籤頁。",
+  "status.messaging.signInReceived": "OpenBot 已收到 Slack 安裝請求，你可以關閉該分頁。",
   "status.messaging.signInUnknown": "該 Slack 安裝不是由 OpenBot 發起的，請在 OpenBot 中重新開始。",
   // Text that OpenBot posts in a Telegram chat, and the Telegram Orchestrator agent. Telegram users
   // read the posts. The user can rename the agent.

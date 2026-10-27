@@ -3,7 +3,7 @@ import type { messages as source } from "../en/account";
 
 export const messages = {
   "account.menu.billing": "帳單",
-  "account.menu.sendFeedback": "傳送反饋",
+  "account.menu.sendFeedback": "傳送回饋",
   "account.menu.signOut": "登出",
   "account.menu.signingOut": "正在登出…",
   "account.menu.updateFailed": "無法更新 OpenBot。",
@@ -24,8 +24,8 @@ export const messages = {
   "account.usage.row.notReported": "{name}，未報告用量",
   "account.usage.row.loading": "{name}，載入中",
   "account.usage.row.window": "{window}剩餘 {percent}%",
-  "account.usage.row.resets": "{time} 重置",
-  "account.usage.resetsAt": "{time} 重置",
+  "account.usage.row.resets": "{time} 重設",
+  "account.usage.resetsAt": "{time} 重設",
   "account.usage.resetIn.minutes": "{minutes} 分鐘",
   "account.usage.resetIn.hours": "{hours} 小時 {minutes} 分",
   "account.usage.resetIn.days": "{days} 天 {hours} 小時",

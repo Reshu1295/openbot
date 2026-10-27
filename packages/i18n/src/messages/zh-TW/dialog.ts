@@ -3,7 +3,7 @@ import type { messages as source } from "../en/dialog";
 
 export const messages = {
   // Native file pickers.
-  "dialog.chooseSiteDirectory": "選擇靜態站點目錄",
+  "dialog.chooseSiteDirectory": "選擇靜態網站目錄",
   "dialog.chooseSkill": "選擇技能資料夾或 ZIP",
   "dialog.filter.skillPackages": "技能包",
   "dialog.filter.images": "圖片",

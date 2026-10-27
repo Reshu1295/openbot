@@ -26,9 +26,9 @@ export const messages = {
   "error.connector.onePasswordFileTooLarge": "1Password 連線檔案過大。",
   "error.connector.bitwardenFailed":
     "無法讀取 Bitwarden。請安裝 bw CLI、登入並解鎖，然後建立一個名為 Shared with OpenBot 的資料夾，用新的工作階段金鑰連線。",
-  "error.connector.bitwardenHostInput": "請填寫 HTTPS 伺服器地址、API 金鑰的 client_id 和 client_secret，以及主密碼。",
+  "error.connector.bitwardenHostInput": "請填寫 HTTPS 伺服器網址、API 金鑰的 client_id 和 client_secret，以及主密碼。",
   "error.connector.bitwardenHostFailed":
-    "無法在該伺服器上開啟 Bitwarden。請檢查伺服器地址、API 金鑰和主密碼，並確認有一個資料夾名為 Shared with OpenBot，然後重新連線。",
+    "無法在該伺服器上開啟 Bitwarden。請檢查伺服器網址、API 金鑰和主密碼，並確認有一個資料夾名為 Shared with OpenBot，然後重新連線。",
   "error.connector.bitwardenCliInstallFailed": "無法在該伺服器上安裝 Bitwarden CLI。請檢查它的網路連線，然後重新連線。",
   "error.connector.bitwardenFileUnreadable": "Bitwarden 連線檔案無法讀取。",
 } as const satisfies PartialTranslation<typeof source>;

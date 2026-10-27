@@ -19,7 +19,7 @@ export const messages = {
   "remoteDesktop.openFailed": "無法開啟桌面",
   "remoteDesktop.notSharingTitle": "{name} 沒有共享螢幕",
   "remoteDesktop.notSharingDescription":
-    "伺服器阻止了 OpenBot 錄製螢幕。請在那台伺服器上開啟「系統設定 → 隱私與安全性 → 螢幕錄製」，開啟 OpenBot，然後回到這裡重試。",
+    "伺服器阻止了 OpenBot 錄製螢幕。請在那台伺服器上開啟「系統設定 → 隱私權與安全性 → 螢幕錄製」，開啟 OpenBot，然後回到這裡重試。",
   "remoteDesktop.setup.check.screenRecording": "螢幕錄製",
   "remoteDesktop.setup.check.accessibility": "輔助功能",
   "remoteDesktop.setup.check.service": "Sunshine 服務",
@@ -45,7 +45,7 @@ export const messages = {
   "remoteDesktop.setup.grantAccess": "授予 {name} 存取權限",
   "remoteDesktop.setup.grant": "授予",
   "remoteDesktop.setup.grantHelp":
-    "請保持 Sunshine 帳號在 Mac 上登入。在該帳號下前往「系統設定 → 隱私與安全性」授予權限。點「授予」會開啟一個輔助視窗，請把 Sunshine.app 拖入權限清單。",
+    "請保持 Sunshine 帳號在 Mac 上登入。在該帳號下前往「系統設定 → 隱私權與安全性」授予權限。點「授予」會開啟一個輔助視窗，請把 Sunshine.app 拖入權限清單。",
   "remoteDesktop.setup.restartRequired":
     "Sunshine 需要重啟。請結束目前遠端桌面工作階段後重新檢查。活躍工作階段不會被重啟。",
   "remoteDesktop.setup.showInFinder": "在訪達中顯示 Sunshine",

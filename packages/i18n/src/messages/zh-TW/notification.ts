@@ -5,12 +5,12 @@ export const messages = {
   // Desktop notifications, raised by the main process while the window may be closed, and browser
   // notifications, raised by the web client while its tab is open.
   "notification.needsInput": "需要你輸入。",
-  "notification.needsApproval": "需要你批准。",
+  "notification.needsApproval": "需要你核准。",
   "notification.needsBrowserStep": "需要你在瀏覽器中完成一個步驟。",
-  "notification.needsApprovalFor": "需要你批准：{action}",
+  "notification.needsApprovalFor": "需要你核准：{action}",
   "notification.finished": "工作已完成。",
   // A workflow step that waits for a person to approve or reject it.
-  "notification.workflowApproval": "一個步驟正在等待你批准。",
+  "notification.workflowApproval": "一個步驟正在等待你核准。",
   // A workflow output step that tells the user its result.
   "notification.workflowOutput": "一個工作流有了新結果。",
   "notification.failed": "因錯誤而停止。",
@@ -24,8 +24,8 @@ export const messages = {
     other: "{count} 個助理在等待，OpenBot 稍後會重試。",
   },
   "notification.usageLimit.bodyResets": {
-    one: "{count} 個助理在等待，{reset} 重置。",
-    other: "{count} 個助理在等待，{reset} 重置。",
+    one: "{count} 個助理在等待，{reset} 重設。",
+    other: "{count} 個助理在等待，{reset} 重設。",
   },
   "notification.test": "通知功能正常。",
   "notification.welcome": "當助理需要你時，OpenBot 會在這裡通知你。",

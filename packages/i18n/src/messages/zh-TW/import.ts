@@ -98,7 +98,7 @@ export const messages = {
   "import.hermes.chooseAnother": "選擇其他資料夾",
   "import.hermes.title": "來自 Hermes Agent 的助理",
   "import.hermes.profiles": { other: "{count} 個設定檔" },
-  "import.hermes.caption": "{path} · 唯讀 · .env 中的金鑰不會被複制",
+  "import.hermes.caption": "{path} · 唯讀 · .env 中的金鑰不會被複製",
   "import.hermes.items": { other: "{count} 個專案" },
   "import.hermes.importedBefore": "之前已匯入",
   "import.hermes.rerunNote": "{name} 來自該設定檔。它的對話會保留。",

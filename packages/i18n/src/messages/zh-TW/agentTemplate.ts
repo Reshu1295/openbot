@@ -24,7 +24,7 @@ export const messages = {
   "agentTemplate.install.ready": "它的指令、技能和自動化任務已就緒。",
   "agentTemplate.publish.title": "發佈 {name}",
   "agentTemplate.publish.nameFallback": "助理",
-  "agentTemplate.publish.description": "把該助理作為模板分享。會發布它的指令、技能和自動化任務，不會發布檔案和記憶。",
+  "agentTemplate.publish.description": "把該助理作為範本分享。會發佈它的指令、技能和自動化任務，不會發佈檔案和記憶。",
   "agentTemplate.publish.published": "已發佈",
   "agentTemplate.publish.unpublish": "取消發佈",
   "agentTemplate.publish.unpublishing": "正在取消發佈…",

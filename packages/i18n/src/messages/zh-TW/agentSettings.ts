@@ -5,10 +5,10 @@ export const messages = {
   "agentSettings.session.title": "供應商設定",
   "agentSettings.session.readFailed": "無法讀取供應商設定。",
   "agentSettings.session.pending": "已儲存的更改將在下一輪開始前生效。",
-  "agentSettings.session.unavailable": "已儲存的值 {value} 不可用，請選擇其他值或重置。",
+  "agentSettings.session.unavailable": "已儲存的值 {value} 不可用，請選擇其他值或重設。",
   "agentSettings.session.effective": "供應商目前值：{value}",
-  "agentSettings.session.reset": "重置設定",
-  "agentSettings.session.resetNamed": "重置 {name}",
+  "agentSettings.session.reset": "重設設定",
+  "agentSettings.session.resetNamed": "重設 {name}",
   "agentSettings.label": "助理設定",
   "agentSettings.title": "設定",
   "agentSettings.backToDetails": "返回詳情",
@@ -35,7 +35,7 @@ export const messages = {
   "agentSettings.backupModels.unavailable": "目前不可用 · 已跳過",
   "agentSettings.backupModels.withAccount": "{model} · {account}",
   "agentSettings.backupModels.note":
-    "{name} 在開始輸出後不會切換。額度重置後會回到 {model}；出現供應商錯誤時，則在 10 分鐘後回到 {model}。",
+    "{name} 在開始輸出後不會切換。額度重設後會回到 {model}；出現供應商錯誤時，則在 10 分鐘後回到 {model}。",
   "agentSettings.groups.brain": "核心",
   "agentSettings.groups.knows": "已知",
   "agentSettings.groups.does": "行為",
@@ -44,8 +44,8 @@ export const messages = {
 
   "agentSettings.name": "名稱",
   "agentSettings.nameLabel": "助理名稱",
-  "agentSettings.agentTitle": "稱號",
-  "agentSettings.agentTitleLabel": "助理稱號",
+  "agentSettings.agentTitle": "標題",
+  "agentSettings.agentTitleLabel": "助理標題",
   "agentSettings.agentTitlePlaceholder": "描述你的助理做什麼",
   "agentSettings.instructions": "指令",
   "agentSettings.instructionsLabel": "助理指令",
@@ -87,7 +87,7 @@ export const messages = {
   "agentSettings.runtime.workingDirectory": "工作目錄",
   "agentSettings.runtime.notAvailable": "暫不可用",
   "agentSettings.runtime.fullAccessNote": "助理可從其工作區和共享資料夾獲得完整的電腦存取權限。",
-  "agentSettings.runtime.askNote": "在呼叫 OpenBot 工具、發佈站點，以及供應商要求批准時，它會先詢問你。",
+  "agentSettings.runtime.askNote": "在呼叫 OpenBot 工具、發佈網站，以及供應商要求核准時，它會先詢問你。",
   "agentSettings.runtime.fullNote": "除非它主動提問，否則執行操作時不再詢問。",
 
   "agentSettings.access.workspace": "僅工作區",
@@ -116,7 +116,7 @@ export const messages = {
   "agentSettings.fullAccess.askTitle": "允許該助理在其工作區之外工作？",
   "agentSettings.fullAccess.description":
     "助理將能讀取、修改和刪除你的帳號可存取的任何檔案，執行任何命令，並存取網路。一條理解錯的指令或一個惡意網頁，就可能波及你的個人檔案。",
-  "agentSettings.fullAccess.noApproval": "助理執行命令、修改檔案、使用工具和發佈站點時都不會再先詢問你。",
+  "agentSettings.fullAccess.noApproval": "助理執行命令、修改檔案、使用工具和發佈網站時都不會再先詢問你。",
   "agentSettings.fullAccess.confirm": "允許完整存取",
   "agentSettings.fullAccess.askConfirm": "使用「先詢問」",
 
@@ -139,7 +139,7 @@ export const messages = {
   "agentSettings.computerUse.title": "Computer Use",
   "agentSettings.computerUse.description": "允許該助理控制這台電腦上的應用",
   "agentSettings.automation.title": "本地腳本",
-  "agentSettings.automation.description": "允許主機上的腳本傳送訊息、執行自動化任務、回答問題，以及接受或拒絕批准",
+  "agentSettings.automation.description": "允許主機上的腳本傳送訊息、執行自動化任務、回答問題，以及接受或拒絕核准",
   "agentSettings.agentNewChat.title": "助理自行開始新對話",
   "agentSettings.agentNewChat.description": "對話變長時，讓助理自行開始新對話。它會先儲存筆記。",
   "agentSettings.quickAcknowledgement.title": "長任務開始前顯示計劃",
@@ -152,8 +152,8 @@ export const messages = {
   "agentSettings.browserProfile.new": "新建設定檔",
   "agentSettings.browserProfile.manageTitle": "瀏覽器設定檔",
   "agentSettings.browserProfile.manageDescription":
-    "每個設定檔都有各自的登入狀態和 Cookie。更改後，助理已開啟的標籤頁會關閉。",
+    "每個設定檔都有各自的登入狀態和 Cookie。更改後，助理已開啟的分頁會關閉。",
   "agentSettings.browserProfile.manage": "管理",
   "agentSettings.runtime.workspaceEnforcedProcess":
-    "整個 {provider} 程序執行在沙盒中，因此工作區外的寫入會失敗。僅在 macOS 上可用。",
+    "整個 {provider} 程序執行在沙箱中，因此工作區外的寫入會失敗。僅在 macOS 上可用。",
 } as const satisfies PartialTranslation<typeof source>;

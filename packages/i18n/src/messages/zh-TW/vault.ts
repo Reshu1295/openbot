@@ -88,8 +88,8 @@ export const messages = {
   "vault.unavailableDescription": "OpenBot 使用系統的金鑰儲存來加密保險庫。請先設定鑰匙串，然後重新開啟該頁面。",
   "vault.unreadableTitle": "OpenBot 無法讀取保險庫",
   "vault.unreadableDescription":
-    "保險庫檔案在這台電腦上，但 OpenBot 無法解密。系統鑰匙串發生變化時可能出現這種情況。重置保險庫後將從空白開始。",
-  "vault.reset": "重置保險庫",
-  "vault.resetTitle": "重置保險庫？",
+    "保險庫檔案在這台電腦上，但 OpenBot 無法解密。系統鑰匙串發生變化時可能出現這種情況。重設保險庫後將從空白開始。",
+  "vault.reset": "重設保險庫",
+  "vault.resetTitle": "重設保險庫？",
   "vault.resetDescription": "OpenBot 會刪除保險庫檔案和其中的所有專案。該操作無法撤銷。",
 } as const satisfies PartialTranslation<typeof source>;

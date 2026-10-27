@@ -69,7 +69,7 @@ export const messages = {
   "error.import.transferProviderKey": "{name}：請在設定中重新輸入它的 API 金鑰。",
   "error.import.transferAgentEnv": "{name}：請在設定中重新輸入 {names} 的值。",
   "error.import.transferMcpValues":
-    "{name}：MCP 伺服器以關閉狀態新增。請檢查其命令，重新輸入其取值和完整地址，然後在 MCP 設定中開啟。",
-  "error.import.transferValuesCleared": "{name}：可能包含金鑰的取值已從其參數或地址中移除，請在設定中重新輸入。",
+    "{name}：MCP 伺服器以關閉狀態新增。請檢查其命令，重新輸入其取值和完整網址，然後在 MCP 設定中開啟。",
+  "error.import.transferValuesCleared": "{name}：可能包含金鑰的取值已從其參數或網址中移除，請在設定中重新輸入。",
   "error.import.transferSharedKept": "共享資料夾中已有 {number} 個同名檔案，因此保持原樣。",
 } as const satisfies PartialTranslation<typeof source>;

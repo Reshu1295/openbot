@@ -3,8 +3,8 @@ import type { messages as source } from "../../en/error/computerUse";
 
 export const messages = {
   // Computer Use driver and permission window errors.
-  "error.computerUse.noAppToDrag": "該版本的 OpenBot 沒有可拖動的應用。",
-  "error.computerUse.helpWindowChanged": "權限幫助視窗在拖動開始前發生了變化。",
+  "error.computerUse.noAppToDrag": "該版本的 OpenBot 沒有可拖曳的應用。",
+  "error.computerUse.helpWindowChanged": "權限幫助視窗在拖曳開始前發生了變化。",
   "error.computerUse.noAppToShow": "該版本的 OpenBot 沒有可顯示的應用。",
   "error.computerUse.noDriver": "這台電腦沒有 Computer Use 驅動。",
   "error.computerUse.socketPathTooLong": "Computer Use 通訊端路徑為 {length} 個字元，而該系統允許 {limit} 個。",
