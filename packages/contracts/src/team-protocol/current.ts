@@ -99,6 +99,7 @@ export const TEAM_AGENT_CREATE_MODEL_CAPABILITY = "agent-create-model";
 export const TEAM_MEDIA_ATTACHMENTS_CAPABILITY = "media-attachments";
 export const TEAM_EML_ATTACHMENTS_CAPABILITY = "eml-attachments";
 export const TEAM_ZIP_ATTACHMENTS_CAPABILITY = "zip-attachments";
+export const TEAM_MP4_ATTACHMENTS_CAPABILITY = "mp4-attachments";
 /**
  * Frozen optional member-leave-v1 contract: a bodyless `POST /v1/team/leave` answered with 204. The
  * caller, a member or an admin, removes their own membership with the same effects as an admin's
@@ -225,6 +226,7 @@ export const TEAM_CURRENT_CAPABILITIES = [
   TEAM_EML_ATTACHMENTS_CAPABILITY,
   TEAM_MEDIA_ATTACHMENTS_CAPABILITY,
   TEAM_ZIP_ATTACHMENTS_CAPABILITY,
+  TEAM_MP4_ATTACHMENTS_CAPABILITY,
   "channel-chats-v1",
   CHANNEL_DELETE_CAPABILITY,
   MCP_SERVERS_CAPABILITY,
@@ -421,6 +423,7 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== CLAUDE_API_KEY_CAPABILITY &&
     capability !== WORKFLOWS_CAPABILITY &&
     capability !== AGENT_THREADS_CAPABILITY &&
+    capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY &&
     capability !== VAULT_CAPABILITY,
 );
 // A v7 host does not know the v8 markers, so a client sends them only after it negotiates protocol 8.
@@ -483,6 +486,7 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== CLAUDE_API_KEY_CAPABILITY &&
       capability !== WORKFLOWS_CAPABILITY &&
       capability !== AGENT_THREADS_CAPABILITY &&
+      capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY &&
       capability !== VAULT_CAPABILITY,
   );
 }

@@ -26,7 +26,7 @@
 // 11. B's answer waits in A's running side thread, and A stops the thread. The Stop does not cancel
 //    the answer: it runs next in the side thread, and A's own chat does not get it.
 // 12. The same, but A archives the side thread. The answer goes to A's own chat.
-// 13. B steers busy messages and runs a turn in its own chat when A asks it. The request goes into
+// 13. B steers busy messages and runs a turn in a new own chat when A asks it. The request goes into
 //    that running turn, not into a new one. It needs a provider that steers natively.
 // At the end it stops and deletes each thread that it started.
 // Writes .openbot-build/agent-threads-messaging-e2e/report.json.
@@ -142,6 +142,13 @@ const ask = (word: string, question: string, toName: string) =>
     "Then end your turn and reply with the single word SENT. Do not wait for the answer.",
   ].join("\n");
 
+/**
+ * Keeps a turn busy for `seconds`. Claude Code refuses a standalone foreground `sleep`, and after one
+ * refusal a chat also refuses other waits, so the command is a ping, which works for the stated time.
+ */
+const busyFor = (seconds: number) =>
+  `run the shell command "ping -c ${seconds} 127.0.0.1" in the foreground, with a timeout of ${(seconds + 60) * 1000} ms`;
+
 const fromAgentInfo = await bridge.agent(from);
 const toAgentInfo = await bridge.agent(to);
 for (const provider of [fromAgentInfo.provider, toAgentInfo.provider]) {
@@ -233,11 +240,7 @@ try {
   await step("recipient answers while its side thread runs", async (details) => {
     const word = `M3${run}`;
     const slept = `SLEPT${run}`;
-    const side = await bridge.startTask(
-      to,
-      // Claude Code blocks a standalone foreground `sleep`, so the wait is a Python command.
-      `Run the shell command python3 -c "import time; time.sleep(90)" in the foreground, with a timeout of 120000 ms, then reply with the single word ${slept}.`,
-    );
+    const side = await bridge.startTask(to, `First ${busyFor(90)}, then reply with the single word ${slept}.`);
     details.taskId = side.id;
     await waitFor(
       page,
@@ -533,7 +536,7 @@ try {
         from,
         [
           "Use your Agent tool with run_in_background set to true to start one subagent. Tell it:",
-          `run the shell command "sleep 20" once in the foreground, then reply with the single word ${word}.`,
+          `${busyFor(20)} once, then reply with the single word ${word}.`,
           "Do not wait for it: reply with the single word STARTED2 now and end your turn.",
           `When its result comes later, reply with ${follow} and its answer.`,
         ].join(" "),
@@ -579,13 +582,12 @@ try {
     const answer = (m: ConversationMessage) => m.senderAgentId === to && m.text.includes("12");
     const got = `GOT${run}`;
     const answersBefore = count(await bridge.main(from), answer);
-    // Claude Code refuses a standalone foreground `sleep`, so the turn waits with Python.
     const side = await bridge.startTask(
       from,
       [
         `Use openbot.send_message to send ${toAgentInfo.name} (agent id "${to}") this message, with expectsReply true:`,
         `"${word}: What is 9+3? Answer with only the number."`,
-        `Then run the shell command python3 -c "import time; time.sleep(120)" in the foreground, and then reply DONE.`,
+        `Then ${busyFor(120)}, and then reply DONE.`,
         `When the answer comes, reply with ${got} and the number.`,
       ].join("\n"),
     );
@@ -629,7 +631,7 @@ try {
       [
         `Use openbot.send_message to send ${toAgentInfo.name} (agent id "${to}") this message, with expectsReply true:`,
         `"${word}: What is 9+4? Answer with only the number."`,
-        `Then run the shell command python3 -c "import time; time.sleep(120)" in the foreground, and then reply DONE.`,
+        `Then ${busyFor(120)}, and then reply DONE.`,
       ].join("\n"),
     );
     details.taskId = side.id;
@@ -669,13 +671,12 @@ try {
         agentId: to,
         busyMessageMode,
       });
+    // A new chat, so a wait that B refused earlier in its own chat does not make it refuse this one.
+    await waitFor(page, "B's own chat is idle", () => bridge.main(to), idle, TURN_MS);
+    await page.evaluate((agentId) => window.openbot.agent.clearContext(agentId), to);
     await mode("steer");
     try {
-      await bridge.send(
-        to,
-        // Claude refuses a standalone `sleep` in the foreground.
-        `Run the shell command "python3 -c 'import time; time.sleep(60)'" in the foreground, with a timeout of 120000 ms, then reply with the single word ${slept}.`,
-      );
+      await bridge.send(to, `First ${busyFor(60)}, then reply with the single word ${slept}.`);
       const busy = await waitFor(
         page,
         "B's own chat runs",

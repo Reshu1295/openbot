@@ -16,10 +16,11 @@ const IDLE: ThreadStatus = { kind: "idle" };
 
 function item(id: string, title: string, minutesAgo: number, status: ThreadStatus = IDLE): ThreadItem {
   const updatedAt = new Date(Date.parse("2026-08-19T10:00:00.000Z") - minutesAgo * 60_000).toISOString();
-  return { id, kind: id === MAIN_THREAD_ID ? "main" : "side", title, updatedAt, status };
+  return { id, kind: "side", title, updatedAt, status };
 }
 
-const MAIN = item(MAIN_THREAD_ID, STORY_AGENT.name, 0);
+/** When the agent's own chat changed last. The new thread tab shows this time. */
+const MAIN_UPDATED_AT = "2026-08-19T10:00:00.000Z";
 
 const STATES: ThreadItem[] = [
   item("pricing", "Pricing page copy", 2),
@@ -57,7 +58,7 @@ interface HeaderFixture {
 /** The chat header with a thread row whose actions change a local copy of the threads. */
 function ThreadHeaderStory(props: HeaderFixture) {
   const [state, setState] = createStore({
-    threads: [MAIN, ...props.threads],
+    threads: props.threads,
     archived: props.archived ?? [],
     open: props.open,
     active: props.active ?? MAIN_THREAD_ID,
@@ -67,11 +68,12 @@ function ThreadHeaderStory(props: HeaderFixture) {
   const tabs = (): ThreadItem[] => {
     const open = state.open.flatMap((id) => byId(id) ?? []);
     const draft: ThreadItem[] = state.draft
-      ? [{ id: DRAFT_THREAD_ID, kind: "draft", title: "New thread", updatedAt: MAIN.updatedAt, status: IDLE }]
+      ? [{ id: DRAFT_THREAD_ID, kind: "draft", title: "New thread", updatedAt: MAIN_UPDATED_AT, status: IDLE }]
       : [];
-    return [MAIN, ...open, ...draft];
+    return [...open, ...draft];
   };
-  const order = () => tabs().map((tab) => tab.id);
+  /** The tab order with the agent's own chat first, which has no tab: closing the first tab opens it. */
+  const order = () => [MAIN_THREAD_ID, ...tabs().map((tab) => tab.id)];
   const setOrder = (next: string[], active: string) =>
     setState((draft) => {
       draft.open = next.filter((id) => id !== MAIN_THREAD_ID && id !== DRAFT_THREAD_ID);
@@ -108,6 +110,7 @@ function ThreadHeaderStory(props: HeaderFixture) {
         agent={STORY_AGENT}
         onSettingsIntent={fn()}
         onOpenSettings={fn()}
+        onOpenChat={state.active === MAIN_THREAD_ID ? undefined : () => open(MAIN_THREAD_ID)}
         modelPicker={{
           provider: storyRuntimeSettings(STORY_AGENT).provider,
           value: STORY_AGENT.model,
@@ -139,7 +142,10 @@ function ThreadHeaderStory(props: HeaderFixture) {
               setOrder(next, next.includes(state.active) ? state.active : id);
             }}
             onMove={(id, index) => {
-              const next = order().filter((entry) => entry !== id);
+              // The index is among the shown tabs, without the agent's own chat.
+              const next = tabs()
+                .map((tab) => tab.id)
+                .filter((entry) => entry !== id);
               next.splice(index, 0, id);
               setOrder(next, state.active);
             }}

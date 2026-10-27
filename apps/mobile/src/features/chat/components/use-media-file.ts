@@ -8,6 +8,7 @@ import { queryKeys } from "@/features/workspace/model/query-keys";
 /** The extension of a file whose name has none, for the types a player cannot read without one. */
 const MIME_EXTENSIONS: Record<string, string> = {
   "video/quicktime": "mov",
+  "video/mp4": "mp4",
   "audio/mpeg": "mp3",
   "audio/mp4": "m4a",
   "text/markdown": "md",

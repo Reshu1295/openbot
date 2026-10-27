@@ -13,7 +13,7 @@ import {
 import { useText } from "@openbot/ui/text";
 import { createSignal, For, flush, onSettled, Show } from "solid-js";
 import { ThreadStatusMark, threadAttention } from "./ThreadStatusMark";
-import { type ThreadHeaderProps, type ThreadItem, threadBusy } from "./thread-types";
+import { MAIN_THREAD_ID, type ThreadHeaderProps, type ThreadItem, threadBusy } from "./thread-types";
 
 /** The width of the soft edge where more tabs are out of view, as in the CSS. */
 const FADE = 24;
@@ -73,8 +73,6 @@ function ThreadTab(props: {
     event.preventDefault();
     event.stopPropagation();
   };
-  // The agent's own chat always has a tab.
-  const closable = () => props.thread.kind !== "main";
   const menuMark = () => (props.menuOpen ? "" : undefined);
   const closeLabel = () => t("conversation.threads.closeTab");
   return (
@@ -90,10 +88,10 @@ function ThreadTab(props: {
         props.onRename();
       }}
       onAuxClick={(event: MouseEvent) => {
-        if (event.button === 1 && closable()) props.onClose();
+        if (event.button === 1) props.onClose();
       }}
       onKeyDown={(event: KeyboardEvent) => {
-        if ((event.key === "Delete" || event.key === "Backspace") && closable()) {
+        if (event.key === "Delete" || event.key === "Backspace") {
           event.preventDefault();
           props.onClose();
         } else if (event.key === "F2") {
@@ -108,21 +106,19 @@ function ThreadTab(props: {
     >
       <span class="agent-threads-tab-title">{props.thread.title}</span>
       <ThreadStatusMark status={props.thread.status} />
-      <Show when={closable()}>
-        <span
-          class="agent-threads-tab-close"
-          aria-hidden="true"
-          title={closeLabel()}
-          onPointerDown={stop}
-          onMouseDown={stop}
-          onClick={(event) => {
-            stop(event);
-            props.onClose();
-          }}
-        >
-          <X />
-        </span>
-      </Show>
+      <span
+        class="agent-threads-tab-close"
+        aria-hidden="true"
+        title={closeLabel()}
+        onPointerDown={stop}
+        onMouseDown={stop}
+        onClick={(event) => {
+          stop(event);
+          props.onClose();
+        }}
+      >
+        <X />
+      </span>
     </SlidingTabs.Trigger>
   );
 }
@@ -171,7 +167,11 @@ export function ThreadTabs(props: ThreadHeaderProps) {
     };
     const measure = () => {
       const tab = element.querySelector<HTMLElement>('.agent-threads-tab[aria-selected="true"]');
-      if (!tab) return;
+      // The agent's own chat has no tab: while it is open, no tab is selected and the fill hides.
+      if (!tab) {
+        setFill((current) => ({ x: current.x, width: 0 }));
+        return;
+      }
       setFill({ x: tab.offsetLeft, width: tab.offsetWidth });
       // While a tab moves, the pointer scrolls the tabs.
       if (drag?.moving) return;
@@ -351,9 +351,12 @@ export function ThreadTabs(props: ThreadHeaderProps) {
     const endChoice = () => {
       choosing = false;
     };
+    // A tab control that stops the event, such as close or move, keeps it from the window: the
+    // timer ends the action after the event in that case.
     const choose = (event: Event) => {
       choosing = true;
       window.addEventListener(event.type, endChoice, { once: true });
+      setTimeout(endChoice);
     };
     for (const type of CHOICE_EVENTS) element.addEventListener(type, choose, { capture: true });
     element.addEventListener("keydown", onKey);
@@ -430,10 +433,8 @@ export function ThreadTabs(props: ThreadHeaderProps) {
   const target = () => threadOf(menuTarget()) ?? threadOf(props.activeId);
   const targetId = () => target()?.id ?? props.activeId;
   const targetIndex = () => props.tabs.findIndex((thread) => thread.id === targetId());
-  const closable = (thread: ThreadItem) => thread.kind !== "main";
-  const targetClosable = () => target()?.kind !== "main";
-  const hasOthers = () => props.tabs.some((thread) => thread.id !== targetId() && closable(thread));
-  const hasTabsToTheRight = () => props.tabs.slice(targetIndex() + 1).some(closable);
+  const hasOthers = () => props.tabs.some((thread) => thread.id !== targetId());
+  const hasTabsToTheRight = () => targetIndex() < props.tabs.length - 1;
   const isSide = () => target()?.kind === "side";
   const targetBusy = () => {
     const thread = target();
@@ -444,6 +445,15 @@ export function ThreadTabs(props: ThreadHeaderProps) {
   const isMenuTarget = (id: string) => menuOpen() && menuTarget() === id;
   const openChosen = (id: string) => {
     if (choosing) props.onOpen(id);
+  };
+  /** The last tab leaves with the tab list. Focus then goes to the agent's name, which opens the agent's chat. */
+  const closeTab = (id: string) => {
+    const heading = area?.closest(".conversation-heading-group");
+    props.onClose(id);
+    requestAnimationFrame(() => {
+      if (area?.isConnected || document.activeElement !== document.body) return;
+      heading?.querySelector<HTMLElement>(".conversation-title")?.focus();
+    });
   };
 
   return (
@@ -462,13 +472,24 @@ export function ThreadTabs(props: ThreadHeaderProps) {
                 data-initializing={initializing()}
                 style={fillStyle()}
               />
+              {/*
+                The agent's own chat has no tab, but Kobalte selects the first tab while the selected value
+                is not one of its triggers. This trigger never shows, so the agent's chat stays selected.
+              */}
+              <SlidingTabs.Trigger
+                value={MAIN_THREAD_ID}
+                class="agent-threads-main-key"
+                disabled
+                tabindex={-1}
+                aria-hidden="true"
+              />
               {/* Keyed by id, so a tab keeps its element, focus and drag when its title or state changes. */}
               <For each={props.tabs} keyed={(thread) => thread.id}>
                 {(thread) => (
                   <ThreadTab
                     thread={thread()}
                     menuOpen={isMenuTarget(thread().id)}
-                    onClose={() => props.onClose(thread().id)}
+                    onClose={() => closeTab(thread().id)}
                     onMove={(step) => move(thread().id, step)}
                     onRename={() => startRename(thread().id)}
                   />
@@ -486,7 +507,7 @@ export function ThreadTabs(props: ThreadHeaderProps) {
               </ContextMenu.Item>
               <ContextMenu.Separator />
             </Show>
-            <ContextMenu.Item disabled={!targetClosable()} onSelect={() => props.onClose(targetId())}>
+            <ContextMenu.Item onSelect={() => props.onClose(targetId())}>
               <X class="agent-context-icon size-4" aria-hidden="true" />
               <span>{t("conversation.threads.closeTab")}</span>
             </ContextMenu.Item>

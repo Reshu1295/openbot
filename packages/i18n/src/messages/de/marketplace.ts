@@ -363,6 +363,15 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Welche Projekte und Dienste sind in meinem Railway-Workspace?",
   "marketplace.plugin.railway.prompt.crash": "Warum stürzt mein Backend-Dienst auf Railway beim Deployment ab?",
   "marketplace.plugin.railway.prompt.redeploy": "Deploye den API-Dienst in meinem Railway-Projekt erneut.",
+  "marketplace.plugin.render.tagline": "Dienste, Deployments und Logs",
+  "marketplace.plugin.render.description":
+    "Mit Render listen Agenten Workspaces und Dienste auf, lesen Logs, Ereignisse und Metriken, sehen den Deployment-Verlauf, starten Deployments und führen schreibgeschütztes SQL auf Render Postgres aus. Ein Render-API-Schlüssel kommt in einen Authorization-Header. Der Schlüssel erreicht jeden Workspace des Render-Kontos. Agenten können Webdienste, statische Websites, Cronjobs, Postgres-Datenbanken und Key-Value-Instanzen erstellen, was Kosten verursachen kann, und sie können die Umgebungsvariablen eines Dienstes ersetzen. Der Server kann keine Ressource löschen.",
+  "marketplace.plugin.render.app":
+    "Dienste, Deployments, Logs und Metriken über den MCP-Server von Render mit einem API-Schlüssel.",
+  "marketplace.plugin.render.prompt.services": "Welche Dienste sind in meinem Render-Workspace?",
+  "marketplace.plugin.render.prompt.logs":
+    "Welche Fehler hat mein Render-Webdienst in der letzten Stunde protokolliert?",
+  "marketplace.plugin.render.prompt.deploy": "Warum ist das letzte Deployment meines Render-Dienstes fehlgeschlagen?",
   "marketplace.plugin.atlassian.tagline": "Jira-Arbeitselemente und Confluence-Seiten",
   "marketplace.plugin.atlassian.description":
     "Mit Atlassian durchsuchen und lesen Agenten Jira-Arbeitselemente, Confluence-Seiten und Bitbucket-Pull-Requests und erstellen oder aktualisieren Arbeitselemente, Seiten und Kommentare. Jeder Nutzer meldet sich im Browser bei seinem eigenen Atlassian-Konto an und bestätigt den Zugriff auf einer Zustimmungsseite. Agenten haben dieselben Rechte wie der Nutzer: Sie können Arbeitselemente und Seiten ändern, Seitenberechtigungen ändern und Pull-Requests mergen. Tools, die Jira-Daten löschen, bleiben aus, bis ein Organisationsadmin sie einschaltet. Jeder Tool-Aufruf verbraucht Rovo-Credits.",

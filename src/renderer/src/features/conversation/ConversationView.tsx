@@ -36,6 +36,7 @@ export function ConversationView(props: ConversationProps) {
     setDropActive,
     settingsPanelWidth,
     submitting,
+    sideThreadOpen,
   } = scope;
   const { t } = useText();
   createEffect(
@@ -96,16 +97,11 @@ export function ConversationView(props: ConversationProps) {
         <ConversationHeader />
         {props.notice}
 
-        {/* A side thread takes the place of the agent's own chat and its message box. */}
-        <Show
-          when={props.threads?.open !== undefined}
-          fallback={
-            <>
-              <ConversationTimeline />
-              <ConversationComposer />
-            </>
-          }
-        >
+        {/* A side thread covers the agent's own chat and its message box. They stay mounted, so the way
+            back keeps their rows and scroll position and does not build the chat again. */}
+        <ConversationTimeline />
+        <ConversationComposer />
+        <Show when={sideThreadOpen()}>
           <ConversationThread />
         </Show>
 

@@ -225,6 +225,11 @@ interface ThreadRuntime {
   subagents: ClaudeSubagentState;
   /** Background subagents and commands that outlive their turn. Stopping the process ends them (#1870). */
   backgroundTasks: number;
+  /**
+   * The uuid of the message that the CLI's next turn of its own answers, such as a steer that came
+   * after the turn's last request. Its history names the turn by that uuid (#3365).
+   */
+  nextTurnId: string | null;
 }
 
 /**
@@ -265,6 +270,10 @@ interface ClaudeStreamMessage {
   rate_limit_info?: unknown;
   /** `background_tasks_changed`: every live background task. */
   tasks?: unknown;
+  /** The uuid of the user message that the turn answers, on the turn's first stream event and assistant message. */
+  user_message_uuid?: string;
+  /** Set when the turn runs an interrupted turn again, and `user_message_uuid` names that turn's prompt. */
+  resume_reason?: string;
 }
 
 interface ClaudeQuery extends AsyncIterable<ClaudeStreamMessage> {
@@ -936,6 +945,7 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
       plan: newClaudePlanState(),
       subagents: newClaudeSubagentState(),
       backgroundTasks: 0,
+      nextTurnId: null,
     };
     runtime.consume = yield* Effect.forkIn(this.#consume(runtime), this.#scope, { startImmediately: true });
     this.#threads.add(runtime);
@@ -1046,6 +1056,7 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
       unprompted,
     };
     runtime.activeTurn = turn;
+    runtime.nextTurnId = null;
     startClaudePlanTurn(runtime.plan);
     this.#threads.holdForTurn(runtime);
     this.emit("notification", {
@@ -1062,10 +1073,12 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
 
   /**
    * The turn that main-agent output belongs to. In stream mode the CLI starts a turn of its own when
-   * a background subagent or command ends, and the answer of that turn is shown like any other.
+   * a background subagent or command ends, and the answer of that turn is shown like any other. A
+   * steer that comes after the turn's last request also starts one. That turn keeps the steer's
+   * uuid, so the history import finds its answer and does not add it again.
    */
   #outputTurn(runtime: ThreadRuntime): ActiveTurn {
-    return runtime.activeTurn ?? this.#beginTurn(runtime, randomUUID(), true);
+    return runtime.activeTurn ?? this.#beginTurn(runtime, runtime.nextTurnId ?? randomUUID(), true);
   }
 
   readonly #steerTurnEffect = Effect.fn("ClaudeAgentClient.steerTurn")(function* (
@@ -1212,6 +1225,16 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
       return;
     }
 
+    // Only a reply frame names the message that the next turn answers.
+    if (
+      (message.type === "stream_event" || message.type === "assistant") &&
+      !runtime.activeTurn &&
+      message.parent_tool_use_id === null &&
+      message.user_message_uuid &&
+      isUuid(message.user_message_uuid) &&
+      !message.resume_reason
+    )
+      runtime.nextTurnId = message.user_message_uuid;
     if (message.type === "stream_event" && message.parent_tool_use_id === null) {
       const event = message.event;
       const delta = isRecord(event) ? event.delta : null;
@@ -1321,6 +1344,8 @@ export class ClaudeAgentClient extends EventEmitter<ClientEvents> {
     }
 
     if (message.type !== "result") return;
+    // A turn that ended with no output must not give its uuid to a later turn of the CLI's own.
+    runtime.nextTurnId = null;
     if (
       message.subtype === "success" &&
       message.total_cost_usd !== undefined &&

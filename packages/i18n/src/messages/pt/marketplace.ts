@@ -338,6 +338,14 @@ export const messages = {
   "marketplace.plugin.railway.prompt.projects": "Quais projetos e serviços estão no meu workspace do Railway?",
   "marketplace.plugin.railway.prompt.crash": "Por que meu serviço de backend no Railway falha no deploy?",
   "marketplace.plugin.railway.prompt.redeploy": "Faça um novo deploy do serviço da API no meu projeto do Railway.",
+  "marketplace.plugin.render.tagline": "Serviços, deploys e logs",
+  "marketplace.plugin.render.description":
+    "O Render permite que agentes listem workspaces e serviços, leiam logs, eventos e métricas, vejam o histórico de deploys, iniciem deploys e executem SQL somente leitura no Render Postgres. Uma chave de API do Render vai em um cabeçalho Authorization. A chave alcança todos os workspaces da conta do Render. Os agentes podem criar serviços web, sites estáticos, cron jobs, bancos de dados Postgres e instâncias Key Value, o que pode gerar custos, e podem substituir as variáveis de ambiente de um serviço. O servidor não pode excluir nenhum recurso.",
+  "marketplace.plugin.render.app":
+    "Serviços, deploys, logs e métricas, através do servidor MCP do Render com uma chave de API.",
+  "marketplace.plugin.render.prompt.services": "Quais serviços estão no meu workspace do Render?",
+  "marketplace.plugin.render.prompt.logs": "Quais erros meu serviço web no Render registrou na última hora?",
+  "marketplace.plugin.render.prompt.deploy": "Por que o último deploy do meu serviço no Render falhou?",
   "marketplace.plugin.atlassian.tagline": "Itens de trabalho do Jira e páginas do Confluence",
   "marketplace.plugin.atlassian.description":
     "O Atlassian permite que agentes pesquisem e leiam itens de trabalho do Jira, páginas do Confluence e pull requests do Bitbucket, e criem ou atualizem itens de trabalho, páginas e comentários. Cada usuário entra com a própria conta Atlassian pelo navegador e aprova o acesso em uma tela de consentimento. Os agentes têm as mesmas permissões do usuário: podem alterar itens de trabalho e páginas, alterar as permissões das páginas e fazer merge de pull requests. As ferramentas que excluem dados do Jira ficam desativadas até que um administrador da organização as ative. Cada chamada de ferramenta consome créditos do Rovo.",

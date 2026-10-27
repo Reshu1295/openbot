@@ -64,6 +64,7 @@ export const messages = {
   "sidebar.agentMenu.restore": "Восстановить",
   "sidebar.agentMenu.restoreTo": "Восстановить в «{section}»",
   "sidebar.agentMenu.openWindow": "Открыть в новом окне",
+  "sidebar.agentMenu.newThread": "Новая ветка",
   "sidebar.agentMenu.inWindow": "Открыт в отдельном окне",
   "sidebar.channelMenu.label": "Действия с каналом",
   "sidebar.channelMenu.edit": "Изменить канал",

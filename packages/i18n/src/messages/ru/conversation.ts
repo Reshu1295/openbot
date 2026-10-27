@@ -42,6 +42,7 @@ export const messages = {
   "conversation.direct.input": "Сообщение для {name}",
   "conversation.direct.send": "Отправить личное сообщение",
   "conversation.header.settings": "Открыть настройки агента",
+  "conversation.header.mainChat": "Открыть основной чат",
   "conversation.header.resumeRemote": "Возобновить удалённое управление",
   "conversation.header.openRemote": "Открыть удалённое управление",
   "conversation.header.publish": "Опубликовать агента",

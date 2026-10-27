@@ -10,6 +10,7 @@ import {
 import {
   TEAM_EML_ATTACHMENTS_CAPABILITY,
   TEAM_MEDIA_ATTACHMENTS_CAPABILITY,
+  TEAM_MP4_ATTACHMENTS_CAPABILITY,
   TEAM_ZIP_ATTACHMENTS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
 import { sourceText } from "@openbot/i18n/source";
@@ -124,6 +125,7 @@ export function ConversationComposer() {
     providerSilentMinutes,
     providerOffline,
     agentProviderName,
+    sideThreadOpen,
   } = useConversationViewScope();
   const { t, format, sourceText: localizeSourceText } = useText();
   const messageLabel = () =>
@@ -293,6 +295,7 @@ export function ConversationComposer() {
       eml: local || capabilities.includes(TEAM_EML_ATTACHMENTS_CAPABILITY),
       media: local || capabilities.includes(TEAM_MEDIA_ATTACHMENTS_CAPABILITY),
       zip: local || capabilities.includes(TEAM_ZIP_ATTACHMENTS_CAPABILITY),
+      mp4: local || capabilities.includes(TEAM_MP4_ATTACHMENTS_CAPABILITY),
     })
       .map((extension) => `.${extension}`)
       .join(",");
@@ -361,7 +364,7 @@ export function ConversationComposer() {
   );
   function ComposerBody() {
     return (
-      <div class="composer-wrap">
+      <div class={["composer-wrap", { "conversation-covered": sideThreadOpen() }]} inert={sideThreadOpen()}>
         {channel ? <channel.AboveComposer /> : null}
         <Show when={speaking() && props.agent}>
           {(agent) => (
