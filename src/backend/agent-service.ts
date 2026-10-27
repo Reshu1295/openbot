@@ -272,7 +272,10 @@ export interface AgentServiceOptions {
   mailbox: MailboxStore;
   browser: AgentBrowserHost;
   requestTimeoutMs?: number;
-  /** How long a Codex context compaction runs before OpenBot stops it. Tests make it short. */
+  /**
+   * How long a provider takes to start a context compaction before OpenBot stops it. A started
+   * compaction runs ten times as long. Tests make it short.
+   */
   contextCompactionTimeoutMs?: number;
   preferredProvider?: AgentProvider;
   /** The model chosen beside `preferredProvider`, or `null` for that provider's own default. */
@@ -1321,6 +1324,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
               ),
             );
         },
+        attachAnswerFiles: (agentId, snapshot, answer, paths) =>
+          this.#attachments
+            .attachAnswerFiles(agentId, snapshot, answer, paths)
+            .pipe(
+              Effect.catch((failure) =>
+                Effect.sync(() => this.#emitError("answer_attachments_failed", failure.cause, agentId)),
+              ),
+            ),
         taskForThread: (threadId) => this.#tasks.taskForThread(threadId),
         taskOpen: (taskId) => this.#tasks.threadId(taskId) !== null,
         taskFailed: (taskId, message) => this.#tasks.failed(taskId, this.#mcp.redact(message)),
@@ -1541,6 +1552,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
   getRuntimeSnapshot(): AgentRuntimeSnapshot {
     return buildRuntimeSnapshot({
       contextStates: this.#compaction.snapshot(),
+      threadContextStates: this.#compaction.threadSnapshot(this.#tasks.openExecutionThreads()),
       agents: this.listAgents(),
       conversation: this.#conversation,
       database: this.#store.database,
@@ -3156,6 +3168,30 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       return session.externalSessionId;
     });
     yield* this.#compaction.request(agentId, externalThreadId);
+  }, Effect.uninterruptible).bind(this);
+
+  /** As `compactAgentContext`, for the session of one open side thread of the agent. */
+  readonly compactTaskContext = Effect.fn("AgentService.compactTaskContext")(function* (
+    this: AgentService,
+    input: AgentTaskInput,
+  ) {
+    const externalThreadId = yield* lifecycleStep("compact task context", () => {
+      const agent = this.#conversation.requireKnownAgent(input.agentId);
+      const task = this.#tasks.requireOpen(input.agentId, input.taskId);
+      const session = this.#store.database.activeProviderSession(task.threadId, agent.provider);
+      // A compaction that still runs, or a start that the provider refused, holds the session too.
+      if (
+        this.#conversation.loadedExecutionSnapshot(task.threadId)?.activeTurnId ||
+        this.#store.database.readActiveTurnId(agent.id, task.threadId) ||
+        this.#mailbox.taskBusy(agent.id, task.taskId) ||
+        (session && this.#compaction.heldThreads(agent.id).includes(session.externalSessionId))
+      )
+        throw new Error(sourceText("error.agent.waitBeforeCompactContext"));
+      if (!session || !this.#compaction.reserve(agent.id, session.externalSessionId, true))
+        throw new Error(sourceText("error.agent.compactContextUnavailable"));
+      return session.externalSessionId;
+    });
+    yield* this.#compaction.request(input.agentId, externalThreadId);
   }, Effect.uninterruptible).bind(this);
 
   /**

@@ -126,6 +126,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
   } = useAgents();
   const {
     contextStates,
+    threadContextStates,
     activeQueue,
     activeWaits,
     activeRoutineIds,
@@ -238,6 +239,14 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
     const server = activeServer();
     if (!agent || server?.kind !== "local") return undefined;
     return () => turnsPort().agent.compactContext(agent.id, server.id);
+  });
+
+  /** As `compactActiveAgentContext`, for one side thread of the active agent. */
+  const compactTaskContext = createMemo(() => {
+    const agent = activeAgent();
+    const server = activeServer();
+    if (!agent || server?.kind !== "local") return undefined;
+    return (taskId: string) => turnsPort().agent.compactTaskContext({ agentId: agent.id, taskId }, server.id);
   });
 
   /** The Team API agent summary has no access, so a joined server's agent shows the host's answer. */
@@ -368,16 +377,19 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
       onRespondApproval: (approval, decision, options) =>
         respondToApprovalRequest(approval.agentId, approval.requestId, decision, options),
       onAnswerPrompt: answerThreadPrompt,
+      contextStates: threadContextStates,
+      onCompactContext: compactTaskContext(),
     });
   });
-  /** The takeover of the open thread: of a side thread while one is open, else of the agent's own chat. */
+  /** The thread that the conversation shows: the open side thread, or the agent's own chat. */
+  const openThreadId = () => threads()?.open?.threadId;
   const activeBrowserTakeover = createMemo(() => {
     const agent = activeAgent();
-    if (!agent) return undefined;
+    // A new thread draft has no turn, so it has no takeover.
     const open = threads()?.open;
-    if (open !== undefined) return threads()?.takeover;
-    const event = pendingPrompts()[attentionKey(agent.id, agent.threadId)];
-    return event?.type === "browser-takeover-requested" && event.request.threadId === agent.threadId
+    const threadId = open === undefined ? agent?.threadId : open?.threadId;
+    const event = agent && threadId ? pendingPrompts()[attentionKey(agent.id, threadId)] : undefined;
+    return event?.type === "browser-takeover-requested" && event.request.threadId === threadId
       ? event.request
       : undefined;
   });
@@ -604,9 +616,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
         agentMemoryLimit={generalSettings().agentMemoryLimit}
         onClearAgentContext={clearActiveAgentContext()}
         onCompactAgentContext={compactActiveAgentContext()}
-        onRespondToBrowserTakeover={(decision, options) =>
-          respondToBrowserTakeover(decision, activeBrowserTakeover()?.threadId, options)
-        }
+        onRespondToBrowserTakeover={(decision, options) => respondToBrowserTakeover(decision, openThreadId(), options)}
         onCancelQueuedMessage={cancelQueuedMessage}
         waits={activeWaits()}
         threads={threads()}

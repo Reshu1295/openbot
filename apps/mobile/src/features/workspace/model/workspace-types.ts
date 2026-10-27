@@ -338,6 +338,8 @@ export interface MobileWorkspaceContextValue {
   canManageVault: (serverId: string) => boolean;
   /** The same for a CSV import from this phone (`vault-import-v1`). */
   canImportVault: (serverId: string) => boolean;
+  /** The same for API keys in the Vault (`vault-v2`). */
+  canManageVaultApiKeys: (serverId: string) => boolean;
   /** Reads or changes the host's GitHub connection. The answer names the GitHub pages that the phone opens. */
   githubConnector: (route: GitHubConnectorRoute, serverId: string) => Promise<HostGitHubConnectorStatus>;
   /** The repositories where the host's GitHub App is installed. The host reads them from GitHub. */
@@ -726,6 +728,7 @@ type MobileWorkspaceStateKey =
   | "canManageBitwardenConnector"
   | "canManageVault"
   | "canImportVault"
+  | "canManageVaultApiKeys"
   | "serverUpdateAccess"
   | "canReadServerRelease"
   | "canViewHostedSites"

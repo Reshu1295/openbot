@@ -30,10 +30,11 @@ const CONTACT = {
   phone: "",
   email: "ada@example.com",
 };
+const API_KEY = { id: "k1", kind: "apiKey", name: "OPENAI_API_KEY", notes: "", hasKey: true };
 
 describe("decodeVaultState", () => {
   it("keeps the summaries of every item kind", () => {
-    const state = { status: "ready", items: [LOGIN, CARD, CONTACT] };
+    const state = { status: "ready", items: [LOGIN, CARD, CONTACT, API_KEY] };
     expect(decodeVaultState(state)).toEqual(state);
   });
 
@@ -41,6 +42,7 @@ describe("decodeVaultState", () => {
     ["a login password", { ...LOGIN, password: "hunter2" }],
     ["a card number", { ...CARD, number: "4242424242424242" }],
     ["a security code", { ...CARD, securityCode: "123" }],
+    ["an API key", { ...API_KEY, key: "sk-test-1234567890" }],
   ])("refuses a summary that carries %s", (_name, item) => {
     expect(() => decodeVaultState({ status: "ready", items: [item] })).toThrow();
   });

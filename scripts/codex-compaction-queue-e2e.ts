@@ -2,8 +2,10 @@
 // compaction, and that no message fails because of a compaction (#1766). Runs the real agent
 // service on a temporary profile with a fake Codex app-server that, like Codex 0.160.1, refuses
 // `turn/start` with `ActiveTurnNotSteerable { turn_kind: Compact }` while a compaction turn runs.
-// Three cases: a compaction that ends by itself, one that the deadline stops, and one that does
-// not stop, so that OpenBot sends a turn that Codex refuses.
+// Four cases: a compaction that ends by itself, one that runs past the start deadline and ends by
+// itself (#3466), one that the run deadline stops, and one that does not stop, so that OpenBot sends
+// a turn that Codex refuses. Then a side thread: the runtime snapshot carries its context, and
+// `compactTaskContext` compacts its session and not the agent's own chat (#3503).
 // `bun scripts/codex-compaction-queue-e2e.ts`. Writes .openbot-build/codex-compaction-queue-e2e/report.json.
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -22,7 +24,8 @@ const home = join(root, "home");
 const logPath = join(root, "protocol.jsonl");
 const controlPath = join(root, "control.json");
 const fakeCodex = join(root, "codex");
-const COMPACTION_TIMEOUT_MS = 1_500;
+// Codex must start the compaction in 1 s; a started compaction runs for 10 s at most.
+const COMPACTION_TIMEOUT_MS = 1_000;
 
 // Before the service modules load: the Codex process and the stores read the home folder.
 process.env.HOME = home;
@@ -244,9 +247,34 @@ try {
   await runCauseEffect(agents.initialize());
 
   const cases = [
-    { name: "compaction ends by itself", compactionMs: 400, ignoreInterrupt: false, end: "completed" },
-    { name: "deadline stops the compaction", compactionMs: 60_000, ignoreInterrupt: false, end: "interrupted" },
-    { name: "refused start waits for the compaction", compactionMs: 4_000, ignoreInterrupt: true, end: "completed" },
+    {
+      name: "compaction ends by itself",
+      compactionMs: 400,
+      ignoreInterrupt: false,
+      end: "completed",
+      interrupt: false,
+    },
+    {
+      name: "compaction runs past the start deadline",
+      compactionMs: 3_000,
+      ignoreInterrupt: false,
+      end: "completed",
+      interrupt: false,
+    },
+    {
+      name: "deadline stops the compaction",
+      compactionMs: 60_000,
+      ignoreInterrupt: false,
+      end: "interrupted",
+      interrupt: true,
+    },
+    {
+      name: "refused start waits for the compaction",
+      compactionMs: 12_000,
+      ignoreInterrupt: true,
+      end: "completed",
+      interrupt: true,
+    },
   ] as const;
 
   for (const [index, entry] of cases.entries()) {
@@ -304,11 +332,72 @@ try {
     assert.equal(result.statusWhileCompacting, "queued", `${entry.name}: the message did not wait`);
     assert.equal(result.finalStatus, "completed", `${entry.name}: ${result.finalError ?? result.finalStatus}`);
     assert.equal(result.compactionEnd, entry.end, `${entry.name}: the compaction did not end as expected`);
-    assert.equal(result.interruptSent, entry.compactionMs > COMPACTION_TIMEOUT_MS, `${entry.name}: turn/interrupt`);
+    assert.equal(result.interruptSent, entry.interrupt, `${entry.name}: turn/interrupt`);
     if (entry.ignoreInterrupt) assert.ok(result.refusedStarts > 0, "Codex refused no start");
     else assert.equal(result.refusedStarts, 0, `${entry.name}: Codex refused a start`);
     result.passed = true;
   }
+
+  // A side thread shows its own context, and Compact compacts only its session (#3503).
+  await writeFile(controlPath, JSON.stringify({ compactionMs: 200, ignoreInterrupt: false }));
+  const owner = await runCauseEffect(
+    agents.createAgent({
+      name: "Side thread",
+      description: "Checks the context of a side thread.",
+      avatarSeed: "compaction-thread",
+      avatarHue: null,
+      initialMessage: "First message.",
+    }),
+  );
+  const mainSession = await waitFor("the agent's first turn to end", () => {
+    const session = store.activeProviderSession(owner.id)?.externalSessionId;
+    const busy = agents.listQueue(owner.id).deliveries.some((delivery) => delivery.status !== "completed");
+    return session && !busy ? session : null;
+  });
+  const mainContext = () =>
+    agents.getRuntimeSnapshot().contextStates?.find((state) => state.agentId === owner.id) ?? null;
+  const mainCompactStarts = () =>
+    protocol().filter((line) => line.method === "thread/compact/start" && line.threadId === mainSession).length;
+  // The agent's own first turn reports 90% too, so its chat compacts first.
+  const mainBefore = await waitFor(
+    "the agent's own compaction",
+    () => mainContext()?.compaction?.status === "completed" && mainContext(),
+  );
+  const mainStartsBefore = mainCompactStarts();
+  const task = await runCauseEffect(agents.startTask({ agentId: owner.id, text: "Thread message." }));
+  const taskSession = await waitFor(
+    "the thread session",
+    () => store.database.activeProviderSession(task.threadId, "codex")?.externalSessionId,
+  );
+  const threadContext = () =>
+    agents.getRuntimeSnapshot().threadContextStates?.find((state) => state.threadId === task.threadId) ?? null;
+  const compactions = () => protocol().filter((line) => line.compactionEnded && line.threadId === taskSession);
+  // The thread's turn reports 90% of the window, so the thread compacts at the end of the turn.
+  const automatic = await waitFor("the thread's automatic compaction", () => {
+    const state = threadContext();
+    const idle = agents.listTasks(owner.id).tasks.find((candidate) => candidate.id === task.id)?.state === "idle";
+    return idle && compactions().length === 1 && state?.compaction?.status === "completed" ? state : null;
+  });
+  await runCauseEffect(agents.compactTaskContext({ agentId: owner.id, taskId: task.id }));
+  const manual = await waitFor("the thread's manual compaction", () => {
+    const state = threadContext();
+    return compactions().length === 2 && state?.compaction?.status === "completed" ? state : null;
+  });
+  const mainAfter = mainContext();
+  const sideThread = {
+    threadUsage: automatic.usage,
+    automaticCompaction: automatic.compaction?.id ?? null,
+    manualCompaction: manual.compaction?.id ?? null,
+    threadCompactions: compactions().map((line) => line.status),
+    mainCompactStarts: mainCompactStarts() - mainStartsBefore,
+    mainContextUnchanged: JSON.stringify(mainAfter) === JSON.stringify(mainBefore),
+  };
+  Object.assign(report, { sideThread });
+  assert.equal(sideThread.threadUsage?.usedTokens, 90_000, "side thread: no usage");
+  assert.notEqual(sideThread.manualCompaction, sideThread.automaticCompaction, "side thread: no new compaction");
+  assert.deepEqual(sideThread.threadCompactions, ["completed", "completed"], "side thread: compactions");
+  assert.equal(sideThread.mainCompactStarts, 0, "side thread: the agent's own chat compacted");
+  assert.ok(sideThread.mainContextUnchanged, "side thread: the agent's own context changed");
   report.passed = true;
 } catch (error) {
   report.error = error instanceof Error ? (error.stack ?? error.message) : String(error);

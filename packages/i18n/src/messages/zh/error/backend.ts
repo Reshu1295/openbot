@@ -175,6 +175,8 @@ export const messages = {
   "error.backend.mcpServerNameTaken": "名为 {name} 的 MCP 服务器已存在。",
   "error.backend.mcpServerNoAnswer": "服务器未在 {seconds} 秒内响应。",
   "error.backend.mcpSignInNotAccepted": "服务器未接受该登录。",
+  "error.backend.mcpSignInClientRefused":
+    "完成登录时，登录服务器未接受 OpenBot。请重新登录，OpenBot 会重新向服务器注册。",
   "error.backend.mcpCommandNotFound": "未找到命令：{command}",
   "error.backend.mcpRegistrationRefused":
     "登录服务器尚未接受 OpenBot 作为应用，这与你的账号无关。请改用其他连接方式，例如本地 MCP 服务器。",

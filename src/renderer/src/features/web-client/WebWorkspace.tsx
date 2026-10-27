@@ -35,6 +35,7 @@ import { ROUTINE_RECOVERY_CAPABILITY } from "@openbot/contracts/team-protocol/ro
 import { SIDE_QUESTION_CAPABILITY } from "@openbot/contracts/team-protocol/side-question-v1";
 import { SIGN_IN_RELAY_CAPABILITY } from "@openbot/contracts/team-protocol/sign-in-relay-v1";
 import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
 import { WEBHOOK_TESTS_CAPABILITY } from "@openbot/contracts/team-protocol/webhook-tests-v1";
 import { runTeamEffect } from "@openbot/team-client";
 import { channelForThread } from "@openbot/team-client/channel-notifications";
@@ -413,6 +414,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       controller.setComposerErrors({});
       controller.setConversationErrors({});
       controller.setChannelDrafts({});
+      controller.setThreadDrafts({});
       // A queue edit holds its message on its host until Save or Cancel. Keep the edit and its draft
       // after a reload or a host change, so the user can release the hold on that host.
       const editAgentId = untrack(controller.editingAgentId);
@@ -1237,15 +1239,18 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     return store ? { store, listAgents: async () => workspace.profiles() } : undefined;
   });
   // The Vault section, for an owner or admin of a host with `vault-v1`. The store follows the host id.
+  // With `vault-v2` it also keeps API keys.
   const vaultHostId = createMemo(() => {
     const current = server();
     return serverCanAdminister(current, VAULT_CAPABILITY) ? current?.id : undefined;
   });
-  const vaultSettings = createMemo((): ServerVaultOptions | undefined =>
-    vaultHostId() === undefined
-      ? undefined
-      : { store: createVaultStore(webVaultCalls(() => hostRequest(), workspace.onHostEvent)) },
-  );
+  // A host that updates or rolls back keeps its id, so the store follows this capability too.
+  const vaultV2 = createMemo(() => serverCanAdminister(server(), VAULT_V2_CAPABILITY));
+  const vaultSettings = createMemo((): ServerVaultOptions | undefined => {
+    if (vaultHostId() === undefined) return undefined;
+    const v2 = vaultV2();
+    return { store: createVaultStore(webVaultCalls(() => hostRequest(), workspace.onHostEvent, v2)), apiKeys: v2 };
+  });
   const openBrowserProfileSettings = (trigger: HTMLElement) => {
     const current = server();
     if (current) void openServerSettings(current.id, trigger, "browser-profiles");
@@ -1389,14 +1394,15 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
         reportedFailure(() => workspace.answer({ requestId: prompt.requestId, answers }), options),
     });
   });
-  /** The takeover of the open thread: of a side thread while one is open, else of the agent's own chat. */
+  /** The thread that the conversation shows: the open side thread, or the agent's own chat. */
+  const openThreadId = () => threads()?.open?.threadId;
   const browserTakeover = createMemo(() => {
     const agent = workspace.selected();
     if (!agent) return undefined;
-    if (threads()?.open !== undefined) return threads()?.takeover;
-    return workspace.state.takeovers.find(
-      (request) => request.agentId === agent.id && request.threadId === agent.threadId,
-    );
+    // A new thread draft has no turn, so it has no takeover.
+    const open = threads()?.open;
+    const threadId = open === undefined ? agent.threadId : open?.threadId;
+    return workspace.state.takeovers.find((request) => request.agentId === agent.id && request.threadId === threadId);
   });
   // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.
   // The marker does not tell whether the routine is paused; an agent makes an active routine unless told otherwise.
@@ -2504,12 +2510,9 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 remoteTaskLimitLoaded={remoteAgentAdmin.taskLimit() !== undefined}
                 onUpdateAgentPermissions={remoteAgentAdmin.settings() ? remoteAgentAdmin.update : undefined}
                 onClearAgentContext={clearSelectedAgentContext()}
-                onRespondToBrowserTakeover={(decision, options) => {
-                  const request = browserTakeover();
-                  return request
-                    ? workspace.respondToBrowserTakeover(request, decision, options)
-                    : Promise.resolve(false);
-                }}
+                onRespondToBrowserTakeover={(decision, options) =>
+                  workspace.respondToBrowserTakeover(decision, openThreadId(), options)
+                }
                 onCancelQueuedMessage={workspace.cancelQueued}
                 onSteerQueuedMessage={workspace.steerQueued}
                 onUpdateQueuedMessage={workspace.updateQueued}

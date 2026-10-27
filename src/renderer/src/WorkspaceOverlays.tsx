@@ -1,6 +1,7 @@
 import type { CentralAuthUser, RoutineFields, ServerSummary } from "@openbot/contracts/ipc";
 import { BROWSER_PROFILES_CAPABILITY } from "@openbot/contracts/team-protocol/browser-profiles-v1";
 import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
 import { classifyFailure } from "@openbot/telemetry";
 import { isAgentAccount } from "@openbot/ui/components/provider-accounts";
 import type { AcpRegistrySettingsApi } from "@openbot/ui/features/custom-providers/AcpRegistrySettings";
@@ -133,6 +134,7 @@ export function SkillsMarketplace() {
   const { openInstalledMarketplaceAgent } = useServerSelection();
   const { openMcpAdd } = useServerSettings();
   const connectors = useConnectors();
+  const platform = usePlatform();
   const { remoteDesktopWorkspaceVisible, hideRemoteDesktopWorkspace } = useRemoteDesktop();
   // The remote desktop covers the window card, so a link or a search that opens the page hides it.
   // The remote desktop session stays.
@@ -157,6 +159,7 @@ export function SkillsMarketplace() {
         setPendingPluginConnect(false);
       }}
       connectors={connectors.active}
+      macOS={platform.appInfo()?.platform === "darwin"}
       onAddServer={(serverId) => {
         setSkillsMarketplaceOpen(false);
         openMcpAdd(serverId, null);
@@ -434,11 +437,16 @@ function ServerSettings() {
     const target = serverSettingsTarget();
     return serverCanAdminister(target, VAULT_CAPABILITY) ? target.id : undefined;
   });
+  // A host that updates or rolls back keeps its id, so the API key kind follows this capability too.
+  const vaultApiKeys = createMemo(() => serverCanAdminister(serverSettingsTarget(), VAULT_V2_CAPABILITY));
   const vault = createMemo(() => {
     const serverId = vaultServerId();
     if (serverId === undefined) return undefined;
     const local = untrack(serverSettingsTarget)?.kind === "local";
-    return { store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)) };
+    return {
+      store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)),
+      apiKeys: vaultApiKeys(),
+    };
   });
   // The workspace belongs to the selected server. For another server, the switch comes first and
   // the agent is published for the scope it lands in; a message there opens as its agent's chat.
@@ -894,6 +902,7 @@ function RemoteDesktop() {
     remoteDesktopConnectionError,
     remoteDesktopConnectionErrorCode,
     hideRemoteDesktopWorkspace,
+    reportRemoteDesktopViewerFailed,
     disconnectRemoteDesktopWorkspace,
     retryRemoteDesktopWorkspace,
     selectRemoteDesktopDisplay,
@@ -914,6 +923,7 @@ function RemoteDesktop() {
               connectionError={remoteDesktopConnectionError()}
               connectionErrorCode={remoteDesktopConnectionErrorCode()}
               onHide={hideRemoteDesktopWorkspace}
+              onViewerState={(state) => reportRemoteDesktopViewerFailed(state === "error")}
               onDisconnect={() => disconnectRemoteDesktopWorkspace()}
               onRetry={retryRemoteDesktopWorkspace}
               onSelectDisplay={selectRemoteDesktopDisplay}

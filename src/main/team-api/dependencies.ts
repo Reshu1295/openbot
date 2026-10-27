@@ -13,6 +13,7 @@ import type { HostEventsApi } from "../host-events-api";
 import type { HostEventsService } from "../host-events-service";
 import type { HostReleaseService } from "../host-release-service";
 import type { HostService } from "../host-service";
+import type { MachineAlertMonitor } from "../machine-alerts";
 import type { PromptCacheTtlPreferenceStore } from "../prompt-cache-ttl-preference-store";
 import type { ProviderCredentialStore } from "../provider-credential-store";
 import type { ProviderRuntimeManager } from "../provider-runtime-manager";
@@ -30,12 +31,15 @@ import type { SkillMarketplaceService } from "../skill-marketplace-service";
 
 import type {
   AgentEvent,
+  AgentModelId,
+  AgentProviderId,
   CentralAuthUser,
   DirectMessageRealtimeEvent,
   DirectTypingRealtimeEvent,
   RoutineResultConnectionOption,
   RoutineResultDestination,
   RoutineResultRoutineInput,
+  SaveSetupInput,
   SetRoutineResultDestinationInput,
   SidebarLayoutSnapshot,
   TeamPresenceSnapshot,
@@ -219,6 +223,11 @@ export type TeamApiProviderUsageResets = Pick<AgentService, "providerUsageResets
 
 /** Its presence is what `#protocolSupport` advertises `storage-v1` and `storage-disk-v1` on. */
 export type TeamApiStorage = Pick<StorageUsageService, "usage" | "deleteFile" | "clear" | "disk">;
+/** `machine-resources-v1`: the machine use and its alerts. The routes are admin-only. */
+export type TeamApiMachine = Pick<
+  MachineAlertMonitor,
+  "metrics" | "alerts" | "setAlerts" | "canBeResponsible" | "pending" | "subscribe"
+>;
 /** `hosted-sites-v1`: the openbot.site sites of this server. Members list; only admins delete. */
 export type TeamApiHostedSites = Pick<HostedSiteDesktopService, "listServerSites" | "deleteServerSite">;
 
@@ -295,6 +304,17 @@ export type TeamApiWorkflows = Pick<
 > &
   Pick<HostEventsService, "rotateWorkflowSecret">;
 
+/** The setup choice of this computer: the same file and the same service step as the local Settings save. */
+interface TeamApiDefaultProvider {
+  get(): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
+  set(input: SaveSetupInput): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
+}
+
+export interface ProviderDefaultSetting {
+  provider: AgentProviderId | null;
+  model: AgentModelId | null;
+}
+
 /**
  * The admin routes, one member per optional capability. A member's presence is what
  * `#protocolSupport` advertises its capability on; every route behind it requires an owner or admin.
@@ -342,6 +362,8 @@ export interface TeamApiAdmin {
   memoryLimit?: AgentMemoryLimitSetting;
   /** `prompt-cache-ttl-v1`: how long the provider keeps the prompt cache of this computer's agents. */
   promptCacheTtl?: Pick<PromptCacheTtlPreferenceStore, "get" | "set">;
+  /** `provider-default-v1`: the provider and model that a new agent of this computer starts on. */
+  defaultProvider?: TeamApiDefaultProvider;
   /** `routine-results-v1`: the place where an agent routine sends its answers. */
   routineResults?: TeamApiRoutineResults;
 }
@@ -470,6 +492,7 @@ export interface TeamApiOptions {
   /** Starts and waits for the managed tool runtimes behind the MCP save, enable, and test routes. */
   mcpToolRuntimePreparation?: McpToolRuntimePreparation;
   storage?: TeamApiStorage;
+  machine?: TeamApiMachine;
   hostedSites?: TeamApiHostedSites;
   agentImport?: TeamApiAgentImport;
   instanceTransfer?: TeamApiInstanceTransfer;

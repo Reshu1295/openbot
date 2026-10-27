@@ -1768,13 +1768,16 @@ export function createWebWorkspace(
       });
       await refresh();
     },
-    /** Answers a takeover: of the selected agent's own chat, or of its open side thread. */
+    /** Answers the takeover of the selected agent's chat, or of its side thread `sideThreadId`. */
     async respondToBrowserTakeover(
-      request: (typeof state.takeovers)[number],
       decision: "complete" | "cancel",
+      sideThreadId?: string,
       options?: PromptAnswerOptions,
     ) {
       const current = generation;
+      const threadId = sideThreadId ?? state.agents.find((agent) => agent.id === selectedId)?.threadId;
+      const request = state.takeovers.find((item) => item.agentId === selectedId && item.threadId === threadId);
+      if (!request) return false;
       try {
         await runtime.respondToTakeover({ requestId: request.requestId, decision });
         if (disposed || current !== generation) return false;

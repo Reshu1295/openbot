@@ -413,12 +413,14 @@ export interface ConversationThreads {
   prompt: Extract<AgentEvent, { type: "prompt" }> | undefined;
   /** The interactive block of `prompt`'s message, when the agent asked with one. */
   promptUiBlock: ConversationUiBlock | undefined;
-  /** The browser takeover that the open side thread's turn waits for. */
-  takeover: BrowserTakeoverRequest | undefined;
   onSend: (text: string) => Promise<boolean>;
   onStop: () => void;
   onRespondApproval: (decision: "accept" | "decline", options?: PromptAnswerOptions) => Promise<boolean>;
   onAnswerPrompt: (answers: Record<string, string[]>, options?: PromptAnswerOptions) => Promise<boolean>;
+  /** The context of the open side thread, when its provider reported it. */
+  contextState: AgentContextState | undefined;
+  /** Missing when the host cannot compact a side thread. */
+  onCompactContext?: (() => Promise<void>) | undefined;
   /** Missing when the host cannot move a queued message to a new thread. */
   onRunQueuedMessage?: ((deliveryId: string) => void) | undefined;
 }

@@ -3,6 +3,10 @@ import {
   AGENT_SESSION_SETTINGS_CAPABILITY,
   AGENT_SESSION_SETTINGS_ROUTES,
 } from "@openbot/contracts/team-protocol/agent-session-settings-v1";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 // An agent's core surface: status, agents, conversations, the queue and the prompts
 // a turn can raise. Memories, routines and attachments are their own registrars.
 // Every one of these routes to the local service or to a remote server by the
@@ -772,6 +776,12 @@ export function agentIpcHandlers({
           throw new Error(sourceText("error.team.contextCompactUnsupported"));
         },
       }),
+      compactTaskContext: scopedHandler(parseAgentTask, {
+        local: (parsed) => runCauseEffect(service.compactTaskContext(parsed)),
+        remote: () => {
+          throw new Error(sourceText("error.team.contextCompactUnsupported"));
+        },
+      }),
       respondToPrompt: scopedHandler(parsePromptResponse, {
         local: (parsed) => runCauseEffect(service.respondToPrompt(parsed)),
         remote: (parsed, serverId) =>
@@ -794,13 +804,24 @@ export function agentIpcHandlers({
       }),
       respondToBrowserSecret: scopedHandler(parseLocalBrowserSecretResponse, {
         local: (parsed) => runCauseEffect(service.respondToBrowserSecret(parsed)),
-        remote: (parsed, serverId) =>
-          runCauseEffect(
-            remoteServers.request(serverId, BROWSER_SECRET_RESPONSE_PATH, decodeVoid, {
+        remote: (parsed, serverId) => {
+          // A save goes to the Vault of the joined server, on the route that only its owner or an admin can use.
+          if (parsed.decision !== "submit" || !parsed.saveToVault)
+            return runCauseEffect(
+              remoteServers.request(serverId, BROWSER_SECRET_RESPONSE_PATH, decodeVoid, {
+                method: "POST",
+                body: remoteBrowserSecretResponse(parsed),
+              }),
+            );
+          if (!remoteServers.supportsCapability(serverId, BROWSER_SECRET_VAULT_CAPABILITY))
+            throw new Error(sourceText("error.team.vaultUnsupported"));
+          return runCauseEffect(
+            remoteServers.request(serverId, BROWSER_SECRET_VAULT_ROUTES.respond, acceptEmpty, {
               method: "POST",
               body: remoteBrowserSecretResponse(parsed),
             }),
-          ),
+          );
+        },
       }),
       respondToBrowserTakeover: scopedHandler(parseBrowserTakeoverResponse, {
         local: (parsed) => runCauseEffect(service.respondToBrowserTakeover(parsed)),

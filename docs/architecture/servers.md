@@ -41,6 +41,32 @@ says "Storage almost full" and can be closed until the next level; under 2% free
 is red and cannot be closed. "Free up space" opens Server settings › Storage. A host without the
 capability shows no card.
 
+The optional `machine-resources-v1` capability (`team-protocol/machine-resources-v1.ts`) adds the
+machine part at the top of Server settings › Storage, for an owner or admin only. `POST
+/v1/admin/host/machine/metrics` answers the disk, memory and CPU use of the machine that runs the
+host (`src/main/machine-metrics.ts`), as the server can use it. The disk is the one that holds the
+data folder, counted as `df` counts it: space that ext4 keeps for root is neither used nor free. In
+a Docker container that is the disk of the Docker host, which all its containers share; Docker sets
+no disk limit per container. Memory counts what programs can still use: `MemAvailable` and the
+cgroup limit on Linux, Activity Monitor's "Memory Used" from `vm_stat` on macOS, and free memory on
+Windows. CPU is the use since the reading before. When main's cgroup has a CPU limit (`cpu.max`,
+such as `docker run --cpus`), it is the cgroup's `usage_usec` against that limit, and the core count
+is the limit; otherwise it is the use of all cores of the machine. The panel reads it each minute
+while it is open; the read routes are passive. `.../machine/alerts` and `.../alerts/update` read and
+set one level per metric (50–99%) and the owner or admin who gets the alert, in
+`openbot-machine-alerts-v1.json` (`src/main/machine-alerts.ts`). With no member set, or when that
+member is no longer an admin, the owner gets it. The host checks the machine once a minute. A metric
+at or above its level alerts once, and again each day while it stays there; CPU must stay above for
+five readings. The alert ends when the use goes 5 points below the level. The host sends the
+`machine-alert` event only to the event sockets of that member, and again to each device of theirs
+that connects while the alert is in force; the desktop shows each alert id once, as a notification.
+When the host is a desktop app and its owner gets the alert, that app shows it directly. For an
+owner or admin of the selected server, the sidebar machine card (`features/sidebar/machine-card.ts`)
+reads the use and the levels at start, every five minutes, and when Server settings closes. It shows
+the metric furthest above its level in place of the storage card, which then does not show; far
+above the level (95%, or 10 points above a higher level) it is red and cannot be closed. A closed card
+stays closed for that metric and level until the use goes below every level.
+
 ### Hosted sites per server
 
 A hosted site belongs to the server that published it (`hosted_sites.server_id`, D1 `0024`). The user
@@ -400,7 +426,9 @@ host advertises a capability only when its `TeamApiAdmin` member exists.
 | `host-update-v1` | Check for, download and restart into an app update; cancel a restart that waits | `hostAdmin` |
 | `host-timezone-v1` | Read and set the server timezone | `hostAdmin` |
 | `agent-memory-limit-v1` | Read and set how many memories each agent keeps | `hostAdmin` |
+| `machine-resources-v1` | Read the disk, memory and CPU use of the host machine; read and set the alert levels and the owner or admin who gets the `machine-alert` event | `storage`, `hostAdmin` |
 | `prompt-cache-ttl-v1` | Read and set how long Claude keeps the prompt cache of the host's agents | `hostAdmin` |
+| `provider-default-v1` | Read and set the provider that a new agent of the host starts on | none: only the mobile app sends it |
 | `agent-access-v1` | Read and set the roles that give members access to agents (see [Roles](#roles)) | `hostAdmin` |
 | `discord-access-v1` | Read and set which Discord roles can use OpenBot in a Discord server; list its roles | `messaging` |
 | `events-v1` | Manage webhook routines, their secrets, and activity | `events` |
@@ -408,10 +436,11 @@ host advertises a capability only when its `TeamApiAdmin` member exists.
 | `routine-results-v1` | List the messaging connections and their places; read and set where an agent routine sends its answers. Deliveries stay on the host | none: only the mobile app sends it |
 | `webhook-tests-v1` | Send one signed test event to a webhook routine | `events` |
 | `vault-v1` | The host's Vault: list, add, change and delete logins, cards and contact info; show one saved password, card number or security code; reset a Vault that the host cannot read. No CSV import. A change sends `vault-changed` with no data, so a client reads the list again | `vault` |
+| `vault-v2` | All of `vault-v1`, under `/v1/admin/vault/v2/`, and API keys as a fourth item kind: list each key's variable name and notes, add, change and delete keys, and show one saved key. The host leaves API keys out of every `vault-v1` answer, and `vault-v1` cannot delete or show one, so an older client keeps a valid list. It uses the `vault-changed` event of `vault-v1` | `vault` |
 | `vault-import-v1` | A CSV password export that an owner or admin sends as text, at most 256 KiB, below the JSON body limit. The host adds its logins as from its own file dialog and answers only the counts. The iPhone app uses it; the phone never calls the `vault-v1` reveal or reset | none: only the mobile app sends it |
 
 These IPC groups take a required server id and route with `scopedHandler`. A key travels only towards
-the host; no response carries one, except the `vault-v1` reveal: it answers the one secret that the
+the host; no response carries one, except the `vault-v1` and `vault-v2` reveal: it answers the one secret that the
 admin asked to show or copy. `providers-v1` has no progress event, so the renderer reads runtime
 status again every second while a host download runs. Publishing, macOS permissions, the browser
 sign-in and folder import stay on the host.
@@ -470,6 +499,16 @@ in the Claude settings or `CLAUDE_CODE_PROMPT_CACHE_TTL` on the host still wins.
 the next Claude process, not to a running one; an idle thread starts a new process when it resumes.
 The Cache section of the Claude page in Server settings → Providers sets it for this computer and
 for a joined server.
+
+`provider-default-v1` reads and sets the provider, and the model beside it, that a new agent of the
+host starts on when its creator chooses none. It is the setup choice of the host (`openbot-setup`
+file, `preferredProvider` and `preferredModel`): a set writes the file and calls
+`AgentService.setPreferredProvider`, as the local Settings save does. A read gives the provider that
+`AgentService.preferredProvider` uses now, so a host before its setup choice reads `codex`. A
+provider that the client's protocol does not show reads as none (`provider: null`), and the host
+refuses to set it. The phone's Server settings → Providers sets it. The desktop sets it only for this
+computer. A remote set also sends the new setup to each window of the host (`app.setupState`), so
+its Settings show the change at once.
 
 `claude-api-key-v1` has no routes. It tells a client that the host reads the key that the released
 `providers-v1` key routes save for `claude`. The host keeps the key as a Claude account with the

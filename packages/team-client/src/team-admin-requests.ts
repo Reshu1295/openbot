@@ -25,22 +25,24 @@ import { HOST_MEMBER_UPDATE_ROUTES } from "@openbot/contracts/team-protocol/host
 import { HOST_RELEASE_ROUTES } from "@openbot/contracts/team-protocol/host-release-v1";
 import { HOST_TIMEZONE_ROUTES } from "@openbot/contracts/team-protocol/host-timezone-v1";
 import { PROMPT_CACHE_TTL_ROUTES } from "@openbot/contracts/team-protocol/prompt-cache-ttl-v1";
+import { PROVIDER_DEFAULT_ROUTES } from "@openbot/contracts/team-protocol/provider-default-v1";
 import type { PROVIDERS_V5_ROUTES } from "@openbot/contracts/team-protocol/providers-v5";
 import { PROVIDERS_V8_ROUTES } from "@openbot/contracts/team-protocol/providers-v8";
 // Admin requests to one host: agent settings and skills, shared tables, agent share links, the server name and logo,
-// the server timezone, the agent memory limit, the prompt cache time, the Discord roles that can use OpenBot, the app update, MCP servers, storage, hosted sites and providers.
+// the server timezone, the agent memory limit, the prompt cache time, the default provider, the Discord roles that can use OpenBot, the app update, MCP servers, storage, hosted sites and providers.
 //
 // The desktop sends the same routes from the main process. The web client and the mobile app send
 // them through their own transport, so the path, body and decoding of each request are here once.
 // The host answers only an owner or admin; a member gets a refusal, which the transport rejects.
 
-import type { ManagedProviderId } from "@openbot/contracts/agent-providers";
+import { type AgentProviderRef, isAgentProviderRef, type ManagedProviderId } from "@openbot/contracts/agent-providers";
 import { parseHostedSiteList } from "@openbot/contracts/hosted-sites";
 import {
   type AccountUsage,
   type AddedAgent,
   type AddMessagingOrchestratorResult,
   type AgentAdminSettings,
+  type AgentModelId,
   type AgentProviderId,
   type AgentStatus,
   type AgentTemplatePreview,
@@ -113,6 +115,7 @@ import {
   type InstallMarketplaceAgentInput,
   type InstallSkillInput,
   isAddMessagingOrchestratorResult,
+  isAgentModel,
   isAgentStatus,
   isSharedTable,
   type McpServerConfig,
@@ -217,6 +220,7 @@ import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
 import { VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_ROUTES } from "@openbot/contracts/team-protocol/vault-v2";
 import { WEBHOOK_TESTS_ROUTES } from "@openbot/contracts/team-protocol/webhook-tests-v1";
 import { Effect, Schema } from "effect";
 import { bytesToBase64 } from "./base64";
@@ -610,6 +614,37 @@ export function setHostPromptCacheTtl(
   ttl: PromptCacheTtl,
 ): Effect.Effect<PromptCacheTtlSetting, TeamAdminRequestError> {
   return adminCall(() => request("POST", PROMPT_CACHE_TTL_ROUTES.update, decodePromptCacheTtlSetting, { ttl }));
+}
+
+/** `provider-default-v1`: the provider that a new agent of the host starts on. A newer host can name a provider this build does not know. */
+export interface HostProviderDefault {
+  provider: AgentProviderRef | null;
+  model: AgentModelId | null;
+}
+
+function decodeHostProviderDefault(value: unknown): HostProviderDefault {
+  const record = decodeRecord(value, "default provider");
+  const { provider, model } = record;
+  if (provider !== null && !isAgentProviderRef(provider)) throw new Error("Invalid default provider.");
+  if (model !== null && !isAgentModel(model)) throw new Error("Invalid default model.");
+  return { provider, model };
+}
+
+export function getHostProviderDefault(
+  request: TeamApiRequest,
+): Effect.Effect<HostProviderDefault, TeamAdminRequestError> {
+  return adminCall(() => request("POST", PROVIDER_DEFAULT_ROUTES.settings, decodeHostProviderDefault, {}));
+}
+
+/** A null model is the provider's own default model. */
+export function setHostProviderDefault(
+  request: TeamApiRequest,
+  provider: AgentProviderId,
+  model: AgentModelId | null,
+): Effect.Effect<HostProviderDefault, TeamAdminRequestError> {
+  return adminCall(() =>
+    request("POST", PROVIDER_DEFAULT_ROUTES.update, decodeHostProviderDefault, { provider, model }),
+  );
 }
 
 /** The one MCP read route, and the only one the host answers to a GET. */
@@ -1183,28 +1218,43 @@ export function bitwardenConnectorRequest(
   );
 }
 
-/** The host's Vault (`vault-v1`). No list item carries a password, a card number or a security code. */
-export function listHostVault(request: TeamApiRequest): Effect.Effect<VaultState, TeamAdminRequestError> {
-  return adminCall(() => request("POST", VAULT_ROUTES.list, decodeHostVaultState, {}));
+/** The routes of `vault-v2` when the host serves it, else of `vault-v1`, which has no API keys. */
+function vaultRoutes(v2: boolean) {
+  return v2 ? VAULT_V2_ROUTES : VAULT_ROUTES;
+}
+
+/**
+ * The host's Vault (`vault-v2`, or `vault-v1` without API keys). No list item carries a password, a
+ * card number, a security code or an API key.
+ */
+export function listHostVault(request: TeamApiRequest, v2: boolean): Effect.Effect<VaultState, TeamAdminRequestError> {
+  return adminCall(() => request("POST", vaultRoutes(v2).list, decodeHostVaultState, {}));
 }
 
 /** Adds or changes one item of the host's Vault. A null secret keeps the saved one; a new one goes to the host once. */
 export function saveHostVaultItem(
   request: TeamApiRequest,
   input: VaultSaveInput,
+  v2: boolean,
 ): Effect.Effect<VaultState, TeamAdminRequestError> {
   // Only a card has approved sites, and an absent list keeps them all.
   const { fillSites, ...item } = { fillSites: undefined, ...input };
   return adminCall(() =>
-    request("POST", VAULT_ROUTES.save, decodeHostVaultState, fillSites === undefined ? item : { ...item, fillSites }),
+    request(
+      "POST",
+      vaultRoutes(v2).save,
+      decodeHostVaultState,
+      fillSites === undefined ? item : { ...item, fillSites },
+    ),
   );
 }
 
 export function deleteHostVaultItem(
   request: TeamApiRequest,
   id: string,
+  v2: boolean,
 ): Effect.Effect<VaultState, TeamAdminRequestError> {
-  return adminCall(() => request("POST", VAULT_ROUTES.delete, decodeHostVaultState, { id }));
+  return adminCall(() => request("POST", vaultRoutes(v2).delete, decodeHostVaultState, { id }));
 }
 
 /** Adds the logins of a CSV password export (`vault-import-v1`). The answer has only the counts. */

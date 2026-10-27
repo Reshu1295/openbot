@@ -16,7 +16,6 @@ import { ChatScrollRail, createChatScrollRail } from "@openbot/ui/features/conve
 import { ChatSearch } from "@openbot/ui/features/conversation/ChatSearch";
 import { ChatVisual } from "@openbot/ui/features/conversation/ChatVisual";
 import { ContextCompactionMarker, type ContextCompactionView } from "@openbot/ui/features/conversation/ContextUsage";
-import { BrowserTakeoverCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { dayMarkerLabel } from "@openbot/ui/features/conversation/chat-day-markers";
 import { ReplyReturnButton, ScrollToLatestButton } from "@openbot/ui/features/conversation/MessageNavigation";
 import { MessageActions, MessageMenu } from "@openbot/ui/features/conversation/MessageRendering";
@@ -43,6 +42,7 @@ import {
   toggleSpokenReply,
 } from "../speech/speech-replies";
 import { groupedMessageIds } from "./agent-message-timeline";
+import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
 import { continuesSenderRun } from "./chat-grouping";
 import { isChatVisualAppShortcut } from "./chat-visual-shortcuts";
 import { chatVisualPageUrl } from "./chat-visual-url";
@@ -53,7 +53,6 @@ import { agentSkillsMode } from "./installed-skills-source";
 import { MarketplaceSuggestionChatCard, marketplaceSuggestionKnown } from "./MarketplaceSuggestionChatCard";
 import { McpSignInChatCard } from "./McpSignInChatCard";
 import { createMessageImageFiles } from "./message-image-files";
-import { PendingBrowserTakeover } from "./PendingBrowserTakeover";
 import { RoutineChatCard } from "./RoutineChatCard";
 import { createChatWebhookRoutines, RoutineWebhookChatCard } from "./RoutineWebhookChatCard";
 import { desktopChatEventRoutinesApi } from "./routine-webhooks-api";
@@ -113,7 +112,6 @@ export function ConversationTimeline() {
     activeChatSearchIndex,
     agentActivitySpaceReserved,
     attachmentAction,
-    browserTakeoverResolution,
     channel,
     chatSearchMatches,
     chatSearchOpen,
@@ -1445,29 +1443,9 @@ export function ConversationTimeline() {
                 />
               )}
             </Show>
-            <Show when={props.browserTakeover}>
-              {(request) => (
-                <Loading>
-                  <PendingBrowserTakeover
-                    request={request()}
-                    agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  />
-                </Loading>
-              )}
-            </Show>
-            <Show when={!props.browserTakeover && browserTakeoverResolution()}>
-              {(resolution) => (
-                <BrowserTakeoverCard
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={resolution().tab}
-                  preview={resolution().preview}
-                  previewStatus={resolution().previewStatus}
-                  decision={resolution().decision}
-                  signInBlocked={resolution().signInBlocked}
-                  onComplete={async () => false}
-                  onCancel={async () => false}
-                />
-              )}
+            {/* Under an open side thread, the thread draws the card of its own request. */}
+            <Show when={!sideThreadOpen()}>
+              <ConversationBrowserTakeover />
             </Show>
           </div>
         </Show>

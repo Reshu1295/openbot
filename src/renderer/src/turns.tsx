@@ -89,6 +89,8 @@ const Turns = createSimpleContext({
     const [failedTurns, setFailedTurns] = createSignal<Record<string, string | undefined>>(seed?.failedTurns ?? {});
     // The agents whose queue waits for a provider plan to reset, in epoch seconds. Only a runtime snapshot of the local host carries it.
     const [contextStates, setContextStates] = createSignal<Record<string, AgentContextState>>({});
+    // The context of each side thread, by thread id. Only a runtime snapshot of the local host carries it.
+    const [threadContextStates, setThreadContextStates] = createSignal<Record<string, AgentContextState>>({});
     const [usageLimits, setUsageLimits] = createSignal<Record<string, number | null>>({});
     // Each provider account and model that a usage limit holds, also with no agent on it.
     const [usageLimitedModels, setUsageLimitedModels] = createSignal<AgentModelChoice[]>([]);
@@ -325,7 +327,7 @@ const Turns = createSimpleContext({
       return respondToApprovalRequest(agent.id, approval.requestId, decision);
     }
 
-    /** Answers the takeover of the active agent's thread: its own chat, or the side thread `threadId`. */
+    /** Answers the takeover of the agent's chat, or of its side thread `threadId`. */
     async function respondToBrowserTakeover(
       decision: "complete" | "cancel",
       threadId?: string,
@@ -485,6 +487,8 @@ const Turns = createSimpleContext({
       setFailedTurns,
       contextStates,
       setContextStates,
+      threadContextStates,
+      setThreadContextStates,
       usageLimits,
       setUsageLimits,
       usageLimitedModels,

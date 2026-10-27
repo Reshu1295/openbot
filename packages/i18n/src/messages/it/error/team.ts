@@ -95,6 +95,7 @@ export const messages = {
   "error.team.routineResultsUnsupported": "Questa connessione non supporta le destinazioni delle routine.",
   "error.team.agentMemoryLimitUnsupported": "Questa connessione non supporta il limite di memorie degli agenti.",
   "error.team.promptCacheTtlUnsupported": "Questa connessione non supporta la durata della cache dei prompt.",
+  "error.team.providerDefaultUnsupported": "Questa connessione non supporta il provider predefinito.",
   "error.team.attachmentNameRequired": "Serve un nome di allegato sicuro.",
   "error.team.attachmentNotFound": "Allegato non trovato.",
   "error.team.sharedFileTooLarge": "Il file condiviso supera il limite di 100 MB.",
@@ -103,6 +104,9 @@ export const messages = {
   "error.team.browserSessionNotFound": "Sessione della vista del browser non trovata.",
   "error.team.mcpUnsupported": "I server MCP non sono supportati da questa connessione.",
   "error.team.storageUnsupported": "L'archiviazione non è supportata da questa connessione.",
+  "error.team.machineResourcesUnsupported": "L'uso della macchina non è supportato da questa connessione.",
+  "error.team.machineAlertMemberInvalid":
+    "Solo un proprietario o un amministratore di questo server può ricevere gli avvisi della macchina.",
   "error.team.hostedSitesUnsupported": "I siti non sono supportati da questa connessione.",
   "error.team.hostedSitesUnregistered": "Questo server non è registrato con OpenBot, quindi non ha siti.",
   "error.team.hostedSiteNotFound": "Sito non trovato.",

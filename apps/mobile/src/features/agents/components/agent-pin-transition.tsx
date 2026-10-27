@@ -15,6 +15,7 @@ import { scheduleOnRN } from "react-native-worklets";
 import { AgentPinTransitionOverlay } from "@/features/agents/components/agent-pin-transition-overlay";
 import { type MobileAgent, useMobileWorkspaceReader } from "@/features/workspace/context/mobile-workspace-context";
 import { canToggleAgentPin } from "@/features/workspace/model/agent-pins";
+import { showsOnline } from "@/features/workspace/model/server-status";
 import { haptics } from "@/shared/lib/haptics";
 
 export type AgentAvatarLocation = "chat" | "pinned" | "row";
@@ -223,7 +224,7 @@ export function AgentPinTransitionProvider({ children }: PropsWithChildren) {
           kind: "channel",
           channel,
           agents: new Map(agents.filter((agent) => agent.serverId === serverId).map((agent) => [agent.id, agent])),
-          disconnected: !servers.some((server) => server.id === serverId && server.state === "online"),
+          disconnected: !servers.some((server) => server.id === serverId && showsOnline(server)),
         },
         pinnedChannelIds.includes(channel.id),
         () => workspace().toggleChannelPin(channel.id, serverId),

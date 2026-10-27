@@ -91,6 +91,7 @@ export const messages = {
   "error.team.routineResultsUnsupported": "Deze verbinding ondersteunt geen bestemmingen voor routines.",
   "error.team.agentMemoryLimitUnsupported": "Deze verbinding ondersteunt de geheugenlimiet van agents niet.",
   "error.team.promptCacheTtlUnsupported": "Deze verbinding ondersteunt de cachetijd van prompts niet.",
+  "error.team.providerDefaultUnsupported": "Deze verbinding ondersteunt de standaardaanbieder niet.",
   "error.team.agentAccessUnsupported": "Deze verbinding ondersteunt geen rollen.",
   "error.team.agentAccessStale": "Iemand heeft de rollen gewijzigd. Open ze opnieuw en breng je wijziging aan.",
   "error.team.agentViewOnly": "Je kunt deze agent alleen bekijken.",
@@ -103,6 +104,9 @@ export const messages = {
   "error.team.browserSessionNotFound": "Sessie van de browserweergave niet gevonden.",
   "error.team.mcpUnsupported": "Deze verbinding ondersteunt geen MCP-servers.",
   "error.team.storageUnsupported": "Deze verbinding ondersteunt geen opslag.",
+  "error.team.machineResourcesUnsupported": "Deze verbinding ondersteunt geen machinegebruik.",
+  "error.team.machineAlertMemberInvalid":
+    "Alleen een eigenaar of beheerder van deze server kan machinealarmen krijgen.",
   "error.team.hostedSitesUnsupported": "Deze verbinding ondersteunt geen sites.",
   "error.team.hostedSitesUnregistered": "Deze server is niet geregistreerd bij OpenBot, dus hij heeft geen sites.",
   "error.team.hostedSiteNotFound": "Site niet gevonden.",

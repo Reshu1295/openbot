@@ -1,17 +1,24 @@
-import type { AgentApproval, AgentTask, AgentTaskHold, AttachmentSummary } from "@openbot/contracts/ipc";
+import type {
+  AgentApproval,
+  AgentTask,
+  AgentTaskHold,
+  AttachmentSummary,
+  InstalledSkill,
+} from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import { isAgentTaskActive } from "@openbot/team-client/agent-tasks";
 import { ArrowUp, Button, Square } from "@openbot/ui";
 import { createScrollFades } from "@openbot/ui/components/createScrollFades";
-import type { AgentMessage, AgentProfile } from "@openbot/ui/data";
+import type { AgentMessage, AgentProfile, ComposerMcpServer } from "@openbot/ui/data";
 import { AgentActivityIndicator, nextAgentActivityLabel } from "@openbot/ui/features/conversation/AgentActivity";
 import { type ChatMessageAuthor, ChatMessageRow } from "@openbot/ui/features/conversation/ChatMessageRow";
 import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor";
 import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice";
+import { ContextUsageMeter, type ContextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { type TextValue, useText } from "@openbot/ui/text";
 import type { JSX } from "@solidjs/web";
-import { createEffect, createSignal, For, onSettled, Show } from "solid-js";
+import { children, createSignal, For, onSettled, Show } from "solid-js";
 
 const HOLD_TEXT = {
   "agent-restarting": "conversation.threads.hold.agentRestarting",
@@ -58,7 +65,16 @@ export interface AgentThreadViewProps {
   agent: AgentProfile;
   agents: AgentProfile[];
   messages: readonly AgentMessage[];
-  /** Sends a message. It resolves to false when the message did not go, so the text stays. */
+  /** The agent's skills, for the `$` picker and the skill tags in messages. */
+  skills?: InstalledSkill[] | undefined;
+  /** The last skill list request failed, so an empty picker says so instead of "no skills". */
+  skillsLoadFailed?: boolean | undefined;
+  /** The host's MCP servers, offered by the same `$` the skills answer. */
+  mcpServers?: ComposerMcpServer[] | undefined;
+  /** The unsent text of this thread's message box. The host keeps it for each thread. */
+  draft: string;
+  onDraftChange: (text: string) => void;
+  /** Sends a message. The host clears the text when the message went; when it did not, the text stays. */
   onSend: (text: string) => Promise<boolean>;
   onStop: () => void;
   onOpenLink: (url: string) => void;
@@ -67,10 +83,14 @@ export interface AgentThreadViewProps {
   /** The approval that the thread's running turn waits for. */
   approval?: AgentApproval | undefined;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
+  /** How full the thread's context is, when its provider reported it. */
+  context?: ContextUsageView | undefined;
+  /** Compacts the thread's context now. Missing when the host cannot. */
+  onCompactContext?: (() => Promise<void>) | undefined;
   /** Whether the thread's running turn waits for the person: a question or a browser takeover. */
   waitsForAnswer?: boolean | undefined;
-  /** The card of that wait. */
-  prompt?: JSX.Element | undefined;
+  /** Another card that the thread shows, such as a question or a browser takeover. The app builds it. */
+  attention?: JSX.Element | undefined;
 }
 
 /**
@@ -80,16 +100,10 @@ export interface AgentThreadViewProps {
  */
 export function AgentThreadView(props: AgentThreadViewProps) {
   const { t } = useText();
-  const [draft, setDraft] = createSignal("");
+  // Resolved once, so the card is built one time for the check and the row.
+  const attention = children(() => props.attention);
   const [sending, setSending] = createSignal(false);
   let scroller: HTMLElement | undefined;
-  // The view stays when the user opens another thread, so text typed for one thread must not go to the next.
-  createEffect(
-    () => props.task?.id,
-    () => {
-      setDraft("");
-    },
-  );
   const activityLabel = nextAgentActivityLabel();
   const fades = createScrollFades();
   onSettled(() => {
@@ -119,11 +133,11 @@ export function AgentThreadView(props: AgentThreadViewProps) {
       ? t("conversation.threads.view.placeholder", { name: props.agent.name, title: props.task.title })
       : t("conversation.threads.view.newPlaceholder", { name: props.agent.name });
   const send = async () => {
-    const text = draft().trim();
+    const text = props.draft.trim();
     if (!text || sending()) return;
     setSending(true);
     try {
-      if (await props.onSend(text)) setDraft("");
+      await props.onSend(text);
     } finally {
       setSending(false);
     }
@@ -171,6 +185,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                   message={message()}
                   author={author(message())}
                   agents={props.agents}
+                  skills={props.skills}
                   onSelectAgent={() => undefined}
                   onOpenLink={props.onOpenLink}
                   onPreview={props.onPreview}
@@ -198,8 +213,8 @@ export function AgentThreadView(props: AgentThreadViewProps) {
               </div>
             )}
           </Show>
-          <Show when={props.waitsForAnswer}>
-            <div class="virtual-chat-row">{props.prompt}</div>
+          <Show when={attention.toArray().length > 0}>
+            <div class="virtual-chat-row">{attention()}</div>
           </Show>
           <Show when={hold()}>
             {(text) => (
@@ -243,16 +258,27 @@ export function AgentThreadView(props: AgentThreadViewProps) {
             <ComposerEditor
               agentId={props.agent.id}
               agents={props.agents}
-              value={draft()}
+              skills={props.skills}
+              skillsLoadFailed={props.skillsLoadFailed}
+              mcpServers={props.mcpServers}
+              value={props.draft}
               placeholder={placeholder()}
               ariaLabel={placeholder()}
               disabled={sending()}
               onSubmit={() => void send()}
-              onValueChange={setDraft}
+              onValueChange={props.onDraftChange}
             />
           </div>
           <div class="composer-toolbar">
             <div class="composer-primary-actions">
+              {/* One meter for each thread: a pending Compact or an open popover stays with its thread. */}
+              <Show when={props.task?.id} keyed>
+                {(_taskId) => (
+                  <Show when={props.context}>
+                    {(usage) => <ContextUsageMeter usage={usage()} compact={props.onCompactContext} />}
+                  </Show>
+                )}
+              </Show>
               <Show when={active()}>
                 <Button
                   type="button"
@@ -270,7 +296,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                 variant="ghost"
                 class="voice-button"
                 aria-label={t("composer.send.message")}
-                disabled={sending() || draft().trim().length === 0}
+                disabled={sending() || props.draft.trim().length === 0}
               >
                 <ArrowUp aria-hidden="true" />
               </Button>

@@ -90,6 +90,7 @@ export const messages = {
   "error.team.routineResultsUnsupported": "To połączenie nie obsługuje miejsc docelowych rutyn.",
   "error.team.agentMemoryLimitUnsupported": "To połączenie nie obsługuje limitu wspomnień agentów.",
   "error.team.promptCacheTtlUnsupported": "To połączenie nie obsługuje czasu pamięci podręcznej promptów.",
+  "error.team.providerDefaultUnsupported": "To połączenie nie obsługuje domyślnego dostawcy.",
   "error.team.attachmentNameRequired": "Wymagana jest bezpieczna nazwa załącznika.",
   "error.team.attachmentNotFound": "Nie znaleziono załącznika.",
   "error.team.sharedFileTooLarge": "Udostępniony plik przekracza limit 100 MB.",
@@ -98,6 +99,9 @@ export const messages = {
   "error.team.browserSessionNotFound": "Nie znaleziono sesji podglądu przeglądarki.",
   "error.team.mcpUnsupported": "To połączenie nie obsługuje serwerów MCP.",
   "error.team.storageUnsupported": "To połączenie nie obsługuje pamięci dyskowej.",
+  "error.team.machineResourcesUnsupported": "To połączenie nie obsługuje użycia maszyny.",
+  "error.team.machineAlertMemberInvalid":
+    "Alerty maszyny może otrzymywać tylko właściciel lub administrator tego serwera.",
   "error.team.hostedSitesUnsupported": "To połączenie nie obsługuje witryn.",
   "error.team.hostedSitesUnregistered": "Ten serwer nie jest zarejestrowany w OpenBot, więc nie ma witryn.",
   "error.team.hostedSiteNotFound": "Nie znaleziono witryny.",

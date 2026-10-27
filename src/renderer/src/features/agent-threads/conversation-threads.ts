@@ -1,4 +1,4 @@
-import type { AgentApproval, AgentEvent, ConversationMessage } from "@openbot/contracts/ipc";
+import type { AgentApproval, AgentContextState, AgentEvent, ConversationMessage } from "@openbot/contracts/ipc";
 import { isAgentTaskActive, taskApproval } from "@openbot/team-client/agent-tasks";
 import { activeThreadId, threadLists } from "@openbot/ui/features/conversation/threads/thread-items";
 import { DRAFT_THREAD_ID, MAIN_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
@@ -34,11 +34,18 @@ export interface ConversationThreadsInput {
     answers: Record<string, string[]>,
     options?: PromptAnswerOptions,
   ) => Promise<boolean>;
+  /**
+   * The context of each side thread that reported it, by thread id. Only this computer reports it.
+   * Read only by `contextState`, so a new runtime snapshot does not build the threads again.
+   */
+  contextStates?: (() => Readonly<Record<string, AgentContextState>>) | undefined;
+  /** Missing when the host cannot compact a side thread. */
+  onCompactContext?: ((taskId: string) => Promise<void>) | undefined;
 }
 
 /** The threads of one agent, for the conversation. Read it in a memo: it reads the thread state. */
 export function conversationThreads(input: ConversationThreadsInput): ConversationThreads {
-  const { agent, tasks, tabs, approvals, prompts, takeovers } = input;
+  const { agent, tasks, tabs, approvals, prompts, takeovers, onCompactContext } = input;
   const agentId = agent.id;
   const snapshot = tasks.snapshot(agentId);
   const list = snapshot?.tasks ?? [];
@@ -67,7 +74,6 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
         : list.find((task) => task.id === activeId);
   const approval = open ? taskApproval(open, approvals) : undefined;
   const prompt = open ? ofTaskThread(open, prompts) : undefined;
-  const takeover = open ? ofTaskThread(open, takeovers) : undefined;
   const conversation = open ? tasks.conversation(open.id) : undefined;
   const editable = tasks.editable();
   return {
@@ -93,7 +99,6 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     approval,
     prompt,
     promptUiBlock: prompt && conversation ? promptUiBlock(prompt, conversation.messages) : undefined,
-    takeover,
     onSend: (text) => (open ? tabs.send(agentId, open.id, text) : tabs.sendDraft(agentId, text)),
     onStop: () => {
       if (open) tasks.stopTask(agentId, open.id);
@@ -102,6 +107,10 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
       approval ? input.onRespondApproval(approval, decision, options) : Promise.resolve(false),
     onAnswerPrompt: (answers, options) =>
       prompt ? input.onAnswerPrompt(prompt, answers, options) : Promise.resolve(false),
+    get contextState() {
+      return open ? input.contextStates?.()[open.threadId] : undefined;
+    },
+    onCompactContext: open && onCompactContext ? () => onCompactContext(open.id) : undefined,
     // Only this computer moves a queued message to a new thread.
     onRunQueuedMessage: tasks.local() ? (deliveryId) => void tabs.runQueuedMessage(agentId, deliveryId) : undefined,
   };

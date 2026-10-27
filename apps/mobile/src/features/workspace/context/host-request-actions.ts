@@ -78,6 +78,7 @@ import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
 import { VAULT_IMPORT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
 import { WORKFLOWS_CAPABILITY } from "@openbot/contracts/team-protocol/workflows-v1";
 import type { MobileTextKey } from "@openbot/i18n/mobile";
 import { readHostAnalytics } from "@openbot/team-client";
@@ -473,9 +474,12 @@ export function createHostRequestActions({
       runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "connect", input)),
     disconnectBitwarden: async (serverId) =>
       runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "disconnect")),
-    loadVault: async (serverId) => runTeamRequest(listHostVault(vaultAdmin(serverId))),
-    saveVaultItem: async (input, serverId) => runTeamRequest(saveHostVaultItem(vaultAdmin(serverId), input)),
-    deleteVaultItem: async (id, serverId) => runTeamRequest(deleteHostVaultItem(vaultAdmin(serverId), id)),
+    loadVault: async (serverId) =>
+      runTeamRequest(listHostVault(vaultAdmin(serverId), has(serverId, VAULT_V2_CAPABILITY))),
+    saveVaultItem: async (input, serverId) =>
+      runTeamRequest(saveHostVaultItem(vaultAdmin(serverId), input, has(serverId, VAULT_V2_CAPABILITY))),
+    deleteVaultItem: async (id, serverId) =>
+      runTeamRequest(deleteHostVaultItem(vaultAdmin(serverId), id, has(serverId, VAULT_V2_CAPABILITY))),
     importVaultCsv: async (csv, serverId) => runTeamRequest(importHostVaultCsv(vaultImportAdmin(serverId), csv)),
     loadMessagingConnections: async (platform, serverId) =>
       runTeamRequest(messagingConnectorOverview(connectorsAdmin(serverId), { platform })),

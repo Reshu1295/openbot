@@ -187,6 +187,10 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
     },
   );
   const latestMessageMarker = createMemo(() => {
+    // An open side thread has its own messages, so a result card there goes with them, not with the chat.
+    const threads = deps.props.threads;
+    if (threads?.open !== undefined)
+      return `thread:${threads.open?.id ?? "new"}:${threads.conversation?.revision ?? 0}`;
     const message = deps.props.messages.at(-1);
     return message
       ? `${message.id}:${message.body.length}:${message.streaming === true ? "streaming" : "settled"}`
@@ -216,8 +220,7 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
       messageMarker: latestMessageMarker(),
       signInBlocked: blockedTakeoverSignIn(),
     } satisfies BrowserTakeoverResolutionState;
-    // The takeover of an open side thread: a failure shows where the person answered, and the agent's
-    // own chat keeps no card of it.
+    // The takeover of an open side thread: a failure shows where the person answered, not in the agent's chat.
     const sideThread = request.threadId === deps.props.threads?.open?.threadId;
     const completed = await deps.props.onRespondToBrowserTakeover(
       decision,
@@ -230,8 +233,7 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
           }
         : undefined,
     );
-    if (completed && !sideThread && latestMessageMarker() === resolution.messageMarker)
-      setBrowserTakeoverResolution(resolution);
+    if (completed && latestMessageMarker() === resolution.messageMarker) setBrowserTakeoverResolution(resolution);
     return completed;
   };
   let previousBrowserTabCount = 0;

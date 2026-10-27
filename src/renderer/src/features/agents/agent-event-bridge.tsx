@@ -86,6 +86,7 @@ export function AgentEventBridge() {
     setUsageLimitedModels,
     setWaitedUsageLimits,
     setContextStates,
+    setThreadContextStates,
     setQueues,
     setPendingPrompts,
     setPresentedPromptResolutions,
@@ -389,6 +390,9 @@ export function AgentEventBridge() {
     );
     setFailedTurns(Object.fromEntries(snapshot.failedTurns.map((turn) => [turn.agentId, turn.turnId])));
     setContextStates(Object.fromEntries((snapshot.contextStates ?? []).map((state) => [state.agentId, state])));
+    setThreadContextStates(
+      Object.fromEntries((snapshot.threadContextStates ?? []).map((state) => [state.threadId, state])),
+    );
     const usageLimits = Object.fromEntries(
       (snapshot.usageLimits ?? []).map((limit) => [limit.agentId, limit.resetsAt]),
     );

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type { AgentContextCategoryUsage, AgentContextState } from "@openbot/contracts/ipc";
 import { Effect, Schema } from "effect";
 import type { AgentClient } from "../agent-client";
@@ -21,11 +22,19 @@ interface ThreadContextBudget {
 
 const CONTEXT_COMPACTION_THRESHOLD = 0.8;
 const CONTEXT_COMPACTION_TIMEOUT_MS = 120_000;
+/**
+ * A started compaction of a long thread can take minutes (#3466). Its deadline is this many times
+ * the start deadline, so it only ends a compaction that hangs.
+ */
+const CONTEXT_COMPACTION_RUN_FACTOR = 10;
 /** Usage arrives after each model step; one runtime snapshot carries the latest value of a burst. */
 const USAGE_CHANGE_DELAY_MS = 250;
 
 export interface ContextCompactionOptions {
-  /** How long a compaction runs before OpenBot stops it. Tests make it short. */
+  /**
+   * How long the provider takes to start a compaction before OpenBot stops it. A started compaction
+   * runs `CONTEXT_COMPACTION_RUN_FACTOR` times as long. Tests make it short.
+   */
   timeoutMs?: number | undefined;
   store: AgentStore;
   providers: ProviderPort;
@@ -82,6 +91,8 @@ export class ContextCompaction {
   readonly #compacting = new Map<string, { agentId: string; client: AgentClient | null }>();
   readonly #refusals = new Map<string, RefusalHold>();
   readonly #timeoutMs: number;
+  /** How long a started compaction runs before OpenBot stops it. */
+  readonly #runTimeoutMs: number;
   /** How long a stopped compaction, or a refused queue, waits for the turn to end. */
   readonly #graceMs: number;
   readonly #display = new Map<string, Omit<AgentContextState, "agentId" | "threadId">>();
@@ -96,6 +107,7 @@ export class ContextCompaction {
     this.#changed = options.changed ?? (() => {});
     this.#compacted = options.compacted ?? (() => {});
     this.#timeoutMs = options.timeoutMs ?? CONTEXT_COMPACTION_TIMEOUT_MS;
+    this.#runTimeoutMs = this.#timeoutMs * CONTEXT_COMPACTION_RUN_FACTOR;
     this.#graceMs = Math.ceil(this.#timeoutMs / 4);
     this.#store = options.store;
     this.#providers = options.providers;
@@ -114,6 +126,25 @@ export class ContextCompaction {
       const display = session ? this.#display.get(session.externalSessionId) : null;
       return display && agent.threadId ? [{ agentId: agent.id, threadId: agent.threadId, ...display }] : [];
     });
+  }
+
+  /** The side threads of `threads` (`id` is the agent) that reported their context, keyed by thread id. */
+  threadSnapshot(threads: Array<{ id: string; threadId: string }>): AgentContextState[] {
+    if (this.#display.size === 0) return [];
+    const agents = new Map(this.#store.list().map((agent) => [agent.id, agent]));
+    return threads
+      .flatMap(({ id: agentId, threadId }) => {
+        const agent = agents.get(agentId);
+        const session = agent ? this.#store.database.activeProviderSession(threadId, agent.provider) : null;
+        const display = session ? this.#display.get(session.externalSessionId) : null;
+        if (!agent || !display) return [];
+        // A `handoff` provider compacts only a session it can replace, which a side thread never is, so
+        // nothing compacts the thread on its own.
+        const handoff = this.#providers.clientForAgent(agent)?.contextCompaction === "handoff";
+        const usage = display.usage && handoff ? { ...display.usage, autoCompactAt: null } : display.usage;
+        return [{ agentId, threadId, usage, compaction: display.compaction }];
+      })
+      .slice(0, INPUT_LIMITS.agents * INPUT_LIMITS.agentTasks);
   }
 
   observeUsage(
@@ -298,22 +329,17 @@ export class ContextCompaction {
     }
 
     this.#compacting.set(threadId, { agentId, client });
-    this.#clearTimer(threadId);
-    const timer = setTimeout(() => {
-      this.#emitError(
-        "context_compaction_timeout",
-        "Codex context compaction timed out; queued work will continue.",
-        agentId,
-      );
-      const turnId = budget.compactionTurnId;
-      if (budget.phase === "running" && turnId) this.#stop(agentId, threadId, client, turnId);
-      else this.#abandon(agentId, threadId);
-    }, this.#timeoutMs);
-    timer.unref?.();
-    this.#timers.set(threadId, timer);
+    // A `request` compaction runs inside the request, so it starts now and the request waits as long.
+    const runsInRequest = client.contextCompaction === "request";
+    this.#armDeadline(agentId, threadId, client, runsInRequest ? this.#runTimeoutMs : this.#timeoutMs);
 
     yield* client
-      .request("thread/compact/start", { threadId }, decodeRecordResponse)
+      .request(
+        "thread/compact/start",
+        { threadId },
+        decodeRecordResponse,
+        runsInRequest ? this.#runTimeoutMs : undefined,
+      )
       .pipe(toContextCompactionFailed)
       .pipe(
         Effect.tap(() =>
@@ -355,6 +381,8 @@ export class ContextCompaction {
     if (budget?.phase !== "requested" || this.#compacting.get(threadId)?.agentId !== agentId) return false;
     budget.phase = "running";
     budget.compactionTurnId = turnId;
+    const client = this.#compacting.get(threadId)?.client;
+    if (client) this.#armDeadline(agentId, threadId, client, this.#runTimeoutMs);
     return true;
   }
 
@@ -517,6 +545,24 @@ export class ContextCompaction {
     this.#emitChanged();
     this.#scheduleDrain(agentId);
   });
+
+  /** Stops the compaction of `threadId` after `ms`, in place of an earlier deadline. */
+  #armDeadline(agentId: string, threadId: string, client: AgentClient, ms: number): void {
+    this.#clearTimer(threadId);
+    const timer = setTimeout(() => {
+      this.#emitError(
+        "context_compaction_timeout",
+        "Codex context compaction timed out; queued work will continue.",
+        agentId,
+      );
+      const budget = this.#budgets.get(threadId);
+      const turnId = budget?.compactionTurnId;
+      if (budget?.phase === "running" && turnId) this.#stop(agentId, threadId, client, turnId);
+      else this.#abandon(agentId, threadId);
+    }, ms);
+    timer.unref?.();
+    this.#timers.set(threadId, timer);
+  }
 
   /** Ends a compaction that did not end by itself, and lets the queue continue. */
   #abandon(agentId: string, threadId: string): void {

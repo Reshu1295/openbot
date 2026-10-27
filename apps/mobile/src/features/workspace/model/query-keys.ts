@@ -110,6 +110,7 @@ export const queryKeys = {
   serverVault: (scope: QueryScope, serverId: string) => ["server-vault", ...scope, serverId],
   providerStatus: (scope: QueryScope, serverId: string) => ["provider-status", ...scope, serverId],
   providerRuntimes: (scope: QueryScope, serverId: string) => ["provider-runtimes", ...scope, serverId],
+  providerDefault: (scope: QueryScope, serverId: string) => ["provider-default", ...scope, serverId],
   providerKey: (scope: QueryScope, serverId: string, provider: string) => [
     "provider-key",
     ...scope,

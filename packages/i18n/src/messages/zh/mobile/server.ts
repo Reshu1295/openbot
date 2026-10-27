@@ -594,6 +594,10 @@ export const messages = {
   "mobile.server.settings.providersConnected": { other: "已连接 {count} 个" },
   // The AI providers of the computer that runs the server. Owners and admins manage them from the phone.
   "mobile.server.providers.description": "运行该服务器的电脑上的 AI 服务商。",
+  "mobile.server.providers.connectedTitle": "已连接",
+  "mobile.server.providers.otherTitle": "未连接",
+  "mobile.server.providers.defaultProvider": "默认服务商",
+  "mobile.server.providers.defaultProviderHint": "此服务器上的新智能体会使用此服务商。之后你可以为每个智能体单独更改。",
   "mobile.server.providers.loading": "正在加载服务商…",
   "mobile.server.providers.loadFailed": "无法加载该服务器的服务商。",
   "mobile.server.providers.runtimesFailed": "无法加载该服务器的下载项。",
@@ -650,6 +654,7 @@ export const messages = {
   "mobile.server.providers.keyFailed": "无法更改密钥，请重试。",
   "mobile.server.providers.newKey": "密钥",
   "mobile.server.providers.replaceKey": "新密钥",
+  "mobile.server.providers.keyPlaceholder": "粘贴你的密钥",
   "mobile.server.providers.saveKey": "保存密钥",
   "mobile.server.providers.removeKey": "移除密钥",
   "mobile.server.providers.removeKeyTitle": "从服务器移除该密钥？",

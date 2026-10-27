@@ -7,12 +7,12 @@ import { queryKeys } from "@/features/workspace/model/query-keys";
 import { haptics } from "@/shared/lib/haptics";
 
 /**
- * The Vault of one joined server (`vault-v1`), for an owner or admin. The Vault page and the item page
- * read one query, so a change on one shows on the other. The host answers each change with the whole
- * state, which carries no secret.
+ * The Vault of one joined server (`vault-v1`, or `vault-v2` with API keys), for an owner or admin.
+ * The Vault page and the item page read one query, so a change on one shows on the other. The host
+ * answers each change with the whole state, which carries no secret.
  */
 export function useServerVault(serverId: string) {
-  const { servers, canManageVault, canImportVault } = useMobileWorkspace();
+  const { servers, canManageVault, canImportVault, canManageVaultApiKeys } = useMobileWorkspace();
   const { loadVault } = useMobileWorkspaceActions();
   const queryScope = useQueryScope();
   const queryClient = useQueryClient();
@@ -44,6 +44,7 @@ export function useServerVault(serverId: string) {
     server,
     canManage,
     canImport: canImportVault(serverId),
+    canManageApiKeys: canManageVaultApiKeys(serverId),
     query,
     action,
     /** Shows the state that the host answered. A read still in flight has the old state. */
