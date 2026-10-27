@@ -99,9 +99,16 @@ try {
         assert.ok(result.watchdogLine, `${command}: the main log has the watchdog line`);
       } else {
         assert.equal(result.code, 0, `${command}: a clean exit keeps code 0`);
-        assert.equal(result.watchdogLine, false, `${command}: a clean exit adds no watchdog line`);
       }
     }
+  }
+
+  // The watchdog shell of a clean exit sleeps for its limit before it can write. The stalled exits
+  // above took longer than that limit, so a line that it wrote by mistake is in the log now.
+  for (const result of results.exits.filter((exit) => !exit.stalled)) {
+    const mainLog = join(root, `user-data-${result.command}-clean`, "logs", "main", "main.log");
+    result.watchdogLine = existsSync(mainLog) && readFileSync(mainLog, "utf8").includes(WATCHDOG_LINE);
+    assert.equal(result.watchdogLine, false, `${result.command}: a clean exit adds no watchdog line`);
   }
 
   // The stopped process gave the lock back: a new launch on the same user data takes it.

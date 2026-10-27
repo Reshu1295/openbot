@@ -5,6 +5,7 @@
 // with `app.quit`, `app.exit` and `process.exit`.
 import { open, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import { app } from "electron";
 import { stopStuckExitAfterLimit } from "../src/main/exit-watchdog";
 import { startMainLog } from "../src/main/provider-log";
@@ -37,15 +38,13 @@ void app.whenReady().then(() => {
     app.quit();
     return;
   }
-  process.stdin.setEncoding("utf8");
-  process.stdin.on("data", (chunk: string) => {
-    for (const line of chunk.split("\n")) {
-      if (line === "stall") {
-        for (let thread = 0; thread < LIBUV_THREADS; thread++) open(argument("fifo"), "r", () => undefined);
-      }
-      if (line === "quit") app.quit();
-      if (line === "exit") app.exit(0);
-      if (line === "process-exit") process.exit(0);
+  // `readline` keeps a line that a pipe splits between two chunks.
+  createInterface({ input: process.stdin }).on("line", (line) => {
+    if (line === "stall") {
+      for (let thread = 0; thread < LIBUV_THREADS; thread++) open(argument("fifo"), "r", () => undefined);
     }
+    if (line === "quit") app.quit();
+    if (line === "exit") app.exit(0);
+    if (line === "process-exit") process.exit(0);
   });
 });
