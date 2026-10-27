@@ -148,8 +148,8 @@
   opacity: 1;
 }
 
-/* The agent's own chat has no close control, so its title stays whole. */
-.agent-threads-tab:hover:where(:has(.agent-threads-tab-close)) .agent-threads-tab-title {
+/* On hover the title fades under the close control. */
+.agent-threads-tab:hover .agent-threads-tab-title {
   mask-image: linear-gradient(to left, transparent 14px, var(--openbot-text-primary) 28px);
 }
 

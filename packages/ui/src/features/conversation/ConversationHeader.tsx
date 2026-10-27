@@ -54,8 +54,8 @@ export function ConversationHeader(props: ConversationHeaderProps) {
               type="button"
               class="conversation-title no-drag"
               aria-label={props.onOpenChat ? t("conversation.header.mainChat") : t("conversation.header.settings")}
-              onPointerEnter={props.onSettingsIntent}
-              onFocus={props.onSettingsIntent}
+              onPointerEnter={() => props.onOpenChat || props.onSettingsIntent()}
+              onFocus={() => props.onOpenChat || props.onSettingsIntent()}
               onClick={() => (props.onOpenChat ?? props.onOpenSettings)()}
             >
               <AgentAvatar agent={agent()} />

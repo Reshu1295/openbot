@@ -4175,7 +4175,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       .deleteTaskMessages(task.agentId, task.taskId)
       .pipe(Effect.mapError(({ cause }) => new AgentLifecycleFailed({ operation: "delete task messages", cause })));
     // The provider sessions close only now: a thread that a failed step keeps resumes its own session
-    // when it opens again.
+    // when it opens again. A turn that started meanwhile keeps the thread, also with its session.
+    yield* lifecycleStep("check task", () => {
+      if (this.#mailbox.taskBusy(task.agentId, task.taskId))
+        throw new Error(sourceText("error.backend.threadStillRunning"));
+    });
     yield* this.#forgetExecutionThread(task.threadId);
     yield* lifecycleStep("delete task", () => {
       if (this.#mailbox.taskBusy(task.agentId, task.taskId))

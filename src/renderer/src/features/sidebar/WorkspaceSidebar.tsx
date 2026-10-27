@@ -96,9 +96,12 @@ export function WorkspaceSidebar(props: { peopleEnabled: boolean }) {
   const { selectAgent, selectDirectMember, setGlobalSearchVisibility, chatHistory } = useNavigation();
   const agentTasks = useAgentTasks();
   const agentThreads = useAgentThreads();
-  /** Opens the agent's chat with a new thread. A host without threads has no such item. */
+  /**
+   * Opens the agent's chat with a new thread. A host without threads has no such item, and neither has a
+   * chat window: another agent opens in a window of its own, which does not get the new thread.
+   */
   const newAgentThread = () =>
-    agentTasks.available()
+    agentTasks.available() && !platform.chatWindow
       ? (agentId: string) => {
           if (selectAgent(agentId)) agentThreads.startNew(agentId);
         }

@@ -10,12 +10,12 @@ export type ThreadStatus =
   | { kind: "failed" };
 
 /**
- * One thread of an agent. `main` is the agent's own chat: it has no rename, archive or delete. `draft`
- * is a new thread that has no message yet: its first message starts it.
+ * One side thread of an agent. `draft` is a new thread that has no message yet: its first message
+ * starts it. The agent's own chat is not a thread item: the agent's name in the header opens it.
  */
 export interface ThreadItem {
   id: string;
-  kind: "main" | "side" | "draft";
+  kind: "side" | "draft";
   title: string;
   updatedAt: string;
   status: ThreadStatus;

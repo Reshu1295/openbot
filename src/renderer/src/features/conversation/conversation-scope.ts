@@ -556,7 +556,11 @@ export function createConversationViewScope(props: ConversationProps) {
     setChatSearchTotal,
     setActiveChatSearchIndex,
   });
-  const { closeChatSearch, moveChatSearch, handleChatSearchShortcut, setChatSearchInputElement } = search;
+  const { closeChatSearch, moveChatSearch, setChatSearchInputElement } = search;
+  /** The search finds messages of the agent's own chat. A side thread covers it, so the shortcut does nothing there. */
+  const handleChatSearchShortcut = (event: KeyboardEvent) => {
+    if (!sideThreadOpen()) search.handleChatSearchShortcut(event);
+  };
   const voice = createVoiceStore({
     props,
     resources,
@@ -877,12 +881,14 @@ export function createConversationViewScope(props: ConversationProps) {
         setActiveRightPanel("browser");
         return;
       }
-      if (chatSearchOpen()) {
+      // A side thread covers the search and the queued message edit of the agent's own chat. Escape in
+      // the thread does not close or cancel what the user cannot see.
+      if (chatSearchOpen() && !sideThreadOpen()) {
         event.preventDefault();
         closeChatSearch();
         return;
       }
-      if (currentEditingDeliveryId()) {
+      if (currentEditingDeliveryId() && !sideThreadOpen()) {
         void cancelQueuedMessageEdit();
         return;
       }
@@ -1566,8 +1572,9 @@ export function createConversationViewScope(props: ConversationProps) {
     noteReaderIntent(event.deltaY < 0);
   }
   function readerKeyDown(event: KeyboardEvent) {
-    // A control that used the key, such as the rows of a trace dialog, did not scroll the chat.
-    if (event.defaultPrevented) return;
+    // A control that used the key, such as the rows of a trace dialog, did not scroll the chat. A key in
+    // a side thread does not scroll the agent's own chat under it.
+    if (event.defaultPrevented || sideThreadOpen()) return;
     if (event.key === "ArrowUp" || event.key === "PageUp" || event.key === "Home") noteReaderIntent(true);
     else if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === "End") noteReaderIntent(false);
     else if (event.key === " ") noteReaderIntent(event.shiftKey);

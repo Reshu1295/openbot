@@ -20,7 +20,7 @@ function item(id: string, title: string, minutesAgo: number, status: ThreadStatu
 }
 
 /** When the agent's own chat changed last. The new thread tab shows this time. */
-const MAIN_UPDATED_AT = item(MAIN_THREAD_ID, STORY_AGENT.name, 0).updatedAt;
+const MAIN_UPDATED_AT = "2026-08-19T10:00:00.000Z";
 
 const STATES: ThreadItem[] = [
   item("pricing", "Pricing page copy", 2),
