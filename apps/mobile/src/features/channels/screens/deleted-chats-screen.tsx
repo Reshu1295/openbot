@@ -8,6 +8,7 @@ import { useMemo, useRef, useState } from "react";
 import { Pressable, View } from "react-native";
 import { showFailureAlert } from "@/features/analytics/failure-reports";
 import { useMobileWorkspaceSelector } from "@/features/workspace/context/mobile-workspace-context";
+import { showsOnline } from "@/features/workspace/model/server-status";
 import { SheetScrollView } from "@/shared/components/sheet-scroll-view";
 import { haptics } from "@/shared/lib/haptics";
 import { currentText, useText } from "@/shared/lib/text";
@@ -26,7 +27,7 @@ export function DeletedChatsScreen() {
     () => new Map(agents.filter((agent) => agent.serverId === serverId).map((agent) => [agent.id, agent])),
     [agents, serverId],
   );
-  const online = server?.state === "online";
+  const online = showsOnline(server);
   // As on desktop, the people who can delete a channel can restore it. The host checks the role again.
   const canRestore = online && server?.role !== "member" && state.canDelete;
   const [restoring, setRestoring] = useState<string | null>(null);
