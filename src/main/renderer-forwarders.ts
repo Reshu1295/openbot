@@ -14,6 +14,7 @@
  * without pulling in `main-window.ts` and, through it, the whole window and menu surface.
  */
 
+import { hostname } from "node:os";
 import {
   type AgentEvent,
   type BrowserDisplayState,
@@ -439,8 +440,11 @@ export function createRendererForwarders({
       ?.list()
       .find((server) => server.id === serverId);
     if (remote?.notificationsMuted || remote?.notificationLevel === "nothing") return;
+    // A computer with no server set up has no server name, so its own name stands for it.
     const name =
-      serverId === LOCAL_SERVER_ID ? (getHostService()?.getStatus().serverName ?? remote?.name) : remote?.name;
+      serverId === LOCAL_SERVER_ID
+        ? (getHostService()?.getStatus().serverName ?? remote?.name ?? hostname())
+        : remote?.name;
     if (!name) return;
     const translate = getTranslate();
     const { percent } = getFormat();

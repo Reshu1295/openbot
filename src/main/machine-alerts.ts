@@ -89,7 +89,10 @@ interface ActiveAlert {
 }
 
 export interface MachineAlertMonitorOptions {
+  /** The reading of the once-a-minute check. */
   read: () => Effect.Effect<MachineMetrics>;
+  /** The reading of Server settings, from its own sampler, so its reads do not move the check's CPU window. */
+  display: () => Effect.Effect<MachineMetrics>;
   store: MachineAlertPreferenceStore;
   members: () => TeamMemberSummary[];
   onError: (message: string, error: unknown) => void;
@@ -126,7 +129,7 @@ export class MachineAlertMonitor {
   }
 
   metrics(): Effect.Effect<MachineMetrics> {
-    return this.#options.read();
+    return this.#options.display();
   }
 
   alerts(): MachineAlertSettings {
@@ -169,6 +172,8 @@ export class MachineAlertMonitor {
 
   /** The alerts in force for `memberId`, for a device of theirs that connects. */
   pending(memberId: string): MachineAlertEvent[] {
+    // A member who is no longer the responsible admin gets nothing; the next reading alerts the new one.
+    if (this.#recipient(this.alerts()) !== memberId) return [];
     return [...this.#active.values()].filter((alert) => alert.recipient === memberId).map((alert) => alert.event);
   }
 
@@ -208,7 +213,9 @@ export class MachineAlertMonitor {
         continue;
       }
       if (percent < level || (metric === "cpu" && this.#cpuReadingsAbove < CPU_READINGS)) continue;
-      if (active && now - active.sentAt < REPEAT_MS) continue;
+      const recipient = this.#recipient(settings);
+      // A new responsible member, or an owner after a demotion, gets an alert in force at once.
+      if (active && active.recipient === recipient && now - active.sentAt < REPEAT_MS) continue;
       const event: MachineAlertEvent = {
         type: MACHINE_ALERT_EVENT,
         alertId: `${metric}-${now}`,
@@ -216,7 +223,6 @@ export class MachineAlertMonitor {
         percent,
         level,
       };
-      const recipient = this.#recipient(settings);
       this.#active.set(metric, { event, sentAt: now, recipient });
       for (const listener of this.#listeners) listener(recipient, event);
     }

@@ -26,7 +26,7 @@ import {
 } from "@openbot/ui";
 import { useText } from "@openbot/ui/text";
 import type { JSX } from "@solidjs/web";
-import { createMemo, createStore, createUniqueId, For, Show } from "solid-js";
+import { createMemo, createSignal, createUniqueId, For, Show } from "solid-js";
 
 export interface MachineResourcesProps {
   /** Null until the first reading arrives. */
@@ -69,15 +69,12 @@ const LEVEL_FIELDS = {
 export function MachineResources(props: MachineResourcesProps) {
   const { t, format } = useText();
   const headingId = `machine-${createUniqueId()}`;
-  // The sliders move with the pointer, and the level saves when the user lets go.
-  const [draft, setDraft] = createStore<{ levels: Partial<Record<MachineMetric, number>>; saving: boolean }>({
-    levels: {},
-    saving: false,
-  });
-  const level = (metric: MachineMetric): number | null => {
-    const saved = props.alerts;
-    return draft.levels[metric] ?? (saved ? machineAlertLevel(saved, metric) : null);
-  };
+  // A slider moves with the pointer, and its level saves when the user lets go. The record is replaced
+  // whole on each move, so the slider reads the new level at once. The sliders stay enabled while a
+  // level saves, so keyboard focus stays on the slider.
+  const [draftLevels, setDraftLevels] = createSignal<Partial<Record<MachineMetric, number>>>({});
+  const level = (metric: MachineMetric): number | null =>
+    draftLevels()[metric] ?? (props.alerts ? machineAlertLevel(props.alerts, metric) : null);
   const recipients = createMemo(() =>
     props.members.filter((member) => !member.disabled && canAdministerServer(member.role)),
   );
@@ -99,16 +96,14 @@ export function MachineResources(props: MachineResourcesProps) {
   async function save(change: Partial<MachineAlertSettings>): Promise<void> {
     const saved = props.alerts;
     if (!saved) return;
-    setDraft((state) => {
-      state.saving = true;
-    });
+    // A member who left or is no longer an admin cannot get the alert, and the host refuses the
+    // settings while they name one. The owner gets it then, as the picker shows.
+    const stored = saved.responsibleMemberId;
+    const stale = stored !== null && props.members.length > 0 && !recipients().some((member) => member.id === stored);
     try {
-      await props.onChangeAlerts({ ...saved, ...change });
+      await props.onChangeAlerts({ ...saved, ...(stale ? { responsibleMemberId: null } : {}), ...change });
     } finally {
-      setDraft((state) => {
-        state.levels = {};
-        state.saving = false;
-      });
+      setDraftLevels({});
     }
   }
 
@@ -156,18 +151,20 @@ export function MachineResources(props: MachineResourcesProps) {
                       <span class="machine-resources-title">{t(METRIC_LABELS[metric])}</span>
                       <span class="machine-resources-meta">{metricDetail(metrics(), metric)}</span>
                     </span>
+                    {/* 0% is a reading too, so the test is for null, not for a falsy value. */}
                     <Show
-                      when={percent()}
-                      keyed
+                      when={percent() !== null}
                       fallback={<span class="machine-resources-meta">{t("files.machine.unknown")}</span>}
                     >
-                      {(value) => (
+                      {(_) => (
                         <>
                           <span class="machine-resources-bar">
                             <Progress
-                              value={value}
+                              value={percent() ?? 0}
                               aria-label={t(METRIC_LABELS[metric])}
-                              getValueLabel={() => t("files.machine.used", { percent: format.percent(value / 100) })}
+                              getValueLabel={() =>
+                                t("files.machine.used", { percent: format.percent((percent() ?? 0) / 100) })
+                              }
                             />
                             <Show when={level(metric)} keyed>
                               {(limit) => (
@@ -179,7 +176,7 @@ export function MachineResources(props: MachineResourcesProps) {
                               )}
                             </Show>
                           </span>
-                          <span class="machine-resources-value">{format.percent(value / 100)}</span>
+                          <span class="machine-resources-value">{format.percent((percent() ?? 0) / 100)}</span>
                         </>
                       )}
                     </Show>
@@ -222,7 +219,6 @@ export function MachineResources(props: MachineResourcesProps) {
                 optionValue="id"
                 optionTextValue={memberName}
                 value={responsible()}
-                disabled={draft.saving}
                 placement="bottom-end"
                 onChange={(member) => {
                   if (member) void save({ responsibleMemberId: member.id });
@@ -248,16 +244,12 @@ export function MachineResources(props: MachineResourcesProps) {
                 value={level(metric) ?? MACHINE_ALERT_LEVEL_MAX}
                 minValue={MACHINE_ALERT_LEVEL_MIN}
                 maxValue={MACHINE_ALERT_LEVEL_MAX}
-                disabled={draft.saving}
                 formatValue={(value) => t("files.machine.above", { percent: format.percent(value / 100) })}
-                onChange={(value) =>
-                  setDraft((state) => {
-                    state.levels[metric] = value;
-                  })
-                }
+                onChange={(value) => setDraftLevels((levels) => ({ ...levels, [metric]: value }))}
                 onChangeEnd={(value) => {
                   if (props.alerts && value !== machineAlertLevel(props.alerts, metric))
                     void save({ [LEVEL_FIELDS[metric]]: value });
+                  else setDraftLevels({});
                 }}
               />
             )}

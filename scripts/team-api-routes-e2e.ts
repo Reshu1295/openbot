@@ -583,12 +583,14 @@ const machineMetrics = {
   checkedAt: "2026-10-27T12:00:00.000Z",
 };
 const machineAlertStore = new MachineAlertPreferenceStore(join(root, "machine-alerts.json"));
+const readMachine = () =>
+  Effect.sync(() => {
+    record("machineMetrics");
+    return machineMetrics;
+  });
 const machine = new MachineAlertMonitor({
-  read: () =>
-    Effect.sync(() => {
-      record("machineMetrics");
-      return machineMetrics;
-    }),
+  read: readMachine,
+  display: readMachine,
   store: machineAlertStore,
   members: () => store.listMembers(),
   onError: (message) => logged.push(message),

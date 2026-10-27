@@ -2043,8 +2043,11 @@ export async function createApplicationServices({
   await runCauseEffect(machineAlertStore.load());
   // The same disk as the sidebar storage card: the one that holds the data folder.
   const machineMetrics = new MachineMetricsSampler(storageSources.roots.data);
+  // Its own sampler, so a Storage panel that reads in between does not shorten its one-minute CPU window.
+  const machineAlertMetrics = new MachineMetricsSampler(storageSources.roots.data);
   const machineAlerts = new MachineAlertMonitor({
-    read: () => machineMetrics.read(),
+    read: () => machineAlertMetrics.read(),
+    display: () => machineMetrics.read(),
     store: machineAlertStore,
     members: () => teamStore.listMembers(),
     onError: (message, error) => logger.warn(message, toLogValue(error)),
