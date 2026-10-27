@@ -954,6 +954,8 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       setupState = { completed: true, preferredProvider, preferredModel };
       return clone(setupState);
     },
+    // Only a joined admin changes the setup from outside the window, and the preview has none.
+    onSetupState: () => () => undefined,
     getAnalyticsPreference: async () => clone(analyticsPreference),
     setAnalyticsPreference: async ({ enabled }) => {
       analyticsPreference = { enabled };

@@ -471,9 +471,8 @@ file, `preferredProvider` and `preferredModel`): a set writes the file and calls
 `AgentService.preferredProvider` uses now, so a host before its setup choice reads `codex`. A
 provider that the client's protocol does not show reads as none (`provider: null`), and the host
 refuses to set it. The phone's Server settings → Providers sets it. The desktop sets it only for this
-computer, and its renderer reads the setup file once at start (`onboarding-context.tsx`), so the
-desktop Settings show a change from the phone after the app starts again. New agents use the change
-at once.
+computer. A remote set also sends the new setup to each window of the host (`app.setupState`), so
+its Settings show the change at once.
 
 `claude-api-key-v1` has no routes. It tells a client that the host reads the key that the released
 `providers-v1` key routes save for `claude`. The host keeps the key as a Claude account with the

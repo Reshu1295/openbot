@@ -2339,6 +2339,13 @@ export async function createApplicationServices({
         set: (input) =>
           writeSetupState(setupFile, input).pipe(
             Effect.tap(() => service.setPreferredProvider(input.preferredProvider, input.preferredModel)),
+            // The window read the setup once at start, so it gets the new choice.
+            Effect.tap((state) =>
+              Effect.sync(() => {
+                for (const window of BrowserWindow.getAllWindows())
+                  sendToRenderer(window, IPC_ENDPOINTS.app.setupState, state);
+              }),
+            ),
             Effect.map((state) => ({ provider: state.preferredProvider, model: state.preferredModel })),
           ),
       },
