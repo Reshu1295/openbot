@@ -342,7 +342,13 @@ export const resolveAntigravityCli: (input?: {
         Effect.gen(function* () {
           const manifest = join(dirname(dirname(candidate.executable)), ANTIGRAVITY_MANIFEST);
           const version = parseAntigravityVersion(yield* providerCall(() => readFile(manifest, "utf8")));
-          return { executable: candidate.executable, version, source: candidate.source };
+          const launchPath = yield* cliLaunchPath(candidate.executable, candidate.source);
+          return {
+            executable: candidate.executable,
+            version,
+            source: candidate.source,
+            ...(launchPath ? { launchPath } : {}),
+          };
         }).pipe(Effect.catchDefect((cause) => Effect.fail(providerFailure(cause)))),
       );
       if (Result.isSuccess(attempt)) return attempt.success;

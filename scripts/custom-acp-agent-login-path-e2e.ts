@@ -5,18 +5,20 @@
 // this is the normal macOS setup. Both ways the agent starts must work: Check agent, and the `acp`
 // provider driver that lists its models. `bun run test:custom-agents:login-path`; exit 0 = both
 // worked. Writes .openbot-build/custom-acp-agent-login-path-e2e/report.json.
+// Gemini also uses this PATH for MCP subprocesses, for managed and user-supplied harnesses and
+// profile generation. Its harness starts by absolute path, so only its child exposes a missing PATH.
 import assert from "node:assert/strict";
 import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Effect } from "effect";
 import type { AgentClient } from "../src/backend/agent-client";
-import { runInLoginShell } from "../src/backend/cli";
+import { ANTIGRAVITY_MANIFEST, resolveAntigravityCli, runInLoginShell } from "../src/backend/cli";
 import { runCauseEffect } from "../src/backend/effect-boundary";
 import { requireProviderDriver } from "../src/backend/provider-drivers";
 import { createCustomAgentChanges } from "../src/main/custom-agent-changes";
 import { CustomAgentStore } from "../src/main/custom-agent-store";
-import { stopClients, xorCipher } from "./provider-fakes/host";
+import { installFakeAgent, runTurn, startThread, stopClients, xorCipher } from "./provider-fakes/host";
 
 // The interpreter has a name no system folder holds, so the result does not depend on whether this
 // machine also has a `node` in /usr/bin.
@@ -52,7 +54,13 @@ setInterval(() => {}, 1000);
 `;
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/custom-acp-agent-login-path-e2e");
-const report: { passed: boolean; check?: unknown; models?: unknown; error?: string } = { passed: false };
+const report: {
+  passed: boolean;
+  check?: unknown;
+  models?: unknown;
+  gemini: { source: string; profile: boolean; reply: string }[];
+  error?: string;
+} = { passed: false, gemini: [] };
 
 const root = await mkdtemp(join(tmpdir(), "openbot-login-path-e2e-"));
 const clients: AgentClient[] = [];
@@ -117,6 +125,34 @@ try {
   const text = JSON.stringify(models);
   report.models = models;
   assert.ok(text.includes('"alpha/fast"'), "The agent lists its model.");
+  const harness = join(root, "harness", "bin", "localharness_external");
+  await installFakeAgent(harness, "login-path");
+  await writeFile(join(root, "harness", ANTIGRAVITY_MANIFEST), JSON.stringify({ version: "1.4.3" }));
+  const gemini = requireProviderDriver("antigravity");
+  const workspace = join(root, "workspace");
+  await mkdir(workspace);
+  for (const source of ["managed", "system"] as const) {
+    const resolved = await runCauseEffect(
+      resolveAntigravityCli({
+        systemCandidates: source === "system" ? [harness] : [],
+        bundledExecutable: harness,
+      }),
+    );
+    for (const profile of [false, true]) {
+      assert.ok(gemini.createProfileClient, "Gemini has a profile-generation client.");
+      const next = profile
+        ? gemini.createProfileClient(resolved, 20_000, context)
+        : gemini.createClient(resolved, 20_000, context, undefined);
+      clients.push(next);
+      next.start();
+      const thread = await startThread(next, { model: "fast", cwd: workspace });
+      const turn = await runTurn(next, thread, { model: "fast", text: "Check the child command." });
+      assert.equal(turn.error, null, `${source}, profile=${profile}: the child command starts.`);
+      assert.equal(turn.reply, "MCP child started", `${source}, profile=${profile}: the child sends its result.`);
+      report.gemini.push({ source, profile, reply: turn.reply });
+      await runCauseEffect(next.stop());
+    }
+  }
   passed = true;
 } catch (error) {
   report.error = error instanceof Error ? error.message : String(error);
