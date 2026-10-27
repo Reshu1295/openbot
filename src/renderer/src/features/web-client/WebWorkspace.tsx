@@ -1373,7 +1373,9 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
   const browserTakeover = createMemo(() => {
     const agent = workspace.selected();
     if (!agent) return undefined;
-    const threadId = openThreadId() ?? agent.threadId;
+    // A new thread draft has no turn, so it has no takeover.
+    const open = threads()?.open;
+    const threadId = open === undefined ? agent.threadId : open?.threadId;
     return workspace.state.takeovers.find((request) => request.agentId === agent.id && request.threadId === threadId);
   });
   // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.

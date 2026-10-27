@@ -368,7 +368,9 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
   const openThreadId = () => threads()?.open?.threadId;
   const activeBrowserTakeover = createMemo(() => {
     const agent = activeAgent();
-    const threadId = openThreadId() ?? agent?.threadId;
+    // A new thread draft has no turn, so it has no takeover.
+    const open = threads()?.open;
+    const threadId = open === undefined ? agent?.threadId : open?.threadId;
     const event = agent && threadId ? pendingPrompts()[attentionKey(agent.id, threadId)] : undefined;
     return event?.type === "browser-takeover-requested" && event.request.threadId === threadId
       ? event.request
