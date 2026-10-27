@@ -546,13 +546,17 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
   /** Sends the update offers again after the user turns a provider on or off. */
   providerUseChanged(): Effect.Effect<void> {
     return Effect.gen({ self: this }, function* () {
-      // This instance does not stamp a provider that is off, so a sibling may have collected its
-      // version meanwhile. A provider turned on reads the store again when that version is gone.
+      // This instance does not stamp a provider that is off. A provider turned on stamps its version
+      // at once, not at the next hourly check, so a sibling's collector keeps it from now on. When a
+      // sibling collected that version meanwhile, the provider reads the store again.
       for (const provider of PROVIDERS) {
         const executable = this.executablePath(provider);
-        if (this.#statuses[provider].phase !== "ready" || !executable || this.#tasks.has(provider)) continue;
-        if (!this.#cliInUse(provider) || (yield* pathExists(executable))) continue;
-        yield* this.#inspectEffect(provider).pipe(Effect.ignore);
+        if (!executable || !this.#cliInUse(provider) || this.#tasks.has(provider)) continue;
+        if (yield* pathExists(executable)) {
+          yield* this.#stampInUseEffect(provider, dirname(dirname(executable))).pipe(Effect.ignore);
+        } else if (this.#statuses[provider].phase === "ready") {
+          yield* this.#inspectEffect(provider).pipe(Effect.ignore);
+        }
       }
       this.#revision += 1;
       this.emit("status", this.getStatus());
