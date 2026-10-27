@@ -1045,6 +1045,9 @@ if (!hasSingleInstanceLock) {
     .then(async () => {
       // Startup marks for `dev:bench`, which reads them over the inspector. They change nothing.
       performance.mark("openbot:when-ready");
+      // Set the Dock icon before `dock.show()` below. A development build runs the stock Electron.app,
+      // so until this call its Dock tile shows the Electron logo.
+      if (process.platform === "darwin") app.dock?.setIcon(appIconPath);
       if (!(await Effect.runPromise(hostAllowsTenantLaunch()))) {
         app.quit();
         return;
@@ -1072,7 +1075,6 @@ if (!hasSingleInstanceLock) {
           logger.warn("Unable to register the openbot:// scheme. Invitation links will not open OpenBot.");
         }
       }
-      if (process.platform === "darwin") app.dock?.setIcon(appIconPath);
       configureContentSecurityPolicy();
       configureRendererPermissions();
       await Effect.runPromise(windows.restoreMainWindowBounds());

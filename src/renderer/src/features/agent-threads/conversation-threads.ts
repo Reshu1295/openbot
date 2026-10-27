@@ -1,19 +1,13 @@
 import type { AgentApproval } from "@openbot/contracts/ipc";
 import { isAgentTaskActive, taskApproval } from "@openbot/team-client/agent-tasks";
 import { activeThreadId, threadLists } from "@openbot/ui/features/conversation/threads/thread-items";
-import {
-  DRAFT_THREAD_ID,
-  MAIN_THREAD_ID,
-  type ThreadStatus,
-} from "@openbot/ui/features/conversation/threads/thread-types";
+import { DRAFT_THREAD_ID, MAIN_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
 import type { AgentTasks } from "../agent-tasks/agent-tasks-state";
 import type { ConversationThreads } from "../conversation/conversation-types";
 import type { AgentThreadTabsState } from "./agent-thread-tabs";
 
 export interface ConversationThreadsInput {
-  agent: { id: string; name: string; updatedAt: string };
-  /** What the agent does in its own chat, for its tab. */
-  mainStatus: ThreadStatus;
+  agent: { id: string; updatedAt: string };
   tasks: AgentTasks;
   tabs: AgentThreadTabsState;
   /** The approvals that wait on the server. A side thread's turn waits for the one of its own thread. */
@@ -29,7 +23,7 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
   const snapshot = tasks.snapshot(agentId);
   const list = snapshot?.tasks ?? [];
   const lists = threadLists({
-    main: { id: MAIN_THREAD_ID, kind: "main", title: agent.name, updatedAt: agent.updatedAt, status: input.mainStatus },
+    mainUpdatedAt: agent.updatedAt,
     tasks: list,
     open: tabs.openIds(agentId),
     draft: tabs.hasDraft(agentId),

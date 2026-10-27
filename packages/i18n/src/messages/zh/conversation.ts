@@ -42,6 +42,7 @@ export const messages = {
   "conversation.direct.input": "发消息给 {name}",
   "conversation.direct.send": "发送私信",
   "conversation.header.settings": "查看助手设置",
+  "conversation.header.mainChat": "打开主聊天",
   "conversation.header.resumeRemote": "恢复远程控制",
   "conversation.header.openRemote": "打开远程控制",
   "conversation.header.publish": "发布助手",

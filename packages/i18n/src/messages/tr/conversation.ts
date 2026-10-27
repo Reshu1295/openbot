@@ -42,6 +42,7 @@ export const messages = {
   "conversation.direct.input": "{name} kişisine mesaj gönder",
   "conversation.direct.send": "Doğrudan mesaj gönder",
   "conversation.header.settings": "Ajan ayarlarını görüntüle",
+  "conversation.header.mainChat": "Ana sohbeti aç",
   "conversation.header.resumeRemote": "Uzaktan kontrolü sürdür",
   "conversation.header.openRemote": "Uzaktan kontrolü aç",
   "conversation.header.publish": "Ajanı yayımla",

@@ -11,6 +11,7 @@ import { reasoningLabel } from "@openbot/ui/components/ProviderModelPicker";
 import { providerAccountName } from "@openbot/ui/components/provider-accounts";
 import { ConversationHeader as SharedConversationHeader } from "@openbot/ui/features/conversation/ConversationHeader";
 import { ThreadHeader } from "@openbot/ui/features/conversation/threads/ThreadHeader";
+import { MAIN_THREAD_ID } from "@openbot/ui/features/conversation/threads/thread-types";
 import { Show } from "solid-js";
 import { useConversationViewScope } from "./conversation-scope";
 
@@ -45,9 +46,15 @@ export function ConversationHeader() {
     settingsProvider,
     settingsReasoning,
     sidePanelOpen,
+    sideThreadOpen,
     toggleSidePanel,
   } = useConversationViewScope();
   const runningThreads = () => props.threads?.running ?? 0;
+  /** While a side thread is open, the agent's name goes back to the agent's own chat. */
+  const openMainChat = () => {
+    const header = props.threads?.header;
+    return header && sideThreadOpen() ? () => header.onOpen(MAIN_THREAD_ID) : undefined;
+  };
   const working = () => agentActivity() === "Working";
   const providerName = (provider: AgentProviderRef) =>
     isKnownAgentProvider(provider) ? providerDisplayName(provider) : String(provider);
@@ -95,6 +102,7 @@ export function ConversationHeader() {
       title={channel ? <channel.HeaderTitle onOpenSettings={() => setActiveRightPanel("settings")} /> : undefined}
       onSettingsIntent={() => void loadAgentSettingsPanel()}
       onOpenSettings={() => setActiveRightPanel("settings")}
+      onOpenChat={openMainChat()}
       pendingModel={pendingModel()}
       modelPicker={{
         provider: settingsProvider(),

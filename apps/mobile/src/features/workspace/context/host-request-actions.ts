@@ -53,6 +53,7 @@ import {
   TEAM_EML_ATTACHMENTS_CAPABILITY,
   TEAM_MEDIA_ATTACHMENTS_CAPABILITY,
   TEAM_MESSAGE_CLIENT_ID_CAPABILITY,
+  TEAM_MP4_ATTACHMENTS_CAPABILITY,
   TEAM_SEMANTIC_TAGS_CAPABILITY,
   TEAM_ZIP_ATTACHMENTS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
@@ -422,6 +423,7 @@ export function createHostRequestActions({
         eml: advertised.includes(TEAM_EML_ATTACHMENTS_CAPABILITY),
         media: advertised.includes(TEAM_MEDIA_ATTACHMENTS_CAPABILITY),
         zip: advertised.includes(TEAM_ZIP_ATTACHMENTS_CAPABILITY),
+        mp4: advertised.includes(TEAM_MP4_ATTACHMENTS_CAPABILITY),
       };
     },
   };

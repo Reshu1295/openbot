@@ -98,6 +98,11 @@
   background: var(--openbot-bg-surface);
 }
 
+/* The trigger that keeps the agent's own chat selected in the tabs. It never shows. */
+.agent-threads-tabs .agent-threads-main-key {
+  display: none;
+}
+
 .agent-threads-tab.ui-sliding-tabs-trigger {
   display: inline-flex;
   max-width: 200px;
@@ -143,8 +148,8 @@
   opacity: 1;
 }
 
-/* The agent's own chat has no close control, so its title stays whole. */
-.agent-threads-tab:hover:where(:has(.agent-threads-tab-close)) .agent-threads-tab-title {
+/* On hover the title fades under the close control. */
+.agent-threads-tab:hover .agent-threads-tab-title {
   mask-image: linear-gradient(to left, transparent 14px, var(--openbot-text-primary) 28px);
 }
 
@@ -245,10 +250,12 @@
   white-space: nowrap;
 }
 
-/* Fixed widths put the badges in one column, on whole pixels, so their icons stay centred. */
+/* The time shows in full, also on a 12-hour clock. Its minimum width keeps the badges in one column,
+ * on whole pixels, so their icons stay centred. */
 .agent-threads-menu-time {
-  width: 44px;
+  min-width: 44px;
   flex: 0 0 auto;
+  white-space: nowrap;
   color: var(--openbot-text-muted);
   font-size: var(--openbot-text-sm);
   font-variant-numeric: tabular-nums;

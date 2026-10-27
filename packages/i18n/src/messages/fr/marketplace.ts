@@ -363,6 +363,15 @@ export const messages = {
     "Quels projets et services se trouvent dans mon espace de travail Railway ?",
   "marketplace.plugin.railway.prompt.crash": "Pourquoi mon service backend sur Railway plante-t-il au déploiement ?",
   "marketplace.plugin.railway.prompt.redeploy": "Redéploie le service API de mon projet Railway.",
+  "marketplace.plugin.render.tagline": "Services, déploiements et journaux",
+  "marketplace.plugin.render.description":
+    "Render permet aux agents de lister les espaces de travail et les services, de lire les journaux, les événements et les métriques, de consulter l'historique des déploiements, de lancer des déploiements et d'exécuter du SQL en lecture seule sur Render Postgres. Une clé d'API Render va dans un en-tête Authorization. La clé donne accès à tous les espaces de travail du compte Render. Les agents peuvent créer des services web, des sites statiques, des tâches cron, des bases de données Postgres et des instances Key Value, ce qui peut coûter de l'argent, et ils peuvent remplacer les variables d'environnement d'un service. Le serveur ne peut supprimer aucune ressource.",
+  "marketplace.plugin.render.app":
+    "Services, déploiements, journaux et métriques, via le serveur MCP de Render avec une clé d'API.",
+  "marketplace.plugin.render.prompt.services": "Quels services se trouvent dans mon espace de travail Render ?",
+  "marketplace.plugin.render.prompt.logs":
+    "Quelles erreurs mon service web Render a-t-il journalisées au cours de la dernière heure ?",
+  "marketplace.plugin.render.prompt.deploy": "Pourquoi le dernier déploiement de mon service Render a-t-il échoué ?",
   "marketplace.plugin.atlassian.tagline": "Éléments de travail Jira et pages Confluence",
   "marketplace.plugin.atlassian.description":
     "Atlassian permet aux agents de rechercher et de lire les éléments de travail Jira, les pages Confluence et les pull requests Bitbucket, et de créer ou de mettre à jour des éléments de travail, des pages et des commentaires. Chaque utilisateur se connecte à son propre compte Atlassian dans le navigateur et approuve l’accès sur un écran de consentement. Les agents ont les mêmes droits que l’utilisateur : ils peuvent modifier les éléments de travail et les pages, modifier les autorisations des pages et fusionner des pull requests. Les outils qui suppriment des données Jira restent désactivés jusqu’à ce qu’un administrateur de l’organisation les active. Chaque appel d’outil consomme des crédits Rovo.",
