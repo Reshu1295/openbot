@@ -2044,11 +2044,11 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         return;
       }
       if (update.content.text) this.#completeThought(thread, turn);
-      // Each ACP message is a message of its own. Text that an agent writes in one step and then in
-      // the next one with no tool call between was joined into one line.
+      // The text of an earlier ACP message is not the answer. Joined with the next one, the text of two
+      // steps showed as one line.
       const messageId = contentMessageId(update);
       if (this.#flavor.messagePerId && messageId && turn.textMessageId && messageId !== turn.textMessageId)
-        this.#completeMessage(thread, turn, "narration");
+        this.#completeMessage(thread, turn, "commentary");
       if (messageId) turn.textMessageId = messageId;
       if (update.content.text.trim()) {
         turn.receivedOutput = true;
@@ -2083,10 +2083,9 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     if (update.sessionUpdate === "tool_call" || update.sessionUpdate === "tool_call_update") {
       turn.receivedOutput = true;
       // A tool call ends the step, so thinking after it is a new thought, not text added to the old one.
-      // The text before it is a message to the user, such as "I will look at the logs" (#3406).
       if (update.sessionUpdate === "tool_call") {
         this.#completeThought(thread, turn);
-        this.#completeMessage(thread, turn, "narration");
+        this.#completeMessage(thread, turn, "commentary");
       }
       // ACP updates are partial; OpenCode omits the name when a tool finishes.
       const name = update.name ?? update.title ?? turn.toolNames.get(update.toolCallId) ?? "tool";
@@ -2132,7 +2131,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
 
   // ACP cannot identify final text while streaming. A later step boundary assigns its phase.
   // Antigravity also publishes provisional answer text because its prompt can wait on background work.
-  #completeMessage(thread: AcpThread, turn: AcpTurn, phase: "commentary" | "narration" | "final_answer"): void {
+  #completeMessage(thread: AcpThread, turn: AcpTurn, phase: "commentary" | "final_answer"): void {
     if (phase === "final_answer") {
       if (!turn.text.trim() && turn.interruptedAnswer) turn.text = turn.interruptedAnswer;
       turn.interruptedAnswer = null;

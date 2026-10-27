@@ -1,7 +1,7 @@
 // Runs turns on the real OpenCode driver against a fake `opencode acp` that answers a finished
 // background subagent in a turn it sends no update for, as OpenCode 2.2.0 does (#3406). Checks that
-// text before a tool call is a `narration` item; that the background turn shows as a turn of the
-// agent's own, from `session/load`, with all its items; that a message sent meanwhile waits for it;
+// the background turn shows as a turn of the agent's own, from `session/load`, with all its items;
+// that text before a tool call stays thinking there too; that a message sent meanwhile waits for it;
 // and that a stopped background turn does not come back.
 // `bun run test:opencode-background-turn`. Writes .openbot-build/opencode-background-turn-e2e/report.json.
 import assert from "node:assert/strict";
@@ -132,7 +132,7 @@ try {
   clients.push(client);
   client.start();
 
-  // Text before a tool call is a message of its own, not thinking and not the answer.
+  // Text before a tool call is thinking, and only the last text is the answer.
   const first = await startThread(client, { cwd: workspace });
   const one = record(client, first);
   assert.equal((await runTurn(client, first, { text: "narrate" })).status, "completed");
@@ -140,10 +140,10 @@ try {
   assert.deepEqual(
     narrated.filter((item) => item?.type === "agentMessage").map((item) => [item?.phase, item?.text]),
     [
-      ["narration", "I will check the file."],
+      ["commentary", "I will check the file."],
       ["final_answer", "The file is fine."],
     ],
-    "The text before the tool call is narration, and the last text is the answer.",
+    "The text before the tool call is thinking, and the last text is the answer.",
   );
 
   // A background subagent's turn shows from `session/load`, as a turn of the agent's own.
@@ -173,7 +173,7 @@ try {
     one.items(own.turnId).map((item) => [item?.type, item?.phase ?? item?.status, item?.text ?? item?.id]),
     [
       ["agentMessage", "commentary", "The subagent is done."],
-      ["agentMessage", "narration", "Checking its file."],
+      ["agentMessage", "commentary", "Checking its file."],
       ["toolCall", "completed", "tool_bg_check"],
       ["agentMessage", "final_answer", "The background task finished: DONE."],
     ],

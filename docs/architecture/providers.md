@@ -387,19 +387,9 @@ background subagent ends, OpenCode answers its result in a turn of its own (a `s
 The watch is in memory. A background task that ends while OpenBot is closed, or after OpenBot
 loaded the session again, shows only in OpenCode's own store.
 
-#### Narration
-
-Text that an ACP agent writes before a tool call in the same turn is an `agentMessage` item with
-phase `narration` (`CONVERSATION_NARRATION_ITEM_TYPE`), not `commentary`. For OpenCode
-(`messagePerId`), a text of another ACP `messageId` also ends the text before it as narration, so
-two steps' texts are not joined into one line. The desktop chat shows narration as a message, and the steps of the turn between its messages:
-the steps before each message stand above it, and the last message holds the rest, the memory
-changes. The trace and the turn's facts sit on the last message that has steps above it. While the
-turn runs, its steps after the latest message show on the activity line. Narration is not the
-turn's answer (`latestTurnAnswer`): it does not count as unread, set the preview, show in the
-dynamic island, go to a messaging app, or show as a channel reply, where it folds into the steps as
-commentary. The jump-to-latest count does count it, because the reader sees it as a new message. Claude, Codex and Pi still send such text as commentary. Rows stored before
-this change keep `commentary`.
+For OpenCode (`messagePerId`), the text of an earlier ACP `messageId` in a turn ends as commentary,
+as text before a tool call does. Only the turn's last text is its answer, and the text of two steps
+does not show as one line.
 
 Provider session IDs remain in `projection_provider_sessions`; migration 17 adds OpenCode while
 preserving turn links. Provider switches keep the same agent, workspace, and local thread.
@@ -555,9 +545,9 @@ a delivery that runs again keeps its turn ID) and adds `thoughtTokens` to the ou
 
 Antigravity 1.3.0 keeps `session/prompt` open until its harness reports
 `STATE_FULLY_IDLE`. A background task can thus keep a turn open after answer text
-arrives. The adapter streams that text at once. A later tool call changes the same
-message to narration, and a later thought changes it to commentary. It does not use
-a quiet period or a usage update as proof that the turn ended.
+arrives. The adapter streams that text at once. A later tool or thought changes
+the same message to commentary. It does not use a quiet period or a usage update
+as proof that the turn ended.
 
 Stop sends `session/cancel`, ends the local turn, and saves unfinished tool calls
 as interrupted. Before the next message, `session/resume` rebuilds the harness
