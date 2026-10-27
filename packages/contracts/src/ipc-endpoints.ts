@@ -1110,7 +1110,9 @@ export const IPC_ENDPOINTS = {
     hostDisconnect: scopedQuery<BitwardenConnectorStatus, "required">()("bitwarden-connector:host-disconnect"),
   },
   // The Vault of this computer. Lists carry no password, card number or security code: `reveal`
-  // returns one when the user asks, and `copy` writes one to the clipboard in main.
+  // returns one when the user asks, and `copy` writes one to the clipboard in main. The `host*`
+  // endpoints do the same for one server: a joined server answers through `vault-v1`, to an owner
+  // or admin. It has no CSV import, as the file is on this computer.
   vault: {
     list: request<undefined, VaultState>()("vault:list"),
     save: request<VaultSaveInput, VaultState>()("vault:save"),
@@ -1120,6 +1122,12 @@ export const IPC_ENDPOINTS = {
     importCsv: request<undefined, VaultImportResult>()("vault:import-csv"),
     reset: request<undefined, VaultState>()("vault:reset"),
     changed: event<VaultState>()("vault:changed"),
+    hostList: scopedQuery<VaultState, "required">()("vault:host-list"),
+    hostSave: scopedRequest<VaultSaveInput, VaultState, "required">()("vault:host-save"),
+    hostDelete: scopedRequest<string, VaultState, "required">()("vault:host-delete"),
+    hostReveal: scopedRequest<VaultSecretRequest, string, "required">()("vault:host-reveal"),
+    hostCopy: scopedRequest<VaultSecretRequest, void, "required">()("vault:host-copy"),
+    hostReset: scopedQuery<VaultState, "required">()("vault:host-reset"),
   },
   // The 1Password connection of this computer. The token goes from the renderer to main once, in
   // `connectWithToken`; every answer is the status only. The `host*` endpoints do the same for a

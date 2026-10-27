@@ -2,7 +2,8 @@
 // store and the direct-message store are the real ones on temporary files. The agent service, the
 // mailbox and the browser are small in-memory stand-ins that record each call, so a check can show
 // that a refused request did not reach them. The checks cover the protocol and auth gates, sign-in
-// and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`,
+// and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`, the
+// host's Vault (`vault-v1`) over the real service and store,
 // direct-message isolation, agents hidden from an older
 // protocol, the queue routes, the attachment and file routes with their size limits, and the error
 // codes. Writes .openbot-build/team-api-routes-e2e/report.json.
@@ -61,6 +62,7 @@ import {
   TEAM_CAPABILITIES_HEADER,
   TEAM_PROTOCOL_VERSION_HEADER,
 } from "@openbot/contracts/team-protocol/v1";
+import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect } from "effect";
@@ -80,6 +82,8 @@ import type { TeamApiAgents, TeamApiBrowser, TeamApiMailbox } from "../src/main/
 import { isPeerHiddenProvider } from "../src/main/team-api/provider-visibility";
 import { TeamApiServer } from "../src/main/team-api-server";
 import { TeamStore } from "../src/main/team-store";
+import { VaultService } from "../src/main/vault-service";
+import { VaultStore } from "../src/main/vault-store";
 
 const OUT = resolve(import.meta.dirname, "../.openbot-build/team-api-routes-e2e");
 const APP_VERSION = "0.43.0";
@@ -510,6 +514,11 @@ const createBitwardenHost = () =>
     },
   });
 const bitwardenConnector = createBitwardenHost();
+// The host's Vault: the real service and store, over the same reversible cipher.
+const vaultFile = join(root, "openbot-vault-v1.json");
+const vault = new VaultService({ store: new VaultStore(vaultFile, fakeCipher), canPersist: () => true });
+await Effect.runPromise(vault.load());
+const VAULT_PASSWORD = "e2e-vault-password-7f3c";
 /** Resolves with the first status after a host sign-in started (`connecting`) and then ended. */
 function bitwardenSettled(connector: BitwardenConnectorService): Promise<BitwardenConnectorStatus> {
   return new Promise((resolveStatus) => {
@@ -622,6 +631,7 @@ try {
       },
     },
     bitwardenConnector,
+    vault,
     browserProfiles,
     // Only the disk of the host answers here; the storage-v1 routes are not part of this run.
     storage: {
@@ -1903,6 +1913,104 @@ try {
         !existsSync(bitwardenData) &&
         !bitwardenConnector.connected(),
       summary(disconnect),
+    );
+  }
+
+  // ---- The host's Vault (vault-v1) ----
+  {
+    const vaultCapabilities = [VAULT_CAPABILITY];
+    const vaultCall = (token: string, path: string, json: unknown = {}) =>
+      call("POST", path, { token, json, capabilities: vaultCapabilities });
+    const login = {
+      kind: "login",
+      id: null,
+      website: "https://shop.example.com",
+      username: "ada@example.com",
+      notes: "",
+      password: VAULT_PASSWORD,
+    };
+    const unsupported = await call("POST", VAULT_ROUTES.list, { token: adaToken, json: {} });
+    check(
+      "the Vault routes without the capability get 400 vaultUnsupported",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")),
+      summary(unsupported),
+    );
+    const memberList = await vaultCall(bobToken, VAULT_ROUTES.list);
+    const memberSave = await vaultCall(bobToken, VAULT_ROUTES.save, login);
+    check(
+      "a member cannot list or change the host's Vault",
+      errorIs(memberList, 403, sourceText("error.team.adminRequired")) &&
+        errorIs(memberSave, 403, sourceText("error.team.adminRequired")) &&
+        vault.state().items.length === 0,
+      [summary(memberList), summary(memberSave)],
+    );
+    const saved = await vaultCall(adaToken, VAULT_ROUTES.save, login);
+    const items = field(saved.body, "items");
+    const itemId = field(saved.body, "items", 0, "id");
+    check(
+      "an admin adds a login; the answer lists it with no password",
+      saved.status === 200 &&
+        field(saved.body, "status") === "ready" &&
+        Array.isArray(items) &&
+        items.length === 1 &&
+        field(saved.body, "items", 0, "hasPassword") === true &&
+        typeof itemId === "string" &&
+        !saved.text.includes(VAULT_PASSWORD) &&
+        !readFileSync(vaultFile, "utf8").includes(VAULT_PASSWORD),
+      summary(saved),
+    );
+    assert.ok(typeof itemId === "string", "the Vault save did not answer an item id.");
+    const listed = await vaultCall(adaToken, VAULT_ROUTES.list);
+    check(
+      "the list carries the login with no password",
+      listed.status === 200 &&
+        field(listed.body, "items", 0, "username") === "ada@example.com" &&
+        !listed.text.includes(VAULT_PASSWORD),
+      summary(listed),
+    );
+    const memberReveal = await vaultCall(bobToken, VAULT_ROUTES.reveal, { id: itemId, field: "password" });
+    const revealed = await vaultCall(adaToken, VAULT_ROUTES.reveal, { id: itemId, field: "password" });
+    check(
+      "only an admin gets the saved password, and only from reveal",
+      errorIs(memberReveal, 403, sourceText("error.team.adminRequired")) &&
+        !memberReveal.text.includes(VAULT_PASSWORD) &&
+        revealed.status === 200 &&
+        isDeepStrictEqual(revealed.body, { value: VAULT_PASSWORD }),
+      [summary(memberReveal), { status: revealed.status }],
+    );
+    const badCard = await vaultCall(adaToken, VAULT_ROUTES.save, {
+      kind: "card",
+      id: null,
+      label: "",
+      nameOnCard: "Ada",
+      expMonth: 12,
+      expYear: 2030,
+      billingContactId: null,
+      number: "4111111111111112",
+      securityCode: "123",
+    });
+    const malformed = await vaultCall(adaToken, VAULT_ROUTES.save, { ...login, kind: "note" });
+    check(
+      "a card number that fails the check is refused with catalog text, and a malformed item is refused",
+      errorIs(badCard, 400, sourceText("error.vault.cardNumberInvalid")) &&
+        malformed.status === 400 &&
+        vault.state().items.length === 1,
+      [summary(badCard), summary(malformed)],
+    );
+    const deleted = await vaultCall(adaToken, VAULT_ROUTES.delete, { id: itemId });
+    const missing = await vaultCall(adaToken, VAULT_ROUTES.delete, { id: itemId });
+    check(
+      "an admin deletes the login; a second delete says the item is gone",
+      deleted.status === 200 &&
+        isDeepStrictEqual(deleted.body, { status: "ready", items: [] }) &&
+        errorIs(missing, 400, sourceText("error.vault.itemMissing")),
+      [summary(deleted), summary(missing)],
+    );
+    const reset = await vaultCall(adaToken, VAULT_ROUTES.reset);
+    check(
+      "an admin resets the Vault to no items",
+      reset.status === 200 && isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
+      summary(reset),
     );
   }
 

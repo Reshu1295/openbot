@@ -34,6 +34,7 @@ import { ROUTINE_FLOWS_CAPABILITY } from "@openbot/contracts/team-protocol/routi
 import { ROUTINE_RECOVERY_CAPABILITY } from "@openbot/contracts/team-protocol/routine-recovery-v1";
 import { SIDE_QUESTION_CAPABILITY } from "@openbot/contracts/team-protocol/side-question-v1";
 import { SIGN_IN_RELAY_CAPABILITY } from "@openbot/contracts/team-protocol/sign-in-relay-v1";
+import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
 import { WEBHOOK_TESTS_CAPABILITY } from "@openbot/contracts/team-protocol/webhook-tests-v1";
 import { runTeamEffect } from "@openbot/team-client";
 import { channelForThread } from "@openbot/team-client/channel-notifications";
@@ -186,6 +187,8 @@ import { licenseContactUs, trackLicenseEvent } from "../settings/license-analyti
 import type { HostPromptCacheTtlCalls } from "../settings/provider-prompt-cache";
 import { createCommunityCardVisibility } from "../sidebar/community-card";
 import { isReaderAuthor } from "../team/reader-identity";
+import type { ServerVaultOptions } from "../vault/ServerVaultPanel";
+import { createVaultStore } from "../vault/stores/vault-store";
 import { RailHelpMenu } from "../window/RailHelpMenu";
 import { ServerSettingsPageTitle, SettingsPageFrame } from "../window/SettingsPageFrame";
 import type { SettingsKind, WindowPage } from "../window/window-page-context";
@@ -218,6 +221,7 @@ import { webRoutineFlowsHost } from "./web-routine-flows";
 import { webScheduleSource } from "./web-schedule";
 import { createWebServerSettings } from "./web-server-settings";
 import { createWebUsagePort } from "./web-usage-port";
+import { webVaultCalls } from "./web-vault";
 
 const CONNECTING_STATUS: AgentStatus = {
   phase: "starting",
@@ -1214,6 +1218,16 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     const store = browserProfiles();
     return store ? { store, listAgents: async () => workspace.profiles() } : undefined;
   });
+  // The Vault section, for an owner or admin of a host with `vault-v1`. The store follows the host id.
+  const vaultHostId = createMemo(() => {
+    const current = server();
+    return serverCanAdminister(current, VAULT_CAPABILITY) ? current?.id : undefined;
+  });
+  const vaultSettings = createMemo((): ServerVaultOptions | undefined =>
+    vaultHostId() === undefined
+      ? undefined
+      : { store: createVaultStore(webVaultCalls(() => hostRequest(), workspace.onHostEvent)) },
+  );
   const openBrowserProfileSettings = (trigger: HTMLElement) => {
     const current = server();
     if (current) void openServerSettings(current.id, trigger, "browser-profiles");
@@ -2094,6 +2108,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                       hostPromptCacheTtl={{ calls: hostPromptCacheTtlCalls }}
                       agentAccess={{ calls: hostAgentAccessCalls, listAgents: () => workspace.runtime.listAgents() }}
                       browserProfiles={browserProfileSettings()}
+                      vault={vaultSettings()}
                       // Any member imports into a host with `agent-import-v1`.
                       agentImport={
                         workspace.state.capabilities.includes(AGENT_IMPORT_CAPABILITY)

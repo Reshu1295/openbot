@@ -1826,6 +1826,8 @@ export async function createApplicationServices({
     changed: (workflowId) => service.notifyWorkflowsChanged(workflowId),
   });
   service.armRoutines();
+  // An agent event too, so joined admins and the web app read the Vault again. It carries no item.
+  vault.onChanged(() => service.notifyVaultChanged());
   teardown.push(TEARDOWN_ORDER.workflows, "the workflows", () => Effect.runPromise(workflowRuntime.close()));
   // An agent routine's answer sent on to a messaging place; see `routine-results.ts`.
   const routineResultRuntime = await Effect.runPromise(
@@ -2264,6 +2266,8 @@ export async function createApplicationServices({
     // Present, so the host advertises `bitwarden-connector-v1`. An owner or admin connects it with an
     // API key and the master password: a session key from their computer cannot open this vault.
     bitwardenConnector,
+    // Present, so the host advertises `vault-v1`. The routes are admin-only.
+    vault,
     // Present on Linux, so the host advertises `provider-host-sign-in-v1`. The routes are admin-only.
     providerHostSignIns,
     // Present, so the host advertises `provider-accounts-v1`. The routes are admin-only.
