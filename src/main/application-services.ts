@@ -174,6 +174,7 @@ import { type CustomProviderChanges, createCustomProviderChanges } from "./custo
 import { CustomProviderStore } from "./custom-provider-store";
 import { MCP_OAUTH_REDIRECT_URL } from "./deep-link-router";
 import { desktopShowsAgentEvent } from "./desktop-notifications";
+import { shouldAutoStartHost } from "./development-profile";
 import {
   applyDevelopmentRemoteAccount,
   type DevelopmentRemoteRole,
@@ -400,6 +401,7 @@ const TEARDOWN_ORDER = {
   hostUpdateCoordinator: 12,
   requestedUpdate: 13,
   hostedServerStartRetry: 14,
+  launchPublishRetry: 14.5,
   hostedServerActivity: 15,
   serverMemory: 16,
   serverMode: 17,
@@ -2948,6 +2950,29 @@ export async function createApplicationServices({
     hostedServerActivity.start();
     teardown.push(TEARDOWN_ORDER.hostedServerActivity, "the hosted server activity report", () =>
       Effect.runPromise(hostedServerActivity.stop()),
+    );
+  } else if (!serverModeEnvironment) {
+    // A server that was published at the last quit is published again at launch, once (`index.ts`).
+    // That start can fail when the network is not ready yet, such as at login after an update, and
+    // the server then stayed private until the user published it again.
+    const launchPublishRetry = new HostedServerStartRetry({
+      hostPhase: () => host.getStatus().phase,
+      startHost: () =>
+        Effect.gen(function* () {
+          // A server that the user stopped is not published again: Stop clears `enabledOnLaunch`.
+          if (!shouldAutoStartHost({ ...host.getStatus(), remoteRole: developmentRemoteRole })) return;
+          const auth = centralAuth.getState();
+          // Only a start with no answer from the account server; any other auth error is the user's.
+          if (auth.status === "error" && auth.issue.code === "auth_api_unavailable")
+            yield* centralAuth.retry().pipe(toRemoteWorkflowError);
+          if (centralAuth.getState().status !== "signed_in") return;
+          return yield* host.start();
+        }),
+      onError: (message, error) => logger.warn(message, toLogValue(error)),
+    });
+    launchPublishRetry.start();
+    teardown.push(TEARDOWN_ORDER.launchPublishRetry, "the launch publish retry", () =>
+      Effect.runPromise(launchPublishRetry.stop()),
     );
   }
   const serverMode = serverModeEnvironment

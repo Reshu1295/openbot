@@ -4,6 +4,7 @@ import type { RemoteWorkflowError } from "./remote-service-effects";
  * A hosted server has nobody to press Retry, so it publishes the host again after a failed start. A
  * start that could not sign in leaves the host idle or unconfigured, so those phases also start again.
  * Nothing here stops the server. The Worker stops it when it reports no use (`HostedServerActivity`).
+ * A desktop server uses it too, to publish again after a failed publish at launch.
  */
 
 import type { HostPhase } from "@openbot/contracts/ipc";
