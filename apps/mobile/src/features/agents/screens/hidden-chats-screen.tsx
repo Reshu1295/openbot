@@ -8,6 +8,7 @@ import { BloubAvatar } from "@/features/agents/components/bloub-avatar";
 import { ChannelAvatar } from "@/features/channels/components/channel-avatar";
 import { useChannels } from "@/features/channels/components/use-channels";
 import { useMobileWorkspace } from "@/features/workspace/context/mobile-workspace-context";
+import { showsOnline } from "@/features/workspace/model/server-status";
 import { SheetScrollView } from "@/shared/components/sheet-scroll-view";
 import { haptics } from "@/shared/lib/haptics";
 import { useText } from "@/shared/lib/text";
@@ -65,9 +66,7 @@ export function HiddenChatsScreen() {
       id: channel.id,
       name: channel.name,
       href: { pathname: "/channel/[channelId]" as const, params: { channelId: channel.id, serverId: activeServer.id } },
-      avatar: (
-        <ChannelAvatar channel={channel} agents={members} size={46} disconnected={activeServer.state !== "online"} />
-      ),
+      avatar: <ChannelAvatar channel={channel} agents={members} size={46} disconnected={!showsOnline(activeServer)} />,
       show: () => {
         if (!unhideChannel(channel.id, activeServer.id)) return;
         void haptics.notification();
