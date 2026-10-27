@@ -42,6 +42,7 @@ import {
   readDevelopmentRemoteDebuggingPort,
   shouldAutoStartHost,
 } from "./development-profile";
+import { stopStuckExitAfterLimit } from "./exit-watchdog";
 import { filePreviewPages } from "./file-preview-pages";
 import { hostAllowsTenantLaunch } from "./host-update-coordinator";
 import { takeHostedServerEnvironment } from "./hosted-server-bootstrap";
@@ -218,6 +219,8 @@ if (hasSingleInstanceLock) {
   crashReporter.start({ uploadToServer: false });
   // Linux AppImage: the handler must stop before the AppImage unmounts (#3066).
   stopAppImageCrashpadHandlerAtExit();
+  // A file request that never finishes must not keep the process and its lock after an exit.
+  stopStuckExitAfterLimit(join(app.getPath("userData"), "logs"));
 }
 // Linux: the GPU stays on until it fails on this computer (#992). `userData` has its final path here.
 configureLinuxGpu({
