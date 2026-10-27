@@ -10,14 +10,15 @@ const EXIT_LIMIT_SECONDS = 10;
 const FILE_REQUESTS = new Set(["FSReqCallback", "FSReqPromise"]);
 
 // $0 is the process id, $1 the limit, $2 the main log and $3 the open file requests at exit. The start
-// time makes sure that a process id the system gave to another process since is not stopped.
+// time makes sure that a process id the system gave to another process since is not stopped. The kill
+// comes before the log write: the write can wait for the same approval as the stuck request.
 const WATCHDOG_SCRIPT = [
   'start=$(ps -o lstart= -p "$0") || exit 0',
   'sleep "$1"',
   '[ "$(ps -o lstart= -p "$0" 2>/dev/null)" = "$start" ] || exit 0',
+  'kill -9 "$0"',
   'mkdir -p "$(dirname "$2")"',
   'printf \'%s WARN [main] OpenBot did not exit within %s s with %s open file requests and was stopped.\\n\' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$3" >> "$2"',
-  'kill -9 "$0"',
 ].join("\n");
 
 /**

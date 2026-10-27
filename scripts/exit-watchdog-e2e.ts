@@ -96,7 +96,11 @@ try {
       assert.ok(ended, `${command} (${stalled ? "stalled" : "clean"}) did not end within ${limit} ms`);
       if (stalled) {
         assert.equal(result.signal, "SIGKILL", `${command}: the watchdog stops a stuck exit`);
-        assert.ok(result.watchdogLine, `${command}: the main log has the watchdog line`);
+        // The shell writes the line after the kill.
+        result.watchdogLine = await until(
+          () => existsSync(mainLog) && readFileSync(mainLog, "utf8").includes(WATCHDOG_LINE),
+          `${command}: the watchdog line in the main log`,
+        );
       } else {
         assert.equal(result.code, 0, `${command}: a clean exit keeps code 0`);
       }
