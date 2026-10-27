@@ -395,6 +395,30 @@ export const messages = {
   "mobile.server.connectors.later": "稍后",
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary": "用 Bitwarden 填充浏览器登录信息。请在桌面应用中设置。",
+  "mobile.server.connectors.bitwarden.hostSummary": "用 Bitwarden 或 Vaultwarden 填充浏览器登录信息",
+  "mobile.server.connectors.bitwarden.description": "在 {host} 上用 Bitwarden 或 Vaultwarden 填充浏览器登录信息。",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} 使用自己的 Bitwarden CLI 登录。请在你的保险库中创建一个名为 Shared with OpenBot 的文件夹，只把允许助手使用的登录信息放进去。在网页版保险库中打开“设置 › 安全 › 密钥”，查看你的 API 密钥。",
+  "mobile.server.connectors.bitwarden.serverUrl": "服务器地址",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden，或你的 Vaultwarden 服务器地址。{host} 必须能通过 HTTPS 访问它。",
+  "mobile.server.connectors.bitwarden.clientId": "API 密钥 client_id",
+  "mobile.server.connectors.bitwarden.clientSecret": "API 密钥 client_secret",
+  "mobile.server.connectors.bitwarden.masterPassword": "主密码",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} 会加密保存 API 密钥和主密码，因此重启后可以再次解锁。这台手机不保存它们。",
+  "mobile.server.connectors.bitwarden.connect": "连接 Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "正在连接…",
+  "mobile.server.connectors.bitwarden.connectingBody": "{host} 正在登录 Bitwarden。首次登录可能需要几分钟。",
+  "mobile.server.connectors.bitwarden.folderTitle": "共享文件夹",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Bitwarden 中的文件夹",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "在 Bitwarden 中把登录信息移入该文件夹，助手即可用它登录。移出后即停止。",
+  "mobile.server.connectors.bitwarden.disconnect": "断开 Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "断开 Bitwarden？",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} 会删除 API 密钥和主密码。{host} 上的代理将无法再从 Bitwarden 填写登录信息。",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "所有助手都可使用仓库、Issue 和拉取请求",
   "mobile.server.connectors.github.description":

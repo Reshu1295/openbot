@@ -409,6 +409,33 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Remplit les identifiants du navigateur depuis Bitwarden. Configurez-le dans l’app de bureau.",
+  "mobile.server.connectors.bitwarden.hostSummary":
+    "Remplit les identifiants du navigateur depuis Bitwarden ou Vaultwarden",
+  "mobile.server.connectors.bitwarden.description":
+    "Remplir les identifiants du navigateur sur {host} depuis Bitwarden ou Vaultwarden.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host} se connecte avec sa propre CLI Bitwarden. Dans votre coffre, créez un dossier nommé « Shared with OpenBot » et placez-y uniquement les identifiants que les agents peuvent utiliser. Dans le coffre web, ouvrez Paramètres › Sécurité › Clés et affichez votre clé d’API.",
+  "mobile.server.connectors.bitwarden.serverUrl": "Adresse du serveur",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden, ou l’adresse de votre serveur Vaultwarden. {host} doit la joindre en HTTPS.",
+  "mobile.server.connectors.bitwarden.clientId": "client_id de la clé d’API",
+  "mobile.server.connectors.bitwarden.clientSecret": "client_secret de la clé d’API",
+  "mobile.server.connectors.bitwarden.masterPassword": "Mot de passe principal",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host} conserve la clé d’API et le mot de passe principal chiffrés, pour pouvoir déverrouiller à nouveau après un redémarrage. Ce téléphone ne les conserve pas.",
+  "mobile.server.connectors.bitwarden.connect": "Connecter Bitwarden",
+  "mobile.server.connectors.bitwarden.connecting": "Connexion…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host} se connecte à Bitwarden. La première connexion peut prendre quelques minutes.",
+  "mobile.server.connectors.bitwarden.folderTitle": "Dossier partagé",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Dossier dans Bitwarden",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "Déplacez un identifiant dans ce dossier dans Bitwarden pour permettre aux agents de se connecter avec. Retirez-le pour arrêter.",
+  "mobile.server.connectors.bitwarden.disconnect": "Déconnecter Bitwarden",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Déconnecter Bitwarden ?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host} supprime la clé d’API et le mot de passe principal. Les agents de {host} ne peuvent plus remplir les identifiants depuis Bitwarden.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "Dépôts, tickets et pull requests pour chaque agent",
   "mobile.server.connectors.github.description":

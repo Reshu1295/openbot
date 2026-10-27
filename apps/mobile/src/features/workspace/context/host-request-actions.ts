@@ -39,6 +39,7 @@ import { AGENT_PUBLISH_CAPABILITY } from "@openbot/contracts/team-protocol/agent
 import { AGENT_SESSION_SETTINGS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-session-settings-v1";
 import { AGENT_TASKS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-tasks-v1";
 import { AGENT_UPDATE_CAPABILITY } from "@openbot/contracts/team-protocol/agent-update-v1";
+import { BITWARDEN_CONNECTOR_CAPABILITY } from "@openbot/contracts/team-protocol/bitwarden-connector-v1";
 import { CHANNEL_ROUTES } from "@openbot/contracts/team-protocol/channels-v1";
 import { CONNECTORS_CAPABILITY } from "@openbot/contracts/team-protocol/connectors-v1";
 import { CONTEXT_RESET_CAPABILITY } from "@openbot/contracts/team-protocol/context-reset-v1";
@@ -75,6 +76,8 @@ import { SIGN_IN_RELAY_CAPABILITY } from "@openbot/contracts/team-protocol/sign-
 import { SKILLS_ADMIN_CAPABILITY } from "@openbot/contracts/team-protocol/skills-admin-v1";
 import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
+import { VAULT_IMPORT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-import-v1";
+import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
 import { WORKFLOWS_CAPABILITY } from "@openbot/contracts/team-protocol/workflows-v1";
 import type { MobileTextKey } from "@openbot/i18n/mobile";
 import { readHostAnalytics } from "@openbot/team-client";
@@ -82,6 +85,7 @@ import { readPlanLimits } from "@openbot/team-client/plan-limits";
 import type { RemoteFileUpload } from "@openbot/team-client/remote-peer";
 import { buildRoutineCalendar, type RoutineCalendarSource } from "@openbot/team-client/routine-calendar";
 import {
+  bitwardenConnectorRequest,
   cancelHostUpdate,
   cancelSignInRelay,
   checkHostForUpdate,
@@ -89,6 +93,7 @@ import {
   completeSignInRelay,
   deleteEventRoutine,
   deleteHostedSite,
+  deleteHostVaultItem,
   deleteSharedTable,
   getHostAgentAccess,
   getHostAgentMemoryLimit,
@@ -98,6 +103,7 @@ import {
   getRoutineResultDestination,
   githubConnectorRepositories,
   githubConnectorRequest,
+  importHostVaultCsv,
   installAgentSkill,
   installAgentTemplate,
   installMarketplaceAgent,
@@ -106,6 +112,7 @@ import {
   listEventRoutines,
   listHiddenAgents,
   listHostedSites,
+  listHostVault,
   listMcpServers,
   listMcpSignIns,
   listProviderAccounts,
@@ -126,6 +133,7 @@ import {
   resetAgentSessionSetting,
   rotateEventRoutineSecret,
   saveEventRoutine,
+  saveHostVaultItem,
   saveMcpServer,
   setAgentHidden,
   setAgentProviderAccount,
@@ -255,6 +263,13 @@ type HostRequestActions = Pick<
   | "loadOnePasswordConnector"
   | "connectOnePassword"
   | "disconnectOnePassword"
+  | "loadBitwardenConnector"
+  | "connectBitwarden"
+  | "disconnectBitwarden"
+  | "loadVault"
+  | "saveVaultItem"
+  | "deleteVaultItem"
+  | "importVaultCsv"
   | "loadMessagingConnections"
   | "connectMessaging"
   | "completeMessagingInstall"
@@ -386,6 +401,11 @@ export function createHostRequestActions({
     capabilityApi(serverId, CONNECTORS_CAPABILITY, "mobile.server.connectors.unsupported");
   const onePasswordAdmin = (serverId: string) =>
     capabilityApi(serverId, ONEPASSWORD_CONNECTOR_CAPABILITY, "mobile.server.connectors.unsupported");
+  const bitwardenAdmin = (serverId: string) =>
+    capabilityApi(serverId, BITWARDEN_CONNECTOR_CAPABILITY, "mobile.server.connectors.unsupported");
+  const vaultAdmin = (serverId: string) => capabilityApi(serverId, VAULT_CAPABILITY, "mobile.server.vault.unsupported");
+  const vaultImportAdmin = (serverId: string) =>
+    capabilityApi(serverId, VAULT_IMPORT_CAPABILITY, "mobile.server.vault.unsupported");
   /** The OpenBot update of the host: the admin route set, or the member set that only checks and starts. */
   const updateApi = (serverId: string, access: ServerUpdateAccess) =>
     capabilityApi(
@@ -447,6 +467,16 @@ export function createHostRequestActions({
       runTeamRequest(onePasswordConnectorRequest(onePasswordAdmin(serverId), "connect", { token })),
     disconnectOnePassword: async (serverId) =>
       runTeamRequest(onePasswordConnectorRequest(onePasswordAdmin(serverId), "disconnect")),
+    loadBitwardenConnector: async (serverId) =>
+      runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "status")),
+    connectBitwarden: async (input, serverId) =>
+      runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "connect", input)),
+    disconnectBitwarden: async (serverId) =>
+      runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "disconnect")),
+    loadVault: async (serverId) => runTeamRequest(listHostVault(vaultAdmin(serverId))),
+    saveVaultItem: async (input, serverId) => runTeamRequest(saveHostVaultItem(vaultAdmin(serverId), input)),
+    deleteVaultItem: async (id, serverId) => runTeamRequest(deleteHostVaultItem(vaultAdmin(serverId), id)),
+    importVaultCsv: async (csv, serverId) => runTeamRequest(importHostVaultCsv(vaultImportAdmin(serverId), csv)),
     loadMessagingConnections: async (platform, serverId) =>
       runTeamRequest(messagingConnectorOverview(connectorsAdmin(serverId), { platform })),
     connectMessaging: async (input, serverId) =>

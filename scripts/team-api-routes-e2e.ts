@@ -3,7 +3,7 @@
 // mailbox and the browser are small in-memory stand-ins that record each call, so a check can show
 // that a refused request did not reach them. The checks cover the protocol and auth gates, sign-in
 // and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`, the
-// host's Vault (`vault-v1`) over the real service and store,
+// host's Vault (`vault-v1`, and the CSV import of `vault-import-v1`) over the real service and store,
 // direct-message isolation, agents hidden from an older
 // protocol, the queue routes, the attachment and file routes with their size limits, and the error
 // codes. Writes .openbot-build/team-api-routes-e2e/report.json.
@@ -62,6 +62,7 @@ import {
   TEAM_CAPABILITIES_HEADER,
   TEAM_PROTOCOL_VERSION_HEADER,
 } from "@openbot/contracts/team-protocol/v1";
+import { VAULT_IMPORT_CAPABILITY, VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
@@ -2023,6 +2024,47 @@ try {
         reset.status === 200 &&
         isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
       [summary(unreadable), summary(reset)],
+    );
+  }
+
+  // ---- A CSV import into the host's Vault (vault-import-v1) ----
+  {
+    const csvPassword = ["vault", "e2e", "csv", "password"].join("-");
+    const importCall = (token: string, json: unknown, capabilities = [VAULT_IMPORT_CAPABILITY]) =>
+      call("POST", VAULT_IMPORT_ROUTES.import, { token, json, capabilities });
+    const csv = [
+      "url,username,password",
+      `https://mail.example.com,ada,${csvPassword}`,
+      `http://old.example.com,ada,${csvPassword}`,
+    ].join("\n");
+    const unsupported = await importCall(adaToken, { csv }, [VAULT_CAPABILITY]);
+    const member = await importCall(bobToken, { csv });
+    check(
+      "a CSV import needs vault-import-v1 and an owner or admin",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(member, 403, sourceText("error.team.adminRequired")) &&
+        vault.state().items.length === 0,
+      [summary(unsupported), summary(member)],
+    );
+    const loggedBefore = logged.length;
+    const imported = await importCall(adaToken, { csv });
+    const logins = vault.state().items.filter((item) => item.kind === "login");
+    check(
+      "an admin imports a CSV export: the HTTPS login is added, the other row skipped, and only the counts answer",
+      imported.status === 200 &&
+        isDeepStrictEqual(imported.body, { imported: 1, skipped: 1 }) &&
+        logins.length === 1 &&
+        logins[0] !== undefined &&
+        vault.reveal({ id: logins[0].id, field: "password" }) === csvPassword &&
+        !imported.text.includes(csvPassword) &&
+        !logged.slice(loggedBefore).some((line) => line.includes(csvPassword)),
+      summary(imported),
+    );
+    const notCsv = await importCall(adaToken, { csv: "name\nnothing" });
+    check(
+      "a file that is not a password export gets the Vault's own sentence",
+      errorIs(notCsv, 400, sourceText("error.vault.csvInvalid")),
+      summary(notCsv),
     );
   }
 

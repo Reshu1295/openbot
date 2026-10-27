@@ -390,6 +390,32 @@ export const messages = {
   "mobile.server.connectors.bitwarden.title": "Bitwarden",
   "mobile.server.connectors.bitwarden.summary":
     "Bitwarden으로 브라우저 로그인 정보를 입력해요. 데스크톱 앱에서 설정하세요.",
+  "mobile.server.connectors.bitwarden.hostSummary": "Bitwarden 또는 Vaultwarden으로 브라우저 로그인 정보를 입력해요",
+  "mobile.server.connectors.bitwarden.description":
+    "Bitwarden 또는 Vaultwarden에서 {host}의 브라우저 로그인 정보를 입력해요.",
+  "mobile.server.connectors.bitwarden.howItWorks":
+    "{host}은(는) 자체 Bitwarden CLI로 로그인해요. 보관함에 Shared with OpenBot이라는 폴더를 만들고 에이전트가 사용해도 되는 로그인 정보만 넣으세요. 웹 보관함에서 설정 › 보안 › 키를 열어 API 키를 확인하세요.",
+  "mobile.server.connectors.bitwarden.serverUrl": "서버 주소",
+  "mobile.server.connectors.bitwarden.serverUrlHint":
+    "Bitwarden 또는 Vaultwarden 서버의 주소예요. {host}이(가) 이 주소에 HTTPS로 접근할 수 있어야 해요.",
+  "mobile.server.connectors.bitwarden.clientId": "API 키 client_id",
+  "mobile.server.connectors.bitwarden.clientSecret": "API 키 client_secret",
+  "mobile.server.connectors.bitwarden.masterPassword": "마스터 비밀번호",
+  "mobile.server.connectors.bitwarden.keptHint":
+    "{host}은(는) 재시작 후에도 다시 잠금 해제할 수 있도록 API 키와 마스터 비밀번호를 암호화해 보관해요. 이 휴대폰에는 보관되지 않아요.",
+  "mobile.server.connectors.bitwarden.connect": "Bitwarden 연결",
+  "mobile.server.connectors.bitwarden.connecting": "연결 중…",
+  "mobile.server.connectors.bitwarden.connectingBody":
+    "{host}이(가) Bitwarden에 로그인하고 있어요. 처음 로그인할 때는 몇 분 걸릴 수 있어요.",
+  "mobile.server.connectors.bitwarden.folderTitle": "공유 폴더",
+  "mobile.server.connectors.bitwarden.folderName": "Shared with OpenBot",
+  "mobile.server.connectors.bitwarden.folderKind": "Bitwarden 폴더",
+  "mobile.server.connectors.bitwarden.folderFooter":
+    "에이전트가 로그인 정보를 사용하게 하려면 Bitwarden에서 이 폴더로 옮기세요. 사용을 멈추려면 폴더에서 제거하세요.",
+  "mobile.server.connectors.bitwarden.disconnect": "Bitwarden 연결 해제",
+  "mobile.server.connectors.bitwarden.disconnectTitle": "Bitwarden 연결을 해제할까요?",
+  "mobile.server.connectors.bitwarden.disconnectBody":
+    "{host}에서 API 키와 마스터 비밀번호를 삭제해요. {host}의 에이전트가 더 이상 Bitwarden에서 로그인을 채울 수 없어요.",
   "mobile.server.connectors.github.title": "GitHub",
   "mobile.server.connectors.github.summary": "모든 에이전트가 저장소, 이슈, 풀 리퀘스트를 사용해요",
   "mobile.server.connectors.github.description":

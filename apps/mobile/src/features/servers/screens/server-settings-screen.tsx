@@ -52,6 +52,8 @@ export function ServerSettingsScreen() {
     hostedServerStarting,
     canManageConnectors,
     canManageOnePasswordConnector,
+    canManageBitwardenConnector,
+    canManageVault,
     canReadServerStorage,
     canManageProviders,
     canManageMcpServers,
@@ -114,7 +116,8 @@ export function ServerSettingsScreen() {
     );
   const memberCount = memberCountByServer[serverId];
   const memberLimit = server.memberLimit ?? DEFAULT_TEAM_MEMBER_LIMIT;
-  const connectors = canManageConnectors(serverId) || canManageOnePasswordConnector(serverId);
+  const connectors =
+    canManageConnectors(serverId) || canManageOnePasswordConnector(serverId) || canManageBitwardenConnector(serverId);
   return (
     <SettingsContent>
       {canAdministerServer(server.role) ? <ServerIdentityForm server={server} /> : <ServerHeader server={server} />}
@@ -163,8 +166,13 @@ export function ServerSettingsScreen() {
           ) : null}
         </SettingsSection>
       ) : null}
-      {canViewHostedSites(serverId) || canReadServerStorage(serverId) ? (
+      {canManageVault(serverId) || canViewHostedSites(serverId) || canReadServerStorage(serverId) ? (
         <SettingsSection title={t("mobile.server.settings.dataSection")}>
+          {canManageVault(serverId) ? (
+            <SettingsRow onPress={() => router.push({ pathname: "/server-settings/vault", params: { serverId } })}>
+              <Typography.Paragraph>{t("mobile.server.settings.vault")}</Typography.Paragraph>
+            </SettingsRow>
+          ) : null}
           {canViewHostedSites(serverId) ? <ServerSitesRow serverId={serverId} /> : null}
           {canReadServerStorage(serverId) ? (
             <SettingsRow onPress={() => router.push({ pathname: "/server-settings/storage", params: { serverId } })}>

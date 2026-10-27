@@ -22,6 +22,8 @@ import type {
   AgentTemplatePublication,
   AvatarHue,
   AvatarImageInput,
+  BitwardenConnectorStatus,
+  BitwardenHostConnectInput,
   ClearableStorageCategory,
   ConversationFileSearchPage,
   ConversationSearchPage,
@@ -88,6 +90,9 @@ import type {
   UpdateAgentInput,
   UpdateRestartMode,
   UpdateRoutineInput,
+  VaultHostImportResult,
+  VaultSaveInput,
+  VaultState,
   WorkflowDetail,
   WorkflowRunDetail,
   WorkflowRunPage,
@@ -327,6 +332,12 @@ export interface MobileWorkspaceContextValue {
   canManageConnectors: (serverId: string) => boolean;
   /** The same for the host's 1Password connection (`onepassword-connector-v1`). */
   canManageOnePasswordConnector: (serverId: string) => boolean;
+  /** The same for the host's Bitwarden connection (`bitwarden-connector-v1`). */
+  canManageBitwardenConnector: (serverId: string) => boolean;
+  /** True for an owner or admin of a host that serves its Vault to other devices (`vault-v1`). */
+  canManageVault: (serverId: string) => boolean;
+  /** The same for a CSV import from this phone (`vault-import-v1`). */
+  canImportVault: (serverId: string) => boolean;
   /** Reads or changes the host's GitHub connection. The answer names the GitHub pages that the phone opens. */
   githubConnector: (route: GitHubConnectorRoute, serverId: string) => Promise<HostGitHubConnectorStatus>;
   /** The repositories where the host's GitHub App is installed. The host reads them from GitHub. */
@@ -335,6 +346,21 @@ export interface MobileWorkspaceContextValue {
   /** The token goes to the host once. No answer carries it. */
   connectOnePassword: (token: string, serverId: string) => Promise<OnePasswordConnectorStatus>;
   disconnectOnePassword: (serverId: string) => Promise<OnePasswordConnectorStatus>;
+  loadBitwardenConnector: (serverId: string) => Promise<BitwardenConnectorStatus>;
+  /**
+   * The API key and the master password go to the host once. No answer carries them. The host
+   * answers `connecting` at once and signs in after that.
+   */
+  connectBitwarden: (input: BitwardenHostConnectInput, serverId: string) => Promise<BitwardenConnectorStatus>;
+  /** Also stops a sign-in that has not ended. */
+  disconnectBitwarden: (serverId: string) => Promise<BitwardenConnectorStatus>;
+  /** The host's Vault. No answer carries a password, a card number or a security code. */
+  loadVault: (serverId: string) => Promise<VaultState>;
+  /** A new secret goes to the host once; a null secret keeps the saved one. */
+  saveVaultItem: (input: VaultSaveInput, serverId: string) => Promise<VaultState>;
+  deleteVaultItem: (id: string, serverId: string) => Promise<VaultState>;
+  /** The text of a CSV password export. The host adds its logins and answers only the counts. */
+  importVaultCsv: (csv: string, serverId: string) => Promise<VaultHostImportResult>;
   loadMessagingConnections: (platform: MessagingPlatform, serverId: string) => Promise<MessagingOverview>;
   /** The platform's page that the phone opens. The host opens no page. */
   connectMessaging: (input: HostMessagingConnectInput, serverId: string) => Promise<MessagingConnectorPage>;
@@ -697,6 +723,9 @@ type MobileWorkspaceStateKey =
   | "hasAgentAccessLimits"
   | "canManageConnectors"
   | "canManageOnePasswordConnector"
+  | "canManageBitwardenConnector"
+  | "canManageVault"
+  | "canImportVault"
   | "serverUpdateAccess"
   | "canReadServerRelease"
   | "canViewHostedSites"
