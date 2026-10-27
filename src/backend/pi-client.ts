@@ -110,6 +110,11 @@ interface PiThread {
   turn: PiTurn | null;
   closed: boolean;
   gate: Semaphore.Semaphore;
+  /**
+   * Opened with the session settings of `thread/start` or `thread/resume`: OpenBot tools,
+   * instructions and access. A thread that a history read opened after a restart has none of them.
+   */
+  configured: boolean;
 }
 interface ClientEvents {
   notification: [AppServerNotification];
@@ -214,7 +219,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
   readonly releaseIdleThreads = Effect.fn("PiAgentClient.releaseIdleThreads")(function* (this: PiAgentClient) {
     for (const [id, thread] of this.#threads) {
       if (thread.turn) continue;
-      this.#released.set(id, thread.params);
+      if (thread.configured) this.#released.set(id, thread.params);
       yield* this.#close(thread);
       this.#threads.delete(id);
     }
@@ -249,7 +254,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
         break;
       case "thread/start":
       case "thread/resume": {
-        const thread = yield* this.#opening.withPermit(this.#open(params, method === "thread/resume"));
+        const thread = yield* this.#opening.withPermit(this.#open(params, method === "thread/resume", true));
         response = { thread: { id: thread.id } };
         break;
       }
@@ -401,11 +406,25 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     this: PiAgentClient,
     params: unknown,
     resume: boolean,
+    configured: boolean,
   ): Effect.fn.Return<PiThread, ProviderClientOperationError> {
     const requestedId = getString(params, "threadId");
     if (resume && requestedId) {
       const live = this.#threads.get(requestedId);
-      if (live) return live;
+      if (live && (live.configured || !configured)) return live;
+      // The live thread has no OpenBot tools, and its next prompt would remove them from the session
+      // (#3343). An idle one is replaced by a thread with the session settings.
+      if (live) {
+        const replaced = yield* live.gate.withPermit(
+          Effect.gen({ self: this }, function* () {
+            if (live.turn) return false;
+            yield* this.#close(live);
+            this.#threads.delete(requestedId);
+            return true;
+          }),
+        );
+        if (!replaced) return live;
+      }
       if (!isAbsolute(requestedId)) return yield* providerFailure(new MissingPiSessionError());
       yield* providerCall(() => access(requestedId)).pipe(
         Effect.mapError(() => providerFailure(new MissingPiSessionError())),
@@ -506,6 +525,7 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
         turn: null,
         closed: false,
         gate: Semaphore.makeUnsafe(1),
+        configured,
       };
       yield* this.#configure(thread, params);
       this.#threads.set(id, thread);
@@ -535,7 +555,11 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
     if (existing) return existing;
     const saved = this.#released.get(id);
     return yield* this.#opening.withPermit(
-      this.#open({ ...(isRecord(saved) ? saved : {}), ...(isRecord(params) ? params : {}), threadId: id }, true),
+      this.#open(
+        { ...(isRecord(saved) ? saved : {}), ...(isRecord(params) ? params : {}), threadId: id },
+        true,
+        isRecord(saved),
+      ),
     );
   });
 
