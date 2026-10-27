@@ -1,3 +1,4 @@
+import { providerCannotSteer } from "@openbot/contracts/agent-providers";
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import { type ConversationMessage, isQueuedAgentReply, type QueueDelivery } from "@openbot/contracts/ipc";
 import { isQueueEditRejected } from "@openbot/contracts/team-protocol/queue-edit-v1";
@@ -50,6 +51,10 @@ export function useChatQueue(
 ) {
   const workspace = useMobileWorkspaceReader();
   const canEditQueue = useMobileWorkspaceSelector((current) => current.canEditQueue(serverId));
+  const provider = useMobileWorkspaceSelector(
+    (current) => current.agents.find((agent) => agent.id === agentId && agent.serverId === serverId)?.provider,
+  );
+  const providerSteers = provider === undefined || !providerCannotSteer(provider);
   const text = useText();
   const { session } = useMobileSession();
   const storageKey = `queue-edit.${session?.user.id}.${serverId}.${agentId}`;
@@ -383,6 +388,7 @@ export function useChatQueue(
       canEdit: canEditQueue,
       online,
       activeTurnId,
+      providerSteers,
       begin,
       save,
       refresh,
@@ -461,6 +467,7 @@ export function useChatQueue(
       canEditQueue,
       online,
       activeTurnId,
+      providerSteers,
       begin,
       save,
       refresh,
