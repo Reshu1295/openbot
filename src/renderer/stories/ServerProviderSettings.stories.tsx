@@ -358,8 +358,8 @@ function ServerProvidersStory(props: {
                       props.offProviders && props.providerUpdate
                         ? async (provider: AgentProviderId) =>
                             isManagedRuntimeProvider(provider)
-                              ? (await mock.api.providerRuntimes.downloadedBytes(provider)).bytes
-                              : 0
+                              ? await mock.api.providerRuntimes.measureDownload(provider)
+                              : { bytes: 0, versions: 0 }
                         : undefined,
                     onRemoveProviderDownload:
                       props.offProviders && props.providerUpdate
@@ -500,7 +500,7 @@ export const ProviderUpdateRetry: Story = {
 
 /**
  * Cursor, Antigravity and Cline are installed for other work, so the user turned them off. Agents use
- * Codex and Claude, so those switches stay on. Open Cursor: its Use section offers Remove download,
+ * Codex and Claude, so those switches stay on. Open Cursor: its Download section offers Remove download,
  * and after it the list reads "Off · Not downloaded".
  */
 export const ProvidersOff: Story = {

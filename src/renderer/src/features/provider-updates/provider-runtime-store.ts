@@ -30,7 +30,7 @@ const PROVIDERS = MANAGED_RUNTIME_PROVIDERS;
  * The runtime calls a joined server's host serves too. Removing a download is this computer's only,
  * so the store does not need it.
  */
-export type ProviderRuntimeSource = Omit<ProviderRuntimesDesktopApi, "downloadedBytes" | "removeDownload">;
+export type ProviderRuntimeSource = Omit<ProviderRuntimesDesktopApi, "measureDownload" | "removeDownload">;
 
 /** The analytics code of each catalog reason that the runtime manager shows for a failed download. */
 const DOWNLOAD_FAILURE_CODES: Readonly<Record<string, string>> = {

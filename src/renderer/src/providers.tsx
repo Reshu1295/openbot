@@ -4,6 +4,7 @@ import {
   agentProviderDescriptor,
   isManagedRuntimeProvider,
   LOCAL_SERVER_ID,
+  type ProviderRuntimeDownload,
 } from "@openbot/contracts/ipc";
 import { CLAUDE_API_KEY_CAPABILITY } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import {
@@ -254,12 +255,12 @@ const Providers = createSimpleContext({
     }
 
     /**
-     * The bytes of the downloaded CLI of a provider of this computer that is off. A joined host has
-     * no such call, so its providers offer no removal.
+     * The downloaded CLI of a provider of this computer that is off. A joined host has no such call,
+     * so its providers offer no removal.
      */
-    async function measureProviderDownload(provider: AgentProviderId): Promise<number> {
-      if (activeServer()?.kind !== "local" || !isManagedRuntimeProvider(provider)) return 0;
-      return (await providersPort().providerRuntimes.downloadedBytes(provider)).bytes;
+    async function measureProviderDownload(provider: AgentProviderId): Promise<ProviderRuntimeDownload> {
+      if (activeServer()?.kind !== "local" || !isManagedRuntimeProvider(provider)) return { bytes: 0, versions: 0 };
+      return await providersPort().providerRuntimes.measureDownload(provider);
     }
 
     /** Removes the downloaded CLI of a provider of this computer that is off. */

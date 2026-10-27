@@ -207,12 +207,17 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 ora",
   "provider.settings.promptCacheDefault": "Predefinito di Claude Code",
   "provider.settings.promptCacheLoadFailed": "Impossibile caricare la durata della cache dei prompt di questo server.",
-  "provider.settings.downloadedCli": "CLI scaricata",
-  "provider.settings.downloadedCliSize": "{size} su questo computer",
+  "provider.settings.download": "Download",
+  "provider.settings.downloadedCli": "CLI di {name}",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 versione · {size}",
+    other: "{version} · {count} versioni · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 versione · {size}", other: "{count} versioni · {size}" },
+  "provider.settings.downloadAgain": "Quando attivi {name}, OpenBot scarica di nuovo la sua CLI.",
+  "provider.settings.removeDownloadConfirm": "Rimuovere {size}?",
+  "provider.settings.removeDownloadKeeps": "Account, accessi e agenti restano.",
   "provider.settings.removeDownload": "Rimuovi download",
-  "provider.settings.removeDownloadTitle": "Rimuovere il download di {name}?",
-  "provider.settings.removeDownloadDescription":
-    "Libera {size}. Account, accessi e agenti restano. Quando attivi {name}, OpenBot la scarica di nuovo.",
   "provider.settings.removingDownload": "Rimozione…",
   "provider.settings.removeDownloadFailed": "Impossibile rimuovere il download.",
 } as const satisfies PartialTranslation<typeof source>;

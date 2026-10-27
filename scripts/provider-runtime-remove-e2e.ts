@@ -36,6 +36,7 @@ interface Report {
   passed: boolean;
   offStampedAtStart?: boolean;
   bytesBefore?: Partial<Record<ManagedProviderId, number>>;
+  versionsBefore?: number;
   removed?: { versions: string[]; partials: string[]; records: string[]; phase: string; version: string | null };
   bytesAfter?: number;
   onRefused?: string;
@@ -125,7 +126,7 @@ try {
   assert.equal(report.offStampedAtStart, false, "a provider that is off is not stamped");
 
   const measure = async (provider: ManagedProviderId) =>
-    (await runCauseEffect(manager.downloadedBytes(provider))).bytes;
+    (await runCauseEffect(manager.measureDownload(provider))).bytes;
   report.bytesBefore = {
     [OFF]: await measure(OFF),
     [ON]: await measure(ON),
@@ -134,6 +135,8 @@ try {
     [PI]: await measure(PI),
   };
   assert.ok((report.bytesBefore[OFF] ?? 0) >= 2 * 4096, "both versions of the off provider count");
+  report.versionsBefore = (await runCauseEffect(manager.measureDownload(OFF))).versions;
+  assert.equal(report.versionsBefore, 2, "the page names how many versions it removes");
   assert.equal(report.bytesBefore[ON], 0, "a provider that is on offers nothing to remove");
   assert.equal(report.bytesBefore[SIBLING], 0, "a version a sibling stamped is not counted");
   assert.equal(report.bytesBefore[CONFIGURED], 0, "a provider with a CLI path offers nothing to remove");

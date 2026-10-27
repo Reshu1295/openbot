@@ -7,6 +7,7 @@ import {
   type CustomProviderRestart,
   type CustomProviderSummary,
   type ProviderApiKeyStatus,
+  type ProviderRuntimeDownload,
   type ProviderRuntimeStatus,
   type SaveCustomProviderInput,
   type UpdateCustomProviderInput,
@@ -74,7 +75,7 @@ interface ProviderSettingsSectionProps {
   onRestartProvider?: ((provider: AgentProviderId) => void | Promise<void>) | undefined;
   onCancelProviderRestart?: ((provider: AgentProviderId) => void | Promise<void>) | undefined;
   onSetProviderOn?: ((provider: AgentProviderId, on: boolean) => void | Promise<void>) | undefined;
-  onMeasureProviderDownload?: ((provider: AgentProviderId) => Promise<number>) | undefined;
+  onMeasureProviderDownload?: ((provider: AgentProviderId) => Promise<ProviderRuntimeDownload>) | undefined;
   onRemoveProviderDownload?: ((provider: AgentProviderId) => Promise<void>) | undefined;
   onInstallProvider?: ((provider: AgentProviderId) => void | Promise<void>) | undefined;
   onCancelProviderSignIn?: ((provider: AgentProviderId) => void | Promise<void>) | undefined;
@@ -459,7 +460,7 @@ export interface HostProviderSettings {
   /** Adds, names and removes provider accounts on the computer that runs the providers. */
   accountActions?: ProviderAccountActions | undefined;
   onSetProviderOn?: ((provider: AgentProviderId, on: boolean) => void | Promise<void>) | undefined;
-  onMeasureProviderDownload?: ((provider: AgentProviderId) => Promise<number>) | undefined;
+  onMeasureProviderDownload?: ((provider: AgentProviderId) => Promise<ProviderRuntimeDownload>) | undefined;
   onRemoveProviderDownload?: ((provider: AgentProviderId) => Promise<void>) | undefined;
   customProviders?: readonly CustomProviderSummary[] | undefined;
   onAddCustomProvider?: ((value: SaveCustomProviderInput) => Promise<CustomProviderRestart>) | undefined;

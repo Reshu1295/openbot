@@ -755,8 +755,8 @@ export const IPC_ENDPOINTS = {
     getStatus: request<undefined, ProviderRuntimeSnapshot>()("provider-runtimes:get-status"),
     download: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:download"),
     cancel: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:cancel"),
-    /** The bytes `removeDownload` frees now. Zero while the provider is on. */
-    downloadedBytes: request<ManagedProviderId, ProviderRuntimeDownload>()("provider-runtimes:downloaded-bytes"),
+    /** What `removeDownload` frees now: nothing while the provider is on. */
+    measureDownload: request<ManagedProviderId, ProviderRuntimeDownload>()("provider-runtimes:measure-download"),
     /** Removes the downloaded CLI of a provider that is off. Rejects while it is on or downloading. */
     removeDownload: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:remove-download"),
     /** Asks each provider's upstream for its latest release. Rejects when no source answered. */

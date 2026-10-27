@@ -212,12 +212,17 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 Stunde",
   "provider.settings.promptCacheDefault": "Claude Code-Standard",
   "provider.settings.promptCacheLoadFailed": "Die Prompt-Cache-Dauer dieses Servers konnte nicht geladen werden.",
-  "provider.settings.downloadedCli": "Heruntergeladene CLI",
-  "provider.settings.downloadedCliSize": "{size} auf diesem Computer",
+  "provider.settings.download": "Download",
+  "provider.settings.downloadedCli": "{name}-CLI",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 Version · {size}",
+    other: "{version} · {count} Versionen · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 Version · {size}", other: "{count} Versionen · {size}" },
+  "provider.settings.downloadAgain": "Wenn du {name} einschaltest, lädt OpenBot die CLI erneut herunter.",
+  "provider.settings.removeDownloadConfirm": "{size} entfernen?",
+  "provider.settings.removeDownloadKeeps": "Konten, Anmeldungen und Agenten bleiben.",
   "provider.settings.removeDownload": "Download entfernen",
-  "provider.settings.removeDownloadTitle": "Download von {name} entfernen?",
-  "provider.settings.removeDownloadDescription":
-    "Gibt {size} frei. Konten, Anmeldungen und Agenten bleiben. Wenn du {name} einschaltest, lädt OpenBot die CLI erneut herunter.",
   "provider.settings.removingDownload": "Wird entfernt…",
   "provider.settings.removeDownloadFailed": "Der Download konnte nicht entfernt werden.",
 } as const satisfies PartialTranslation<typeof source>;

@@ -691,7 +691,7 @@ const openbotApi: OpenBotDesktopApi = {
     getStatus: decodeProviderRuntimeSnapshot,
     download: decodeProviderRuntimeSnapshot,
     cancel: decodeProviderRuntimeSnapshot,
-    downloadedBytes: decodeProviderRuntimeDownload,
+    measureDownload: decodeProviderRuntimeDownload,
     removeDownload: decodeProviderRuntimeSnapshot,
     checkForUpdates: decodeProviderRuntimeSnapshot,
     event: decodeProviderRuntimeSnapshot,

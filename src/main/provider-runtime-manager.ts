@@ -352,13 +352,14 @@ export class ProviderRuntimeManager extends EventEmitter<ProviderRuntimeManagerE
   }
 
   /**
-   * The bytes that `removeDownload` frees now. Zero for a provider that is on, or whose CLI the user
-   * pointed OpenBot at.
+   * What `removeDownload` frees now. Nothing for a provider that is on, or whose CLI the user pointed
+   * OpenBot at.
    */
-  downloadedBytes(provider: ManagedProviderId): Effect.Effect<ProviderRuntimeDownload> {
+  measureDownload(provider: ManagedProviderId): Effect.Effect<ProviderRuntimeDownload> {
     return Effect.gen({ self: this }, function* () {
-      if (!this.#target || this.#cliInUse(provider) || configuredCliPath(provider)) return { bytes: 0 };
-      return { bytes: yield* measurePaths(yield* this.#removableVersionPathsEffect(provider, this.#target)) };
+      if (!this.#target || this.#cliInUse(provider) || configuredCliPath(provider)) return { bytes: 0, versions: 0 };
+      const paths = yield* this.#removableVersionPathsEffect(provider, this.#target);
+      return { bytes: yield* measurePaths(paths), versions: paths.length };
     });
   }
 
