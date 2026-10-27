@@ -142,7 +142,8 @@ function ActiveCurrentRow(props: { key: string }) {
 
 export interface SearchSelectProps<Option> {
   options: Option[];
-  value: Option;
+  /** Null when the list is an action, such as "Add backup model": no row is the current value. */
+  value: Option | null;
   onChange: (option: Option) => void;
   /** The text of the trigger and of a row. */
   label: (option: Option) => string;
@@ -150,12 +151,19 @@ export interface SearchSelectProps<Option> {
   optionValue?: (option: Option) => string;
   /** The text that the search reads. The default is `label`. */
   optionTextValue?: (option: Option) => string;
+  /** The content of a row. The default is `label`. */
+  itemContent?: (option: Option) => JSX.Element;
+  /** The content of the trigger in place of the value. */
+  children?: JSX.Element;
+  class?: string | undefined;
   disabled?: boolean | undefined;
   placement?: PopoverRootProps["placement"];
   mount?: Element | undefined;
   size?: "sm" | "md" | undefined;
   /** The id of the setting's label. The trigger adds its value to the name. */
   "aria-labelledby"?: string | undefined;
+  /** The name of the trigger and the list when no label element names them. */
+  "aria-label"?: string | undefined;
 }
 
 /**
@@ -170,6 +178,7 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
   const valueId = `ui-search-select-value-${createUniqueId()}`;
   let input: HTMLInputElement | undefined;
   const key = (option: Option) => props.optionValue?.(option) ?? String(option);
+  const isCurrent = (option: Option) => props.value !== null && key(option) === key(props.value);
   const matches = createMemo(() => {
     const text = searchText(query());
     if (!text) return props.options;
@@ -188,10 +197,13 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
     <Popover.Root open={open()} onOpenChange={toggle} placement={props.placement ?? "bottom"} gutter={4} modal>
       <div class="ui-select">
         <Popover.Trigger
-          class="ui-select-trigger"
+          class={cx("ui-select-trigger", props.class)}
           data-size={props.size ?? "md"}
           data-slot="select-trigger"
-          aria-labelledby={[props["aria-labelledby"], valueId].filter(Boolean).join(" ")}
+          aria-label={props["aria-label"]}
+          aria-labelledby={
+            props["aria-label"] ? undefined : [props["aria-labelledby"], valueId].filter(Boolean).join(" ")
+          }
           disabled={props.disabled}
           onKeyDown={(event: KeyboardEvent) => {
             // The arrow keys open the list, as on `SelectTrigger`.
@@ -200,9 +212,11 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
             toggle(true);
           }}
         >
-          <span id={valueId} class="ui-select-value" data-slot="select-value">
-            {props.label(props.value)}
-          </span>
+          {props.children ?? (
+            <span id={valueId} class="ui-select-value" data-slot="select-value">
+              {props.value === null ? "" : props.label(props.value)}
+            </span>
+          )}
           <span class="ui-select-trigger-icon">
             <ChevronsUpDown aria-hidden="true" />
           </span>
@@ -212,6 +226,7 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
         <Popover.Content
           class="ui-select-content ui-search-select-content"
           data-slot="select-content"
+          aria-label={props["aria-label"]}
           aria-labelledby={props["aria-labelledby"]}
         >
           <Combobox.Root<Option>
@@ -238,12 +253,14 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
                 item={item.item}
                 class="ui-select-item"
                 data-slot="select-item"
-                data-checked={key(item.item.rawValue) === key(props.value) ? "" : undefined}
+                data-checked={isCurrent(item.item.rawValue) ? "" : undefined}
                 // The combobox has no selection, so the search field starts empty. The row says it is the value.
-                aria-selected={key(item.item.rawValue) === key(props.value) ? "true" : "false"}
+                aria-selected={isCurrent(item.item.rawValue) ? "true" : "false"}
               >
-                <Combobox.ItemLabel class="ui-select-item-label">{props.label(item.item.rawValue)}</Combobox.ItemLabel>
-                <Show when={key(item.item.rawValue) === key(props.value)}>
+                <Combobox.ItemLabel class="ui-select-item-label">
+                  {(props.itemContent ?? props.label)(item.item.rawValue)}
+                </Combobox.ItemLabel>
+                <Show when={isCurrent(item.item.rawValue)}>
                   <span class="ui-select-item-indicator">
                     <Check aria-hidden="true" />
                   </span>
@@ -275,8 +292,12 @@ export function SearchSelect<Option>(props: SearchSelectProps<Option>): JSX.Elem
                 }}
               />
             </Combobox.Control>
-            <ActiveCurrentRow key={key(props.value)} />
-            <Combobox.Listbox class="ui-select-listbox" aria-labelledby={props["aria-labelledby"]} />
+            {props.value !== null && <ActiveCurrentRow key={key(props.value)} />}
+            <Combobox.Listbox
+              class="ui-select-listbox"
+              aria-label={props["aria-label"]}
+              aria-labelledby={props["aria-labelledby"]}
+            />
             <Show when={matches().length === 0}>
               <p class="ui-search-select-empty" role="status">
                 {t("common.noMatches")}
