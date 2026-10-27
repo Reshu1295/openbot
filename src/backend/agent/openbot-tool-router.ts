@@ -165,6 +165,11 @@ export interface OpenBotToolRouterHooks {
   reportRoutineFailure(agentId: string, turnId: string, reason: string): boolean;
   /** Starts a new chat with the agent when its turn ends and its queue is empty. */
   requestNewChat(agentId: string): void;
+  /**
+   * Takes a message from another agent into the recipient's running chat turn when the recipient's
+   * busy-message mode is "steer". Otherwise the message waits in the queue.
+   */
+  steerAgentMessage(recipientAgentId: string, deliveryId: string): Effect.Effect<void>;
 }
 
 export interface OpenBotToolRouterOptions {
@@ -1637,9 +1642,10 @@ export class OpenBotToolRouter {
           idempotencyKey: toolCallIdempotencyKey(params),
         })
         .pipe(toToolOperationFailed);
-      for (const recipient of recipientValues) {
-        this.#mailboxSync.emitQueue(recipient);
-        this.#drain.scheduleDrain(recipient);
+      for (const delivery of receipt.deliveries) {
+        yield* this.#hooks.steerAgentMessage(delivery.recipientAgentId, delivery.id);
+        this.#mailboxSync.emitQueue(delivery.recipientAgentId);
+        this.#drain.scheduleDrain(delivery.recipientAgentId);
       }
       const snapshot = this.#conversation.ensureSnapshot(senderAgentId, params.threadId);
       this.#mailboxSync.syncMailboxMessages(snapshot);

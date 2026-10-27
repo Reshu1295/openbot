@@ -419,6 +419,13 @@ When the last copy ends, the waiting answers start in one turn, and the prompt n
 whose copy ended with no answer. A message from the person does not wait: it starts at once and
 takes the answers that are already in. Each end of a copy schedules a drain for the requester.
 
+A message from another agent follows the recipient's busy-message mode, as a message from the
+person does. When the mode is "steer", the provider steers natively and the recipient runs a chat
+turn, `send_message` and the result relay take the message into that turn
+(`AgentService.#steerAgentMessage`). Channel, messaging and task work and a waiting answer stay
+queued (`MailboxStore.steersChatTurn`). The person can steer a queued answer into the running turn
+from the waiting block on desktop, the web and mobile; it has no other queue action.
+
 This policy lives in `src/backend/agent/developer-instructions.ts` and is supplied on both thread
 start and resume. Codex receives `developerInstructions`; Claude and Pi append them to the system
 prompt; Grok and the other ACP agents receive them as a tagged instruction block in normal turn

@@ -92,6 +92,9 @@ export function QueuedMessagesScreen() {
           // With nothing else to show, the sheet would only say that the queue is empty.
           if (count === 0 && !queue?.error) router.back();
         }}
+        onOpenReply={(deliveryId) =>
+          router.push({ pathname: "/queued-messages/actions", params: { chat, deliveryId } })
+        }
       />
       {count > 0 ? (
         <SettingsSection title={t("mobile.chat.queue.waitingTitle")}>

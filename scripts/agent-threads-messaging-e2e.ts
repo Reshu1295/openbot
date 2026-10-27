@@ -17,6 +17,8 @@
 // 6. A Claude subagent in a side thread shows in that thread only.
 // 7. A background Claude subagent in a side thread ends after its turn. Its answer comes back to that
 //    side thread, not to the agent's own chat.
+// 8. B steers busy messages and runs a turn in its own chat when A asks it. The request goes into
+//    that running turn, not into a new one. It needs a provider that steers natively.
 // At the end it stops and deletes each thread that it started.
 // Writes .openbot-build/agent-threads-messaging-e2e/report.json.
 import assert from "node:assert/strict";
@@ -388,6 +390,59 @@ try {
       assert.equal(lane, "side", "The background subagent's answer went to the own chat.");
     });
   }
+
+  // 8. A request steers the running turn of a recipient that steers busy messages.
+  await step("request steers the recipient's running turn", async (details) => {
+    const provider = toAgentInfo.provider;
+    if (!isAgentProvider(provider) || agentProviderDescriptor(provider).steer !== "native") {
+      report.knownGaps.push(`${provider} cannot steer a running turn, so the steer check did not run.`);
+      return;
+    }
+    const word = `M8${run}`;
+    const slept = `SLEPT8${run}`;
+    const settings = await page.evaluate((agentId) => window.openbot.agent.getAgentHostSettings(agentId), to);
+    const mode = (busyMessageMode: "steer" | "queue" | null) =>
+      page.evaluate((input) => window.openbot.agent.updateAgentHostSettings(input), {
+        agentId: to,
+        busyMessageMode,
+      });
+    await mode("steer");
+    try {
+      await bridge.send(
+        to,
+        // Claude refuses a standalone `sleep` in the foreground.
+        `Run the shell command "python3 -c 'import time; time.sleep(60)'" in the foreground, with a timeout of 120000 ms, then reply with the single word ${slept}.`,
+      );
+      const busy = await waitFor(
+        page,
+        "B's own chat runs",
+        () => bridge.main(to),
+        (s) => !idle(s),
+        TURN_MS,
+      );
+      const turnId = busy.activeTurnId;
+      await bridge.send(from, ask(word, "What is 7+7?", toAgentInfo.name));
+      const delivery = await waitFor(
+        page,
+        "the request leaves B's queue",
+        async () => {
+          const queue = await page.evaluate((agentId) => window.openbot.agent.listQueue(agentId), to);
+          return queue.deliveries.find((entry) => entry.sender.kind === "agent" && entry.text.includes(word)) ?? null;
+        },
+        (entry) => entry !== null && entry.status !== "queued",
+        TURN_MS,
+      );
+      details.deliveryStatus = delivery?.status;
+      details.steerFallback = delivery?.steerFallback ?? null;
+      details.steeredIntoRunningTurn = delivery?.turnId === turnId;
+      const main = await bridge.main(to);
+      details.turnStillRan = main.activeTurnId === turnId;
+      assert.equal(details.steeredIntoRunningTurn, true, "The request waited for a new turn of B.");
+      await waitFor(page, "B's turn ends", () => bridge.main(to), idle, TURN_MS);
+    } finally {
+      await mode(settings.busyMessageMode);
+    }
+  });
   report.passed = report.steps.every((entry) => entry.passed);
 } finally {
   for (const { agentId, taskId } of started.reverse()) {

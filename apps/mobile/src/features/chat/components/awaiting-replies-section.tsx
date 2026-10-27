@@ -19,8 +19,8 @@ const STATE_KEYS = {
 } as const satisfies Record<AwaitingReplyState, MobileTextKey>;
 
 /**
- * The teammates this agent asked, and the answers that wait for its next turn. It has no row
- * actions: an answer is not the user's message, so edit, steer and reorder do not apply to it.
+ * The teammates this agent asked, and the answers that wait for its next turn. An answer is not
+ * the user's message, so edit and reorder do not apply to it; its row opens the steer action.
  * When no teammate still works, the person can hide the rows, as on desktop.
  */
 export function AwaitingRepliesSection({
@@ -28,11 +28,13 @@ export function AwaitingRepliesSection({
   agents,
   self,
   onHide,
+  onOpenReply,
 }: {
   rows: readonly AwaitingReply[];
   agents: readonly MobileAgent[];
   self: MobileAgent | undefined;
   onHide: () => void;
+  onOpenReply: (deliveryId: string) => void;
 }) {
   const { t } = useText();
   const [secondaryColor, primaryColor] = useCSSVariable(["--openbot-text-grouped-secondary", "--openbot-text-primary"]);
@@ -53,9 +55,11 @@ export function AwaitingRepliesSection({
       >
         {rows.map((row) => {
           const agent = agents.find((candidate) => candidate.id === row.agentId);
+          const deliveryId = row.deliveryId;
           return (
             <SettingsRow
               key={row.id}
+              {...(deliveryId ? { onPress: () => onOpenReply(deliveryId) } : {})}
               leading={
                 agent ? (
                   <BloubAvatarThumbnail

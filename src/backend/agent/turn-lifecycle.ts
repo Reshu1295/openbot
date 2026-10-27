@@ -137,6 +137,11 @@ export interface TurnHooks {
   emitError(code: string, error: unknown, agentId?: string, context?: FailureContext): void;
   emitRuntimeSnapshot(): void;
   scheduleDrain(agentId: string): void;
+  /**
+   * Takes a message from another agent into the recipient's running chat turn when the recipient's
+   * busy-message mode is "steer". Otherwise the message waits in the queue.
+   */
+  steerAgentMessage(recipientAgentId: string, deliveryId: string): Effect.Effect<void>;
   /** Closes a provider session the provider refuses; the next turn opens a new one with the transcript. */
   dropRefusedSession(agentId: string, externalThreadId: string): Effect.Effect<void, TurnOperationFailed>;
   listAgents(): AgentSummary[];
@@ -1354,7 +1359,7 @@ export class TurnLifecycle {
     )
       return;
 
-    yield* this.#mailbox
+    const receipt = yield* this.#mailbox
       .enqueue({
         sender: { kind: "agent", agentId },
         recipientAgentIds: [recipientAgentId],
@@ -1371,6 +1376,7 @@ export class TurnLifecycle {
       this.#mailboxSync.syncMailboxMessages(senderSnapshot);
       this.#conversation.emitConversation(senderSnapshot);
     }
+    for (const queued of receipt.deliveries) yield* this.#hooks.steerAgentMessage(recipientAgentId, queued.id);
     this.#mailboxSync.emitQueue(recipientAgentId);
     this.#hooks.scheduleDrain(recipientAgentId);
   }, Effect.uninterruptible);
