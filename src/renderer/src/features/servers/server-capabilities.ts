@@ -42,6 +42,7 @@ export function serverSupportsCapability(
       capability === "onepassword-connector-v1" ||
       capability === "bitwarden-connector-v1" ||
       capability === "vault-v1" ||
+      capability === "browser-secret-vault-v1" ||
       capability === "provider-host-sign-in-v1" ||
       capability === "storage-v1" ||
       capability === "storage-disk-v1" ||

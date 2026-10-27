@@ -43,6 +43,7 @@ import {
   toggleSpokenReply,
 } from "../speech/speech-replies";
 import { groupedMessageIds } from "./agent-message-timeline";
+import { browserSecretVault } from "./browser-secret-vault";
 import { continuesSenderRun } from "./chat-grouping";
 import { isChatVisualAppShortcut } from "./chat-visual-shortcuts";
 import { chatVisualPageUrl } from "./chat-visual-url";
@@ -1477,7 +1478,7 @@ export function ConversationTimeline() {
                   signInBlocked={localSignIn.blockedTakeover()}
                   browserSecret={{
                     loadPreview: runtime.browser.capturePreview,
-                    vaultSave: props.server?.kind === "local",
+                    vault: browserSecretVault(props.server),
                     onRespond: runtime.agent.respondToBrowserSecret,
                   }}
                 />

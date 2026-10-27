@@ -7,24 +7,37 @@ import { errorReference } from "@openbot/user-errors";
 import { createEffect, createSignal, createUniqueId, onCleanup, Show } from "solid-js";
 
 /**
+ * The Vault that a typed password can go to. `server` is null for this computer, or the name of the
+ * joined server. `blocked` is why that server cannot save it: the account is a member, or the host is
+ * older than `browser-secret-vault-v1`.
+ */
+export interface BrowserSecretVault {
+  server: string | null;
+  blocked?: "role" | "version" | undefined;
+}
+
+/**
  * The code or the password that the agent asks for: the site at the top, the value in the middle and Submit
  * at the end. Cancel is the X. The `card` variant is the timeline card and shows the sign-in page under the
  * value; the `island` variant is the glass card over the browser page. The value goes only to the agent, and
- * the card clears it after each answer. With `vaultSave`, a password can also go to the Vault of this
- * computer; the box starts checked.
+ * the card clears it after each answer. With `vault`, a password can also go to the Vault of the server
+ * that runs the agent. The box starts checked for this computer and unchecked for a joined server; a
+ * server that cannot save shows the box off, with the reason.
  */
 export function BrowserSecretCard(props: {
   request: BrowserTakeoverRequest;
   variant?: "card" | "island";
   onOpen?: (() => void) | undefined;
   loadPreview?: ((tabId: string) => Promise<BrowserPreview>) | undefined;
-  /** Offer "Save to Vault" for a password. Only the local server has a Vault. */
-  vaultSave?: boolean | undefined;
+  /** Offer "Save to Vault" for a password. */
+  vault?: BrowserSecretVault | undefined;
   onRespond: (input: LocalBrowserSecretResponse) => Promise<void>;
 }) {
   const { t } = useText();
   const saveId = `browser-secret-save-${createUniqueId()}`;
-  const [saveToVault, setSaveToVault] = createSignal(true);
+  const [saveChoice, setSaveChoice] = createSignal<boolean | null>(null);
+  const saveBlocked = () => Boolean(props.vault?.blocked);
+  const saveToVault = () => !saveBlocked() && (saveChoice() ?? props.vault?.server === null);
   const [preview, setPreview] = createSignal<BrowserPreview | null>(null);
   const [previewStatus, setPreviewStatus] = createSignal<"loading" | "ready" | "failed">("loading");
   const [previewHidden, setPreviewHidden] = createSignal(false);
@@ -49,6 +62,18 @@ export function BrowserSecretCard(props: {
     const marker = "\u0000";
     const [before = "", after = ""] = t("browser.secret.submitOnce", { origin: marker }).split(marker);
     return { before, after };
+  };
+  // The server name is bold inside the sentence, as the origin is.
+  const saveLabel = (vault: BrowserSecretVault) => {
+    const marker = "\u0000";
+    const [before = "", after = ""] = t("browser.secret.saveToVaultOn", { server: marker }).split(marker);
+    return { before, server: vault.server ?? t("browser.secret.thisComputer"), after };
+  };
+  const saveHint = (vault: BrowserSecretVault) => {
+    if (vault.server === null) return t("browser.secret.saveHintLocal");
+    if (vault.blocked === "role") return t("browser.secret.saveBlockedRole", { server: vault.server });
+    if (vault.blocked === "version") return t("browser.secret.saveBlockedVersion", { server: vault.server });
+    return t("browser.secret.saveHintRemote", { server: vault.server });
   };
   const valid = () => (password() ? value().length > 0 : value().length === digits());
   onCleanup(() => setValue(""));
@@ -88,7 +113,7 @@ export function BrowserSecretCard(props: {
     setPending(true);
     setError("");
     const identity = { requestId: props.request.requestId, agentId: props.request.agentId };
-    const save: { saveToVault?: true } = props.vaultSave && password() && saveToVault() ? { saveToVault: true } : {};
+    const save: { saveToVault?: true } = props.vault && password() && saveToVault() ? { saveToVault: true } : {};
     const input: LocalBrowserSecretResponse =
       decision === "submit" ? { ...identity, decision, secret: value(), ...save } : { ...identity, decision };
     setValue("");
@@ -181,16 +206,28 @@ export function BrowserSecretCard(props: {
               <ErrorReference reference={shownCode()} />
             </p>
           </Show>
-          <Show when={props.vaultSave}>
-            <label class="browser-secret-save" for={saveId}>
-              <Checkbox
-                id={saveId}
-                checked={saveToVault()}
-                disabled={pending()}
-                onChange={(event) => setSaveToVault(event.currentTarget.checked)}
-              />
-              {t("browser.secret.saveToVault")}
-            </label>
+          <Show when={props.vault}>
+            {(vault) => (
+              <div class="browser-secret-save-option">
+                <label class="browser-secret-save" for={saveId}>
+                  <Checkbox
+                    id={saveId}
+                    checked={saveToVault()}
+                    disabled={pending() || saveBlocked()}
+                    aria-describedby={`${saveId}-hint`}
+                    onChange={(event) => setSaveChoice(event.currentTarget.checked)}
+                  />
+                  <span>
+                    {saveLabel(vault()).before}
+                    <strong class="browser-secret-save-server">{saveLabel(vault()).server}</strong>
+                    {saveLabel(vault()).after}
+                  </span>
+                </label>
+                <p class="browser-secret-save-hint" id={`${saveId}-hint`}>
+                  {saveHint(vault())}
+                </p>
+              </div>
+            )}
           </Show>
         </div>
       </Show>

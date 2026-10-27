@@ -3,7 +3,8 @@
 // mailbox and the browser are small in-memory stand-ins that record each call, so a check can show
 // that a refused request did not reach them. The checks cover the protocol and auth gates, sign-in
 // and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`, the
-// host's Vault (`vault-v1`) over the real service and store,
+// host's Vault (`vault-v1`) over the real service and store, a password that an admin saves from the
+// secure card (`browser-secret-vault-v1`),
 // direct-message isolation, agents hidden from an older
 // protocol, the queue routes, the attachment and file routes with their size limits, and the error
 // codes. Writes .openbot-build/team-api-routes-e2e/report.json.
@@ -46,6 +47,10 @@ import {
   BROWSER_PROFILES_CAPABILITY,
   BROWSER_PROFILES_ROUTES,
 } from "@openbot/contracts/team-protocol/browser-profiles-v1";
+import {
+  BROWSER_SECRET_VAULT_CAPABILITY,
+  BROWSER_SECRET_VAULT_ROUTES,
+} from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
 import {
   PROVIDER_USAGE_RESET_CAPABILITY,
   PROVIDER_USAGE_RESET_ROUTES,
@@ -384,7 +389,7 @@ const fakeAgents: TeamApiAgents = {
   agentIdForRequest: () => undefined,
   respondToPrompt: unused("respondToPrompt"),
   respondToApproval: unused("respondToApproval"),
-  respondToBrowserSecret: unused("respondToBrowserSecret"),
+  respondToBrowserSecret: (input) => Effect.sync(() => record("respondToBrowserSecret", input)),
   respondToBrowserTakeover: unused("respondToBrowserTakeover"),
 };
 
@@ -2023,6 +2028,42 @@ try {
         reset.status === 200 &&
         isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
       [summary(unreadable), summary(reset)],
+    );
+  }
+
+  // ---- A password saved from the secure card (browser-secret-vault-v1) ----
+  {
+    const capabilities = [BROWSER_SECRET_VAULT_CAPABILITY];
+    const answer = { requestId: "auth-1", agentId: "agent-ada", secret: VAULT_PASSWORD, decision: "takeover" };
+    const before = callsOf("respondToBrowserSecret").length;
+    const unsupported = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, { token: adaToken, json: answer });
+    const member = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: bobToken,
+      json: answer,
+      capabilities,
+    });
+    check(
+      "a save without the capability gets 400 vaultUnsupported, and a member gets 403; neither reaches the agent",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(member, 403, sourceText("error.team.adminRequired")) &&
+        callsOf("respondToBrowserSecret").length === before,
+      [summary(unsupported), summary(member)],
+    );
+    const saved = await call("POST", BROWSER_SECRET_VAULT_ROUTES.respond, {
+      token: adaToken,
+      json: answer,
+      capabilities,
+    });
+    check(
+      "an admin submits the password with a save; the answer does not carry it",
+      saved.status === 200 &&
+        isDeepStrictEqual(saved.body, {}) &&
+        !saved.text.includes(VAULT_PASSWORD) &&
+        // The route sends a submit with the save, whatever decision the body names.
+        isDeepStrictEqual(callsOf("respondToBrowserSecret").at(-1), [
+          { requestId: "auth-1", agentId: "agent-ada", decision: "submit", secret: VAULT_PASSWORD, saveToVault: true },
+        ]),
+      summary(saved),
     );
   }
 
