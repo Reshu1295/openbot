@@ -21,6 +21,7 @@ import {
 } from "../protocol";
 import { extractJsonObject, StructuredOutputError } from "../structured-output";
 import { isBalanceDiagnostic, isPlanLimitDiagnostic } from "./provider-diagnostics";
+import { shownProviderFailure } from "./shown-provider-failures";
 import { USAGE_LIMIT_METHOD } from "./usage-limit-gate";
 
 const GENERATION_TIMEOUT_MS = 120_000;
@@ -249,10 +250,24 @@ export const toollessTurn = Effect.fnUntraced(function* (
   );
 });
 
+/**
+ * What an `error` notification of a generation says: whether a plan window is spent, and the text
+ * that a channel may show. Null for an error that the provider retries by itself.
+ */
+export function readGenerationError(params: unknown): { planLimit: boolean; shown: string | null } | null {
+  if (isRecord(params) && params.willRetry === true) return null;
+  const error = getRecord(params, "error");
+  const message = getString(params, "message") ?? getString(error, "message") ?? "";
+  const planLimit =
+    isPlanLimitDiagnostic(message) || (error?.codexErrorInfo === "usageLimitExceeded" && !isBalanceDiagnostic(message));
+  return { planLimit, shown: shownProviderFailure(message) };
+}
+
 const profileCompletion = Effect.fnUntraced(function* (client: AgentClient, observe?: GenerationObserver) {
   return yield* Effect.callback<string, ProfileGenerationFailed | GenerationUsageLimitError>((resume) => {
     let text = "";
     let limit: { resetsAt: number | null } | null = null;
+    let shown: string | null = null;
     const finish = (effect: Effect.Effect<string, ProfileGenerationFailed | GenerationUsageLimitError>) => {
       cleanup();
       resume(effect);
@@ -269,14 +284,10 @@ const profileCompletion = Effect.fnUntraced(function* (client: AgentClient, obse
       if (notification.method === USAGE_LIMIT_METHOD) {
         limit = { resetsAt: isRecord(params) && typeof params.resetsAt === "number" ? params.resetsAt : null };
       }
-      if (notification.method === "error" && !(isRecord(params) && params.willRetry === true)) {
-        const error = getRecord(params, "error");
-        const message = getString(params, "message") ?? getString(error, "message") ?? "";
-        if (
-          isPlanLimitDiagnostic(message) ||
-          (error?.codexErrorInfo === "usageLimitExceeded" && !isBalanceDiagnostic(message))
-        )
-          limit ??= { resetsAt: null };
+      const failure = notification.method === "error" ? readGenerationError(params) : null;
+      if (failure) {
+        if (failure.planLimit) limit ??= { resetsAt: null };
+        shown ??= failure.shown;
       }
       if (notification.method === "item/agentMessage/delta") text += getString(notification.params, "delta") ?? "";
       if (notification.method === "item/completed") {
@@ -295,7 +306,7 @@ const profileCompletion = Effect.fnUntraced(function* (client: AgentClient, obse
               }),
             ),
           );
-        else reject(sourceText("error.agent.profileFailed"));
+        else reject(shown ?? sourceText("error.agent.profileFailed"));
       }
       if (text.length > 32_000) reject(sourceText("error.agent.profileTooLarge"));
     };

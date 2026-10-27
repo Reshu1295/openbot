@@ -35,6 +35,19 @@ function isOpenCodeInternalFailure(error: unknown): boolean {
 }
 
 /**
+ * OpenCode 2.1.4's error for a prompt that a spent free model refused. Its text reads like any
+ * other usage limit, so only `data.errorName` tells this kind from the others.
+ */
+function isOpenCodeFreeLimit(error: unknown): boolean {
+  return (
+    error instanceof RequestError &&
+    error.code === -32603 &&
+    isRecord(error.data) &&
+    error.data.errorName === "provider.free-limit"
+  );
+}
+
+/**
  * OpenCode 2.1.1 answers a turn whose model provider has no credentials with the protocol's
  * `-32000` and "provider authentication required", and no provider ID. A user with no key can pick
  * a paid or third-party model, and met that text with no next step (#2746). The model ID names the
@@ -126,6 +139,7 @@ export const OPENCODE_ACP_FLAVOR: AcpFlavor = {
   turnFailure: (error, detail, redact, log, model) => {
     const authRequired = openCodeAuthRequired(error, model);
     if (authRequired) return authRequired;
+    if (isOpenCodeFreeLimit(error)) return sourceText("error.provider.opencodeFreeLimit");
     // Google answers "API key not valid" (#1388).
     if (/invalid api key|api key not valid|unauthori[sz]ed|token refresh failed|authentication failed/i.test(detail))
       return sourceText("error.provider.opencodeCredentialsRejected", {

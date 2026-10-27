@@ -25,6 +25,7 @@ import {
 import { type DynamicRecord, isDynamicRecord, isString } from "@openbot/contracts/runtime-values";
 import { isFixedSourceText, matchingSourceKeys, sourceText } from "@openbot/i18n/source";
 import { Deferred, Effect, Exit, Fiber, Result, Schema, Scope } from "effect";
+import { shownProviderFailure } from "./agent/shown-provider-failures";
 import { type ChannelOperationError, channelFailure, channelResult, channelSync } from "./channel-effects";
 import {
   ChannelHistory,
@@ -2732,12 +2733,15 @@ export class ChannelService {
  * The channel text for a failed routing turn, or null when the cause has none. Backend catalog text
  * without a placeholder holds nothing from a provider, so the channel can show it. The routing turn
  * runs as a profile generation, whose texts name a profile; those become channel texts. Provider
- * texts can also name a profile, so they are not shown.
+ * texts can also name a profile, so they are not shown, except the fixed texts that
+ * `shownProviderFailure` lists.
  */
-function routingFailureText(error: unknown): string | null {
+export function routingFailureText(error: unknown): string | null {
   if (!(error instanceof Error) || !isFixedSourceText(error.message)) return null;
   if (error.message === sourceText("error.agent.profileTimedOut"))
     return sourceText("error.backend.channelLeadTimedOut");
+  const shown = shownProviderFailure(error.message);
+  if (shown !== null) return shown;
   const keys = matchingSourceKeys(error.message);
   if (keys.some((key) => key.startsWith("error.agent.profile"))) return sourceText("error.backend.channelLeadFailed");
   return keys.some((key) => key.startsWith("error.backend.")) ? error.message : null;

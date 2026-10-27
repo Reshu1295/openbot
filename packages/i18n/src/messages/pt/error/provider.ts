@@ -190,6 +190,8 @@ export const messages = {
     "Sua chave de API do OpenCode expirou. Crie uma nova chave no OpenCode Console, cole-a nas configurações do OpenCode e tente novamente.",
   "error.provider.opencodeServiceFailure":
     "O OpenCode não conseguiu concluir este turno porque seu serviço local falhou. Tente novamente. Se o erro continuar, reconecte o OpenCode em Configurações.",
+  "error.provider.opencodeFreeLimit":
+    "Os modelos gratuitos do OpenCode atingiram o limite de uso. Escolha outro modelo ou conecte um provedor: cole uma chave do OpenCode Go nas configurações do OpenCode ou execute `opencode auth login` em um terminal. Depois tente novamente.",
   "error.provider.opencodeRateLimited":
     "O provedor do modelo recusou a solicitação por causa do limite de requisições. Aguarde alguns minutos ou escolha outro modelo e tente novamente.\n{detail}",
   "error.provider.opencodeBilling":
