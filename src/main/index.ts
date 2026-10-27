@@ -31,6 +31,7 @@ import { runCauseEffect } from "../backend/effect-boundary";
 import { readAppVariant, resolveAppIconPath, resolveLogoColorIconPath } from "./app-icon";
 import { type ApplicationServices, createApplicationServices } from "./application-services";
 import { type BackgroundTray, createBackgroundTray } from "./background-tray";
+import { removeClaudeCodeSessionEnvironment } from "./claude-session-environment";
 import { type DeepLink, findDeepLink, parseDeepLink } from "./deep-link-router";
 import { requestNotificationPermission, showRetainedNotification } from "./desktop-notifications";
 import { guardDevelopmentOutput } from "./development-output";
@@ -170,6 +171,8 @@ const developmentRemoteRole =
     ? process.env.OPENBOT_DEV_REMOTE_ROLE
     : null;
 const developmentTestClientEnabled = !app.isPackaged && process.env.OPENBOT_DEV_TEST_CLIENT_ENABLED === "1";
+// Before any child process starts: agents must not run as part of a Claude Code session that started OpenBot.
+removeClaudeCodeSessionEnvironment(process.env);
 // Before any child process starts: this removes the single-use claim from the environment they inherit.
 const hostedServer = takeHostedServerEnvironment(process.env, app.isPackaged, process.platform);
 const hostingDeveloperKey = takeHostingDeveloperKey(process.env, app.isPackaged);
