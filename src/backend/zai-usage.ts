@@ -10,6 +10,8 @@ const NO_USAGE: AccountRateLimitsReadResult = { rateLimits: null, rateLimitsByLi
 const Quota = Schema.Struct({
   type: Schema.String,
   percentage: Schema.Finite,
+  unit: Schema.optional(Schema.Finite),
+  number: Schema.optional(Schema.Finite),
   nextResetTime: Schema.optional(Schema.NullOr(Schema.Finite)),
 });
 const QuotaResponse = Schema.Struct({
@@ -43,26 +45,31 @@ export const readZaiUsage = Effect.fn("Zai.readUsage")(function* (
   });
   const decoded = Schema.decodeUnknownOption(QuotaResponse)(body);
   if (Option.isNone(decoded) || decoded.value.success === false) return NO_USAGE;
+  let primary: AccountRateLimitGroupResult["primary"] = null;
+  let secondary: AccountRateLimitGroupResult["secondary"] = null;
   const groups: AccountRateLimitGroupResult[] = [];
   for (const limit of decoded.value.data.limits) {
-    // Z.ai calls the model quota TOKENS_LIMIT and the monthly MCP quota TIME_LIMIT.
-    if (limit.type !== "TOKENS_LIMIT" && limit.type !== "TIME_LIMIT") continue;
-    groups.push({
-      name: limit.type === "TOKENS_LIMIT" ? "GLM" : "MCP",
-      models: [],
-      primary: {
-        usedPercent: Math.max(0, Math.min(100, limit.percentage)),
-        windowDurationMins: limit.type === "TOKENS_LIMIT" ? 300 : null,
-        resetsAt: resetSeconds(limit.nextResetTime),
-      },
-      secondary: null,
-    });
+    const window = {
+      usedPercent: Math.max(0, Math.min(100, limit.percentage)),
+      windowDurationMins: null,
+      resetsAt: resetSeconds(limit.nextResetTime),
+    };
+    if (limit.type === "TIME_LIMIT") {
+      groups.push({ name: "MCP", models: [], primary: window, secondary: null });
+      continue;
+    }
+    if (limit.type !== "TOKENS_LIMIT" && limit.type !== "CREDIT_LIMIT") continue;
+    // The monitor API uses unit 3 for hours and unit 6 for the weekly window. Older
+    // token responses omit the window fields and describe only the five-hour quota.
+    if ((limit.unit === 3 && limit.number === 5) || (limit.type === "TOKENS_LIMIT" && limit.unit == null))
+      primary = { ...window, windowDurationMins: 300 };
+    else if (limit.unit === 6) secondary = { ...window, windowDurationMins: 10_080 };
   }
-  const model = groups.find((group) => group.name === "GLM");
-  if (!model) return NO_USAGE;
+  if (!primary && !secondary) return NO_USAGE;
+  if (groups.length) groups.unshift({ name: "GLM", models: [], primary, secondary });
   return {
-    rateLimits: { limitId: "zai", primary: model.primary, secondary: null },
+    rateLimits: { limitId: "zai", primary, secondary },
     rateLimitsByLimitId: null,
-    groups,
+    ...(groups.length ? { groups } : {}),
   } satisfies AccountRateLimitsReadResult;
 });

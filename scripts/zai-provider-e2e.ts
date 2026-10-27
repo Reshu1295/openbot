@@ -104,7 +104,8 @@ createInterface({ input: process.stdin }).on("line", line => {
       success: true,
       data: {
         limits: [
-          { type: "TOKENS_LIMIT", percentage: 25, nextResetTime: 1_800_000_000_000 },
+          { type: "CREDIT_LIMIT", unit: 6, number: 1, percentage: 60, nextResetTime: 1_800_500_000_000 },
+          { type: "CREDIT_LIMIT", unit: 3, number: 5, percentage: 25, nextResetTime: 1_800_000_000_000 },
           { type: "TIME_LIMIT", percentage: 75 },
         ],
       },
@@ -114,7 +115,34 @@ createInterface({ input: process.stdin }).on("line", line => {
     assert.equal(quota.limits[0]?.primary?.usedPercent, 25);
     assert.equal(quota.limits[0]?.primary?.resetsAt, 1_800_000_000);
     assert.equal(quota.limits[0]?.groups?.[1]?.primary?.resetsAt, null);
-    report.checks.push("Quota HTTP authentication, model quota, MCP group and optional reset time");
+    assert.equal(quota.limits[0]?.primary?.windowDurationMins, 300);
+    assert.equal(quota.limits[0]?.secondary?.usedPercent, 60);
+    assert.equal(quota.limits[0]?.secondary?.windowDurationMins, 10_080);
+    assert.equal(quota.limits[0]?.secondary?.resetsAt, 1_800_500_000);
+    payload = {
+      data: {
+        limits: [
+          { type: "TOKENS_LIMIT", unit: 6, number: 7, percentage: 40 },
+          { type: "TOKENS_LIMIT", unit: 3, number: 5, percentage: 15 },
+        ],
+      },
+    };
+    const legacy = normalizeAccountUsage(await runCauseEffect(readZaiUsage(key, request)));
+    assert.equal(legacy.limits[0]?.primary?.usedPercent, 15);
+    assert.equal(legacy.limits[0]?.secondary?.usedPercent, 40);
+    payload = { data: { limits: [{ type: "TOKENS_LIMIT", percentage: 20 }] } };
+    const old = normalizeAccountUsage(await runCauseEffect(readZaiUsage(key, request)));
+    assert.equal(old.limits[0]?.primary?.usedPercent, 20);
+    assert.equal(old.limits[0]?.secondary, null);
+    payload = { data: { limits: [{ type: "CREDIT_LIMIT", unit: 6, percentage: 80 }] } };
+    const weekly = normalizeAccountUsage(await runCauseEffect(readZaiUsage(key, request)));
+    assert.equal(weekly.limits[0]?.primary, null);
+    assert.equal(weekly.limits[0]?.secondary?.usedPercent, 80);
+    payload = { data: { limits: [{ type: "CREDIT_LIMIT", unit: 99, number: 5, percentage: 80 }] } };
+    assert.equal((await runCauseEffect(readZaiUsage(key, request))).rateLimits, null);
+    report.checks.push(
+      "Quota HTTP authentication, credit/token five-hour and weekly windows, unknown windows, MCP group and optional reset time",
+    );
     for (const invalid of [
       null,
       {},

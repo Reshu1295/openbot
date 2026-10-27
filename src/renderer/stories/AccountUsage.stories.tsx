@@ -149,13 +149,13 @@ const zaiRows = accountUsageProviderRows({
     {
       id: "zai",
       primary: { usedPercent: 25, windowDurationMins: 300, resetsAt: fiveHourReset },
-      secondary: null,
+      secondary: { usedPercent: 60, windowDurationMins: 10_080, resetsAt: weeklyReset },
       groups: [
         {
           name: "GLM",
           models: [],
           primary: { usedPercent: 25, windowDurationMins: 300, resetsAt: fiveHourReset },
-          secondary: null,
+          secondary: { usedPercent: 60, windowDurationMins: 10_080, resetsAt: weeklyReset },
         },
         {
           name: "MCP",
