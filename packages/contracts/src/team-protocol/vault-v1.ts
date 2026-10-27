@@ -3,7 +3,8 @@
 // What it grants, recorded here because freezing it makes it permanent: an owner or admin of a joined
 // server manages the host's Vault from their own computer or browser. They list its items, add, change
 // and delete them, see one saved password, card number or security code when they ask for it, and
-// start again with no items when the host cannot read the file. A member cannot use any route;
+// start again with no items when the host cannot read the file; the host refuses a reset of a Vault
+// that it can read. A member cannot use any route;
 // `requireAdmin` on the host is the only gate. A CSV import is not here: it reads a file on the host.
 //
 // A list item never carries a password, a card number or a security code. Only `reveal` answers with

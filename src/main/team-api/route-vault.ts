@@ -54,6 +54,9 @@ export async function routeVault(
       case VAULT_ROUTES.reveal:
         return json(200, { value: vault.reveal(parse(() => decodeVaultSecretRequest(body))) });
       case VAULT_ROUTES.reset:
+        // Only the way out of a file that the host cannot read: a readable Vault is never deleted here.
+        if (vault.state().status !== "unreadable")
+          throw new HttpError(409, sourceText("error.team.vaultResetReadable"));
         return json(200, wireState(await runCauseEffect(vault.reset())));
       default:
         return json(200, wireState(vault.state()));

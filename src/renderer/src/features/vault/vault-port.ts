@@ -33,33 +33,68 @@ export function desktopVaultCalls(): VaultCalls {
 }
 
 /**
+ * The calls of a joined server's Vault. Its host sends `vault-changed` with no items, so `changes`
+ * gives a signal and the list is read again. A list that a newer read or a change overtook is dropped,
+ * so it cannot show an item again that the user just deleted.
+ */
+export function remoteVaultCalls(
+  calls: Omit<VaultCalls, "onChanged" | "importCsv">,
+  changes: (read: () => void) => () => void,
+): VaultCalls {
+  let generation = 0;
+  const change =
+    <A extends unknown[], R>(call: (...args: A) => Promise<R>) =>
+    (...args: A) => {
+      generation++;
+      return call(...args);
+    };
+  return {
+    ...calls,
+    save: change(calls.save),
+    remove: change(calls.remove),
+    reset: change(calls.reset),
+    onChanged: (listener) =>
+      changes(() => {
+        const current = ++generation;
+        calls.list().then(
+          (state) => {
+            if (current === generation) listener(state);
+          },
+          () => {},
+        );
+      }),
+  };
+}
+
+/**
  * The desktop calls for a joined server. Main copies a secret, so it does not pass through this
- * window. The host sends `vault-changed` with no items, so a change or a reconnect reads the list again.
+ * window. A change on the host, or a connection that comes back, reads the list again.
  */
 export function hostVaultCalls(serverId: string): VaultCalls {
   const vault = () => window.openbot.vault;
-  const list = () => vault().hostList(serverId);
-  return {
-    list,
-    save: (input) => vault().hostSave(input, serverId),
-    remove: (id) => vault().hostDelete(id, serverId),
-    reveal: (request) => vault().hostReveal(request, serverId),
-    copy: (request) => vault().hostCopy(request, serverId),
-    reset: () => vault().hostReset(serverId),
-    onChanged(listener) {
-      const read = () => {
-        list().then(listener, () => {});
-      };
+  return remoteVaultCalls(
+    {
+      list: () => vault().hostList(serverId),
+      save: (input) => vault().hostSave(input, serverId),
+      remove: (id) => vault().hostDelete(id, serverId),
+      reveal: (request) => vault().hostReveal(request, serverId),
+      copy: (request) => vault().hostCopy(request, serverId),
+      reset: () => vault().hostReset(serverId),
+    },
+    (read) => {
       const unsubscribe = window.openbot.agent.onScopedEvent((scoped) => {
         if (scoped.serverId === serverId && scoped.event.type === "vault-changed") read();
       });
+      let online = true;
       const reconnect = window.openbot.servers.onEvent((servers) => {
-        if (servers.some((server) => server.id === serverId && server.state === "online")) read();
+        const now = servers.some((server) => server.id === serverId && server.state === "online");
+        if (now && !online) read();
+        online = now;
       });
       return () => {
         unsubscribe();
         reconnect();
       };
     },
-  };
+  );
 }

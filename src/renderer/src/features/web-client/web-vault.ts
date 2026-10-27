@@ -1,7 +1,7 @@
 import { decodeHostVaultSecret, decodeHostVaultState } from "@openbot/contracts/ipc";
 import { VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import type { TeamApiRequest } from "@openbot/team-client/team-api-requests";
-import type { VaultCalls } from "../vault/vault-port";
+import { remoteVaultCalls, type VaultCalls } from "../vault/vault-port";
 import type { WebWorkspace } from "./web-client-context";
 
 /**
@@ -12,19 +12,26 @@ import type { WebWorkspace } from "./web-client-context";
 export function webVaultCalls(request: () => TeamApiRequest, onHostEvent: WebWorkspace["onHostEvent"]): VaultCalls {
   const post = <T>(path: string, decode: (value: unknown) => T, body: Parameters<TeamApiRequest>[3] = {}) =>
     request()("POST", path, decode, body);
-  const list = () => post(VAULT_ROUTES.list, decodeHostVaultState);
   const reveal: VaultCalls["reveal"] = (secret) => post(VAULT_ROUTES.reveal, decodeHostVaultSecret, { ...secret });
-  return {
-    list,
-    save: (input) => post(VAULT_ROUTES.save, decodeHostVaultState, { ...input }),
-    remove: (id) => post(VAULT_ROUTES.delete, decodeHostVaultState, { id }),
-    reveal,
-    copy: async (secret) => navigator.clipboard.writeText(await reveal(secret)),
-    reset: () => post(VAULT_ROUTES.reset, decodeHostVaultState),
-    // The event carries no item, so the list is read again.
-    onChanged: (listener) =>
+  return remoteVaultCalls(
+    {
+      list: () => post(VAULT_ROUTES.list, decodeHostVaultState),
+      save: (input) => post(VAULT_ROUTES.save, decodeHostVaultState, { ...input }),
+      remove: (id) => post(VAULT_ROUTES.delete, decodeHostVaultState, { id }),
+      reveal,
+      // The write starts in the click, with the value still on its way: Safari refuses a clipboard
+      // write that starts after the request returns.
+      copy: (secret) =>
+        navigator.clipboard.write([
+          new ClipboardItem({
+            "text/plain": reveal(secret).then((value) => new Blob([value], { type: "text/plain" })),
+          }),
+        ]),
+      reset: () => post(VAULT_ROUTES.reset, decodeHostVaultState),
+    },
+    (read) =>
       onHostEvent((event) => {
-        if (event.type === "vault-changed") list().then(listener, () => {});
+        if (event.type === "vault-changed") read();
       }),
-  };
+  );
 }

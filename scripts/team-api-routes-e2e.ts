@@ -1997,6 +1997,12 @@ try {
         vault.state().items.length === 1,
       [summary(badCard), summary(malformed)],
     );
+    const readableReset = await vaultCall(adaToken, VAULT_ROUTES.reset);
+    check(
+      "a reset of a Vault that the host can read gets 409 and keeps every item",
+      errorIs(readableReset, 409, sourceText("error.team.vaultResetReadable")) && vault.state().items.length === 1,
+      summary(readableReset),
+    );
     const deleted = await vaultCall(adaToken, VAULT_ROUTES.delete, { id: itemId });
     const missing = await vaultCall(adaToken, VAULT_ROUTES.delete, { id: itemId });
     check(
@@ -2006,11 +2012,17 @@ try {
         errorIs(missing, 400, sourceText("error.vault.itemMissing")),
       [summary(deleted), summary(missing)],
     );
+    // A file that the host cannot decrypt: the Vault is `unreadable` until an admin resets it.
+    writeFileSync(vaultFile, JSON.stringify({ version: 1, record: "bm90LWEtcmVjb3Jk" }));
+    await Effect.runPromise(vault.load());
+    const unreadable = await vaultCall(adaToken, VAULT_ROUTES.list);
     const reset = await vaultCall(adaToken, VAULT_ROUTES.reset);
     check(
-      "an admin resets the Vault to no items",
-      reset.status === 200 && isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
-      summary(reset),
+      "an admin resets a Vault that the host cannot read to no items",
+      isDeepStrictEqual(unreadable.body, { status: "unreadable", items: [] }) &&
+        reset.status === 200 &&
+        isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
+      [summary(unreadable), summary(reset)],
     );
   }
 

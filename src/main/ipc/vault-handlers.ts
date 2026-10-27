@@ -100,7 +100,13 @@ export function vaultIpcHandlers({
       }),
       hostSave: scopedHandler(decodeVaultSaveInput, {
         local: (input) => runCauseEffect(vault.save(input)),
-        remote: (input, serverId) => post(serverId, VAULT_ROUTES.save, decodeHostVaultState, input),
+        remote: (input, serverId) => {
+          // A new password or card number crosses this computer too, so it is redacted here as well.
+          if (input.kind === "login" && input.password !== null)
+            registerSecretValue(input.password, { allowShort: true });
+          if (input.kind === "card" && input.number !== null) registerSecretValue(input.number);
+          return post(serverId, VAULT_ROUTES.save, decodeHostVaultState, input);
+        },
       }),
       hostDelete: scopedHandler(stringPayload("id", 64), {
         local: (id) => runCauseEffect(vault.delete(id)),
