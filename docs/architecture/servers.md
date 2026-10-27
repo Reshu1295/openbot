@@ -244,6 +244,14 @@ in words on a block that has one, is for the owner and admins only; the host ans
 resolution leave it out. The provider transcript of the tool call can keep it, and the agent can
 repeat it in a reply or a thought, which the conversation stores as any other message.
 
+`agent-task-ui-blocks-v1` (`team-protocol/agent-task-ui-blocks-v1.ts`) adds the same `uiBlock`, with
+the same normalization and wire budget, to the task conversations of `agent-tasks-v1`: the response
+of `POST /v1/agent-tasks/read` and the `snapshot` of the `agent-task-conversation` event. A client
+then shows a question in a side thread as its form, such as the API key card. The host adds it only
+for a connection that advertises the capability; the frozen agent-tasks-v1 decoder drops it for
+every other client. The HTTP and WebRTC clients accept it whenever it is present, and the WebRTC host
+peer encodes the local response and the events again with the same option.
+
 ### Subagents
 
 `subagents-v1` carries the subagents that an agent started in one turn (see
