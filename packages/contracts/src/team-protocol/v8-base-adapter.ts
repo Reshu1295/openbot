@@ -111,7 +111,7 @@ export function encodeTeamProtocolV8BaseCurrentEvent(
     options.subagents ? currentValue : null,
   );
   const withMultiSelect = promptMultiSelect ? withEventPromptMultiSelect(withPlans, currentValue) : withPlans;
-  const output = contextUsage ? withRuntimeSnapshotContextUsage(withMultiSelect, wireValue) : withMultiSelect;
+  const output = contextUsage ? withRuntimeSnapshotContextUsage(withMultiSelect, wireValue, true) : withMultiSelect;
   const withSecrets = options.preserveBrowserSecrets ? restoreBrowserSecretMetadata(output, wireValue) : output;
   return JSON.stringify(options.browserSignIn ? restoreBrowserTakeoverReason(withSecrets, wireValue) : withSecrets);
 }

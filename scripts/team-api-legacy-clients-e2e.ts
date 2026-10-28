@@ -753,6 +753,8 @@ try {
     assert.equal(decodeTeamProtocolV8BaseCurrentEvent(malformed).kind, "invalid");
     return { relayed: relayed.status, malformed: "invalid" };
   });
+  // The steps after these read the snapshot that the host builds.
+  hostAgents.getRuntimeSnapshot = runtimeSnapshot;
 
   // --- v2 over WebRTC frames ---
 

@@ -316,7 +316,9 @@ adds `contextStates` and `threadContextStates` beside the frozen keys of the `sn
 rest of that snapshot. The host adds them only on protocol 8 and only for a connection that
 advertises the capability, so a released client gets the snapshot that it got before and shows no
 meter. The host filters the states as the rest of the snapshot, so a member gets only the agents that
-the member can see, and it drops a category that the capability does not name. A host without the
+the member can see. It drops a category that the capability does not name, and a state that the v1
+shape cannot describe, such as a later compaction status, so a client never refuses the snapshot for
+it. A host without the
 capability never sends the fields, so a client keeps them whenever they are present, and a value that
 the runtime snapshot decoder refuses fails closed. A new socket gets a new snapshot, so the meter
 comes back after a reconnect. The WebRTC host peer encodes the events again with the same option.
