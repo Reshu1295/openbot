@@ -51,7 +51,7 @@ const SUPERTONIC_MODEL_BASE_URL = `https://huggingface.co/csukuangfj2/sherpa-onn
 
 /**
  * The directory name of Supertonic 3 on desktop (`<userData>/runtimes`) and on the phone (the app's
- * documents). A new pin needs a new name.
+ * storage outside the device backup). A new pin needs a new name.
  */
 export const SUPERTONIC_MODEL_DIRECTORY = "supertonic-3-int8";
 

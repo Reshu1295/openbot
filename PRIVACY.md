@@ -496,9 +496,9 @@ sent to the agent as a message. The phone then reads the agent's reply aloud wit
 **Settings → Voice**:
 
 - Supertonic 3, the default. When you press Download, the phone downloads the pinned Supertonic 3
-  model from `huggingface.co`, checks the SHA-256 of each file, and keeps it in the app's documents
-  until you remove it. The request carries no user data. The reply text and its audio stay on the
-  phone.
+  model from `huggingface.co`, checks the SHA-256 of each file, and keeps it in the app's storage
+  outside the device backup until you remove it. The request carries no user data. The reply text
+  and its audio stay on the phone.
 - ElevenLabs, only after you save your own ElevenLabs API key. The phone tests the key by listing
   your ElevenLabs voices and reading one character with the first voice, and then sends the text of each reply that it reads to `api.elevenlabs.io`
   with the key, and receives the audio. Nothing else is sent: no conversation history, file or agent

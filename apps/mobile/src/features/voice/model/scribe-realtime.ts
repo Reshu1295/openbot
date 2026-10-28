@@ -53,6 +53,8 @@ export class ScribeRealtimeSession {
   #partial = "";
   #waiting: string[] = [];
   #settleFinish: (() => void) | null = null;
+  /** `finish` came while the socket opened: the session finishes once it starts. */
+  #finishOnStart = false;
   #timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: {
@@ -96,18 +98,20 @@ export class ScribeRealtimeSession {
   /** Ends the audio and waits for the last segment. A failure on the way reports through `onFailure`. */
   finish(): Promise<void> {
     if (this.#phase === "ended") return Promise.resolve();
-    if (this.#phase === "opening") {
-      // Nothing reached ElevenLabs yet, so there is no text to wait for.
-      this.cancel();
-      return Promise.resolve();
-    }
-    this.#phase = "finishing";
     const done = new Promise<void>((resolve) => {
       this.#settleFinish = resolve;
     });
+    if (this.#phase !== "opening") this.#beginFinish();
+    // The words said while the socket opens wait for the session: it sends them, then finishes.
+    else if (this.#waiting.length > 0) this.#finishOnStart = true;
+    else this.cancel();
+    return done;
+  }
+
+  #beginFinish(): void {
+    this.#phase = "finishing";
     this.#send("", true);
     this.#armFinishTimer();
-    return done;
   }
 
   /** Ends the session and drops its text. */
@@ -146,6 +150,7 @@ export class ScribeRealtimeSession {
       this.#phase = "streaming";
       this.#clearTimer();
       for (const pcm of this.#waiting.splice(0)) this.#send(pcm, false);
+      if (this.#finishOnStart) this.#beginFinish();
       return;
     }
     if (type === "partial_transcript" && text !== null) {
