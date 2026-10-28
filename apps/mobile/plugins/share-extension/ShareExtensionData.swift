@@ -43,8 +43,6 @@ struct ShareDirectory: Decodable {
     "mobile.share.content",
     "mobile.share.lastUsed",
     "mobile.share.noAgents",
-    "mobile.share.chooseAgent",
-    "mobile.share.readFailed",
     "mobile.share.extension.send",
     "mobile.share.extension.footer",
     "mobile.share.extension.sending",

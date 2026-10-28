@@ -223,6 +223,19 @@ export function resetShareExtension(): void {
   void native.forget(null).catch(() => undefined);
 }
 
-export function isShareExtensionLocked(config: { pin: boolean; deviceUnlock: boolean }, ready: boolean): boolean {
-  return !ready || config.pin || config.deviceUnlock;
+/**
+ * Locks the saved directory when the app cannot write a new one, such as while the account directory
+ * loads. The extension then opens the app, which asks for the app lock.
+ */
+export function lockShareExtension(): void {
+  try {
+    const file = directoryFile();
+    if (!file?.exists) return;
+    const value = JSON.parse(file.textSync());
+    if (!isDynamicRecord(value) || value.locked === true) return;
+    file.writeSync(JSON.stringify({ ...value, locked: true }));
+    writtenDirectory = null;
+  } catch (error) {
+    supportLog.add("warn", "app", `Share extension data not locked: ${supportLogValue(error)}`);
+  }
 }

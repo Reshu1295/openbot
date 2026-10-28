@@ -6,6 +6,7 @@ import { useText } from "@/shared/lib/text";
 import { loadLastShareTarget, type ShareTarget } from "./model/last-share-target";
 import {
   forgetShareTargets,
+  lockShareExtension,
   readShareExtensionAgents,
   type ShareExtensionAgent,
   type ShareExtensionDirectory,
@@ -45,6 +46,7 @@ export function ShareExtensionSync({
   const accent = String(useCSSVariable("--openbot-accent"));
   const lockReady = useAppLock((state) => state.status === "ready");
   const lockOn = useAppLock((state) => state.config.pin || state.config.deviceUnlock);
+  const locked = !lockReady || lockOn;
   const [saved] = useState(() => readShareExtensionAgents(apiUrl, userId) ?? []);
   const offered = useRef(new Set(saved.map((agent) => shareConversationId(agent.serverId, agent.id))));
   const [lastTarget, setLastTarget] = useState<ShareTarget | null>(null);
@@ -69,8 +71,6 @@ export function ShareExtensionSync({
       "mobile.share.content": t("mobile.share.content"),
       "mobile.share.lastUsed": t("mobile.share.lastUsed"),
       "mobile.share.noAgents": t("mobile.share.noAgents"),
-      "mobile.share.chooseAgent": t("mobile.share.chooseAgent"),
-      "mobile.share.readFailed": t("mobile.share.readFailed"),
       "mobile.share.extension.send": t("mobile.share.extension.send"),
       "mobile.share.extension.footer": t("mobile.share.extension.footer"),
       // The extension puts the agent's name in place of `{name}`.
@@ -108,7 +108,7 @@ export function ShareExtensionSync({
       version: 1,
       apiUrl,
       userId,
-      locked: !lockReady || lockOn,
+      locked,
       servers: reachable.map((server) => ({
         id: server.id,
         name: server.name,
@@ -120,16 +120,20 @@ export function ShareExtensionSync({
       text,
       accent,
     };
-  }, [serversReady, servers, agents, saved, apiUrl, userId, lockReady, lockOn, lastTarget, text, accent]);
+  }, [serversReady, servers, agents, saved, apiUrl, userId, locked, lastTarget, text, accent]);
 
   useEffect(() => {
-    if (!directory) return;
+    if (!directory) {
+      // The lock must reach the extension also while the servers load.
+      if (locked) lockShareExtension();
+      return;
+    }
     writeShareExtensionDirectory(directory, agents);
     // The share sheet must not offer an agent that is gone or on a server the account left.
     const next = new Set(directory.agents.map((agent) => shareConversationId(agent.serverId, agent.id)));
     forgetShareTargets([...offered.current].filter((id) => !next.has(id)));
     offered.current = next;
-  }, [directory, agents]);
+  }, [directory, agents, locked]);
 
   return null;
 }
