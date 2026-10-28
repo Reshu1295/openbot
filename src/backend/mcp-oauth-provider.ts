@@ -211,6 +211,15 @@ export interface McpSignIn {
    */
   registrationFailed: () => boolean;
   /**
+   * Whether the authorization server answered that registration with 401 or 403. The SDK keeps the
+   * status only when the body is not an OAuth error, and turns a code it does not know into a
+   * `ServerError`: Dropbox answers 403 `registration_not_supported`, which arrives as a bare
+   * sentence. Only a fetch passed through `watchRegistration` sees the status.
+   */
+  registrationRefused: () => boolean;
+  /** `fetch` for an exchange that can register, keeping the status of the registration answer. */
+  watchRegistration: (fetch: FetchLike) => FetchLike;
+  /**
    * Whether the user cancelled this attempt. A cancel can land during discovery, registration or
    * the token exchange, where the step it stops fails with its own words; the reader says
    * "cancelled" instead, because that is what the user did.
@@ -451,7 +460,7 @@ export class McpOAuth implements McpOAuthAuthority {
           if (cancelled || abandoned || this.#options.storage.read(resource)?.tokens) return false;
           // Discovery and the registration read only public documents; the abort ends them with this step.
           const controller = new AbortController();
-          const fetchFn = this.#fetch(resource, controller.signal);
+          const fetchFn = provider.watchRegistration(this.#fetch(resource, controller.signal));
           return yield* withTimeout(
             Effect.gen(function* () {
               // A server that answers without a sign-in and names no authorization server takes none:
@@ -534,6 +543,8 @@ export class McpOAuth implements McpOAuthAuthority {
       abandon,
       secrets: () => provider.secrets(),
       registrationFailed: () => provider.registrationPending,
+      registrationRefused: () => provider.registrationRefused,
+      watchRegistration: (fetch) => provider.watchRegistration(fetch),
       cancelled: () => cancelled,
     };
   }
@@ -821,6 +832,8 @@ class McpOAuthClientProvider implements OAuthClientProvider {
   #discoveryState: OAuthDiscoveryState | undefined;
   /** Set when the SDK is told to register, and cleared when it saves what it registered. */
   #registrationPending = false;
+  /** The status the authorization server answered the pending registration with. */
+  #registrationStatus: number | null = null;
 
   constructor(options: ClientProviderOptions) {
     this.#options = options;
@@ -924,9 +937,26 @@ class McpOAuthClientProvider implements OAuthClientProvider {
     return this.#registrationPending;
   }
 
+  get registrationRefused(): boolean {
+    return this.#registrationPending && (this.#registrationStatus === 401 || this.#registrationStatus === 403);
+  }
+
+  /**
+   * While a registration is pending, the one POST the SDK sends is the registration: discovery reads
+   * with GET, and a failed registration ends the exchange before any other request.
+   */
+  watchRegistration(fetch: FetchLike): FetchLike {
+    return async (input, init) => {
+      const response = await fetch(input, init);
+      if (this.#registrationPending && init?.method === "POST") this.#registrationStatus = response.status;
+      return response;
+    };
+  }
+
   /** No client, which makes the SDK register next. */
   #register(): undefined {
     this.#registrationPending = true;
+    this.#registrationStatus = null;
     return undefined;
   }
 
