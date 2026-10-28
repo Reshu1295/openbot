@@ -1916,12 +1916,15 @@ export class ChannelService {
       if (!assignment) continue;
       const task = tasks.get(assignment.taskId);
       const result = existing(`channel-result-${assignment.id}-revision-${assignment.taskRevision}`);
-      if (result?.message.text === message.text) continue;
       const original = existing(message.id);
+      // A repeat of the result adds nothing. But a row that started streaming before its text matched
+      // must still complete: a row left at streaming stopped every later assignment in the channel (#3673).
+      const repeatsResult = result?.message.text === message.text;
+      if (repeatsResult && !original) continue;
       // The result is the answer of the turn. Answer text that the running turn writes after it, such
       // as a "Yes.", folds into its steps. Before, it showed as a second reply from the same member.
       // Text from before the result has a row with a lower sequence and stays as it is, and so do the
-      // rows of older turns.
+      // rows of older turns. A repeat of the result folds too.
       if (
         result &&
         result.message.turnId === message.turnId &&
@@ -1929,9 +1932,10 @@ export class ChannelService {
         !message.questionPrompt &&
         !message.attachments?.length &&
         (!message.itemType || message.itemType === "agentMessage" || message.itemType === "final_answer") &&
-        (original
-          ? original.message.itemType === "commentary" && original.sequence > result.sequence
-          : activeAssignment(assignment))
+        (repeatsResult ||
+          (original
+            ? original.message.itemType === "commentary" && original.sequence > result.sequence
+            : activeAssignment(assignment)))
       )
         message = { ...message, itemType: "commentary" };
       const messageId =
