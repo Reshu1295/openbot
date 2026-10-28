@@ -49,25 +49,28 @@
 ; user data in %APPDATA%\OpenBot (`app.setName` in `src/main/index.ts`). The uninstaller deletes the
 ; installation folder, and an update moves each file in it to a temporary folder that it then
 ; deletes. An installation folder must not be one of these folders or a folder that holds one.
-; Sets OUT to "1" when $INSTDIR is such a folder, otherwise to "0". OUT must not be $R8 or $R9.
-!macro openBotInstallDirHoldsUserData OUT
+; Sets OUT to "1" when the folder in the variable PATH is such a folder, otherwise to "0". A
+; trailing backslash is removed from PATH. OUT must not be PATH, $R8 or $R9.
+!macro openBotHoldsUserData PATH OUT
   Push $R8
   Push $R9
   StrCpy ${OUT} "0"
-  StrCpy $R9 $INSTDIR 1 -1
+  StrCpy $R9 ${PATH} 1 -1
   ${if} $R9 == "\"
-    StrCpy $INSTDIR $INSTDIR -1
+    StrCpy ${PATH} ${PATH} -1
   ${endIf}
-  !insertmacro openBotInstallDirHolds "$PROFILE\OpenBot" ${OUT}
-  !insertmacro openBotInstallDirHolds "$APPDATA\OpenBot" ${OUT}
+  ${if} ${PATH} != ""
+    !insertmacro openBotHolds ${PATH} "$PROFILE\OpenBot" ${OUT}
+    !insertmacro openBotHolds ${PATH} "$APPDATA\OpenBot" ${OUT}
+  ${endIf}
   Pop $R9
   Pop $R8
 !macroend
 
-!macro openBotInstallDirHolds FOLDER OUT
-  StrLen $R9 $INSTDIR
+!macro openBotHolds PATH FOLDER OUT
+  StrLen $R9 ${PATH}
   StrCpy $R8 "${FOLDER}" $R9
-  ${if} $R8 == $INSTDIR
+  ${if} $R8 == ${PATH}
     StrCpy $R8 "${FOLDER}" 1 $R9
     ${if} $R8 == ""
     ${orIf} $R8 == "\"
@@ -77,36 +80,54 @@
 !macroend
 
 !ifndef BUILD_UNINSTALLER
-  ; The earlier installation when it is in a folder with user data, and the update moves it.
+  ; "1" when the registry names an earlier installation in a folder with user data.
+  Var openBotRegisteredInDataFolder
+  ; The folder with user data that holds an earlier OpenBot.exe. The update removes that copy.
   Var openBotDataFolderInstall
 
   ; The assisted installer accepted a folder that did not exist yet, so a first installation could go
   ; to %USERPROFILE%\OpenBot, and the app then made the agent folders in it. The earlier uninstaller
   ; would move them with the app files and delete them, or it stops the update with "Failed to
-  ; uninstall old application files". Install in the default folder instead, and do not run that
-  ; uninstaller: `customCheckAppRunning` removes its registry entry, and `customInstall` removes only
-  ; the app files. The page that chooses the folder shows the default folder.
+  ; uninstall old application files". Do not run that uninstaller: `customCheckAppRunning` removes its
+  ; registry entry, and `customInstall` removes only the app files. A copy whose registry entry is
+  ; already gone, for example after an install that stopped, is removed too. A silent update installs
+  ; in the default folder; the page that chooses a folder refuses the folder with user data.
   !macro customInit
-    !insertmacro openBotInstallDirHoldsUserData $0
+    ReadRegStr $1 SHCTX "${INSTALL_REGISTRY_KEY}" InstallLocation
+    !insertmacro openBotHoldsUserData $1 $0
     ${if} $0 == "1"
-      StrCpy $openBotDataFolderInstall $INSTDIR
+      StrCpy $openBotRegisteredInDataFolder "1"
+      ${if} ${FileExists} "$1\${APP_EXECUTABLE_FILENAME}"
+        StrCpy $openBotDataFolderInstall $1
+      ${endIf}
+    ${elseIf} ${FileExists} "$PROFILE\OpenBot\${APP_EXECUTABLE_FILENAME}"
+      StrCpy $openBotDataFolderInstall "$PROFILE\OpenBot"
+    ${elseIf} ${FileExists} "$APPDATA\OpenBot\${APP_EXECUTABLE_FILENAME}"
+      StrCpy $openBotDataFolderInstall "$APPDATA\OpenBot"
+    ${endIf}
+    !insertmacro openBotHoldsUserData $INSTDIR $0
+    ${if} $0 == "1"
       StrCpy $INSTDIR "$LocalAppData\Programs\${APP_FILENAME}"
     ${endIf}
   !macroend
 
-  ; The installer runs this check before it removes the earlier version. It is the default check, run
-  ; for the earlier folder when that folder holds user data: the update closes the app there. Then the
-  ; registry no longer names that installation, so `uninstallOldVersion` does not run its uninstaller.
-  ; The uninstaller keeps the default check.
+  ; The installer runs this check before it removes the earlier version. It is the default check.
+  ; When the registry names a folder with user data, the update closes the app there, so the check
+  ; looks for the earlier OpenBot.exe only: a match on the folder would also stop the programs that
+  ; agents run from their workspaces. Then the registry no longer names that installation, so
+  ; `uninstallOldVersion` does not run its uninstaller. The uninstaller keeps the default check.
   !macro customCheckAppRunning
     !insertmacro IS_POWERSHELL_AVAILABLE
-    ${if} $openBotDataFolderInstall != ""
+    ${if} $openBotRegisteredInDataFolder == "1"
+    ${andIf} $openBotDataFolderInstall != ""
       Push $INSTDIR
-      StrCpy $INSTDIR $openBotDataFolderInstall
+      StrCpy $INSTDIR "$openBotDataFolderInstall\${APP_EXECUTABLE_FILENAME}"
     ${endIf}
     !insertmacro _CHECK_APP_RUNNING
-    ${if} $openBotDataFolderInstall != ""
-      Pop $INSTDIR
+    ${if} $openBotRegisteredInDataFolder == "1"
+      ${if} $openBotDataFolderInstall != ""
+        Pop $INSTDIR
+      ${endIf}
       DeleteRegKey SHCTX "${UNINSTALL_REGISTRY_KEY}"
       !ifdef UNINSTALL_REGISTRY_KEY_2
         DeleteRegKey SHCTX "${UNINSTALL_REGISTRY_KEY_2}"
@@ -122,11 +143,20 @@
 
 ; After the new copy is installed, delete the earlier app from the folder with user data. Only the
 ; files and folders that an OpenBot installation has are deleted, so the agent folders stay. A file
-; that Windows still holds stays too; it does not stop the update.
+; that Windows still holds stays too; it does not stop the update. The login item names the
+; executable (`src/main/login-item.ts`), and Electron calls it by the AppUserModelId: point it at
+; the new copy, or OpenBot no longer opens at sign-in.
 !macro openBotRemoveAppFromDataFolder
   ${if} $openBotDataFolderInstall != ""
     Push $0
+    Push $1
+    Push $2
     StrCpy $0 $openBotDataFolderInstall
+    ReadRegStr $1 HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_ID}"
+    ${StrContains} $2 "$0\${APP_EXECUTABLE_FILENAME}" $1
+    ${if} $2 != ""
+      WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${APP_ID}" '"$appExe"'
+    ${endIf}
     Delete "$0\${APP_EXECUTABLE_FILENAME}"
     Delete "$0\${UNINSTALL_FILENAME}"
     Delete "$0\uninstallerIcon.ico"
@@ -149,6 +179,8 @@
     Delete "$0\LICENSES.chromium.html"
     RMDir /r "$0\locales"
     RMDir /r "$0\resources"
+    Pop $2
+    Pop $1
     Pop $0
   ${endIf}
 !macroend
@@ -197,7 +229,7 @@
     ${if} $0 == ""
       StrCpy $INSTDIR "$INSTDIR\${APP_FILENAME}"
     ${endIf}
-    !insertmacro openBotInstallDirHoldsUserData $0
+    !insertmacro openBotHoldsUserData $INSTDIR $0
     ${if} $0 == "1"
       StrCpy $INSTDIR "$LocalAppData\Programs\${APP_FILENAME}"
     ${endIf}
