@@ -180,6 +180,13 @@ web client use them through the optional `workflows-v1` capability (see
 [Workflows](servers.md#workflows)). The agent event `workflows-changed` names the workflow that
 changed, on this computer and on a joined host.
 
+- Agents use `openbot.list_workflows`, `openbot.read_workflow` and `openbot.create_workflow`
+  (`workflow-tools.ts`) from their chat. Creation saves a complete graph through the same
+  `Workflows` service as the canvas, checks referenced agent IDs and emits the same change event.
+  It does not start a manual run; schedule triggers become active. The tool guidance distinguishes
+  workflows from routines and asks agents to check for an existing workflow before creation.
+  The tool router reads the runtime through a getter because it is built after `AgentService`.
+
 - `packages/ui/src/features/workflows/` is the canvas. It reads no application context: it takes
   the document, catalogs, run state and callbacks as props. Edits stay local for fast drags and
   undo, and the canvas gives the new document after each history step.

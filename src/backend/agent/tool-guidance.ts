@@ -86,6 +86,13 @@ export function toolGuidance(
         "When work must start on an event from another system, use openbot.create_webhook_routine, not a polling schedule. Give a name that no routine of the agent has, and set eventType or filters only when the user names events. Give the user the URL, the request format, and where to get the signing secret, as the result says; never ask for, guess, or store the secret. To change the events, read the routine with openbot.list_routines and use openbot.update_webhook_routine, and keep the filters that the user did not mention. Only a person's message can start these tools, not a routine run or an agent's message. The user tests or deletes a webhook routine, or makes its signing secret, in Routines settings.",
         "A routine can pass its agent's answer on to other agents. openbot.list_routine_flows reads an agent's routines and links, and openbot.connect_routine_agents and openbot.disconnect_routine_agents add and remove links. Read the flow before a change, and keep the links that the user did not mention.",
       ].join("\n");
+    case "list_workflows":
+    case "read_workflow":
+    case "create_workflow":
+      return [
+        "A routine is one agent's saved instruction with a schedule or webhook trigger. A workflow is a graph on the Workflows page with several steps, agents, conditions, approvals and outputs. When the user asks for a workflow, use openbot.create_workflow. Call openbot.list_workflows first and openbot.read_workflow for a possible match; do not create a duplicate or call a routine a workflow. Return the saved workflow's title and id.",
+        "Supply the complete graph: nodes, edges and strokes (use [] for no drawing). Each node needs a unique id, kind, at: {x,y} and fields. Each edge needs a unique id, from, to and type (text, image or file). Use list_agents for agent ids. Node fields: prompt uses text; agent uses agentId and task; llm uses provider, model, effort, prompt and system; condition uses rule and its outgoing edges use branch yes or no; approval uses question; output uses target notify, or target channel with connectionId and placeId from messaging_list_places. Use list_models before naming a model. A trigger uses fields.trigger manual or schedule; a schedule trigger also needs schedule and fields.timezone. Creating a workflow does not start a manual run, but schedule triggers become active: add one only when the user asks for scheduled work. Use the returned triggers to confirm the schedule.",
+      ].join("\n");
     case "html_render":
     case "html_preview":
       return [
