@@ -260,12 +260,12 @@ function HostedUpsell(props: AccountProps) {
     }
   });
   // The calendar lists every routine of the host. A range in the future reads no run history.
-  function localRoutineIds(): Promise<readonly string[] | null> {
+  function localActiveRoutineIds(): Promise<readonly string[] | null> {
     if (untrack(activeServer)?.kind !== "local") return Promise.resolve(null);
     const from = Date.now() + 60_000;
     return desktopScheduleSource()
       .calendar({ from: new Date(from).toISOString(), to: new Date(from + 60_000).toISOString() }, LOCAL_SERVER_ID)
-      .then((calendar) => calendar.routines.map((routine) => routine.id));
+      .then((calendar) => calendar.routines.filter((routine) => routine.active).map((routine) => routine.id));
   }
   return (
     <HostedServerUpsell
@@ -279,7 +279,7 @@ function HostedUpsell(props: AccountProps) {
         activeServer()?.hosted !== true
       }
       serverId={activeServer()?.id ?? "local"}
-      hostRoutineIds={localRoutineIds}
+      activeHostRoutineIds={localActiveRoutineIds}
       host={activeServer()?.kind === "remote" ? { name: activeServer()?.name ?? "" } : "this-computer"}
       busy={(agentId) => Boolean(activeTurns()[agentId])}
       openPlans={() => setAddServerOpen(true, "upsell")}

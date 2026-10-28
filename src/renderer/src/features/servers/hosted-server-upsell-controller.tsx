@@ -35,10 +35,10 @@ interface HostedServerUpsellProps {
   /** A routine that waits for the modal is dropped when the user opens another server. */
   serverId: string;
   /**
-   * The id of each routine on the open host, or null when the open host is not this computer. The
-   * modal opens only on this computer, after the first routine there. Without it, the modal never opens.
+   * The id of each active routine on the open host, or null when the open host is not this computer.
+   * The modal opens only on this computer, after the first routine there. Without it, the modal never opens.
    */
-  hostRoutineIds?: (() => Promise<readonly string[] | null>) | undefined;
+  activeHostRoutineIds?: (() => Promise<readonly string[] | null>) | undefined;
   host: HostedUpsellHost;
   busy: (agentId: string) => boolean;
   openPlans: () => void;
@@ -183,17 +183,17 @@ export function HostedServerUpsell(props: HostedServerUpsellProps) {
   }
 
   /**
-   * The modal waits for a routine only when it is the first on this computer: every routine on the
-   * host is new in this window. A failed read shows nothing.
+   * The modal waits for a routine only when it is the first on this computer: the host has the routine,
+   * and every active routine there is new in this window. A failed read shows nothing.
    */
   function waitIfFirst(routine: HostedUpsellRoutine): void {
-    const hostRoutineIds = untrack(() => props.hostRoutineIds);
+    const activeHostRoutineIds = untrack(() => props.activeHostRoutineIds);
     const saved = untrack(state);
-    if (!hostRoutineIds || !saved || !modalAllowed(saved)) return;
+    if (!activeHostRoutineIds || !untrack(() => props.canOffer) || !saved || !modalAllowed(saved)) return;
     const serverId = untrack(() => props.serverId);
-    hostRoutineIds().then(
+    activeHostRoutineIds().then(
       (ids) => {
-        if (!ids?.every((id) => reported.has(id))) return;
+        if (!ids?.includes(routine.id) || !ids.every((id) => reported.has(id))) return;
         if (untrack(() => props.serverId) !== serverId || untrack(modalThisSession) || untrack(pending)) return;
         setPending({ routine, serverId });
       },
