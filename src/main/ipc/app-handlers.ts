@@ -32,6 +32,7 @@ import type { LanguageService } from "../language-service";
 import type { LogoColorService } from "../logo-color-service";
 import { MAC_PERMISSION_URLS } from "../mac-permission-urls";
 import { exportDiagnostics, exportOpenBotData } from "../maintenance-service";
+import type { MemoryReviewPreferenceStore } from "../memory-review-preference-store";
 import { isTailscaleConnected } from "../private-network-detection";
 import type { RemoteNetworkRoutePreferenceStore } from "../remote-network-route-preference-store";
 import type { RemoteSessionCache } from "../remote-session-cache";
@@ -50,6 +51,7 @@ import {
   parseChatWindowTarget,
   parseExternalDestination,
   parseExternalLinkPreference,
+  parseMemoryReviewPreference,
   parseRemoteNetworkRoutePreference,
   parseRemoteSessionReusePreference,
   parseSetup,
@@ -101,6 +103,7 @@ export interface AppIpcDependencies {
   busyMessageMode: BusyMessageModePreferenceStore;
   agentDefaults: AgentDefaultsPreferenceStore;
   agentMemoryLimit: AgentMemoryLimitSetting;
+  memoryReview: MemoryReviewPreferenceStore;
   remoteSessionReuse: RemoteSessionReusePreferenceStore;
   remoteNetworkRoute: RemoteNetworkRoutePreferenceStore;
   /** Applies a changed network route to the devices that are connected to this computer now. */
@@ -137,6 +140,7 @@ export function appIpcHandlers({
   busyMessageMode,
   agentDefaults,
   agentMemoryLimit,
+  memoryReview,
   remoteSessionReuse,
   remoteNetworkRoute,
   applyRemoteNetworkRoute,
@@ -204,6 +208,11 @@ export function appIpcHandlers({
         return saved;
       }),
       getAgentMemoryLimitPreference: handler(() => agentMemoryLimit.get()),
+      // The backend reads the interval at the end of each turn, so a change applies from the next turn.
+      getMemoryReviewPreference: handler(() => memoryReview.get()),
+      setMemoryReviewPreference: payloadHandler(parseMemoryReviewPreference, (parsed) =>
+        runCauseEffect(memoryReview.set(parsed)),
+      ),
       getRemoteSessionReusePreference: handler(() => remoteSessionReuse.get()),
       // Off removes the kept sessions at once. The sessions of this run then end when the app quits.
       setRemoteSessionReusePreference: payloadHandler(parseRemoteSessionReusePreference, async (parsed) => {

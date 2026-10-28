@@ -296,6 +296,7 @@
     "test:routine-overnight-window": "bun scripts/routine-overnight-window-e2e.ts",
     "test:agent-waits-tools": "bun scripts/agent-waits-tools-e2e.ts",
     "test:agent-hide-restore": "bun scripts/agent-hide-restore-e2e.ts",
+    "test:memory-review": "bun scripts/memory-review-e2e.ts",
     "test:messaging-pause-resume": "bun scripts/messaging-pause-resume-e2e.ts",
     "test:messaging-discord-access": "bun scripts/messaging-discord-access-e2e.ts",
     "test:turn-input": "bun scripts/turn-input-e2e.ts",

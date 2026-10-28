@@ -67,6 +67,7 @@ import type {
   CreateAgentMemoryInput,
   DeleteAgentMemoryInput,
   HostAgentMemoryLimit,
+  MemoryReviewPreference,
   SetAgentMemoryInclusionInput,
   UpdateAgentMemoryInput,
 } from "./ipc-agent-memories";
@@ -627,6 +628,8 @@ export const IPC_ENDPOINTS = {
     // Server settings set the limit of this computer (`hostAdmin.setAgentMemoryLimit`), here or from a
     // joined admin, so main tells the window.
     agentMemoryLimitPreference: event<AgentMemoryLimitPreference>()("app:agent-memory-limit"),
+    getMemoryReviewPreference: request<undefined, MemoryReviewPreference>()("app:get-memory-review"),
+    setMemoryReviewPreference: request<MemoryReviewPreference, MemoryReviewPreference>()("app:set-memory-review"),
     getRemoteSessionReusePreference: request<undefined, RemoteSessionReusePreference>()("app:get-remote-session-reuse"),
     setRemoteSessionReusePreference: request<RemoteSessionReusePreference, RemoteSessionReusePreference>()(
       "app:set-remote-session-reuse",

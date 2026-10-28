@@ -286,8 +286,9 @@ Claude gets that block with a user turn instead: the full block in the first tur
 compaction, and only the change after a memory edit. A memory change then keeps the cached
 system prompt and does not restart the Claude query. A profile change still restarts it.
 Saved memories stay on the host in SQLite. Agents can use bounded local search and ID-paged
-listing to recall other entries. FTS5 uses `unicode61` and BM25. Queries match any literal term;
-equal scores use the newest update, then the memory ID. Search returns at most 10 entries,
+listing to recall other entries. FTS5 uses `unicode61` and BM25. Queries match any literal term.
+`unicode61` has no stemming, so a term of 6 or more characters also matches as a prefix of its first
+characters, all but the last 3 and at least 4: "closing" also finds "closes". Equal scores use the newest update, then the memory ID. Search returns at most 10 entries,
 and maintenance pages return at most 25. Both responses are limited to 8,192 UTF-8 bytes.
 The search index stays local. Essential prompt text and requested tool results go to the active
 provider through the existing secret-redaction path.

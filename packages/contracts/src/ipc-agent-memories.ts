@@ -85,6 +85,24 @@ export interface AgentMemoryLimitPreference {
 }
 
 /**
+ * The choices for how many completed turns of one conversation pass between two background memory
+ * reviews on this computer. `0` turns the reviews off, also after a pause, a cleared chat and a
+ * closed side thread. The default is 20.
+ */
+export const MEMORY_REVIEW_INTERVALS = [0, 10, 20, 40] as const;
+export type MemoryReviewInterval = (typeof MEMORY_REVIEW_INTERVALS)[number];
+export const DEFAULT_MEMORY_REVIEW_INTERVAL: MemoryReviewInterval = 20;
+
+export function isMemoryReviewInterval(value: unknown): value is MemoryReviewInterval {
+  return isOneOf(MEMORY_REVIEW_INTERVALS, value);
+}
+
+/** The app setting, as it is stored and as it crosses IPC. */
+export interface MemoryReviewPreference {
+  interval: MemoryReviewInterval;
+}
+
+/**
  * The limit of one server's agents (`agent-memory-limit-v1`) and the values that host permits. A
  * newer host can permit other values, so they are numbers here, not `AgentMemoryLimit`.
  */

@@ -726,6 +726,7 @@ function ServerSettings() {
           hostUpdate={{}}
           hostTimezone={{}}
           hostMemoryLimit={{}}
+          memoryReview={{}}
           hostPromptCacheTtl={{}}
           agentAccess={{ listAgents: () => appPort().agent.listAgents(server().id) }}
           initialSection={serverSettingsSection()}

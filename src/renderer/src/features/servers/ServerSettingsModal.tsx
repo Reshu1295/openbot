@@ -64,6 +64,7 @@ import { type ServerImportDetail, type ServerImportOptions, ServerImportPanel } 
 import { type McpPanelDetail, type McpPanelSignIn, ServerMcpPanel } from "./ServerMcpPanel";
 import { createServerMembersSection } from "./ServerMembersSection";
 import type { ServerMemoryLimitOptions } from "./ServerMemoryLimitSetting";
+import type { ServerMemoryReviewOptions } from "./ServerMemoryReviewSetting";
 import { createServerRolesSection, type ServerAgentAccessOptions } from "./ServerRolesSection";
 import { type ServerRoutineFeedOptions, ServerRoutineFeedPanel } from "./ServerRoutineFeedPanel";
 import type { ServerTimezoneOptions } from "./ServerTimezoneSetting";
@@ -196,6 +197,11 @@ export interface ServerSettingsModalProps {
    * the local server or a remote host with `agent-memory-limit-v1` that this member administers.
    */
   hostMemoryLimit?: ServerMemoryLimitOptions | undefined;
+  /**
+   * General shows how often this computer's agents review their memories only when a caller
+   * supplies this, and only for the local server: it is an app setting of this computer.
+   */
+  memoryReview?: ServerMemoryReviewOptions | undefined;
   /**
    * The Claude provider page shows how long Claude keeps the prompt cache only when a caller supplies
    * this, and only for the local server or a remote host with `prompt-cache-ttl-v1` that this member

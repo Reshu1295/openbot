@@ -232,7 +232,17 @@ export class AgentMemoryStore extends MemoryStore {
     if (query.length > 256 || terms.length === 0 || !Number.isInteger(limit) || limit < 1 || limit > 10) {
       throw new AgentMemorySelectionError({ code: "query", message: sourceText("error.backend.memorySearchQuery") });
     }
-    const expression = [...new Set(terms)].map((term) => `"${term}"`).join(" OR ");
+    // unicode61 has no stemming: a long word also matches by its stem prefix, so "closing" finds "closes".
+    const expression = [
+      ...new Set(
+        terms.flatMap((term) => {
+          const letters = [...term];
+          return letters.length < 6
+            ? [`"${term}"`]
+            : [`"${term}"`, `"${letters.slice(0, Math.max(4, letters.length - 3)).join("")}"*`];
+        }),
+      ),
+    ].join(" OR ");
     const ids = databaseRows(
       this.database.connection
         .prepare(
