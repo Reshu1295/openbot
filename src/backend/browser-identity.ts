@@ -6,10 +6,11 @@ export function sessionBrowserUserAgent(userAgent: string): string {
 /**
  * Google currently rejects its account identifier step without the Electron token.
  * Keep this exception on Google account requests; other sites use the session identity.
+ * Chromium requests some URLs that Node cannot parse, such as a host with an escaped space.
  */
 export function browserRequestUserAgent(url: string, userAgent: string, electronVersion: string): string {
   const cleanAgent = sessionBrowserUserAgent(userAgent);
-  const hostname = new URL(url).hostname.replace(/\.+$/u, "");
+  const hostname = URL.parse(url)?.hostname.replace(/\.+$/u, "");
   if (hostname !== "accounts.google.com") return cleanAgent;
   return cleanAgent.replace(/(Chrome\/[^\s]+)/u, `$1 Electron/${electronVersion}`);
 }
