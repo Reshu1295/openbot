@@ -689,6 +689,7 @@ export class UpdateService extends EventEmitter<UpdateServiceEvents> {
     return Effect.gen({ self: this }, function* () {
       if (this.#cancellationToken && !this.#cancellationToken.cancelled) return this.#cancellationToken;
       const checked = yield* Effect.result(updateIO(() => this.#updater.checkForUpdates()));
+      if (Result.isFailure(checked)) logUpdateFailure("OpenBot update check failed.", checked.failure.cause);
       this.#cancellationToken = Result.isSuccess(checked) ? (checked.success?.cancellationToken ?? null) : null;
       return this.#cancellationToken;
     });
@@ -882,7 +883,9 @@ function describeCheckFailure(error: unknown) {
 
 /**
  * The status and `update.log` keep only a failure code. electron-updater puts its own code and the
- * HTTP status on the error, outside the message that `toLogValue` keeps, so they are logged apart.
+ * HTTP status on the error, outside its message, so they are logged apart. The stack is left out:
+ * an offline app fails a check each interval, and electron-updater already puts the stack of the
+ * cause in the message.
  */
 function logUpdateFailure(text: string, error: unknown): void {
   const fields = typeof error === "object" && error !== null ? error : {};
@@ -891,7 +894,7 @@ function logUpdateFailure(text: string, error: unknown): void {
     toLogValue({
       code: "code" in fields ? fields.code : undefined,
       statusCode: "statusCode" in fields ? fields.statusCode : undefined,
-      error,
+      message: error instanceof Error ? error.message : error,
     }),
   );
 }
