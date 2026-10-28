@@ -472,14 +472,26 @@ an image, the phone requests the link from its website and reads only the respon
 link is an image, the phone downloads it and attaches it in place of the link. It stops a download
 after 10 MB, and a larger image stays a link.
 
-Mobile dictation uses the phone's speech recognition only after you press the microphone. It asks
-for on-device recognition. On iOS, this applies when the phone supports it for your language. On
+Mobile dictation and voice conversations listen only after you press the microphone. They use the
+recognizer chosen under **Speech recognition** in **Settings → Voice**:
+
+- Phone recognizer, the default. It is described below.
+- Parakeet v3. When you press Download, the phone downloads the pinned Parakeet TDT 0.6B v3 model
+  from `huggingface.co`, the same files as desktop, checks the SHA-256 of each file, and keeps it in
+  the app's storage outside the device backup until you remove it. The request carries no user data.
+  The audio and the recognized text stay on the phone.
+- ElevenLabs Scribe, only with your own ElevenLabs API key. For each dictation, the phone asks
+  `api.elevenlabs.io` for a single-use token with the key, then streams the microphone audio to
+  ElevenLabs with that token, and receives the text. ElevenLabs handles the audio and the text under
+  its own policy and your ElevenLabs plan. Nothing else is sent.
+
+The phone recognizer asks for on-device recognition. On iOS, this applies when the phone supports it for your language. On
 Android, it applies when the language model is installed. Otherwise, or when on-device recognition
 fails before it recognizes any speech, the phone's recognition service, Apple or Google, receives the
 audio. The recognized text goes into the message field and is sent
 only when you send the message. OpenBot does not store or send the audio.
 
-In a mobile voice conversation, the same recognition hears what you say, and the recognized text is
+In a mobile voice conversation, the same recognizer hears what you say, and the recognized text is
 sent to the agent as a message. The phone then reads the agent's reply aloud with the voice chosen in
 **Settings → Voice**:
 
@@ -488,7 +500,7 @@ sent to the agent as a message. The phone then reads the agent's reply aloud wit
   until you remove it. The request carries no user data. The reply text and its audio stay on the
   phone.
 - ElevenLabs, only after you save your own ElevenLabs API key. The phone tests the key by listing
-  your ElevenLabs voices, and then sends the text of each reply that it reads to `api.elevenlabs.io`
+  your ElevenLabs voices and reading one character with the first voice, and then sends the text of each reply that it reads to `api.elevenlabs.io`
   with the key, and receives the audio. Nothing else is sent: no conversation history, file or agent
   instruction. ElevenLabs handles the text and the audio under its own policy and your ElevenLabs
   plan. The key is kept in the phone's keychain (iOS) or encrypted storage (Android), never in a log

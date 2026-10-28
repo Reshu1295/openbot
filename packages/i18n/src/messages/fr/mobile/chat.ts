@@ -14,6 +14,14 @@ export const messages = {
   "mobile.chat.dictation.networkNeeded": "La reconnaissance vocale nécessite une connexion réseau. Réessayez.",
   "mobile.chat.dictation.busy": "Une autre app utilise la reconnaissance vocale. Réessayez.",
   "mobile.chat.dictation.failed": "La reconnaissance vocale a échoué. Réessayez.",
+  "mobile.chat.dictation.modelLoadFailed":
+    "Le modèle vocal n’a pas pu se charger. Supprimez-le et téléchargez-le de nouveau dans Réglages > Voix.",
+  "mobile.chat.dictation.elevenLabsPermission":
+    "La clé n’a pas l’autorisation Speech to Text: Access. Activez-la pour cette clé dans ElevenLabs.",
+  "mobile.chat.dictation.elevenLabsQuota": "Votre compte ElevenLabs n’a plus de quota.",
+  "mobile.chat.dictation.elevenLabsBusy": "ElevenLabs est occupé. Réessayez dans un instant.",
+  "mobile.chat.dictation.elevenLabsTerms":
+    "Acceptez les conditions Speech to Text sur le site d’ElevenLabs, puis réessayez.",
   "mobile.chat.dictation.openSettings": "Ouvrir Réglages",
   "mobile.chat.routine.invoked": "Routine lancée",
   "mobile.chat.routine.running": "Routine en cours",

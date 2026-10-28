@@ -54,9 +54,8 @@ export const messages = {
   "mobile.settings.sessions.disconnectBody":
     "Cela met aussi fin aux connexions distantes actives du compte. L’appareil pourra se reconnecter.",
   "mobile.settings.sessions.disconnect": "Déconnecter",
-  "mobile.settings.dictation.title": "Dictée",
   "mobile.settings.dictation.footer":
-    "La langue que vous parlez quand vous dictez un message. « Automatique » utilise la première langue des réglages de votre téléphone que la reconnaissance vocale prend en charge.",
+    "La langue que vous parlez à la reconnaissance du téléphone, dans une conversation vocale et en dictée. « Automatique » utilise la première langue des réglages de votre téléphone qu’elle prend en charge.",
   "mobile.settings.dictation.automatic": "Automatique",
   "mobile.settings.appearance.title": "Apparence",
   "mobile.settings.appearance.footer": "« Système » suit l’apparence de votre appareil.",
@@ -209,7 +208,8 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3 lit de nouveau les réponses.",
   "mobile.settings.voice.elevenLabs.saveKey": "Enregistrer la clé",
   "mobile.settings.voice.elevenLabs.testing": "Test de la clé",
-  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot teste les deux autorisations avant d’enregistrer la clé.",
+  "mobile.settings.voice.elevenLabs.keyHint":
+    "OpenBot teste les deux premières autorisations avant d’enregistrer la clé.",
   "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs n’a pas répondu. Réessayez.",
   "mobile.settings.voice.elevenLabs.getKey": "Obtenir une clé d’API",
   "mobile.settings.voice.engine.supertonicReady": "Sur ce téléphone · {voice}",
@@ -229,5 +229,25 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
   "mobile.settings.voice.elevenLabs.permissionVoicesHint": "Liste les voix à choisir.",
   "mobile.settings.voice.elevenLabs.permissionsFooter":
-    "Dans ElevenLabs, ouvrez Developers > API keys et créez une clé. Si vous activez Restrict key, accordez ces deux autorisations et laissez les autres désactivées. Une clé sans restriction fonctionne aussi.",
+    "Dans ElevenLabs, ouvrez Developers > API keys et créez une clé. Si vous activez Restrict key, accordez ces autorisations et laissez les autres désactivées. Une clé sans restriction fonctionne aussi.",
+  "mobile.settings.voice.recognition.title": "Reconnaissance vocale",
+  "mobile.settings.voice.recognition.footer":
+    "Le moteur coché reconnaît ce que vous dites dans une conversation vocale et en dictée.",
+  "mobile.settings.voice.recognition.system": "Reconnaissance du téléphone",
+  "mobile.settings.voice.recognition.systemHint": "Aucun téléchargement · une langue à la fois",
+  "mobile.settings.voice.recognition.parakeet": "Parakeet v3",
+  "mobile.settings.voice.recognition.parakeetReady": "Sur ce téléphone · trouve la langue seul",
+  "mobile.settings.voice.recognition.parakeetUnsupported": "Nécessite un téléphone avec au moins 6 Go de mémoire",
+  "mobile.settings.voice.recognition.parakeetFooter":
+    "Parakeet fonctionne sur ce téléphone, comme sur l’ordinateur. Il trouve la langue que vous parlez, parmi 25 langues européennes, et votre voix reste sur le téléphone. Tant que le modèle n’est pas téléchargé, la reconnaissance du téléphone écoute.",
+  "mobile.settings.voice.recognition.elevenLabs": "ElevenLabs Scribe",
+  "mobile.settings.voice.recognition.elevenLabsHint": "Plus de 90 langues · envoie votre voix à ElevenLabs",
+  "mobile.settings.voice.recognition.model": "Modèle vocal",
+  "mobile.settings.voice.recognition.removeTitle": "Supprimer le modèle vocal ?",
+  "mobile.settings.voice.recognition.removeBody":
+    "La reconnaissance du téléphone écoute jusqu’à ce que vous téléchargiez de nouveau le modèle.",
+  "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
+  "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
+    "Reconnaît votre voix quand ElevenLabs Scribe est coché.",
+  "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
 } as const satisfies PartialTranslation<typeof source>;

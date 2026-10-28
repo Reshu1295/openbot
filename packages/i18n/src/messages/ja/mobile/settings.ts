@@ -54,9 +54,8 @@ export const messages = {
   "mobile.settings.sessions.disconnectBody":
     "アカウントの有効なリモート接続も終了します。デバイスは再度サインインできます。",
   "mobile.settings.sessions.disconnect": "切断",
-  "mobile.settings.dictation.title": "音声入力",
   "mobile.settings.dictation.footer":
-    "メッセージを音声入力するときに話す言語です。「自動」は、スマートフォンの設定の言語のうち、音声認識が対応している最初の言語を使います。",
+    "音声会話や音声入力で、端末の音声認識に話す言語です。「自動」は、スマートフォンの設定の言語のうち、対応している最初の言語を使います。",
   "mobile.settings.dictation.automatic": "自動",
   "mobile.settings.appearance.title": "外観",
   "mobile.settings.appearance.footer": "「システム」はデバイスの外観に従います。",
@@ -207,7 +206,7 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3 が再び返信を読み上げます。",
   "mobile.settings.voice.elevenLabs.saveKey": "キーを保存",
   "mobile.settings.voice.elevenLabs.testing": "キーを確認中",
-  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot は保存前に両方の権限を確認します。",
+  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot は保存前に最初の 2 つの権限を確認します。",
   "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs から応答がありません。もう一度お試しください。",
   "mobile.settings.voice.elevenLabs.getKey": "API キーを取得",
   "mobile.settings.voice.engine.supertonicReady": "このスマートフォン上 · {voice}",
@@ -228,5 +227,23 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
   "mobile.settings.voice.elevenLabs.permissionVoicesHint": "選べる声を一覧表示します。",
   "mobile.settings.voice.elevenLabs.permissionsFooter":
-    "ElevenLabs で Developers > API keys を開き、キーを作成します。Restrict key をオンにする場合は、この 2 つの権限を設定し、ほかはオフのままにしてください。制限のないキーも使えます。",
+    "ElevenLabs で Developers > API keys を開き、キーを作成します。Restrict key をオンにする場合は、これらの権限を設定し、ほかはオフのままにしてください。制限のないキーも使えます。",
+  "mobile.settings.voice.recognition.title": "音声認識",
+  "mobile.settings.voice.recognition.footer": "チェックした方式で、音声会話や音声入力での発話を認識します。",
+  "mobile.settings.voice.recognition.system": "端末の音声認識",
+  "mobile.settings.voice.recognition.systemHint": "ダウンロード不要 · 一度に 1 言語",
+  "mobile.settings.voice.recognition.parakeet": "Parakeet v3",
+  "mobile.settings.voice.recognition.parakeetReady": "この端末で動作 · 言語を自動で判別",
+  "mobile.settings.voice.recognition.parakeetUnsupported": "6 GB 以上のメモリを搭載した端末が必要です",
+  "mobile.settings.voice.recognition.parakeetFooter":
+    "Parakeet はデスクトップと同じく、この端末で動作します。ヨーロッパの 25 言語から話している言語を判別し、音声は端末の外に出ません。モデルのダウンロードが終わるまでは、端末の音声認識を使います。",
+  "mobile.settings.voice.recognition.elevenLabs": "ElevenLabs Scribe",
+  "mobile.settings.voice.recognition.elevenLabsHint": "90 以上の言語 · 音声を ElevenLabs に送信",
+  "mobile.settings.voice.recognition.model": "音声モデル",
+  "mobile.settings.voice.recognition.removeTitle": "音声モデルを削除しますか？",
+  "mobile.settings.voice.recognition.removeBody": "モデルを再度ダウンロードするまで、端末の音声認識を使います。",
+  "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
+  "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
+    "ElevenLabs Scribe をチェックしたときに音声を認識します。",
+  "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
 } as const satisfies PartialTranslation<typeof source>;

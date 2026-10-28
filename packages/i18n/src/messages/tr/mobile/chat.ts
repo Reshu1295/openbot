@@ -13,6 +13,14 @@ export const messages = {
   "mobile.chat.dictation.networkNeeded": "Konuşma tanıma bir ağ bağlantısı gerektirir. Tekrar deneyin.",
   "mobile.chat.dictation.busy": "Başka bir uygulama konuşma tanımayı kullanıyor. Tekrar deneyin.",
   "mobile.chat.dictation.failed": "Konuşma tanıma başarısız oldu. Tekrar deneyin.",
+  "mobile.chat.dictation.modelLoadFailed":
+    "Konuşma modeli yüklenemedi. Ayarlar > Ses bölümünde modeli kaldırıp yeniden indir.",
+  "mobile.chat.dictation.elevenLabsPermission":
+    "Anahtarın Speech to Text: Access izni yok. ElevenLabs'de bu anahtar için izni aç.",
+  "mobile.chat.dictation.elevenLabsQuota": "ElevenLabs hesabında kota kalmadı.",
+  "mobile.chat.dictation.elevenLabsBusy": "ElevenLabs meşgul. Biraz sonra yeniden dene.",
+  "mobile.chat.dictation.elevenLabsTerms":
+    "ElevenLabs web sitesinde Speech to Text koşullarını kabul et ve yeniden dene.",
   "mobile.chat.dictation.openSettings": "Ayarları aç",
   "mobile.chat.routine.invoked": "Çağrılan rutin",
   "mobile.chat.routine.running": "Çalışan rutin",

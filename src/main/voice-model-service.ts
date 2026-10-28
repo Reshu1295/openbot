@@ -4,7 +4,7 @@ import { createReadStream, existsSync } from "node:fs";
 import { mkdir, open, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import type { LocalVoiceModelId, SpeechModelId, VoiceModelStatus } from "@openbot/contracts/ipc";
-import { SUPERTONIC_MODEL_FILES } from "@openbot/contracts/speech-models";
+import { PARAKEET_MODEL_FILES, SUPERTONIC_MODEL_FILES } from "@openbot/contracts/speech-models";
 import { sourceText } from "@openbot/i18n/source";
 import { Effect, Exit, Fiber, Result, Schema, Scope, Stream } from "effect";
 import { causeHelpers } from "../backend/effect-boundary";
@@ -18,40 +18,6 @@ export interface VoiceModelFile {
   bytes: number;
   sha256: string;
 }
-
-const PARAKEET_MODEL_REVISION = "2bda32ec70b097a55adaa07d9a7173915b43cc78";
-const PARAKEET_MODEL_BASE_URL = `https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/${PARAKEET_MODEL_REVISION}`;
-
-/** The directory name of the model in `<userData>/runtimes`. A new pin needs a new name. */
-export const PARAKEET_MODEL_DIRECTORY = "parakeet-tdt-0.6b-v3-int8";
-
-/** NVIDIA Parakeet TDT 0.6B v3 (CC-BY-4.0), int8 ONNX export for sherpa-onnx. */
-export const PARAKEET_MODEL_FILES: readonly VoiceModelFile[] = [
-  {
-    name: "encoder.int8.onnx",
-    url: `${PARAKEET_MODEL_BASE_URL}/encoder.int8.onnx`,
-    bytes: 652_184_281,
-    sha256: "acfc2b4456377e15d04f0243af540b7fe7c992f8d898d751cf134c3a55fd2247",
-  },
-  {
-    name: "decoder.int8.onnx",
-    url: `${PARAKEET_MODEL_BASE_URL}/decoder.int8.onnx`,
-    bytes: 11_845_275,
-    sha256: "179e50c43d1a9de79c8a24149a2f9bac6eb5981823f2a2ed88d655b24248db4e",
-  },
-  {
-    name: "joiner.int8.onnx",
-    url: `${PARAKEET_MODEL_BASE_URL}/joiner.int8.onnx`,
-    bytes: 6_355_277,
-    sha256: "3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3",
-  },
-  {
-    name: "tokens.txt",
-    url: `${PARAKEET_MODEL_BASE_URL}/tokens.txt`,
-    bytes: 93_939,
-    sha256: "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d",
-  },
-];
 
 const BARK_PLUS_MODEL_REVISION = "5f95a80a9da9d392a38df8e9a6609e25be643d07";
 const BARK_PLUS_MODEL_BASE_URL = `https://huggingface.co/velddev/Underdog-Bark-3.0-Plus-sherpa-onnx/resolve/${BARK_PLUS_MODEL_REVISION}`;
@@ -125,7 +91,11 @@ const WHISPER_TURBO_MODEL_FILES: readonly VoiceModelFile[] = [
 type DownloadedModelId = LocalVoiceModelId | SpeechModelId;
 
 /** The directory name of Supertonic 3 in `<userData>/runtimes`. The phone uses the same name. */
-export { SUPERTONIC_MODEL_DIRECTORY } from "@openbot/contracts/speech-models";
+export {
+  PARAKEET_MODEL_DIRECTORY,
+  PARAKEET_MODEL_FILES,
+  SUPERTONIC_MODEL_DIRECTORY,
+} from "@openbot/contracts/speech-models";
 
 /** The files of each model. */
 const VOICE_MODEL_FILES: Record<DownloadedModelId, readonly VoiceModelFile[]> = {

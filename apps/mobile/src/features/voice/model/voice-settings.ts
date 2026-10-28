@@ -9,6 +9,17 @@ import { create } from "zustand";
  */
 export type VoiceEngine = "supertonic" | "elevenlabs";
 
+/**
+ * What recognizes the user's speech. The phone's recognizer needs no download and hears one language;
+ * Parakeet runs on the phone and finds the language itself, as on desktop; ElevenLabs Scribe finds it
+ * too, with the user's own key, and sends the audio to ElevenLabs.
+ */
+export type RecognitionEngine = "system" | "parakeet" | "elevenlabs";
+
+const RECOGNITION_ENGINES: readonly RecognitionEngine[] = ["system", "parakeet", "elevenlabs"];
+const isRecognitionEngine = (value: unknown): value is RecognitionEngine =>
+  RECOGNITION_ENGINES.some((engine) => engine === value);
+
 export interface ElevenLabsVoice {
   id: string;
   name: string;
@@ -16,11 +27,17 @@ export interface ElevenLabsVoice {
 
 interface VoiceSettings {
   engine: VoiceEngine;
+  recognition: RecognitionEngine;
   supertonicVoice: SpeechVoice;
   elevenLabsVoice: ElevenLabsVoice | null;
 }
 
-const DEFAULT_SETTINGS: VoiceSettings = { engine: "supertonic", supertonicVoice: "F1", elevenLabsVoice: null };
+const DEFAULT_SETTINGS: VoiceSettings = {
+  engine: "supertonic",
+  recognition: "system",
+  supertonicVoice: "F1",
+  elevenLabsVoice: null,
+};
 
 const SETTINGS_KEY = "openbot.mobile.voice-settings.v1";
 /** The key stays in the keychain only: no state, log or analytics event holds it. */
@@ -45,6 +62,7 @@ function decodeSettings(raw: string | null): VoiceSettings {
   const voice = value.elevenLabsVoice;
   return {
     engine: value.engine === "elevenlabs" ? "elevenlabs" : "supertonic",
+    recognition: isRecognitionEngine(value.recognition) ? value.recognition : DEFAULT_SETTINGS.recognition,
     supertonicVoice: isSpeechVoice(value.supertonicVoice) ? value.supertonicVoice : DEFAULT_SETTINGS.supertonicVoice,
     elevenLabsVoice:
       isDynamicRecord(voice) && isString(voice.id) && isString(voice.name) ? { id: voice.id, name: voice.name } : null,
@@ -68,9 +86,12 @@ export async function loadVoiceSettings(): Promise<void> {
 
 /** Applies at once, also when storage fails; the caller reports the failure. */
 export async function saveVoiceSettings(change: Partial<VoiceSettings>): Promise<void> {
-  const { engine, supertonicVoice, elevenLabsVoice } = { ...useVoiceSettings.getState(), ...change };
-  useVoiceSettings.setState({ engine, supertonicVoice, elevenLabsVoice });
-  await SecureStore.setItemAsync(SETTINGS_KEY, JSON.stringify({ engine, supertonicVoice, elevenLabsVoice }));
+  const { engine, recognition, supertonicVoice, elevenLabsVoice } = { ...useVoiceSettings.getState(), ...change };
+  useVoiceSettings.setState({ engine, recognition, supertonicVoice, elevenLabsVoice });
+  await SecureStore.setItemAsync(
+    SETTINGS_KEY,
+    JSON.stringify({ engine, recognition, supertonicVoice, elevenLabsVoice }),
+  );
 }
 
 export function readElevenLabsKey(): Promise<string | null> {
@@ -82,9 +103,17 @@ export async function saveElevenLabsKey(key: string): Promise<void> {
   useVoiceSettings.setState({ hasElevenLabsKey: true });
 }
 
-/** Removes the key, and the ElevenLabs voice with it. Supertonic 3 reads again. */
+/**
+ * Removes the key, and the ElevenLabs voice with it. Supertonic 3 reads again, and the phone's
+ * recognizer listens again where ElevenLabs did.
+ */
 export async function removeElevenLabsKey(): Promise<void> {
   await SecureStore.deleteItemAsync(ELEVENLABS_KEY);
   useVoiceSettings.setState({ hasElevenLabsKey: false });
-  await saveVoiceSettings({ engine: "supertonic", elevenLabsVoice: null });
+  const { recognition } = useVoiceSettings.getState();
+  await saveVoiceSettings({
+    engine: "supertonic",
+    elevenLabsVoice: null,
+    recognition: recognition === "elevenlabs" ? "system" : recognition,
+  });
 }

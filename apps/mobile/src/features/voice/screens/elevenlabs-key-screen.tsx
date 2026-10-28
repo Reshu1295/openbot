@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { Typography } from "heroui-native";
 import { useState } from "react";
@@ -20,18 +20,22 @@ const FAILURES = {
   "invalid-key": "mobile.chat.liveVoice.elevenLabsKeyInvalid",
   "missing-voices-permission": "mobile.settings.voice.elevenLabs.missingVoicesPermission",
   "missing-speech-permission": "mobile.settings.voice.elevenLabs.missingSpeechPermission",
+  "missing-transcription-permission": "mobile.chat.dictation.elevenLabsPermission",
   network: "mobile.chat.liveVoice.networkNeeded",
   failed: "mobile.settings.voice.elevenLabs.testFailed",
 } as const;
 
 /**
- * The ElevenLabs API key. The page lists the two permissions that a restricted key needs, and the
- * phone tests both before it saves the key: it lists the voices (Voices: Read) and reads one
- * character (Text to Speech: Access). The key goes to the keychain and never shows again. A new key
- * takes the first voice of the account when none is chosen, and makes ElevenLabs the voice in use.
+ * The ElevenLabs API key. The page lists the permissions that a restricted key needs, and the phone
+ * tests two of them before it saves the key: it lists the voices (Voices: Read) and reads one
+ * character (Text to Speech: Access). Speech to Text is tested when the first dictation starts, as
+ * a test would cost a recognition session. The key goes to the keychain and never shows again. A new
+ * key takes the first voice of the account when none is chosen, and makes ElevenLabs the voice in
+ * use, or the recognizer when the page opened from the choice of recognizer.
  */
 export function ElevenLabsKeyScreen() {
   const { t } = useText();
+  const { use } = useLocalSearchParams<{ use?: string }>();
   const [key, setKey] = useState("");
   const [state, setState] = useState<{ phase: "idle" | "saving"; error: string | null }>({
     phase: "idle",
@@ -49,7 +53,11 @@ export function ElevenLabsKeyScreen() {
       useElevenLabsVoices.setState({ phase: "ready", voices, failure: null });
       const chosen = useVoiceSettings.getState().elevenLabsVoice;
       const kept = chosen && voices.some((voice) => voice.id === chosen.id) ? chosen : (voices[0] ?? null);
-      await saveVoiceSettings({ engine: "elevenlabs", elevenLabsVoice: kept });
+      await saveVoiceSettings(
+        use === "recognition"
+          ? { recognition: "elevenlabs", elevenLabsVoice: kept }
+          : { engine: "elevenlabs", elevenLabsVoice: kept },
+      );
       void haptics.notification("success");
       setState({ phase: "idle", error: null });
       router.back();
@@ -75,6 +83,7 @@ export function ElevenLabsKeyScreen() {
       <View className="gap-2">
         <SheetFormField
           label={t("mobile.settings.voice.elevenLabs.key")}
+          placeholder={t("mobile.settings.voice.elevenLabs.keyPlaceholder")}
           value={key}
           editable={!saving}
           autoCapitalize="none"
@@ -103,6 +112,9 @@ export function ElevenLabsKeyScreen() {
         </SettingsRow>
         <SettingsRow supportingText={t("mobile.settings.voice.elevenLabs.permissionVoicesHint")}>
           <Typography.Paragraph>{t("mobile.settings.voice.elevenLabs.permissionVoices")}</Typography.Paragraph>
+        </SettingsRow>
+        <SettingsRow supportingText={t("mobile.settings.voice.elevenLabs.permissionTranscriptionHint")}>
+          <Typography.Paragraph>{t("mobile.settings.voice.elevenLabs.permissionTranscription")}</Typography.Paragraph>
         </SettingsRow>
       </SettingsSection>
       <SettingsSection footer={t("mobile.settings.voice.elevenLabs.footer")}>

@@ -13,6 +13,13 @@ export const messages = {
   "mobile.chat.dictation.networkNeeded": "음성 인식에는 네트워크 연결이 필요해요. 다시 시도해 주세요.",
   "mobile.chat.dictation.busy": "다른 앱이 음성 인식을 사용 중이에요. 다시 시도해 주세요.",
   "mobile.chat.dictation.failed": "음성 인식에 실패했어요. 다시 시도해 주세요.",
+  "mobile.chat.dictation.modelLoadFailed":
+    "음성 모델을 불러오지 못했어요. 설정 > 음성에서 모델을 삭제하고 다시 다운로드하세요.",
+  "mobile.chat.dictation.elevenLabsPermission":
+    "이 키에 Speech to Text: Access 권한이 없어요. ElevenLabs에서 이 키의 권한을 켜세요.",
+  "mobile.chat.dictation.elevenLabsQuota": "ElevenLabs 계정의 사용량이 남아 있지 않아요.",
+  "mobile.chat.dictation.elevenLabsBusy": "ElevenLabs가 바빠요. 잠시 후 다시 시도하세요.",
+  "mobile.chat.dictation.elevenLabsTerms": "ElevenLabs 웹사이트에서 Speech to Text 약관에 동의한 다음 다시 시도하세요.",
   "mobile.chat.dictation.openSettings": "설정 열기",
   "mobile.chat.routine.invoked": "루틴을 호출함",
   "mobile.chat.routine.running": "루틴 실행 중",

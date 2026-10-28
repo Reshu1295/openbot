@@ -12,6 +12,12 @@ export const messages = {
   "mobile.chat.dictation.networkNeeded": "语音识别需要网络连接，请重试。",
   "mobile.chat.dictation.busy": "有其他应用正在使用语音识别，请重试。",
   "mobile.chat.dictation.failed": "语音识别失败，请重试。",
+  "mobile.chat.dictation.modelLoadFailed": "无法加载语音模型。请在“设置 > 语音”中移除并重新下载。",
+  "mobile.chat.dictation.elevenLabsPermission":
+    "此密钥没有 Speech to Text: Access 权限。请在 ElevenLabs 中为此密钥开启该权限。",
+  "mobile.chat.dictation.elevenLabsQuota": "你的 ElevenLabs 账户已没有剩余额度。",
+  "mobile.chat.dictation.elevenLabsBusy": "ElevenLabs 正忙，请稍后重试。",
+  "mobile.chat.dictation.elevenLabsTerms": "请先在 ElevenLabs 网站上接受 Speech to Text 条款，然后重试。",
   "mobile.chat.dictation.openSettings": "打开系统设置",
   "mobile.chat.routine.invoked": "已触发自动化任务",
   "mobile.chat.routine.running": "正在运行自动化任务",

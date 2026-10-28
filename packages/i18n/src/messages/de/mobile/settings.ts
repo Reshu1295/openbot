@@ -56,9 +56,8 @@ export const messages = {
   "mobile.settings.sessions.disconnectBody":
     "Dies beendet auch die aktiven Remote-Verbindungen des Kontos. Das Gerät kann sich erneut anmelden.",
   "mobile.settings.sessions.disconnect": "Trennen",
-  "mobile.settings.dictation.title": "Diktat",
   "mobile.settings.dictation.footer":
-    "Die Sprache, in der du eine Nachricht diktierst. Automatisch verwendet die erste Sprache in den Telefoneinstellungen, die von der Spracherkennung unterstützt wird.",
+    "Die Sprache, die du mit der Erkennung des Telefons sprichst, in einem Sprachgespräch und beim Diktieren. Automatisch verwendet die erste Sprache in den Telefoneinstellungen, die sie unterstützt.",
   "mobile.settings.dictation.automatic": "Automatisch",
   "mobile.settings.appearance.title": "Darstellung",
   "mobile.settings.appearance.footer": "System folgt der Darstellung deines Geräts.",
@@ -211,7 +210,7 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3 liest die Antworten wieder vor.",
   "mobile.settings.voice.elevenLabs.saveKey": "Schlüssel speichern",
   "mobile.settings.voice.elevenLabs.testing": "Schlüssel wird geprüft",
-  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot prüft beide Berechtigungen vor dem Speichern.",
+  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot prüft die ersten zwei Berechtigungen vor dem Speichern.",
   "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs hat nicht geantwortet. Versuche es erneut.",
   "mobile.settings.voice.elevenLabs.getKey": "API-Schlüssel holen",
   "mobile.settings.voice.engine.supertonicReady": "Auf diesem Telefon · {voice}",
@@ -233,5 +232,24 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
   "mobile.settings.voice.elevenLabs.permissionVoicesHint": "Listet die Stimmen zur Auswahl.",
   "mobile.settings.voice.elevenLabs.permissionsFooter":
-    "Öffne in ElevenLabs Developers > API keys und erstelle einen Schlüssel. Wenn du Restrict key aktivierst, setze diese zwei Berechtigungen und lass die anderen aus. Ein Schlüssel ohne Einschränkungen funktioniert auch.",
+    "Öffne in ElevenLabs Developers > API keys und erstelle einen Schlüssel. Wenn du Restrict key aktivierst, setze diese Berechtigungen und lass die anderen aus. Ein Schlüssel ohne Einschränkungen funktioniert auch.",
+  "mobile.settings.voice.recognition.title": "Spracherkennung",
+  "mobile.settings.voice.recognition.footer":
+    "Die markierte Erkennung versteht, was du in einem Sprachgespräch und beim Diktieren sagst.",
+  "mobile.settings.voice.recognition.system": "Erkennung des Telefons",
+  "mobile.settings.voice.recognition.systemHint": "Kein Download · eine Sprache auf einmal",
+  "mobile.settings.voice.recognition.parakeet": "Parakeet v3",
+  "mobile.settings.voice.recognition.parakeetReady": "Auf diesem Telefon · erkennt die Sprache selbst",
+  "mobile.settings.voice.recognition.parakeetUnsupported": "Braucht ein Telefon mit mindestens 6 GB Arbeitsspeicher",
+  "mobile.settings.voice.recognition.parakeetFooter":
+    "Parakeet läuft auf diesem Telefon, wie auf dem Desktop. Es erkennt die Sprache, die du sprichst, in 25 europäischen Sprachen, und deine Sprache bleibt auf dem Telefon. Bis das Modell geladen ist, hört die Erkennung des Telefons zu.",
+  "mobile.settings.voice.recognition.elevenLabs": "ElevenLabs Scribe",
+  "mobile.settings.voice.recognition.elevenLabsHint": "Mehr als 90 Sprachen · sendet deine Sprache an ElevenLabs",
+  "mobile.settings.voice.recognition.model": "Sprachmodell",
+  "mobile.settings.voice.recognition.removeTitle": "Sprachmodell entfernen?",
+  "mobile.settings.voice.recognition.removeBody": "Die Erkennung des Telefons hört zu, bis du das Modell erneut lädst.",
+  "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
+  "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
+    "Erkennt deine Sprache, wenn ElevenLabs Scribe markiert ist.",
+  "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
 } as const satisfies PartialTranslation<typeof source>;

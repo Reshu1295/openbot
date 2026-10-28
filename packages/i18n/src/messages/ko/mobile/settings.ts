@@ -52,9 +52,8 @@ export const messages = {
   "mobile.settings.sessions.disconnectBody":
     "이 계정의 활성 원격 연결도 함께 종료돼요. 이 기기는 다시 로그인할 수 있어요.",
   "mobile.settings.sessions.disconnect": "연결 해제",
-  "mobile.settings.dictation.title": "받아쓰기",
   "mobile.settings.dictation.footer":
-    "메시지를 받아쓸 때 말하는 언어예요. 자동은 휴대전화 설정에서 음성 인식이 지원하는 첫 번째 언어를 사용해요.",
+    "음성 대화와 받아쓰기에서 휴대폰 음성 인식에 말하는 언어예요. 자동은 휴대전화 설정에서 지원되는 첫 번째 언어를 사용해요.",
   "mobile.settings.dictation.automatic": "자동",
   "mobile.settings.appearance.title": "화면 모드",
   "mobile.settings.appearance.footer": "시스템은 기기의 화면 모드를 따라요.",
@@ -203,7 +202,7 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3가 다시 답변을 읽어요.",
   "mobile.settings.voice.elevenLabs.saveKey": "키 저장",
   "mobile.settings.voice.elevenLabs.testing": "키 확인 중",
-  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot은 저장하기 전에 두 권한을 모두 확인해요.",
+  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot은 저장하기 전에 처음 두 권한을 확인해요.",
   "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs가 응답하지 않았어요. 다시 시도하세요.",
   "mobile.settings.voice.elevenLabs.getKey": "API 키 받기",
   "mobile.settings.voice.engine.supertonicReady": "이 휴대폰에서 · {voice}",
@@ -223,5 +222,22 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
   "mobile.settings.voice.elevenLabs.permissionVoicesHint": "선택할 수 있는 목소리를 불러와요.",
   "mobile.settings.voice.elevenLabs.permissionsFooter":
-    "ElevenLabs에서 Developers > API keys를 열고 키를 만드세요. Restrict key를 켜면 이 두 권한을 설정하고 나머지는 끄세요. 제한이 없는 키도 사용할 수 있어요.",
+    "ElevenLabs에서 Developers > API keys를 열고 키를 만드세요. Restrict key를 켜면 이 권한들을 설정하고 나머지는 끄세요. 제한이 없는 키도 사용할 수 있어요.",
+  "mobile.settings.voice.recognition.title": "음성 인식",
+  "mobile.settings.voice.recognition.footer": "체크한 엔진이 음성 대화와 받아쓰기에서 말한 내용을 인식해요.",
+  "mobile.settings.voice.recognition.system": "휴대폰 음성 인식",
+  "mobile.settings.voice.recognition.systemHint": "다운로드 없음 · 한 번에 한 언어",
+  "mobile.settings.voice.recognition.parakeet": "Parakeet v3",
+  "mobile.settings.voice.recognition.parakeetReady": "이 휴대폰에서 실행 · 언어를 스스로 찾아요",
+  "mobile.settings.voice.recognition.parakeetUnsupported": "메모리가 6GB 이상인 휴대폰이 필요해요",
+  "mobile.settings.voice.recognition.parakeetFooter":
+    "Parakeet은 데스크톱처럼 이 휴대폰에서 실행돼요. 유럽 언어 25개 중에서 말하는 언어를 찾고, 음성은 휴대폰 밖으로 나가지 않아요. 모델을 다운로드하기 전까지는 휴대폰 음성 인식이 들어요.",
+  "mobile.settings.voice.recognition.elevenLabs": "ElevenLabs Scribe",
+  "mobile.settings.voice.recognition.elevenLabsHint": "90개 이상의 언어 · 음성을 ElevenLabs로 보내요",
+  "mobile.settings.voice.recognition.model": "음성 모델",
+  "mobile.settings.voice.recognition.removeTitle": "음성 모델을 삭제할까요?",
+  "mobile.settings.voice.recognition.removeBody": "모델을 다시 다운로드할 때까지 휴대폰 음성 인식이 들어요.",
+  "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
+  "mobile.settings.voice.elevenLabs.permissionTranscriptionHint": "ElevenLabs Scribe를 체크하면 음성을 인식해요.",
+  "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
 } as const satisfies PartialTranslation<typeof source>;

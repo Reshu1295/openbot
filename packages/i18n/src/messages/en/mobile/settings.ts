@@ -51,9 +51,8 @@ export const messages = defineMessages("mobile.settings", {
   "mobile.settings.sessions.disconnectBody":
     "This also ends the account’s active remote connections. The device can sign in again.",
   "mobile.settings.sessions.disconnect": "Disconnect",
-  "mobile.settings.dictation.title": "Dictation",
   "mobile.settings.dictation.footer":
-    "The language you speak when you dictate a message. Automatic uses the first language in your phone settings that speech recognition supports.",
+    "The language you speak to the phone recognizer, in a voice conversation and when you dictate. Automatic uses the first language in your phone settings that it supports.",
   "mobile.settings.dictation.automatic": "Automatic",
   "mobile.settings.appearance.title": "Appearance",
   "mobile.settings.appearance.footer": "System follows your device’s appearance.",
@@ -203,7 +202,7 @@ export const messages = defineMessages("mobile.settings", {
   "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3 reads replies again.",
   "mobile.settings.voice.elevenLabs.saveKey": "Save key",
   "mobile.settings.voice.elevenLabs.testing": "Testing the key",
-  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot tests both permissions before it saves the key.",
+  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot tests the first two permissions before it saves the key.",
   "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs did not answer. Try again.",
   "mobile.settings.voice.elevenLabs.getKey": "Get an API key",
   "mobile.settings.voice.engine.supertonicReady": "On this phone · {voice}",
@@ -223,5 +222,24 @@ export const messages = defineMessages("mobile.settings", {
   "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
   "mobile.settings.voice.elevenLabs.permissionVoicesHint": "Lists the voices you can choose.",
   "mobile.settings.voice.elevenLabs.permissionsFooter":
-    "In ElevenLabs, open Developers > API keys and create a key. If you turn on Restrict key, set these two permissions and leave the others off. A key without restrictions also works.",
+    "In ElevenLabs, open Developers > API keys and create a key. If you turn on Restrict key, set these permissions and leave the others off. A key without restrictions also works.",
+  "mobile.settings.voice.recognition.title": "Speech recognition",
+  "mobile.settings.voice.recognition.footer":
+    "The checked engine recognizes what you say in a voice conversation and when you dictate.",
+  "mobile.settings.voice.recognition.system": "Phone recognizer",
+  "mobile.settings.voice.recognition.systemHint": "No download · one language at a time",
+  "mobile.settings.voice.recognition.parakeet": "Parakeet v3",
+  "mobile.settings.voice.recognition.parakeetReady": "On this phone · finds the language itself",
+  "mobile.settings.voice.recognition.parakeetUnsupported": "Needs a phone with 6 GB of memory or more",
+  "mobile.settings.voice.recognition.parakeetFooter":
+    "Parakeet runs on this phone, as on the desktop. It finds the language you speak, in 25 European languages, and your speech stays on the phone. Until the model is downloaded, the phone recognizer listens.",
+  "mobile.settings.voice.recognition.elevenLabs": "ElevenLabs Scribe",
+  "mobile.settings.voice.recognition.elevenLabsHint": "More than 90 languages · sends your speech to ElevenLabs",
+  "mobile.settings.voice.recognition.model": "Speech model",
+  "mobile.settings.voice.recognition.removeTitle": "Remove the speech model?",
+  "mobile.settings.voice.recognition.removeBody": "The phone recognizer listens until you download the model again.",
+  "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
+  "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
+    "Recognizes your speech when ElevenLabs Scribe is checked.",
+  "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
 });

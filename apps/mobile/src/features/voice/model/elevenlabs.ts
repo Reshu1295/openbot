@@ -9,16 +9,18 @@ export const ELEVENLABS_SAMPLE_RATE = 24_000;
 
 /**
  * The permissions of a restricted ElevenLabs key that the phone uses: Voices: Read lists the voices,
- * and Text to Speech: Access reads the replies. A key without restrictions has both.
+ * Text to Speech: Access reads the replies, and Speech to Text: Access recognizes the user's speech.
+ * A key without restrictions has all of them.
  */
-type ElevenLabsPermission = "voices_read" | "text_to_speech";
+type ElevenLabsPermission = "voices_read" | "text_to_speech" | "speech_to_text";
 
-type ElevenLabsFailure =
-  | "invalid-key"
-  | "missing-voices-permission"
-  | "missing-speech-permission"
-  | "network"
-  | "failed";
+const MISSING_PERMISSION = {
+  voices_read: "missing-voices-permission",
+  text_to_speech: "missing-speech-permission",
+  speech_to_text: "missing-transcription-permission",
+} as const;
+
+type ElevenLabsFailure = "invalid-key" | (typeof MISSING_PERMISSION)[ElevenLabsPermission] | "network" | "failed";
 
 /** Why a request failed. It never holds the key or the response text, which can echo the request. */
 export class ElevenLabsError extends Error {
@@ -45,9 +47,7 @@ async function request(
     // presence of that name is read; the text itself is not kept.
     const body = await response.text().catch(() => "");
     if (body.includes("missing_permissions") || body.includes(permission))
-      throw new ElevenLabsError(
-        permission === "voices_read" ? "missing-voices-permission" : "missing-speech-permission",
-      );
+      throw new ElevenLabsError(MISSING_PERMISSION[permission]);
     throw new ElevenLabsError("invalid-key");
   }
   if (!response.ok) throw new ElevenLabsError("failed");
@@ -85,6 +85,20 @@ export async function elevenLabsSpeech(
     },
   );
   return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * A single-use token for one Scribe v2 Realtime session, so the key itself never goes into the
+ * socket. ElevenLabs answers a key without Speech to Text here, where the refusal can be read.
+ */
+export async function scribeToken(key: string, signal: AbortSignal): Promise<string> {
+  const response = await request("/v1/single-use-token/realtime_scribe", key, "speech_to_text", {
+    method: "POST",
+    signal,
+  });
+  const body = await response.json().catch(() => null);
+  if (!isDynamicRecord(body) || !isString(body.token)) throw new ElevenLabsError("failed");
+  return body.token;
 }
 
 /**

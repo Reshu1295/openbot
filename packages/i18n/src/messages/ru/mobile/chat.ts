@@ -13,6 +13,13 @@ export const messages = {
   "mobile.chat.dictation.networkNeeded": "Для распознавания речи нужно подключение к сети. Повторите попытку.",
   "mobile.chat.dictation.busy": "Распознавание речи занято другим приложением. Повторите попытку.",
   "mobile.chat.dictation.failed": "Не удалось распознать речь. Повторите попытку.",
+  "mobile.chat.dictation.modelLoadFailed":
+    "Не удалось загрузить речевую модель. Удалите её и загрузите снова в Настройки > Голос.",
+  "mobile.chat.dictation.elevenLabsPermission":
+    "У ключа нет разрешения Speech to Text: Access. Включите его для этого ключа в ElevenLabs.",
+  "mobile.chat.dictation.elevenLabsQuota": "В вашем аккаунте ElevenLabs закончилась квота.",
+  "mobile.chat.dictation.elevenLabsBusy": "ElevenLabs занят. Повторите попытку чуть позже.",
+  "mobile.chat.dictation.elevenLabsTerms": "Примите условия Speech to Text на сайте ElevenLabs и повторите попытку.",
   "mobile.chat.dictation.openSettings": "Открыть настройки",
   "mobile.chat.routine.invoked": "Запущена регулярная задача",
   "mobile.chat.routine.running": "Выполняется регулярная задача",

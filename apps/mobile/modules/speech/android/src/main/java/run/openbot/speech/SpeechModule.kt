@@ -1,5 +1,7 @@
 package run.openbot.speech
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -26,6 +28,10 @@ private class SpeechPart(val id: String?, val samples: FloatArray, val sampleRat
 
 private class SpeechModelException : CodedException("ERR_SPEECH_MODEL", "The speech model could not load.", null)
 
+private class CapturePermissionException : CodedException("ERR_CAPTURE_PERMISSION", "Microphone access is off.", null)
+
+private class CaptureException : CodedException("ERR_CAPTURE", "The microphone could not start.", null)
+
 /** A path from a `file://` URI, as the app's file system API names its files, or a plain path. */
 private fun pathOf(location: String): String =
   if (location.startsWith("file:")) Uri.parse(location).path ?: location else location
@@ -43,11 +49,21 @@ class SpeechModule : Module() {
   private var loadedDirectory: String? = null
   @Volatile private var track: AudioTrack? = null
   private var playback: Thread? = null
+  /** Only the recognition executor reads and writes it. */
+  private var recognizer: ParakeetRecognizer? = null
+  private val recognition = Executors.newSingleThreadExecutor()
+  private val captureExecutor = Executors.newSingleThreadExecutor()
+  private val capture = SpeechCapture(
+    executor = captureExecutor,
+    recognition = recognition,
+    recognizer = { recognizer },
+    send = { name, body -> sendEvent(name, body) },
+  )
 
   override fun definition() = ModuleDefinition {
     Name("OpenBotSpeech")
 
-    Events("onSpeechStart", "onSpeechDone", "onSpeechError")
+    Events("onSpeechStart", "onSpeechDone", "onSpeechError", "onCaptureLevel", "onCaptureAudio", "onCaptureText", "onCaptureEnd")
 
     OnCreate {
       playback = Thread({ playLoop() }, "openbot-speech-playback").apply { start() }
@@ -100,6 +116,62 @@ class SpeechModule : Module() {
       val context = appContext.reactContext ?: throw SpeechModelException()
       val root = File(context.noBackupFilesDir, "voice").apply { mkdirs() }
       Uri.fromFile(root).toString()
+    }
+
+    /** Loads Parakeet from a downloaded model directory. The same directory keeps the loaded model. */
+    AsyncFunction("loadRecognizer") { location: String, threads: Int, promise: Promise ->
+      recognition.execute {
+        val directory = pathOf(location)
+        if (recognizer?.directory == directory) {
+          promise.resolve(null)
+          return@execute
+        }
+        recognizer?.release()
+        recognizer = null
+        try {
+          recognizer = ParakeetRecognizer(directory, threads)
+          promise.resolve(null)
+        } catch (error: Throwable) {
+          promise.reject(SpeechModelException())
+        }
+      }
+    }
+
+    /** Frees the recognizer, such as before its files are deleted. */
+    AsyncFunction("unloadRecognizer") { promise: Promise ->
+      recognition.execute {
+        recognizer?.release()
+        recognizer = null
+        promise.resolve(null)
+      }
+    }
+
+    /** Opens the microphone: `transcribe` recognizes speech with Parakeet, `stream` sends the audio. */
+    AsyncFunction("startCapture") { mode: String, promise: Promise ->
+      val context = appContext.reactContext
+      if (context?.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        promise.reject(CapturePermissionException())
+        return@AsyncFunction
+      }
+      captureExecutor.execute {
+        try {
+          capture.start(if (mode == "stream") "stream" else "transcribe")
+          promise.resolve(null)
+        } catch (error: Throwable) {
+          capture.cancel()
+          promise.reject(CaptureException())
+        }
+      }
+    }
+
+    /** Closes the microphone, sends the text of the speech that is left, then `onCaptureEnd`. */
+    Function("finishCapture") {
+      captureExecutor.execute { capture.finish() }
+    }
+
+    /** Closes the microphone and drops the speech that was not sent. */
+    Function("cancelCapture") {
+      captureExecutor.execute { capture.cancel() }
     }
 
     /** Frees the model, such as before its files are deleted. */
@@ -173,6 +245,13 @@ class SpeechModule : Module() {
         tts = null
       }
       synthesis.shutdown()
+      captureExecutor.execute { capture.cancel() }
+      captureExecutor.shutdown()
+      recognition.execute {
+        recognizer?.release()
+        recognizer = null
+      }
+      recognition.shutdown()
     }
   }
 

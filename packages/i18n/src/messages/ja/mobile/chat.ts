@@ -13,6 +13,14 @@ export const messages = {
   "mobile.chat.dictation.networkNeeded": "音声認識にはネットワーク接続が必要です。もう一度お試しください。",
   "mobile.chat.dictation.busy": "別のアプリが音声認識を使用しています。もう一度お試しください。",
   "mobile.chat.dictation.failed": "音声認識に失敗しました。もう一度お試しください。",
+  "mobile.chat.dictation.modelLoadFailed":
+    "音声モデルを読み込めませんでした。設定 > 音声 でモデルを削除し、もう一度ダウンロードしてください。",
+  "mobile.chat.dictation.elevenLabsPermission":
+    "このキーには Speech to Text: Access の権限がありません。ElevenLabs でこのキーの権限をオンにしてください。",
+  "mobile.chat.dictation.elevenLabsQuota": "ElevenLabs アカウントの利用枠が残っていません。",
+  "mobile.chat.dictation.elevenLabsBusy": "ElevenLabs が混み合っています。しばらくしてからもう一度お試しください。",
+  "mobile.chat.dictation.elevenLabsTerms":
+    "ElevenLabs のウェブサイトで Speech to Text の利用規約に同意してから、もう一度お試しください。",
   "mobile.chat.dictation.openSettings": "設定を開く",
   "mobile.chat.routine.invoked": "ルーティンを実行しました",
   "mobile.chat.routine.running": "ルーティンを実行中",

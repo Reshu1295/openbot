@@ -52,9 +52,8 @@ export const messages = {
   "mobile.settings.sessions.disconnectBody":
     "Verranno chiuse anche le connessioni remote attive dell'account. Il dispositivo potrà accedere di nuovo.",
   "mobile.settings.sessions.disconnect": "Disconnetti",
-  "mobile.settings.dictation.title": "Dettatura",
   "mobile.settings.dictation.footer":
-    "La lingua che parli quando detti un messaggio. «Automatica» usa la prima lingua nelle impostazioni del telefono che il riconoscimento vocale supporta.",
+    "La lingua che parli al riconoscimento del telefono, in una conversazione vocale e durante la dettatura. «Automatica» usa la prima lingua nelle impostazioni del telefono che supporta.",
   "mobile.settings.dictation.automatic": "Automatica",
   "mobile.settings.appearance.title": "Aspetto",
   "mobile.settings.appearance.footer": "«Sistema» segue l'aspetto del dispositivo.",
@@ -207,7 +206,7 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3 torna a leggere le risposte.",
   "mobile.settings.voice.elevenLabs.saveKey": "Salva chiave",
   "mobile.settings.voice.elevenLabs.testing": "Verifica della chiave",
-  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot verifica entrambi i permessi prima di salvare la chiave.",
+  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot verifica i primi due permessi prima di salvare la chiave.",
   "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs non ha risposto. Riprova.",
   "mobile.settings.voice.elevenLabs.getKey": "Ottieni una chiave API",
   "mobile.settings.voice.engine.supertonicReady": "Su questo telefono · {voice}",
@@ -227,5 +226,25 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
   "mobile.settings.voice.elevenLabs.permissionVoicesHint": "Elenca le voci da scegliere.",
   "mobile.settings.voice.elevenLabs.permissionsFooter":
-    "In ElevenLabs, apri Developers > API keys e crea una chiave. Se attivi Restrict key, imposta questi due permessi e lascia disattivati gli altri. Funziona anche una chiave senza restrizioni.",
+    "In ElevenLabs, apri Developers > API keys e crea una chiave. Se attivi Restrict key, imposta questi permessi e lascia disattivati gli altri. Funziona anche una chiave senza restrizioni.",
+  "mobile.settings.voice.recognition.title": "Riconoscimento vocale",
+  "mobile.settings.voice.recognition.footer":
+    "Il motore selezionato riconosce ciò che dici in una conversazione vocale e durante la dettatura.",
+  "mobile.settings.voice.recognition.system": "Riconoscimento del telefono",
+  "mobile.settings.voice.recognition.systemHint": "Nessun download · una lingua alla volta",
+  "mobile.settings.voice.recognition.parakeet": "Parakeet v3",
+  "mobile.settings.voice.recognition.parakeetReady": "Su questo telefono · trova la lingua da solo",
+  "mobile.settings.voice.recognition.parakeetUnsupported": "Richiede un telefono con almeno 6 GB di memoria",
+  "mobile.settings.voice.recognition.parakeetFooter":
+    "Parakeet funziona su questo telefono, come sul desktop. Trova la lingua che parli, tra 25 lingue europee, e la tua voce resta sul telefono. Finché il modello non è scaricato, ascolta il riconoscimento del telefono.",
+  "mobile.settings.voice.recognition.elevenLabs": "ElevenLabs Scribe",
+  "mobile.settings.voice.recognition.elevenLabsHint": "Oltre 90 lingue · invia la tua voce a ElevenLabs",
+  "mobile.settings.voice.recognition.model": "Modello vocale",
+  "mobile.settings.voice.recognition.removeTitle": "Rimuovere il modello vocale?",
+  "mobile.settings.voice.recognition.removeBody":
+    "Il riconoscimento del telefono ascolta finché non scarichi di nuovo il modello.",
+  "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
+  "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
+    "Riconosce la tua voce quando ElevenLabs Scribe è selezionato.",
+  "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
 } as const satisfies PartialTranslation<typeof source>;

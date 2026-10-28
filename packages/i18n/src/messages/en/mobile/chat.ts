@@ -12,6 +12,14 @@ export const messages = defineMessages("mobile.chat", {
   "mobile.chat.dictation.networkNeeded": "Speech recognition needs a network connection. Try again.",
   "mobile.chat.dictation.busy": "Another app is using speech recognition. Try again.",
   "mobile.chat.dictation.failed": "Speech recognition failed. Try again.",
+  "mobile.chat.dictation.modelLoadFailed":
+    "The speech model could not load. Remove it and download it again in Settings > Voice.",
+  "mobile.chat.dictation.elevenLabsPermission":
+    "The key does not have the Speech to Text: Access permission. Turn it on for this key in ElevenLabs.",
+  "mobile.chat.dictation.elevenLabsQuota": "Your ElevenLabs account has no quota left.",
+  "mobile.chat.dictation.elevenLabsBusy": "ElevenLabs is busy. Try again in a moment.",
+  "mobile.chat.dictation.elevenLabsTerms":
+    "Accept the ElevenLabs speech to text terms on the ElevenLabs website, then try again.",
   "mobile.chat.dictation.openSettings": "Open Settings",
   "mobile.chat.routine.invoked": "Invoked routine",
   "mobile.chat.routine.running": "Running routine",

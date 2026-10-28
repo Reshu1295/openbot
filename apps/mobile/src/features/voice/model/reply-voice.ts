@@ -14,7 +14,7 @@ import { AUTOMATIC_DICTATION_LANGUAGE, useDictationLanguage } from "@/features/s
 import { phoneLanguages } from "@/shared/lib/phone-languages";
 import { ELEVENLABS_SAMPLE_RATE, ElevenLabsError, elevenLabsSpeech } from "./elevenlabs";
 import { speechNative } from "./speech-native";
-import { supertonicModelUri, useSupertonicModel } from "./supertonic-model";
+import { supertonicModel, useSupertonicModel } from "./supertonic-model";
 import { type ElevenLabsVoice, readElevenLabsKey, useVoiceSettings } from "./voice-settings";
 
 /** Supertonic 3 synthesizes faster with more threads, and a phone has four or more cores. */
@@ -76,8 +76,8 @@ if (speechNative) {
 }
 
 function elevenLabsFailure(code: ElevenLabsError["code"]): ReplyVoiceFailure {
-  if (code === "missing-voices-permission" || code === "missing-speech-permission") return "permission";
-  return code === "failed" ? "speech" : code;
+  if (code === "invalid-key" || code === "network") return code;
+  return code === "failed" ? "speech" : "permission";
 }
 
 let nextReading = 0;
@@ -157,7 +157,7 @@ export function readReply(
         }
         return;
       }
-      const directory = supertonicModelUri();
+      const directory = supertonicModel.uri();
       if (!directory) return end("not-ready");
       // Supertonic 3 reads 31 languages; a reply in another script, such as Chinese, is not read.
       const language = speechLanguageOf(speechTextFromMarkdown(markdown), fallbackLanguage());

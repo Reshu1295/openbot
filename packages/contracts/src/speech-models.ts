@@ -6,6 +6,46 @@ export interface SpeechModelFile {
   sha256: string;
 }
 
+const PARAKEET_MODEL_REVISION = "2bda32ec70b097a55adaa07d9a7173915b43cc78";
+const PARAKEET_MODEL_BASE_URL = `https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/resolve/${PARAKEET_MODEL_REVISION}`;
+
+/**
+ * The directory name of Parakeet on desktop (`<userData>/runtimes`) and on the phone. A new pin needs
+ * a new name.
+ */
+export const PARAKEET_MODEL_DIRECTORY = "parakeet-tdt-0.6b-v3-int8";
+
+/**
+ * NVIDIA Parakeet TDT 0.6B v3 (CC-BY-4.0), int8 ONNX export for sherpa-onnx. It finds the spoken
+ * language itself, in 25 European languages. Desktop and the phone download the same pinned files.
+ */
+export const PARAKEET_MODEL_FILES: readonly SpeechModelFile[] = [
+  {
+    name: "encoder.int8.onnx",
+    url: `${PARAKEET_MODEL_BASE_URL}/encoder.int8.onnx`,
+    bytes: 652_184_281,
+    sha256: "acfc2b4456377e15d04f0243af540b7fe7c992f8d898d751cf134c3a55fd2247",
+  },
+  {
+    name: "decoder.int8.onnx",
+    url: `${PARAKEET_MODEL_BASE_URL}/decoder.int8.onnx`,
+    bytes: 11_845_275,
+    sha256: "179e50c43d1a9de79c8a24149a2f9bac6eb5981823f2a2ed88d655b24248db4e",
+  },
+  {
+    name: "joiner.int8.onnx",
+    url: `${PARAKEET_MODEL_BASE_URL}/joiner.int8.onnx`,
+    bytes: 6_355_277,
+    sha256: "3164c13fc2821009440d20fcb5fdc78bff28b4db2f8d0f0b329101719c0948b3",
+  },
+  {
+    name: "tokens.txt",
+    url: `${PARAKEET_MODEL_BASE_URL}/tokens.txt`,
+    bytes: 93_939,
+    sha256: "d58544679ea4bc6ac563d1f545eb7d474bd6cfa467f0a6e2c1dc1c7d37e3c35d",
+  },
+];
+
 const SUPERTONIC_MODEL_REVISION = "cca5a0e6c96e1d2c720986bf7e75fcc81dee3ae4";
 const SUPERTONIC_MODEL_BASE_URL = `https://huggingface.co/csukuangfj2/sherpa-onnx-supertonic-3-tts-int8-2026-05-11/resolve/${SUPERTONIC_MODEL_REVISION}`;
 

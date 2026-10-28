@@ -52,9 +52,8 @@ export const messages = {
   "mobile.settings.sessions.disconnectBody":
     "Bu aynı zamanda hesabın etkin uzak bağlantılarını da sonlandırır. Cihaz tekrar oturum açabilir.",
   "mobile.settings.sessions.disconnect": "Bağlantıyı kes",
-  "mobile.settings.dictation.title": "Dikte",
   "mobile.settings.dictation.footer":
-    "Bir mesajı dikte ederken konuştuğunuz dil. Otomatik, telefon ayarlarınızda konuşma tanımanın desteklediği ilk dili kullanır.",
+    "Sesli konuşmada ve dikte ederken telefonun tanıyıcısına konuştuğun dil. Otomatik, telefon ayarlarındaki desteklenen ilk dili kullanır.",
   "mobile.settings.dictation.automatic": "Otomatik",
   "mobile.settings.appearance.title": "Görünüm",
   "mobile.settings.appearance.footer": "Sistem cihazınızın görünümünü takip eder.",
@@ -203,7 +202,7 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3 yanıtları yeniden okur.",
   "mobile.settings.voice.elevenLabs.saveKey": "Anahtarı kaydet",
   "mobile.settings.voice.elevenLabs.testing": "Anahtar sınanıyor",
-  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot anahtarı kaydetmeden önce iki izni de sınar.",
+  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot anahtarı kaydetmeden önce ilk iki izni sınar.",
   "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs yanıt vermedi. Yeniden dene.",
   "mobile.settings.voice.elevenLabs.getKey": "API anahtarı al",
   "mobile.settings.voice.engine.supertonicReady": "Bu telefonda · {voice}",
@@ -223,5 +222,22 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
   "mobile.settings.voice.elevenLabs.permissionVoicesHint": "Seçebileceğin sesleri listeler.",
   "mobile.settings.voice.elevenLabs.permissionsFooter":
-    "ElevenLabs'de Developers > API keys bölümünü aç ve bir anahtar oluştur. Restrict key'i açarsan bu iki izni ayarla, diğerlerini kapalı bırak. Kısıtlamasız bir anahtar da çalışır.",
+    "ElevenLabs'de Developers > API keys bölümünü aç ve bir anahtar oluştur. Restrict key'i açarsan bu izinleri ayarla, diğerlerini kapalı bırak. Kısıtlamasız bir anahtar da çalışır.",
+  "mobile.settings.voice.recognition.title": "Konuşma tanıma",
+  "mobile.settings.voice.recognition.footer": "İşaretli motor, sesli konuşmada ve dikte ederken söylediklerini tanır.",
+  "mobile.settings.voice.recognition.system": "Telefonun tanıyıcısı",
+  "mobile.settings.voice.recognition.systemHint": "İndirme yok · aynı anda tek dil",
+  "mobile.settings.voice.recognition.parakeet": "Parakeet v3",
+  "mobile.settings.voice.recognition.parakeetReady": "Bu telefonda · dili kendisi bulur",
+  "mobile.settings.voice.recognition.parakeetUnsupported": "En az 6 GB belleği olan bir telefon gerekir",
+  "mobile.settings.voice.recognition.parakeetFooter":
+    "Parakeet masaüstünde olduğu gibi bu telefonda çalışır. Konuştuğun dili 25 Avrupa dili arasından bulur ve sesin telefonda kalır. Model indirilene kadar telefonun tanıyıcısı dinler.",
+  "mobile.settings.voice.recognition.elevenLabs": "ElevenLabs Scribe",
+  "mobile.settings.voice.recognition.elevenLabsHint": "90'dan fazla dil · sesini ElevenLabs'e gönderir",
+  "mobile.settings.voice.recognition.model": "Konuşma modeli",
+  "mobile.settings.voice.recognition.removeTitle": "Konuşma modeli kaldırılsın mı?",
+  "mobile.settings.voice.recognition.removeBody": "Modeli yeniden indirene kadar telefonun tanıyıcısı dinler.",
+  "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
+  "mobile.settings.voice.elevenLabs.permissionTranscriptionHint": "ElevenLabs Scribe işaretliyken sesini tanır.",
+  "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
 } as const satisfies PartialTranslation<typeof source>;

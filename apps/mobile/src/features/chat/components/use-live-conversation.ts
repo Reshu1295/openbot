@@ -124,6 +124,7 @@ export function useLiveConversation(input: LiveConversationInput): LiveConversat
   const dictation = useVoiceDictation({
     enabled: input.enabled && input.online && state.open && !state.exit,
     onDraft: controller.hear,
+    onSpeaking: controller.speaking,
   });
   dictationRef.current = dictation;
   const { conversation, deliveries, outboxMessages } = input;
@@ -421,6 +422,15 @@ function createController({
       update({ caption: text });
       if (pauseTimer) clearTimeout(pauseTimer);
       pauseTimer = text.trim() ? setTimeout(endTurn, TURN_END_SILENCE_MS) : null;
+    },
+    /**
+     * The user speaks now. Parakeet and ElevenLabs send text a while after the words, so the pause
+     * that ends the turn counts from the last speech, not from the last text.
+     */
+    speaking(): void {
+      if (!open || phase !== "listening" || !heard.trim()) return;
+      if (pauseTimer) clearTimeout(pauseTimer);
+      pauseTimer = setTimeout(endTurn, TURN_END_SILENCE_MS);
     },
     followReply,
     recognizerPhase,
