@@ -172,6 +172,15 @@ const server = createServer((request, response) => {
     );
     return;
   }
+  if (url.pathname === "/malformed-host") {
+    // Chromium requests the first image although the URL parser of Node rejects its host. The second
+    // image reaches this server only while the session still answers its request hook.
+    response.setHeader("content-type", "text/html; charset=utf-8");
+    response.end(
+      `<main>malformed host</main><img src="https://%20malformed-host.invalid/logo.png"><img src="/headers?source=after-malformed-host">`,
+    );
+    return;
+  }
   if (url.pathname === "/sw-identity.js") {
     response.setHeader("content-type", "application/javascript; charset=utf-8");
     response.end(`self.addEventListener("install", (event) => {
@@ -3504,6 +3513,7 @@ async function runIdentityScenario(browser: BrowserHost, origin: string): Promis
   const secondTab = await runCauseEffect(browser.open(`${origin}/headers?source=second-tab`, "smoke-thread"));
   const second = await checkBrowserIdentity(browser, secondTab.id);
   await runIdentityFrameProbe(browser, origin);
+  await runMalformedHostProbe(browser, origin);
   await mkdir(".openbot-build", { recursive: true });
   await writeFile(
     ".openbot-build/browser-identity.json",
@@ -3575,6 +3585,27 @@ async function runIdentityFrameProbe(browser: BrowserHost, origin: string): Prom
     process.stdout.write("BrowserHost: matching frame and worker identity passed.\n");
   } finally {
     await runCauseEffect(browser.close(frameTab.id));
+  }
+}
+
+async function runMalformedHostProbe(browser: BrowserHost, origin: string): Promise<void> {
+  // A page can name a host that Chromium requests and Node cannot parse. The request hook must still
+  // answer, or the main process stops on an uncaught exception and every later request waits.
+  const tab = await runCauseEffect(browser.open(`${origin}/malformed-host`, "smoke-thread"));
+  try {
+    const deadline = Date.now() + 15_000;
+    while (!recordedIdentityAgents["after-malformed-host"] && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!recordedIdentityAgents["after-malformed-host"]) {
+      throw new Error("The page did not load its next image after a request to a malformed host.");
+    }
+    const snapshot = await runCauseEffect(browser.snapshot(tab.id));
+    if (!snapshot.text.includes("malformed host"))
+      throw new Error(`Malformed host page did not load: ${snapshot.text}`);
+    process.stdout.write("BrowserHost: requests after a malformed host passed.\n");
+  } finally {
+    await runCauseEffect(browser.close(tab.id));
   }
 }
 
