@@ -7,6 +7,18 @@
     ],
     "groups": [
       {
+        "type": "added",
+        "items": [
+          "Agents now save lasting preferences and facts from your chats and side threads in the background. The conversation shows each change.",
+          "Server settings → General → Memory review sets how often agents review their memories: every 10, 20 or 40 turns, or Off.",
+          "Memory search also finds other forms of a word, so \"closing\" finds \"closes\"."
+        ]
+      },
+      {
+        "type": "changed",
+        "items": ["An agent can keep 256 memories by default instead of 64. A limit that you set stays as it is."]
+      },
+      {
         "type": "fixed",
         "items": [
           "On Windows, updates work again when OpenBot was installed in the folder that holds your agents. Your agents, Shared and Downloads stay where they are.",
