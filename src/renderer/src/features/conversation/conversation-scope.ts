@@ -775,10 +775,17 @@ export function createConversationViewScope(props: ConversationProps) {
   let readerIntent: { up: boolean; at: number } | undefined;
   let lastTouchY: number | undefined;
   let currentUnreadCount = 0;
-  let unreadOpening: { identity: string | undefined; pending: boolean; boundaryId: string | null | undefined } = {
+  let unreadOpening: {
+    identity: string | undefined;
+    pending: boolean;
+    boundaryId: string | null | undefined;
+    /** The chat opened at the divider and keeps it in view until the reader or a jump moves the chat. */
+    holding: boolean;
+  } = {
     identity: undefined,
     pending: false,
     boundaryId: undefined,
+    holding: false,
   };
   let conversationPanel: HTMLElement | undefined;
   const [browserSurface, setBrowserSurface] = createSignal<HTMLDivElement>();
@@ -981,6 +988,9 @@ export function createConversationViewScope(props: ConversationProps) {
     scrollResizeObserver = new ResizeObserver(() => {
       updateVirtualScrollMargin();
       if (scrollElement && stickToLatest) followConversationBottom(scrollElement);
+      // An image or a preview that lays out after the opening grows a row above the divider. The chat
+      // has no browser scroll anchoring, so without this the divider moves down out of view.
+      else if (scrollElement && unreadOpening.holding) scrollToUnreadDivider(scrollElement);
       updateScrollFade();
       updateUnreadDividerVisibility();
     });
@@ -1034,7 +1044,7 @@ export function createConversationViewScope(props: ConversationProps) {
         if (!target) return;
         lastHandledMessageFocusNonce = request.nonce;
         // The message the user picked replaces the opening at the unread divider.
-        unreadOpening = { ...unreadOpening, pending: false };
+        unreadOpening = { ...unreadOpening, pending: false, holding: false };
         stickToLatest = false;
         // A page that loaded just before the request queued a scroll to the latest message. That scroll
         // must not move the transcript away from the message the user picked, so it is cancelled and
@@ -1105,6 +1115,7 @@ export function createConversationViewScope(props: ConversationProps) {
     const firstBlock = blocks[0];
     if (!firstBlock) return false;
     stickToLatest = false;
+    unreadOpening.holding = false;
     const range = highlightQuotedText(blocks, text);
     (range?.startContainer.parentElement ?? firstBlock).scrollIntoView({
       behavior: "auto",
@@ -1166,11 +1177,24 @@ export function createConversationViewScope(props: ConversationProps) {
     },
   );
 
+  function scrollToUnreadDivider(element: HTMLDivElement): void {
+    const divider = unreadMessagesDivider;
+    if (!divider?.isConnected) return;
+    const readRow = divider.closest(".virtual-chat-row")?.previousElementSibling;
+    const viewTop = element.getBoundingClientRect().top - element.scrollTop;
+    const dividerTop = divider.getBoundingClientRect().top - viewTop;
+    const readTop = readRow instanceof HTMLElement ? readRow.getBoundingClientRect().top - viewTop : dividerTop;
+    // A long read row shows only its end, so the divider stays in view. An offset, not an index:
+    // the virtualizer would otherwise move back to the divider row as rows measure.
+    messageVirtualizer.scrollToOffset(Math.max(0, readTop, dividerTop - element.clientHeight / 3));
+  }
+
   /*
    * A chat with unread messages opens at the divider, with the end of the last read row above it, so
    * the reader sees where they stopped. It runs after the effect above, so it cancels that effect's
    * follow. A boundary that the chat has not loaded yet waits for its page; a different boundary,
-   * such as a message that arrives later, or a scroll by the reader ends the wait.
+   * such as a message that arrives later, or a scroll by the reader ends the wait. After the opening,
+   * the chat holds the divider in view while rows lay out, until the reader moves the chat.
    */
   createEffect(
     () => {
@@ -1184,7 +1208,7 @@ export function createConversationViewScope(props: ConversationProps) {
     },
     ({ identity, loaded, boundaryId, boundaryIndex }) => {
       if (identity !== unreadOpening.identity) {
-        unreadOpening = { identity, pending: true, boundaryId: undefined };
+        unreadOpening = { identity, pending: true, boundaryId: undefined, holding: false };
       }
       if (!unreadOpening.pending || !loaded) return;
       unreadOpening.boundaryId ??= boundaryId;
@@ -1194,6 +1218,7 @@ export function createConversationViewScope(props: ConversationProps) {
       }
       if (boundaryIndex === undefined) return;
       unreadOpening.pending = false;
+      unreadOpening.holding = true;
       stickToLatest = false;
       if (latestScrollFrame !== undefined) cancelAnimationFrame(latestScrollFrame);
       if (latestScrollSettleFrame !== undefined) cancelAnimationFrame(latestScrollSettleFrame);
@@ -1207,16 +1232,7 @@ export function createConversationViewScope(props: ConversationProps) {
           if (unreadOpening !== opening || readerLeftLatest || !scrollElement) return;
           // A scroll event that an earlier follow queued can land at the bottom before this frame.
           stickToLatest = false;
-          const divider = unreadMessagesDivider;
-          if (divider?.isConnected) {
-            const readRow = divider.closest(".virtual-chat-row")?.previousElementSibling;
-            const viewTop = scrollElement.getBoundingClientRect().top - scrollElement.scrollTop;
-            const dividerTop = divider.getBoundingClientRect().top - viewTop;
-            const readTop = readRow instanceof HTMLElement ? readRow.getBoundingClientRect().top - viewTop : dividerTop;
-            // A long read row shows only its end, so the divider stays in view. An offset, not an index:
-            // the virtualizer would otherwise move back to the divider row as rows measure.
-            messageVirtualizer.scrollToOffset(Math.max(0, readTop, dividerTop - scrollElement.clientHeight / 3));
-          }
+          scrollToUnreadDivider(scrollElement);
           updateScrollFade(scrollElement);
           updateUnreadDividerVisibility();
           if (!settle) openAtDivider(true);
@@ -1552,6 +1568,7 @@ export function createConversationViewScope(props: ConversationProps) {
   }
   function stopFollowingLatest() {
     stickToLatest = false;
+    unreadOpening.holding = false;
     if (latestScrollFrame !== undefined) cancelAnimationFrame(latestScrollFrame);
     if (latestScrollSettleFrame !== undefined) cancelAnimationFrame(latestScrollSettleFrame);
     latestScrollFrame = undefined;
@@ -1588,6 +1605,7 @@ export function createConversationViewScope(props: ConversationProps) {
   };
   function noteReaderIntent(up: boolean) {
     readerIntent = { up, at: performance.now() };
+    unreadOpening.holding = false;
   }
   function readerWheel(event: WheelEvent) {
     // Ctrl with the wheel zooms, and a sideways swipe can report a small vertical delta.
@@ -1613,7 +1631,9 @@ export function createConversationViewScope(props: ConversationProps) {
   }
   /* Only the main button drags. A context menu can take the release of another button. */
   function readerPointerDown(event: PointerEvent) {
-    if (event.button === 0) readerDragging = true;
+    if (event.button !== 0) return;
+    readerDragging = true;
+    unreadOpening.holding = false;
   }
   const setVirtualRootElement = (element: HTMLDivElement) => {
     virtualRoot = element;
