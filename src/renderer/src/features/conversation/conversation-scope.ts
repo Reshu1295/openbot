@@ -1210,6 +1210,8 @@ export function createConversationViewScope(props: ConversationProps) {
       if (identity !== unreadOpening.identity) {
         unreadOpening = { identity, pending: true, boundaryId: undefined, holding: false };
       }
+      // A later boundary, such as a message that arrived while the reader was away, is not where they opened.
+      if (boundaryId !== unreadOpening.boundaryId) unreadOpening.holding = false;
       if (!unreadOpening.pending || !loaded) return;
       unreadOpening.boundaryId ??= boundaryId;
       if (!boundaryId || boundaryId !== unreadOpening.boundaryId || readerLeftLatest) {
@@ -1229,7 +1231,8 @@ export function createConversationViewScope(props: ConversationProps) {
       const opening = unreadOpening;
       const openAtDivider = (settle: boolean) =>
         requestAnimationFrame(() => {
-          if (unreadOpening !== opening || readerLeftLatest || !scrollElement) return;
+          // A scroll by the reader or a jump ends the hold, so it also cancels these frames.
+          if (unreadOpening !== opening || !opening.holding || !scrollElement) return;
           // A scroll event that an earlier follow queued can land at the bottom before this frame.
           stickToLatest = false;
           scrollToUnreadDivider(scrollElement);
@@ -1554,6 +1557,7 @@ export function createConversationViewScope(props: ConversationProps) {
     }
     stickToLatest = true;
     readerLeftLatest = false;
+    unreadOpening.holding = false;
   }
   /**
    * The reader moved up, so the chat stops following new content until the reader moves down again
@@ -1585,6 +1589,8 @@ export function createConversationViewScope(props: ConversationProps) {
   function readerFocusIn() {
     if (readerDragging || !scrollElement) return;
     if (scrollElement.scrollTop < lastScrollTop) stopFollowingLatest();
+    // A focus that moved the chat down also leaves the unread divider; the hold must not move the focus out of view.
+    else if (scrollElement.scrollTop > lastScrollTop) unreadOpening.holding = false;
   }
   /**
    * A scroll is the reader's when the chat moves the way that the reader's last input asked, soon after
@@ -1596,7 +1602,11 @@ export function createConversationViewScope(props: ConversationProps) {
     lastScrollTop = element.scrollTop;
     const intent = readerIntent && performance.now() - readerIntent.at < READER_INPUT_WINDOW_MS ? readerIntent : null;
     if (moved < 0 && (readerDragging || intent?.up === true)) leaveLatest();
-    else if (moved > 0 && (readerDragging || intent?.up === false)) readerLeftLatest = false;
+    else if (moved > 0 && (readerDragging || intent?.up === false)) {
+      readerLeftLatest = false;
+      // A scroll up ends the hold at the unread divider in `leaveLatest`; a scroll down ends it here.
+      unreadOpening.holding = false;
+    }
     // Distance only rejoins. A follow that has not yet landed, or a correction to the last row
     // above the activity line, can sit more than 80px from the real bottom while a turn runs.
     if (!readerLeftLatest && element.scrollHeight - element.scrollTop - element.clientHeight <= 80) {
@@ -1605,7 +1615,6 @@ export function createConversationViewScope(props: ConversationProps) {
   };
   function noteReaderIntent(up: boolean) {
     readerIntent = { up, at: performance.now() };
-    unreadOpening.holding = false;
   }
   function readerWheel(event: WheelEvent) {
     // Ctrl with the wheel zooms, and a sideways swipe can report a small vertical delta.
@@ -1631,9 +1640,7 @@ export function createConversationViewScope(props: ConversationProps) {
   }
   /* Only the main button drags. A context menu can take the release of another button. */
   function readerPointerDown(event: PointerEvent) {
-    if (event.button !== 0) return;
-    readerDragging = true;
-    unreadOpening.holding = false;
+    if (event.button === 0) readerDragging = true;
   }
   const setVirtualRootElement = (element: HTMLDivElement) => {
     virtualRoot = element;
