@@ -60,7 +60,7 @@ const MCP_APPROVAL =
 export const MCP_SERVER_TOOL_DEFINITIONS = [
   {
     name: "list_mcp_servers",
-    description: `List the MCP servers of this OpenBot server: name, transport, on or off, address or command, the names of its headers and environment variables, and whether it is signed in. Values are never shown. ${MCP_SCOPE} Read-only. An http server that is not signed in can need a sign-in: when its tools are missing or refuse with an authorization error, call test_mcp_server, which puts a Sign in card in the conversation.`,
+    description: `List the MCP servers of this OpenBot server: name, transport, on or off, address or command, the names of its headers and environment variables, and whether it is signed in. Values are never shown. ${MCP_SCOPE} Read-only.`,
     shape: {},
   },
   {
@@ -225,6 +225,32 @@ const findServer = (servers: AgentMcpServers, name: string) => {
     : Effect.fail(new ToolOperationFailed({ cause: new Error(sourceText("error.agent.mcpServerUnknown", { name })) }));
 };
 
+const SIGN_IN_NEXT =
+  "A Sign in card is in this conversation. Tell the user, end your turn, and test again when the user says it is done.";
+
+/**
+ * A silent test of each saved http server that a tool search names and that has no sign-in on this
+ * computer. A provider that reaches such a server tries its own sign-in and fails, so the search is
+ * where the agent looks for its tools. A server that needs a sign-in gets its card; others are left out.
+ */
+export const searchSignIns = Effect.fn("McpServerTools.searchSignIns")(function* (
+  servers: AgentMcpServers,
+  names: readonly string[],
+  requestSignIn: McpServerToolCall["requestSignIn"],
+) {
+  const named = new Set(names);
+  const signedIn = new Set(servers.signIns().flatMap((state) => (state.signedIn ? [state.mcpServerId] : [])));
+  const found = [];
+  for (const config of servers.list()) {
+    if (!named.has(config.name) || !config.enabled || config.transport !== "http" || signedIn.has(config.id)) continue;
+    const outcome = yield* servers.inspect(config);
+    if (outcome.needs !== "sign_in") continue;
+    yield* requestSignIn(config);
+    found.push({ status: "needs_sign_in", server: describeServer(config, servers.signIns()), next: SIGN_IN_NEXT });
+  }
+  return found;
+});
+
 /** What a test found, in words the agent acts on. A sign-in also puts its card in the conversation. */
 const report = Effect.fnUntraced(function* (
   servers: AgentMcpServers,
@@ -251,7 +277,7 @@ const report = Effect.fnUntraced(function* (
     return openBotToolResult({
       status: "needs_sign_in",
       server,
-      next: "A Sign in card is in this conversation. Tell the user, end your turn, and test again when the user says it is done.",
+      next: SIGN_IN_NEXT,
     });
   }
   if (outcome.needs === "key")

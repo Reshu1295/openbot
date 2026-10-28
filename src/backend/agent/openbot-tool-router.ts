@@ -75,7 +75,7 @@ import { HistoryTools } from "./history-tools";
 import type { HostedSiteCoordinator } from "./hosted-site-coordinator";
 import { isHostedSiteMutationTool } from "./hosted-site-events";
 import type { MailboxSync } from "./mailbox-sync";
-import { type AgentMcpServers, handleMcpServerTool, isMcpServerTool } from "./mcp-tools";
+import { type AgentMcpServers, handleMcpServerTool, isMcpServerTool, searchSignIns } from "./mcp-tools";
 import {
   agentAccountSetup,
   listModelsPayload,
@@ -111,7 +111,7 @@ import { type AgentSidebar, handleSidebarTool } from "./sidebar-tools";
 import { LOCAL_SKILL_TOOL_DEFINITIONS, type LocalSkillTools, runLocalSkillTool } from "./skill-tools";
 import { isDynamicToolCall } from "./thread-items";
 import { toolCallIdempotencyKey } from "./tool-call-idempotency";
-import { discoverTools, resolveDeferredTool } from "./tool-catalog";
+import { discoverTools, namesInSearch, resolveDeferredTool } from "./tool-catalog";
 import { ToolOperationFailed, toolStep, toToolOperationFailed } from "./tool-operation";
 import type { AgentBrowserHost } from "./turn-lifecycle";
 import { handleUpdateAgentsTool } from "./update-agents-tool";
@@ -343,13 +343,20 @@ export class OpenBotToolRouter {
             if (params.tool === "tool_search" || params.tool === "tool_describe") {
               const agentId = this.#conversation.agentForThread(params.threadId);
               if (!agentId) throw new Error("The calling OpenBot agent is unknown.");
+              let result: ReturnType<typeof discoverTools>;
               try {
                 this.#requireAgent(agentId);
-                const result = discoverTools(params);
-                client.respond(request.id, openBotToolResult(result));
+                result = discoverTools(params);
               } catch {
                 client.respond(request.id, openBotToolFailure(sourceText("error.agent.toolRequestInvalid")));
+                return;
               }
+              const signIns = yield* this.#searchSignIns(agentId, params);
+              if (request.signal?.aborted || !client.running) return;
+              client.respond(
+                request.id,
+                openBotToolResult(signIns.length > 0 ? { ...result, mcpServers: signIns } : result),
+              );
               return;
             }
             if (params.tool === "tool_call") {
@@ -1240,17 +1247,51 @@ export class OpenBotToolRouter {
             Effect.map((decision) => decision === "accept"),
             toToolOperationFailed,
           ),
-      requestSignIn: (config) =>
-        toolStep(() =>
-          this.#postSystemCard(agentId, threadId, params.turnId, {
-            itemType: mcpSignInItemType({ mcpServerId: config.id }),
-            text: sourceText("status.agent.mcpSignInRequested", { name: config.name }),
-            eventType: "mcp.sign_in_requested",
-            detail: { mcpServerId: config.id },
-          }),
-        ),
+      requestSignIn: (config) => toolStep(() => this.#postMcpSignInCard(agentId, threadId, params.turnId, config)),
     });
   });
+
+  /**
+   * The saved MCP servers that a tool search names and that need a sign-in, each with its card in the
+   * conversation. A failure leaves the search as it is.
+   */
+  readonly #searchSignIns = Effect.fn("OpenBotToolRouter.searchSignIns")(function* (
+    this: OpenBotToolRouter,
+    agentId: string,
+    params: DynamicToolCallParams,
+  ) {
+    const servers = this.#mcpServers;
+    const names = servers
+      ? namesInSearch(
+          params,
+          servers.list().map(({ name }) => name),
+        )
+      : [];
+    if (!servers || names.length === 0) return [];
+    const threadId = this.#conversation.publicThreadId(agentId, params.threadId);
+    return yield* searchSignIns(servers, names, (config) =>
+      toolStep(() => this.#postMcpSignInCard(agentId, threadId, params.turnId, config)),
+    ).pipe(
+      Effect.catch(() => Effect.succeed([])),
+      Effect.catchDefect(() => Effect.succeed([])),
+    );
+  });
+
+  /**
+   * The card that signs in to a saved http server. One for each server and turn: a search and a
+   * test in the same turn, or the same search sent twice, ask for the same sign-in.
+   */
+  #postMcpSignInCard(agentId: string, threadId: string, turnId: string, config: McpServerConfig): void {
+    const itemType = mcpSignInItemType({ mcpServerId: config.id });
+    const messages = this.#conversation.ensureSnapshot(agentId, threadId).messages;
+    if (messages.some((message) => message.turnId === turnId && message.itemType === itemType)) return;
+    this.#postSystemCard(agentId, threadId, turnId, {
+      itemType,
+      text: sourceText("status.agent.mcpSignInRequested", { name: config.name }),
+      eventType: "mcp.sign_in_requested",
+      detail: { mcpServerId: config.id },
+    });
+  }
 
   /** Adds the note that an agent changed the Vault. `text` names the item, never a secret. */
   postVaultNote(agentId: string, threadId: string, turnId: string, text: string): void {

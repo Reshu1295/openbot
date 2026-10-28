@@ -129,6 +129,17 @@ export function resolveDeferredTool(params: DynamicToolCallParams): DynamicToolC
   return { ...params, namespace: entry.namespace, tool: entry.tool, arguments: parsed.data.arguments };
 }
 
+/** The names that a tool search names with each of their words, such as an MCP server's name. */
+export function namesInSearch(params: DynamicToolCallParams, names: readonly string[]): string[] {
+  const parsed = params.tool === "tool_search" ? searchSchema.safeParse(params.arguments) : null;
+  if (!parsed?.success) return [];
+  const terms = new Set([...(parsed.data.queries ?? []), parsed.data.query ?? ""].flatMap(words));
+  return names.filter((name) => {
+    const nameWords = words(name);
+    return nameWords.length > 0 && nameWords.every((word) => terms.has(word));
+  });
+}
+
 function toolGuidanceFor(entries: readonly (typeof BUILTIN_TOOL_CATALOG)[number][]): string[] {
   return [...new Set(entries.map((entry) => toolGuidance(entry.namespace, entry.tool)))].filter(Boolean);
 }
