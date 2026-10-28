@@ -28,6 +28,7 @@ import { ChatHeader } from "@/features/chat/components/chat-header";
 import { ChatMessageList } from "@/features/chat/components/chat-message-list";
 import { DRAFT_THREAD_ID, useChatThreadMenu } from "@/features/chat/components/chat-thread-menu";
 import { useRowsAfterOpenTransition } from "@/features/chat/components/chat-view";
+import { dictationVoice } from "@/features/chat/components/composer-voice";
 import { useMarkThreadRead } from "@/features/chat/components/use-agent-thread-reads";
 import { useChatAttachments } from "@/features/chat/components/use-chat-attachments";
 import { useChatMotion } from "@/features/chat/components/use-chat-motion";
@@ -628,7 +629,7 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
               onStop={task?.state === "running" && !answersQuestion ? () => threadActions.run(task, "stop") : undefined}
               stopping={task ? threadActions.acting(task) : false}
               keyboardProgress={motion.keyboardProgress}
-              voice={voice}
+              voice={dictationVoice(voice, t)}
               voiceAccent={accent}
             />
           )}

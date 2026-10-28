@@ -1,4 +1,5 @@
 import { type AgentEvent, latestTurnAnswer, type SpeechLanguage } from "@openbot/contracts/ipc";
+import { speechTextFromMarkdown } from "@openbot/contracts/speech-text";
 import { toast } from "@openbot/ui";
 import { currentText } from "@openbot/ui/text";
 import { desktopAnalytics } from "../../analytics";
@@ -18,7 +19,6 @@ import {
   type VoiceRecordingSummary,
 } from "./speech-playback";
 import { speechPort } from "./speech-port";
-import { speechTextFromMarkdown } from "./speech-text";
 
 /** A dictated message that is not sent within this time does not make its reply spoken. */
 const DICTATION_LIFETIME_MS = 10 * 60_000;

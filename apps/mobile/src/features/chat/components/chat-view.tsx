@@ -1,6 +1,8 @@
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
+import type { ConversationMessage } from "@openbot/contracts/ipc";
 import { markdownPlainText } from "@openbot/contracts/markdown-preview-text";
 import { serializeSelectionInstruction } from "@openbot/contracts/selection-instruction";
+import type { MobileTextKey } from "@openbot/i18n/mobile";
 import { type CauseCode, classifyFailure, type FailureProperties } from "@openbot/telemetry";
 import { useQueryClient } from "@tanstack/react-query";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
@@ -64,6 +66,7 @@ import {
   takeComposerRequest,
   useComposerRequest,
 } from "../model/composer-requests";
+import type { LiveConversationPhase } from "../model/live-conversation";
 import { type OutboxMessage, outboxChatKey, outboxChatMessage, outboxRowId, outboxTargetKey } from "../model/outbox";
 import type { OutboxDraft, OutboxStore } from "../model/outbox-store";
 import { queueReceiptMessages, queueRowsWithHeldEdit } from "../model/queue-edit-draft";
@@ -75,7 +78,9 @@ import { ChatAttachmentPanel } from "./chat-attachment-panel";
 import type { OutboxRowStatus } from "./chat-outbox-status";
 import { ChatQueueButton } from "./chat-queue-button";
 import { ChatSelectionBar } from "./chat-selection-bar";
+import { type ComposerVoice, dictationVoice, liveVoice } from "./composer-voice";
 import type { ChatQueueController } from "./use-chat-queue";
+import { useLiveConversation } from "./use-live-conversation";
 import { useVoiceMode } from "./use-voice-mode";
 import { VoiceOverlay } from "./voice-overlay";
 
@@ -100,6 +105,8 @@ export interface ChatViewProps {
   /** The activity of each member agent that works in a channel. */
   activities?: MobileAgentActivity[];
   activeTurnId: string | null;
+  /** The agent's conversation, for the live voice conversation. Absent for a channel, which has none. */
+  conversation?: { messages: readonly ConversationMessage[]; activeTurnId: string | null } | null;
   /** Absent for a chat that cannot stop a turn, such as a channel. */
   stopTurn?: (turnId: string) => Promise<void>;
   questionForm?: QuestionPromptController;
@@ -142,6 +149,15 @@ export interface ChatViewProps {
 }
 
 const CHAT_BACK_EDGE_WIDTH = 24;
+const NO_DELIVERIES: ChatQueueController["deliveries"] = [];
+const LIVE_PHASE_LABELS = {
+  starting: "mobile.chat.liveVoice.phase.starting",
+  listening: "mobile.chat.liveVoice.phase.listening",
+  sending: "mobile.chat.liveVoice.phase.thinking",
+  thinking: "mobile.chat.liveVoice.phase.thinking",
+  speaking: "mobile.chat.liveVoice.phase.speaking",
+  offline: "mobile.chat.liveVoice.phase.offline",
+} as const satisfies Record<LiveConversationPhase, MobileTextKey>;
 /** A host starts a turn within a second or two; this only ends a wait for a turn that never shows. */
 const AWAIT_TURN_MS = 10_000;
 
@@ -202,6 +218,7 @@ export function ChatView({
   activity,
   activities,
   activeTurnId,
+  conversation = null,
   stopTurn,
   questionForm,
   onSelectQuestion,
@@ -535,10 +552,26 @@ export function ChatView({
     sendable: serverOnline && canSend,
     onSend: sendMessage,
   });
+  const writable = canSend && !readOnly && !notice;
+  // Hands-free, as the voice pane on desktop: the agent hears a pause as the end of a turn, and its
+  // reply is read aloud. Only an agent chat has one conversation to follow.
+  const live = useLiveConversation({
+    enabled: isFocused && writable,
+    online: serverOnline,
+    focused: isFocused,
+    foreground: foregroundVisit,
+    conversation,
+    deliveries: queue?.deliveries ?? NO_DELIVERIES,
+    outboxMessages,
+    send: (text) => (writable ? deliver(text, null, []) : null),
+  });
   // Not gated on `appActive`. Notification Center and other system overlays make iOS report the app
   // inactive, and a request must stay with its typed value. It goes when the app leaves.
   const showBrowserRequests = serverOnline && foregroundVisit && isFocused && !readOnly;
-  const voiceOpen = voice.stage !== "closed";
+  // The mic of the composer: a live conversation in an agent chat, as on desktop. A channel has no
+  // one conversation to follow, so its mic dictates a message for review.
+  const composerVoice: ComposerVoice = live.available || live.open ? liveVoice(live, t) : dictationVoice(voice, t);
+  const voiceOpen = voice.stage !== "closed" || live.open;
   // A password or a code is typed where the composer is, so the screen has one field. The voice
   // mode and the attachment card keep the composer until they close. Other secret requests wait.
   const secretRequest =
@@ -600,7 +633,7 @@ export function ChatView({
   }, [voiceOpen, voiceOpenValue]);
   const voiceBack = useRef(voice.back);
   useEffect(() => {
-    voiceBack.current = voice.back;
+    voiceBack.current = live.open ? live.end : voice.back;
   });
   const leaveVoiceMode = useCallback(() => voiceBack.current(), []);
   const edgeBackGesture = useMemo(
@@ -703,7 +736,7 @@ export function ChatView({
     replyToMessageId: string | null,
     files: typeof attachments.items,
     replaces: readonly string[] = [],
-  ): void {
+  ): OutboxMessage {
     setSendError(null);
     setSelection(null);
     // The reply comes at the latest message, which a window around a searched message does not show.
@@ -715,7 +748,7 @@ export function ChatView({
     void haptics.impact();
     setShowStarter(false);
     // The outbox keeps the message on this phone and sends it while the server is online.
-    outbox.add(
+    return outbox.add(
       target.kind === "agent"
         ? { kind: "agent", serverId: target.serverId, agentId: target.id }
         : {
@@ -973,7 +1006,27 @@ export function ChatView({
               upload={listUpload}
               outboxStatuses={outboxStatuses}
             />
-            {voiceOpen ? (
+            {live.open ? (
+              <VoiceOverlay
+                voice={{ presence: live.presence, exit: live.exit, transcript: live.caption, level: live.level }}
+                palette={palette}
+                hint={live.phase === "listening" && !live.muted ? t("mobile.chat.liveVoice.speakNow") : ""}
+                status={t("mobile.chat.liveVoice.status", {
+                  name: target.name,
+                  phase: t(
+                    live.muted && live.phase === "listening"
+                      ? "mobile.chat.liveVoice.phase.muted"
+                      : LIVE_PHASE_LABELS[live.phase],
+                  ),
+                })}
+                error={live.error}
+                segment={live.captionKey}
+                muted={muted}
+                topInset={insets.top}
+                controlsHeight={Math.max(insets.bottom, 10) + VOICE_BUTTON_SIZE + 48}
+                reducedTransparency={reducedTransparency}
+              />
+            ) : voice.stage !== "closed" ? (
               <VoiceOverlay
                 voice={voice}
                 palette={palette}
@@ -1132,7 +1185,7 @@ export function ChatView({
                   menuOpen={attachments.menuOpen}
                   menuProgress={menuProgress}
                   stopping={stopping}
-                  voice={voice}
+                  voice={composerVoice}
                   voiceAccent={accent}
                 />
               )}

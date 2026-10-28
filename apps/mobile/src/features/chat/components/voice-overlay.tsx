@@ -154,15 +154,21 @@ function ListeningHint({ text }: { text: string }) {
 
 function VoiceTranscript({
   text,
+  segment,
   hint,
   reply,
+  status,
+  error,
   muted,
   topInset,
   bottomInset,
 }: {
   text: string;
+  segment: number;
   hint: string;
   reply: string | null;
+  status: string | null;
+  error: string | null;
   muted: ColorValue;
   topInset: number;
   bottomInset: number;
@@ -195,8 +201,20 @@ function VoiceTranscript({
           </Typography.Paragraph>
         </View>
       ) : null}
+      {status ? (
+        <Typography.Paragraph type="body-sm" className="mb-4 text-muted" accessibilityLiveRegion="polite">
+          {status}
+        </Typography.Paragraph>
+      ) : null}
+      {error ? (
+        <Typography.Paragraph accessibilityRole="alert" type="body-sm" className="mb-4 text-danger-text">
+          {error}
+        </Typography.Paragraph>
+      ) : null}
       {words.length > 0 ? (
         <View
+          // A new part, such as the next sentence of a reply, brings its words in again.
+          key={segment}
           accessible
           accessibilityLabel={text}
           style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 7, rowGap: 2 }}
@@ -221,18 +239,28 @@ export function VoiceOverlay({
   voice,
   palette,
   hint,
-  reply,
+  reply = null,
+  status = null,
+  error = null,
+  segment = 0,
   muted,
   topInset,
   controlsHeight,
   reducedTransparency,
 }: {
-  voice: VoiceMode;
+  /** The dictation voice mode, or a live voice conversation. */
+  voice: Pick<VoiceMode, "presence" | "transcript" | "level"> & { exit: VoiceMode["exit"] };
   palette: VoicePalette;
   /** Shown before the first word. */
   hint: string;
   /** The message this one answers, if any. */
-  reply: string | null;
+  reply?: string | null;
+  /** A line above the words that says what the voice mode does now. */
+  status?: string | null;
+  /** Why the voice mode stopped listening. */
+  error?: string | null;
+  /** Changes when the words start again, such as the next part of a reply. */
+  segment?: number;
   muted: ColorValue;
   topInset: number;
   /** Room the voice controls take at the bottom of the screen. */
@@ -284,8 +312,11 @@ export function VoiceOverlay({
       <Animated.View style={[StyleSheet.absoluteFill, transcriptStyle]}>
         <VoiceTranscript
           text={voice.transcript}
+          segment={segment}
           hint={hint}
           reply={reply}
+          status={status}
+          error={error}
           muted={muted}
           topInset={topInset}
           bottomInset={controlsHeight}

@@ -184,6 +184,12 @@ export function MobileChatView({
     void loadOlderMessages(agent.id, agent.serverId);
   }, [agent.id, agent.serverId, loadOlderMessages]);
   const target = useMemo(() => ({ ...agent, kind: "agent" as const }), [agent]);
+  // The live voice conversation follows the turn that answers what the user said. Before the first
+  // read it has an empty conversation, so it can still start.
+  const liveConversation = useMemo(
+    () => ({ messages: conversation?.messages ?? [], activeTurnId: conversation?.activeTurnId ?? null }),
+    [conversation?.messages, conversation?.activeTurnId],
+  );
   const latest = latestReadableMessage(conversation?.messages ?? []);
   const latestId = latest?.id;
   const markRead = useCallback(() => {
@@ -230,6 +236,7 @@ export function MobileChatView({
       notice={viewOnly ? t("mobile.chat.viewOnly") : null}
       activity={activity}
       activeTurnId={conversation?.activeTurnId ?? null}
+      conversation={liveConversation}
       stopTurn={stopTurn}
       questionForm={questionForm}
       activityAccessory={activityAccessory}
