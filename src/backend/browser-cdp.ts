@@ -1529,7 +1529,11 @@ export class BrowserCdpEngine {
             onDispatch?.();
             yield* dispatchMouseClick(send, point, "left", 1, 0, sessionId);
             const opened = yield* Deferred.await(chooser);
-            if (!opened) return yield* browserFailure(new Error("The target did not open a file chooser."));
+            if (!opened) {
+              return yield* browserFailure(
+                new Error("The target was clicked but did not open a file chooser. Take a fresh snapshot."),
+              );
+            }
             const backendNodeId = numberValue(opened.backendNodeId);
             if (!backendNodeId) return yield* browserFailure(new Error("The file chooser has no file input."));
             if (opened.mode === "selectSingle" && paths.length > 1)
