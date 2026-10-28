@@ -221,8 +221,8 @@ function describeProbeFailure(
   signInPlace: McpSignInPlace | null,
 ): string {
   if (signIn?.cancelled()) return sourceText("error.backend.mcpSignInCancelled");
-  if (signIn?.registrationRefused() || (signIn?.registrationFailed() && isRegistrationRefusal(error)))
-    return REGISTRATION_REFUSED;
+  if (isAccessRefusal(signIn?.registrationStatus() ?? null)) return REGISTRATION_REFUSED;
+  if (signIn?.registrationFailed() && isRegistrationRefusal(error)) return REGISTRATION_REFUSED;
   if (signIn && httpStatus(error) === 401) return sourceText("error.backend.mcpSignInNotAccepted");
   // A key the user pasted into a header is theirs to fix; the sign-in would not replace it.
   if (challenge?.status === 401 && challenge.bearer && !hasCredentialHeader(config)) {

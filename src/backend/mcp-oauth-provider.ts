@@ -211,12 +211,12 @@ export interface McpSignIn {
    */
   registrationFailed: () => boolean;
   /**
-   * Whether the authorization server answered that registration with 401 or 403. The SDK keeps the
-   * status only when the body is not an OAuth error, and turns a code it does not know into a
+   * The HTTP status of this attempt's last registration answer, or `null`. The SDK keeps the status
+   * only when the body is not an OAuth error, and turns a code it does not know into a
    * `ServerError`: Dropbox answers 403 `registration_not_supported`, which arrives as a bare
    * sentence. Only a fetch passed through `watchRegistration` sees the status.
    */
-  registrationRefused: () => boolean;
+  registrationStatus: () => number | null;
   /** `fetch` for an exchange that can register, keeping the status of the registration answer. */
   watchRegistration: (fetch: FetchLike) => FetchLike;
   /**
@@ -543,7 +543,7 @@ export class McpOAuth implements McpOAuthAuthority {
       abandon,
       secrets: () => provider.secrets(),
       registrationFailed: () => provider.registrationPending,
-      registrationRefused: () => provider.registrationRefused,
+      registrationStatus: () => provider.registrationStatus,
       watchRegistration: (fetch) => provider.watchRegistration(fetch),
       cancelled: () => cancelled,
     };
@@ -937,26 +937,37 @@ class McpOAuthClientProvider implements OAuthClientProvider {
     return this.#registrationPending;
   }
 
-  get registrationRefused(): boolean {
-    return this.#registrationPending && (this.#registrationStatus === 401 || this.#registrationStatus === 403);
+  get registrationStatus(): number | null {
+    return this.#registrationStatus;
   }
 
   /**
-   * While a registration is pending, the one POST the SDK sends is the registration: discovery reads
-   * with GET, and a failed registration ends the exchange before any other request.
+   * Matched by address, not by `#registrationPending`: the SDK also registers when it drops a
+   * client bound to another issuer, which this provider never hears about.
    */
   watchRegistration(fetch: FetchLike): FetchLike {
     return async (input, init) => {
       const response = await fetch(input, init);
-      if (this.#registrationPending && init?.method === "POST") this.#registrationStatus = response.status;
+      const registrationUrl = this.#registrationUrl();
+      if (init?.method === "POST" && registrationUrl !== null && new URL(String(input)).href === registrationUrl)
+        this.#registrationStatus = response.status;
       return response;
     };
+  }
+
+  /** Where the SDK registers: the advertised endpoint, or `/register` when no metadata was found. */
+  #registrationUrl(): string | null {
+    const discovery = this.#discoveryState;
+    if (!discovery) return null;
+    const endpoint = discovery.authorizationServerMetadata
+      ? discovery.authorizationServerMetadata.registration_endpoint
+      : new URL("/register", discovery.authorizationServerUrl).href;
+    return endpoint && URL.canParse(endpoint) ? new URL(endpoint).href : null;
   }
 
   /** No client, which makes the SDK register next. */
   #register(): undefined {
     this.#registrationPending = true;
-    this.#registrationStatus = null;
     return undefined;
   }
 
@@ -972,6 +983,7 @@ class McpOAuthClientProvider implements OAuthClientProvider {
     return runCauseEffect(
       Effect.gen({ self: this }, function* () {
         this.#registrationPending = false;
+        this.#registrationStatus = null;
         this.recordSecret(information.client_secret);
         // The SDK binds an unstamped client to its issuer after an exchange. For a sign-in app that
         // binding is all that is written: the app is not a registration.
