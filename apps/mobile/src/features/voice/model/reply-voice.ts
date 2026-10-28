@@ -209,9 +209,10 @@ export function streamReply(handlers: ReplyHandlers, choice?: ReplyVoiceChoice):
       // Each part takes its own language, with the part before as the fallback, because the reply
       // plays before it is complete. A short first part, such as "Sure.", is judged with all the text
       // written so far. Supertonic 3 reads 31 languages; a part in another script, such as Chinese,
-      // ends the reading.
+      // ends the reading. A Japanese part written only in kanji, such as "以上。", stays Japanese.
       const text = index === 0 ? speechTextFromMarkdown(markdownSoFar) : part;
-      language = speechLanguageOf(text, language ?? fallbackLanguage());
+      const detected = speechLanguageOf(text, language ?? fallbackLanguage());
+      language = detected ?? (language === "ja" ? "ja" : null);
       if (!language) return end("language");
       native?.speak(idOf(index), part, language, speaker, SUPERTONIC_DENOISING_STEPS);
     }
