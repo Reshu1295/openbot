@@ -80,6 +80,8 @@ export interface ChatMessageRowProps {
   mediaSource?: AttachmentMediaSource | undefined;
   /** Reads an image file that an agent message names, for a preview under the text. */
   loadImageFile?: ((file: MessageImageFile) => Promise<string | null>) | undefined;
+  /** The window draws the macOS window controls over the top start corner. The image viewer leaves room. */
+  macWindowControls?: boolean | undefined;
 }
 
 /**
@@ -230,6 +232,7 @@ export function ChatMessageRow(props: ChatMessageRowProps): JSX.Element {
                 onDownload={props.onDownload}
                 mediaSource={props.mediaSource}
                 loadImageFile={props.loadImageFile}
+                macWindowControls={props.macWindowControls}
               />
               {props.children}
             </BubbleContent>

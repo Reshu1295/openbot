@@ -220,6 +220,8 @@ export function ImageLightbox(props: {
   /** Finds the thumbnail of an image, so the viewer closes back into the one it shows. */
   thumbnail?: (attachment: AttachmentSummary) => HTMLElement | undefined;
   onDownload?: ((attachment: AttachmentSummary) => void) | undefined;
+  /** The window draws the macOS window controls over the top start corner, so the toolbar leaves room. */
+  macWindowControls?: boolean | undefined;
   onClose: () => void;
 }) {
   const { t } = useText();
@@ -546,7 +548,7 @@ export function ImageLightbox(props: {
       <Dialog.Portal>
         <Dialog.Overlay ref={overlay} class="image-lightbox-backdrop" />
         <Dialog.Content
-          class="image-lightbox"
+          class={`image-lightbox${props.macWindowControls ? " image-lightbox-mac-controls" : ""}`}
           data-dialog-surface="unstyled"
           data-closing={closing() ? "" : undefined}
           onPointerDown={(event: PointerEvent) => {

@@ -311,6 +311,8 @@ export function MessageBody(props: {
    * image as a `data:` URL, or `null` when it cannot show. Absent, a named file is only a chip.
    */
   loadImageFile?: ((file: MessageImageFile) => Promise<string | null>) | undefined;
+  /** The window draws the macOS window controls over the top start corner. The image viewer leaves room. */
+  macWindowControls?: boolean | undefined;
 }) {
   const { t } = useText();
   const streamingBody = createStreamingBody(
@@ -709,6 +711,7 @@ export function MessageBody(props: {
             opening={opening()}
             thumbnail={imageThumbnail}
             onDownload={opening().markdown ? undefined : props.onDownload}
+            macWindowControls={props.macWindowControls}
             onClose={() => setLightbox(null)}
           />
         )}
