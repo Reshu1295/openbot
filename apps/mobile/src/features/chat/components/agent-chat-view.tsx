@@ -16,9 +16,10 @@ import { showsOnline } from "@/features/workspace/model/server-status";
 import { useText } from "@/shared/lib/text";
 import { chatRowIndex, latestReadableMessage, projectChatMessages, withFailureReasons } from "../model/chat-messages";
 import { useAgentMentionSkills } from "../model/use-agent-mention-skills";
-import { ChatTaskRows, useOpenAgentTasks } from "./chat-task-rows";
+import { MAIN_THREAD_ID, useChatThreadMenu } from "./chat-thread-menu";
 import { ChatView } from "./chat-view";
 import { useChatQueue } from "./use-chat-queue";
+import { useOpenAgentTasks } from "./use-open-agent-tasks";
 import { useQuestionPrompt } from "./use-question-prompt";
 
 /** `focusMessageId` opens the chat at a message from search instead of at the latest message. */
@@ -71,6 +72,7 @@ export function MobileChatView({
     [conversation?.references, memberId, accountUserId],
   );
   const tasks = useOpenAgentTasks(agent.serverId, agent.id);
+  const threadMenu = useChatThreadMenu(agent, MAIN_THREAD_ID);
   const liveActivity = openTurnActivity(useAgentActivity(agent.id), conversation);
   const threadId = conversation?.threadId ?? null;
   // A turn on another thread, such as channel work, is not this chat's work, as on desktop. A host
@@ -82,7 +84,7 @@ export function MobileChatView({
         (channel) => !channel.archived && channel.threads?.some((thread) => thread.threadId === liveActivity?.threadId),
       )
     : undefined;
-  // A task turn is the task's work, not this chat's: its row below says that the agent works.
+  // A thread's turn is the thread's work, not this chat's: the thread menu shows it.
   const activity =
     otherThread || (liveActivity?.turnId && tasks.some((task) => task.activeTurnId === liveActivity.turnId))
       ? undefined
@@ -204,16 +206,13 @@ export function MobileChatView({
   );
   const workActivity = workChannel ? liveActivity : undefined;
   // One element while its inputs stay, so a new render of this screen does not draw the list again.
+  // The agent's threads are in the thread menu of the header, not in this chat.
   const activityAccessory = useMemo(
-    () => (
-      <>
-        {workChannel && workActivity ? (
-          <ChatChannelWorkRow channel={workChannel} activity={workActivity} serverId={agent.serverId} />
-        ) : null}
-        <ChatTaskRows tasks={tasks} serverId={agent.serverId} />
-      </>
-    ),
-    [workChannel, workActivity, tasks, agent.serverId],
+    () =>
+      workChannel && workActivity ? (
+        <ChatChannelWorkRow channel={workChannel} activity={workActivity} serverId={agent.serverId} />
+      ) : null,
+    [workChannel, workActivity, agent.serverId],
   );
   return (
     <ChatView
@@ -234,6 +233,7 @@ export function MobileChatView({
       stopTurn={stopTurn}
       questionForm={questionForm}
       activityAccessory={activityAccessory}
+      threadMenu={threadMenu}
       threadId={threadId}
       approvals={approvals}
       readBoundary={latest ? `${latest.id}:${latest.status}` : null}

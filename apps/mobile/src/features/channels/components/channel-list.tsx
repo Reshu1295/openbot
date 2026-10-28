@@ -21,6 +21,7 @@ import {
   useMobileWorkspaceSelector,
 } from "@/features/workspace/context/mobile-workspace-context";
 import { canToggleAgentPin } from "@/features/workspace/model/agent-pins";
+import { showsOnline } from "@/features/workspace/model/server-status";
 import type { MobileAgent } from "@/features/workspace/model/workspace-types";
 import { type MenuAction, type MenuComponentRef, MenuView } from "@/shared/components/menu-view";
 import { formatUpdatedAt } from "@/shared/lib/format-updated-at";
@@ -40,7 +41,7 @@ function useChannelMenuActions(channel: ChannelSummary, serverId: string) {
     canToggleAgentPin([...pinnedAgentIds, ...pinnedChannelIds], channel.id),
   );
   const online = useMobileWorkspaceSelector(({ servers }) =>
-    servers.some((server) => server.id === serverId && server.state === "online"),
+    servers.some((server) => server.id === serverId && showsOnline(server)),
   );
   const isMember = useMobileWorkspaceSelector(
     ({ servers }) => servers.find((server) => server.id === serverId)?.role === "member",
@@ -254,7 +255,7 @@ export const ChannelListRow = memo(function ChannelListRow({
     ({ pinnedAgentIds, pinnedChannelIds }) => !canToggleAgentPin([...pinnedAgentIds, ...pinnedChannelIds], channel.id),
   );
   const disconnected = useMobileWorkspaceSelector(
-    ({ servers }) => !servers.some((server) => server.id === serverId && server.state === "online"),
+    ({ servers }) => !servers.some((server) => server.id === serverId && showsOnline(server)),
   );
   // Each long press mounts the Android menu again, so it opens even if an earlier one did not close.
   const [menuKey, setMenuKey] = useState(0);

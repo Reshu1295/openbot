@@ -385,9 +385,35 @@ export const messages = {
   "mobile.chat.queue.addedOnPhone": "Ajouté sur ce téléphone",
   "mobile.chat.queue.addFiles": "Ajouter des fichiers",
   "mobile.chat.queue.addPhotos": "Ajouter des photos",
-  "mobile.chat.tasks.open": "Ouvrir la tâche {title}, {status}",
-  "mobile.chat.tasks.close": "Fermer la tâche {title}",
-  "mobile.chat.tasks.status": "Tâche · {status}",
+  "mobile.chat.threads.open": "Ouvrir le fil {title}, {status}",
+  "mobile.chat.threads.menu": "{name}, fils",
+  "mobile.chat.threads.menuAttention": {
+    one: "{name}, fils. {count} fil vous attend",
+    other: "{name}, fils. {count} fils vous attendent",
+  },
+  "mobile.chat.threads.main": "Chat principal",
+  "mobile.chat.threads.new": "Nouveau fil",
+  "mobile.chat.threads.all": "Tous les fils",
+  "mobile.chat.threads.agentInfo": "Infos de l’agent",
+  "mobile.chat.threads.draftNote":
+    "Votre premier message démarre un nouveau fil. Le chat principal avec {name} ne change pas.",
+  "mobile.chat.threads.draftPlaceholder": "Nouveau fil avec {name}",
+  "mobile.chat.threads.rename": "Renommer",
+  "mobile.chat.threads.renameTitle": "Renommer le fil",
+  "mobile.chat.threads.renameSave": "Enregistrer",
+  "mobile.chat.threads.name": "Nom du fil",
+  "mobile.chat.threads.renameUnavailable":
+    "Vous ne pouvez pas renommer ce fil maintenant. Connectez-vous au serveur ou mettez à jour OpenBot sur l’hôte.",
+  "mobile.chat.threads.delete.action": "Supprimer",
+  "mobile.chat.threads.delete.title": "Supprimer ce fil ?",
+  "mobile.chat.threads.delete.body":
+    "OpenBot supprime définitivement le fil, ses messages et ses fichiers. Le chat principal ne change pas.",
+  "mobile.chat.threads.filesUnsupported":
+    "Cet hôte ne peut pas recevoir de fichiers dans un fil. Mettez à jour OpenBot sur l’hôte.",
+  "mobile.chat.threads.unsupported":
+    "Cet hôte ne peut pas renommer ni supprimer les fils. Mettez à jour OpenBot sur l’hôte.",
+  "mobile.chat.threads.error.rename": "Impossible de renommer le fil.",
+  "mobile.chat.threads.error.delete": "Impossible de supprimer le fil.",
   "mobile.chat.channelWork.working": "Travaille dans {channel}",
   "mobile.chat.channelWork.waiting": "Vous attend dans {channel}",
   "mobile.chat.channelWork.open": "{label}. Ouvre le canal.",

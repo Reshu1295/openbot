@@ -3,7 +3,8 @@
 // mailbox and the browser are small in-memory stand-ins that record each call, so a check can show
 // that a refused request did not reach them. The checks cover the protocol and auth gates, sign-in
 // and account tickets, the admin-only routes, the host's Bitwarden connection over a fake `bw`, the
-// host's Vault (`vault-v1`, and the CSV import of `vault-import-v1`) over the real service and store,
+// host's Vault (`vault-v1`, its API keys through `vault-v2`, and the CSV import of `vault-import-v1`)
+// over the real service and store,
 // a password that an admin saves from the secure card (`browser-secret-vault-v1`),
 // direct-message isolation, agents hidden from an older
 // protocol, the queue routes, the attachment and file routes with their size limits, and the error
@@ -32,6 +33,7 @@ import {
   type RoutineResultDestination,
 } from "@openbot/contracts/ipc";
 import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
+import { TEAM_PROTOCOL_V1_WEBSOCKET } from "@openbot/contracts/team-protocol";
 import {
   AGENT_BACKUP_MODELS_CAPABILITY,
   AGENT_BACKUP_MODELS_ROUTES,
@@ -53,6 +55,12 @@ import {
   BROWSER_SECRET_VAULT_CAPABILITY,
   BROWSER_SECRET_VAULT_ROUTES,
 } from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
+import {
+  MACHINE_RESOURCES_CAPABILITY,
+  MACHINE_RESOURCES_ROUTES,
+  type MachineAlertEvent,
+  machineAlertEvent,
+} from "@openbot/contracts/team-protocol/machine-resources-v1";
 import {
   PROVIDER_DEFAULT_CAPABILITY,
   PROVIDER_DEFAULT_ROUTES,
@@ -77,6 +85,7 @@ import {
 } from "@openbot/contracts/team-protocol/v1";
 import { VAULT_IMPORT_CAPABILITY, VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY, VAULT_V2_ROUTES } from "@openbot/contracts/team-protocol/vault-v2";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect } from "effect";
@@ -92,6 +101,7 @@ import { createAgentHostSettings } from "../src/main/agent-host-settings";
 import { type BitwardenCliRunner, BitwardenConnectorService } from "../src/main/bitwarden-connector-service";
 import { BitwardenConnectorStore } from "../src/main/bitwarden-connector-store";
 import { createBrowserProfileService } from "../src/main/browser-profile-service";
+import { MachineAlertMonitor, MachineAlertPreferenceStore } from "../src/main/machine-alerts";
 import type { TeamApiAgents, TeamApiBrowser, TeamApiMailbox } from "../src/main/team-api/dependencies";
 import { isPeerHiddenProvider } from "../src/main/team-api/provider-visibility";
 import { TeamApiServer } from "../src/main/team-api-server";
@@ -549,6 +559,7 @@ const vaultFile = join(root, "openbot-vault-v1.json");
 const vault = new VaultService({ store: new VaultStore(vaultFile, fakeCipher), canPersist: () => true });
 await Effect.runPromise(vault.load());
 const VAULT_PASSWORD = "e2e-vault-password-7f3c";
+const VAULT_API_KEY = "e2e-vault-api-key-91d2";
 /** Resolves with the first status after a host sign-in started (`connecting`) and then ended. */
 function bitwardenSettled(connector: BitwardenConnectorService): Promise<BitwardenConnectorStatus> {
   return new Promise((resolveStatus) => {
@@ -563,6 +574,30 @@ function bitwardenSettled(connector: BitwardenConnectorService): Promise<Bitward
 }
 
 const store = new TeamStore(join(root, "team.json"));
+// The real alert store and member check, over a fixed reading of a nearly full machine.
+const machineMetrics = {
+  diskUsedBytes: 61 * 1024 ** 3,
+  diskFreeBytes: 3 * 1024 ** 3,
+  diskTotalBytes: 64 * 1024 ** 3,
+  memoryAvailableBytes: 2 * 1024 ** 3,
+  memoryTotalBytes: 16 * 1024 ** 3,
+  cpuPercent: 37,
+  cpuMillicores: 1500,
+  checkedAt: "2026-10-27T12:00:00.000Z",
+};
+const machineAlertStore = new MachineAlertPreferenceStore(join(root, "machine-alerts.json"));
+const readMachine = () =>
+  Effect.sync(() => {
+    record("machineMetrics");
+    return machineMetrics;
+  });
+const machine = new MachineAlertMonitor({
+  read: readMachine,
+  display: readMachine,
+  store: machineAlertStore,
+  members: () => store.listMembers(),
+  onError: (message) => logged.push(message),
+});
 const database = new OpenBotDatabase(join(root, "user-data"));
 let server: TeamApiServer | null = null;
 
@@ -717,6 +752,7 @@ try {
     bitwardenConnector,
     vault,
     browserProfiles,
+    machine,
     // Only the disk of the host answers here; the storage-v1 routes are not part of this run.
     storage: {
       usage: unused("storage.usage"),
@@ -1880,6 +1916,125 @@ try {
     );
   }
 
+  // ---- Machine use and alerts (machine-resources-v1) ----
+  {
+    const unsupported = await call("POST", MACHINE_RESOURCES_ROUTES.metrics, { token: adaToken, json: {} });
+    check(
+      "the machine routes without the capability get 400 machineResourcesUnsupported",
+      errorIs(unsupported, 400, sourceText("error.team.machineResourcesUnsupported")) &&
+        callsOf("machineMetrics").length === 0,
+      summary(unsupported),
+    );
+    const capabilities = [MACHINE_RESOURCES_CAPABILITY];
+    const member = await call("POST", MACHINE_RESOURCES_ROUTES.metrics, { token: bobToken, json: {}, capabilities });
+    const memberAlerts = await call("POST", MACHINE_RESOURCES_ROUTES.alerts, {
+      token: bobToken,
+      json: {},
+      capabilities,
+    });
+    check(
+      "a member cannot read the machine use or its alerts",
+      member.status === 403 && memberAlerts.status === 403 && callsOf("machineMetrics").length === 0,
+      [summary(member), summary(memberAlerts)],
+    );
+    const metrics = await call("POST", MACHINE_RESOURCES_ROUTES.metrics, { token: adaToken, json: {}, capabilities });
+    check(
+      "an admin reads the disk, memory and CPU of the host machine",
+      metrics.status === 200 &&
+        isDeepStrictEqual(metrics.body, machineMetrics) &&
+        callsOf("machineMetrics").length === 1,
+      summary(metrics),
+    );
+    const defaults = await call("POST", MACHINE_RESOURCES_ROUTES.alerts, { token: adaToken, json: {}, capabilities });
+    check(
+      "a new host has the default alert levels and no responsible member",
+      defaults.status === 200 &&
+        isDeepStrictEqual(defaults.body, {
+          diskPercent: 90,
+          memoryPercent: 90,
+          cpuPercent: 95,
+          responsibleMemberId: null,
+        }),
+      summary(defaults),
+    );
+    const toMember = await call("POST", MACHINE_RESOURCES_ROUTES.updateAlerts, {
+      token: adaToken,
+      json: { diskPercent: 80, memoryPercent: 90, cpuPercent: 95, responsibleMemberId: bobId },
+      capabilities,
+    });
+    const tooLow = await call("POST", MACHINE_RESOURCES_ROUTES.updateAlerts, {
+      token: adaToken,
+      json: { diskPercent: 10, memoryPercent: 90, cpuPercent: 95, responsibleMemberId: null },
+      capabilities,
+    });
+    check(
+      "the host refuses a member who is not an admin and a level outside 50-99",
+      errorIs(toMember, 400, sourceText("error.team.machineAlertMemberInvalid")) &&
+        tooLow.status === 400 &&
+        !existsSync(join(root, "machine-alerts.json")),
+      [summary(toMember), summary(tooLow)],
+    );
+    const settings = { diskPercent: 80, memoryPercent: 85, cpuPercent: 97, responsibleMemberId: adaId };
+    const saved = await call("POST", MACHINE_RESOURCES_ROUTES.updateAlerts, {
+      token: adaToken,
+      json: settings,
+      capabilities,
+    });
+    const reread = await call("POST", MACHINE_RESOURCES_ROUTES.alerts, { token: adaToken, json: {}, capabilities });
+    const file = parseJson(readFileSync(join(root, "machine-alerts.json"), "utf8"));
+    check(
+      "an admin saves the levels and names an admin, and the host keeps them in its file",
+      saved.status === 200 &&
+        isDeepStrictEqual(saved.body, settings) &&
+        isDeepStrictEqual(reread.body, settings) &&
+        isDeepStrictEqual(file, { version: 1, ...settings }),
+      [summary(saved), summary(reread), file],
+    );
+
+    // The disk (95%) and memory (87%) are above the saved levels, so the first reading alerts ada.
+    const firstAlert = new Promise<{ memberId: string | null; event: MachineAlertEvent }>((resolveAlert) => {
+      const stop = machine.subscribe((memberId, event) => {
+        stop();
+        resolveAlert({ memberId, event });
+      });
+    });
+    machine.start();
+    const first = await firstAlert;
+    // A device of ada that connects now gets the alert that is still in force.
+    const socket = new WebSocket(`ws://127.0.0.1:${port}${TEAM_API_ROUTES.events}`, [
+      TEAM_PROTOCOL_V1_WEBSOCKET,
+      `openbot-token.${adaToken}`,
+    ]);
+    await new Promise<void>((resolveOpen, reject) => {
+      socket.addEventListener("open", () => resolveOpen(), { once: true });
+      socket.addEventListener("error", () => reject(new Error("The event socket did not open.")), { once: true });
+    });
+    const received = new Promise<MachineAlertEvent>((resolveEvent, reject) => {
+      socket.addEventListener("message", (message) => {
+        const event = machineAlertEvent(JSON.parse(String(message.data)));
+        if (event?.alertId === first.event.alertId) resolveEvent(event);
+      });
+      socket.addEventListener("close", () => reject(new Error("The event socket closed.")), { once: true });
+    });
+    socket.send(
+      JSON.stringify({ type: "agent-event-scope", includeConversations: false, capabilities: [capabilities[0]] }),
+    );
+    const delivered = await received;
+    socket.close();
+    machine.close();
+    check(
+      "the alert goes to the responsible admin, and a device that connects later gets it",
+      first.memberId === adaId &&
+        first.event.metric === "disk" &&
+        first.event.percent === 95 &&
+        first.event.level === 80 &&
+        isDeepStrictEqual(delivered, first.event) &&
+        typeof bobId === "string" &&
+        machine.pending(bobId).length === 0,
+      [first, delivered],
+    );
+  }
+
   // ---- Keys of the key-only providers (providers-v8) ----
   {
     const v8 = { token: adaToken, protocol: 8, capabilities: [PROVIDERS_V8_CAPABILITY] };
@@ -2250,6 +2405,95 @@ try {
         reset.status === 200 &&
         isDeepStrictEqual(reset.body, { status: "ready", items: [] }),
       [summary(unreadable), summary(reset)],
+    );
+  }
+
+  // ---- API keys in the host's Vault (vault-v2), and vault-v1 on the same host ----
+  {
+    const v1Call = (token: string, path: string, json: unknown = {}) =>
+      call("POST", path, { token, json, capabilities: [VAULT_CAPABILITY] });
+    const v2Call = (token: string, path: string, json: unknown = {}) =>
+      call("POST", path, { token, json, capabilities: [VAULT_V2_CAPABILITY] });
+    /** The kind of each listed item, in order. */
+    const kinds = (body: Json | undefined) => {
+      const items = field(body, "items");
+      return Array.isArray(items) ? items.map((item) => field(item, "kind")) : undefined;
+    };
+    const apiKey = { kind: "apiKey", id: null, name: "OPENAI_API_KEY", notes: "Billing", key: VAULT_API_KEY };
+    const login = {
+      kind: "login",
+      id: null,
+      website: "https://shop.example.com",
+      username: "ada@example.com",
+      notes: "",
+      password: VAULT_PASSWORD,
+    };
+    const unsupported = await v1Call(adaToken, VAULT_V2_ROUTES.list);
+    const memberSave = await v2Call(bobToken, VAULT_V2_ROUTES.save, apiKey);
+    check(
+      "the vault-v2 routes need vault-v2 and an owner or admin",
+      errorIs(unsupported, 400, sourceText("error.team.vaultUnsupported")) &&
+        errorIs(memberSave, 403, sourceText("error.team.adminRequired")) &&
+        vault.state().items.length === 0,
+      [summary(unsupported), summary(memberSave)],
+    );
+    const saved = await v2Call(adaToken, VAULT_V2_ROUTES.save, apiKey);
+    const keyId = field(saved.body, "items", 0, "id");
+    check(
+      "an admin adds an API key; the answer lists its name with no key",
+      saved.status === 200 &&
+        field(saved.body, "items", 0, "kind") === "apiKey" &&
+        field(saved.body, "items", 0, "name") === "OPENAI_API_KEY" &&
+        field(saved.body, "items", 0, "hasKey") === true &&
+        typeof keyId === "string" &&
+        !saved.text.includes(VAULT_API_KEY) &&
+        !readFileSync(vaultFile, "utf8").includes(VAULT_API_KEY),
+      summary(saved),
+    );
+    assert.ok(typeof keyId === "string", "the vault-v2 save did not answer an item id.");
+    const duplicate = await v2Call(adaToken, VAULT_V2_ROUTES.save, apiKey);
+    const badName = await v2Call(adaToken, VAULT_V2_ROUTES.save, { ...apiKey, name: "openai key" });
+    const v1ApiKey = await v1Call(adaToken, VAULT_ROUTES.save, apiKey);
+    check(
+      "a second key of the same name and a name that is not a variable are refused; vault-v1 cannot add a key",
+      errorIs(duplicate, 400, sourceText("error.vault.apiKeyNameTaken")) &&
+        errorIs(badName, 400, sourceText("error.vault.apiKeyNameInvalid")) &&
+        v1ApiKey.status === 400 &&
+        vault.state().items.length === 1,
+      [summary(duplicate), summary(badName), summary(v1ApiKey)],
+    );
+    const v1Login = await v1Call(adaToken, VAULT_ROUTES.save, login);
+    const v1List = await v1Call(adaToken, VAULT_ROUTES.list);
+    const v1Delete = await v1Call(adaToken, VAULT_ROUTES.delete, { id: keyId });
+    const v1Reveal = await v1Call(adaToken, VAULT_ROUTES.reveal, { id: keyId, field: "key" });
+    check(
+      "vault-v1 on the same host lists no API key, keeps it when it saves a login, and cannot delete or reveal it",
+      v1Login.status === 200 &&
+        isDeepStrictEqual(kinds(v1List.body), ["login"]) &&
+        errorIs(v1Delete, 400, sourceText("error.vault.itemMissing")) &&
+        v1Reveal.status === 400 &&
+        !v1Reveal.text.includes(VAULT_API_KEY) &&
+        vault.state().items.some((item) => item.id === keyId),
+      [summary(v1Login), summary(v1List), summary(v1Delete), summary(v1Reveal)],
+    );
+    const v2List = await v2Call(adaToken, VAULT_V2_ROUTES.list);
+    const revealed = await v2Call(adaToken, VAULT_V2_ROUTES.reveal, { id: keyId, field: "key" });
+    check(
+      "vault-v2 lists the login and the API key, and reveals the key to an admin only from reveal",
+      isDeepStrictEqual(kinds(v2List.body), ["login", "apiKey"]) &&
+        !v2List.text.includes(VAULT_API_KEY) &&
+        isDeepStrictEqual(revealed.body, { value: VAULT_API_KEY }),
+      [summary(v2List), { status: revealed.status }],
+    );
+    const loginId = field(v1Login.body, "items", 0, "id");
+    const deletedKey = await v2Call(adaToken, VAULT_V2_ROUTES.delete, { id: keyId });
+    const deletedLogin = await v2Call(adaToken, VAULT_V2_ROUTES.delete, { id: loginId });
+    check(
+      "an admin deletes the API key and the login through vault-v2",
+      deletedKey.status === 200 &&
+        isDeepStrictEqual(deletedLogin.body, { status: "ready", items: [] }) &&
+        vault.state().items.length === 0,
+      [summary(deletedKey), summary(deletedLogin)],
     );
   }
 

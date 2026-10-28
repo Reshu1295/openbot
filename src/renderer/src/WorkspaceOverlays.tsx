@@ -1,6 +1,7 @@
-import type { CentralAuthUser, RoutineFields, ServerSummary } from "@openbot/contracts/ipc";
+import { type CentralAuthUser, LOCAL_SERVER_ID, type RoutineFields, type ServerSummary } from "@openbot/contracts/ipc";
 import { BROWSER_PROFILES_CAPABILITY } from "@openbot/contracts/team-protocol/browser-profiles-v1";
 import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
 import { classifyFailure } from "@openbot/telemetry";
 import { isAgentAccount } from "@openbot/ui/components/provider-accounts";
 import type { AcpRegistrySettingsApi } from "@openbot/ui/features/custom-providers/AcpRegistrySettings";
@@ -26,6 +27,7 @@ import { useProviderDetection } from "./features/custom-providers/provider-detec
 import type { ServerStorageOptions } from "./features/files/ServerStoragePanel";
 import { useSetup } from "./features/onboarding/onboarding-context";
 import { useRemoteDesktop } from "./features/remote-desktop/remote-desktop-context";
+import { desktopScheduleSource } from "./features/schedule/schedule-port";
 import { AddServerOverlay } from "./features/servers/AddServerOverlay";
 import {
   createdRoutines,
@@ -133,6 +135,7 @@ export function SkillsMarketplace() {
   const { openInstalledMarketplaceAgent } = useServerSelection();
   const { openMcpAdd } = useServerSettings();
   const connectors = useConnectors();
+  const platform = usePlatform();
   const { remoteDesktopWorkspaceVisible, hideRemoteDesktopWorkspace } = useRemoteDesktop();
   // The remote desktop covers the window card, so a link or a search that opens the page hides it.
   // The remote desktop session stays.
@@ -157,6 +160,7 @@ export function SkillsMarketplace() {
         setPendingPluginConnect(false);
       }}
       connectors={connectors.active}
+      macOS={platform.appInfo()?.platform === "darwin"}
       onAddServer={(serverId) => {
         setSkillsMarketplaceOpen(false);
         openMcpAdd(serverId, null);
@@ -235,7 +239,8 @@ function AddServer() {
 
 /**
  * The offer of a hosted server when routines depend on this computer or on the user's own remote
- * computer. A routine that an agent makes shows the offer when that agent's turn ends.
+ * computer. The modal opens only after the first routine on this computer, when the turn of the agent
+ * that made it ends.
  */
 function HostedUpsell(props: AccountProps) {
   const { activeServer, hostedServersAvailable, hostedServersLoaded, hostedServerIds, setAddServerOpen } = useServers();
@@ -254,6 +259,14 @@ function HostedUpsell(props: AccountProps) {
       }
     }
   });
+  // The calendar lists every routine of the host. A range in the future reads no run history.
+  function localActiveRoutineIds(): Promise<readonly string[] | null> {
+    if (untrack(activeServer)?.kind !== "local") return Promise.resolve(null);
+    const from = Date.now() + 60_000;
+    return desktopScheduleSource()
+      .calendar({ from: new Date(from).toISOString(), to: new Date(from + 60_000).toISOString() }, LOCAL_SERVER_ID)
+      .then((calendar) => calendar.routines.filter((routine) => routine.active).map((routine) => routine.id));
+  }
   return (
     <HostedServerUpsell
       accountId={props.account().id}
@@ -266,6 +279,7 @@ function HostedUpsell(props: AccountProps) {
         activeServer()?.hosted !== true
       }
       serverId={activeServer()?.id ?? "local"}
+      activeHostRoutineIds={localActiveRoutineIds}
       host={activeServer()?.kind === "remote" ? { name: activeServer()?.name ?? "" } : "this-computer"}
       busy={(agentId) => Boolean(activeTurns()[agentId])}
       openPlans={() => setAddServerOpen(true, "upsell")}
@@ -434,11 +448,16 @@ function ServerSettings() {
     const target = serverSettingsTarget();
     return serverCanAdminister(target, VAULT_CAPABILITY) ? target.id : undefined;
   });
+  // A host that updates or rolls back keeps its id, so the API key kind follows this capability too.
+  const vaultApiKeys = createMemo(() => serverCanAdminister(serverSettingsTarget(), VAULT_V2_CAPABILITY));
   const vault = createMemo(() => {
     const serverId = vaultServerId();
     if (serverId === undefined) return undefined;
     const local = untrack(serverSettingsTarget)?.kind === "local";
-    return { store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)) };
+    return {
+      store: createVaultStore(local ? desktopVaultCalls() : hostVaultCalls(serverId)),
+      apiKeys: vaultApiKeys(),
+    };
   });
   // The workspace belongs to the selected server. For another server, the switch comes first and
   // the agent is published for the scope it lands in; a message there opens as its agent's chat.
@@ -894,6 +913,7 @@ function RemoteDesktop() {
     remoteDesktopConnectionError,
     remoteDesktopConnectionErrorCode,
     hideRemoteDesktopWorkspace,
+    reportRemoteDesktopViewerFailed,
     disconnectRemoteDesktopWorkspace,
     retryRemoteDesktopWorkspace,
     selectRemoteDesktopDisplay,
@@ -914,6 +934,7 @@ function RemoteDesktop() {
               connectionError={remoteDesktopConnectionError()}
               connectionErrorCode={remoteDesktopConnectionErrorCode()}
               onHide={hideRemoteDesktopWorkspace}
+              onViewerState={(state) => reportRemoteDesktopViewerFailed(state === "error")}
               onDisconnect={() => disconnectRemoteDesktopWorkspace()}
               onRetry={retryRemoteDesktopWorkspace}
               onSelectDisplay={selectRemoteDesktopDisplay}

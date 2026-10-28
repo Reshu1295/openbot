@@ -174,6 +174,7 @@ import { type CustomProviderChanges, createCustomProviderChanges } from "./custo
 import { CustomProviderStore } from "./custom-provider-store";
 import { MCP_OAUTH_REDIRECT_URL } from "./deep-link-router";
 import { desktopShowsAgentEvent } from "./desktop-notifications";
+import { shouldAutoStartHost } from "./development-profile";
 import {
   applyDevelopmentRemoteAccount,
   type DevelopmentRemoteRole,
@@ -209,6 +210,8 @@ import { localRoutineFeedDocument } from "./local-routine-calendar";
 import { createLoginItem } from "./login-item";
 import { LogoColorService } from "./logo-color-service";
 import type { MacHapticFeedback } from "./mac-haptic-feedback";
+import { MACHINE_ALERTS_PREFERENCE_FILE, MachineAlertMonitor, MachineAlertPreferenceStore } from "./machine-alerts";
+import { MachineMetricsSampler } from "./machine-metrics";
 import {
   computerUseCoveringWindowIds,
   computerUseDesktopPoint,
@@ -400,12 +403,14 @@ const TEARDOWN_ORDER = {
   hostUpdateCoordinator: 12,
   requestedUpdate: 13,
   hostedServerStartRetry: 14,
+  launchPublishRetry: 14.5,
   hostedServerActivity: 15,
   serverMemory: 16,
   serverMode: 17,
   computerUseHighlight: 18,
   computerUsePermissionHelp: 19,
   dynamicIsland: 20,
+  machineAlerts: 21,
   // Before the browser, so no sign-in opens a tab while it stops.
   providerAccountsHost: 27,
   providerHostSignIns: 28,
@@ -594,6 +599,7 @@ export interface ApplicationServices {
   analytics: HostAnalytics;
   trace: TraceFile;
   resourceMonitor: ResourceMonitor;
+  machineAlerts: MachineAlertMonitor;
   teamStore: TeamStore;
   /**
    * The account state this function read part-way through, and bound the local host to. The
@@ -1601,9 +1607,12 @@ export async function createApplicationServices({
   const providerTempDirectory = join(app.getPath("userData"), "provider-temp");
   performance.mark("openbot:services.computer-use");
   if (process.platform === "win32") await Effect.runPromise(sweepProviderTemp(providerTempDirectory));
-  // Outside every workspace. Each saved key is masked in the logs before the first agent starts.
-  const agentApiKeys = new AgentApiKeys(join(app.getPath("userData"), "agent-api-keys"));
+  // Outside every workspace. Each saved key is masked in the logs before the first agent starts. The
+  // Vault's keys are written only when an agent lists its keys; a file left from the last run that the
+  // Vault no longer holds is removed here.
+  const agentApiKeys = new AgentApiKeys(join(app.getPath("userData"), "agent-api-keys"), () => vault.items.apiKeys());
   await Effect.runPromise(agentApiKeys.registerSaved());
+  await Effect.runPromise(agentApiKeys.syncVault().pipe(Effect.ignore));
   // The schedule triggers of workflows share the routine timer; built after the workflows below.
   let workflowTriggers: WorkflowTriggers | null = null;
   const service: AgentService = new AgentService({
@@ -1828,6 +1837,8 @@ export async function createApplicationServices({
   service.armRoutines();
   // An agent event too, so joined admins and the web app read the Vault again. It carries no item.
   vault.onChanged(() => service.notifyVaultChanged());
+  // A changed or deleted Vault API key reaches the file that an agent reads at once.
+  vault.onChanged(() => void Effect.runPromise(agentApiKeys.syncVault().pipe(Effect.ignore)));
   teardown.push(TEARDOWN_ORDER.workflows, "the workflows", () => Effect.runPromise(workflowRuntime.close()));
   // An agent routine's answer sent on to a messaging place; see `routine-results.ts`.
   const routineResultRuntime = await Effect.runPromise(
@@ -2033,6 +2044,22 @@ export async function createApplicationServices({
   );
   await runCauseEffect(teamStore.initialize());
   performance.mark("openbot:services.team");
+  const machineAlertStore = new MachineAlertPreferenceStore(
+    join(app.getPath("userData"), MACHINE_ALERTS_PREFERENCE_FILE),
+  );
+  await runCauseEffect(machineAlertStore.load());
+  // The same disk as the sidebar storage card: the one that holds the data folder.
+  const machineMetrics = new MachineMetricsSampler(storageSources.roots.data);
+  // Its own sampler, so a Storage panel that reads in between does not shorten its one-minute CPU window.
+  const machineAlertMetrics = new MachineMetricsSampler(storageSources.roots.data);
+  const machineAlerts = new MachineAlertMonitor({
+    read: () => machineAlertMetrics.read(),
+    display: () => machineMetrics.read(),
+    store: machineAlertStore,
+    members: () => teamStore.listMembers(),
+    onError: (message, error) => logger.warn(message, toLogValue(error)),
+  });
+  teardown.push(TEARDOWN_ORDER.machineAlerts, "the machine alert check", () => machineAlerts.close());
   ingressHostId = () => teamStore.getIdentity()?.serverId ?? null;
   signalIngress.reconnect();
   const webhookRelay = new WebhookRelay({
@@ -2276,6 +2303,8 @@ export async function createApplicationServices({
     providerUsageResets: service,
     // Present, so the host advertises `storage-v1`. Members read; only admins delete or clear.
     storage: storageUsage,
+    // Present, so the host advertises `machine-resources-v1`. The routes are admin-only.
+    machine: machineAlerts,
     // Present, so the host advertises `hosted-sites-v1`. Members list; only admins delete.
     hostedSites,
     // Present, so the host advertises `agent-import-v1`. Any member can import.
@@ -2949,6 +2978,30 @@ export async function createApplicationServices({
     teardown.push(TEARDOWN_ORDER.hostedServerActivity, "the hosted server activity report", () =>
       Effect.runPromise(hostedServerActivity.stop()),
     );
+  } else if (!serverModeEnvironment) {
+    // A server that was published at the last quit is published again at launch, once (`index.ts`).
+    // That start can fail when the network is not ready yet, such as at login after an update, and
+    // the server then stayed private until the user published it again. A published server that a
+    // Signal failure puts in the error phase later is published again in the same way.
+    const launchPublishRetry = new HostedServerStartRetry({
+      hostPhase: () => host.getStatus().phase,
+      startHost: () =>
+        Effect.gen(function* () {
+          // A server that the user stopped is not published again: Stop clears `enabledOnLaunch`.
+          if (!shouldAutoStartHost({ ...host.getStatus(), remoteRole: developmentRemoteRole })) return;
+          const auth = centralAuth.getState();
+          // Only a start with no answer from the account server; any other auth error is the user's.
+          if (auth.status === "error" && auth.issue.code === "auth_api_unavailable")
+            yield* centralAuth.retry().pipe(toRemoteWorkflowError);
+          if (centralAuth.getState().status !== "signed_in") return;
+          return yield* host.start();
+        }),
+      onError: (message, error) => logger.warn(message, toLogValue(error)),
+    });
+    launchPublishRetry.start();
+    teardown.push(TEARDOWN_ORDER.launchPublishRetry, "the launch publish retry", () =>
+      Effect.runPromise(launchPublishRetry.stop()),
+    );
   }
   const serverMode = serverModeEnvironment
     ? new ServerMode({
@@ -3076,6 +3129,7 @@ export async function createApplicationServices({
     analytics,
     trace,
     resourceMonitor,
+    machineAlerts,
     teamStore,
     appliedAccount: signedInState,
     centralAuthInitialization,

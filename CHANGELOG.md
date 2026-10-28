@@ -6,6 +6,67 @@ All notable changes to OpenBot will be documented here. The project follows
 
 ## [Unreleased]
 
+## [0.52.1] - 2026-10-27
+
+### Added
+
+- Remove the downloaded CLI of a provider that is off. Open the provider in Settings > Providers and
+  select Remove download. It shows the space it frees. Accounts, sign-ins and agents stay. When you
+  turn the provider on again, OpenBot downloads the CLI again (#3321).
+- An owner or admin can import a CSV password export into a server's Vault from the iPhone app.
+  The server answers only how many logins it added and skipped.
+- An owner or admin can set the default provider of a server from the phone. The server starts new
+  agents on that provider. Clients older than Team API protocol 8 do not see DeepSeek, OpenRouter or
+  Inception as the default.
+- The Apple apps listing in the Marketplace has a switch that asks macOS for access to Calendar, Contacts, Mail, Notes, Reminders, Messages and Safari when you install it. macOS shows one prompt for each app, so the prompts no longer stop an agent in the middle of a task. After the install, "Ask for access" asks again, and a message names each app that macOS did not allow. macOS only.
+- The Vault keeps API keys. Add a key with its variable name, such as `OPENAI_API_KEY`, in Server
+  settings › Vault › New item › API key. Every agent on the server finds it with `list_api_keys` and
+  reads it from a private file in its commands, so the key does not go into the chat. Only the user
+  can add, change or delete a Vault API key. An owner or admin of a joined server can manage its API
+  keys from the desktop app or the web app when the server has this version.
+
+### Changed
+
+- Agents get shorter instructions, with each rule in one place, so each turn uses less context.
+
+### Fixed
+
+- Show Mermaid diagrams that have a line break in a label. Before, the chat showed a broken image.
+- The secure password card now always shows "Save to Vault" and names the Vault: this computer or the joined server. An owner or admin of a joined server can save the password to that server's Vault; the box starts unchecked. A member, or a server that needs an update, sees why the box is off. Before, the option did not show on a joined server or in the web app, and the password was not saved.
+- While an agent writes, the activity line shows its text without Markdown marks such as `**` and `- `.
+- Start Claude agents as new sessions when a Claude Code session opens OpenBot, for example with
+  `open -a OpenBot`. Before, the agents got the session ID, entry point and messaging token of that
+  session, and each new chat wrote its prompt cache again.
+- Let Gemini start MCP servers whose command, such as `node`, is on the login shell PATH. Before, OpenBot opened from the Dock or a login item could not find the command.
+- OpenBot now quits when a file operation never finishes, for example when macOS waits for a privacy
+  approval that nobody answers. It stops itself at most 10 seconds after its shutdown, which can take
+  up to 30 seconds. Before, OpenBot stopped responding after you quit it, and it did not open again
+  until you forced it to quit on macOS or ended it on Linux.
+- Agents now follow a confirmation rule in any `CLAUDE.md` or `AGENTS.md` file, also when a request
+  names the action. Before, an agent could make a change that cannot be undone, such as a Stripe
+  setting, without the confirmation that the file asked for.
+- When an agent asks for a password, a code, or browser control in a thread, the thread now shows the card. Before, the card did not show, and the agent waited without end.
+- An OpenCode agent's answer after a background subagent ends now shows in the chat. Before, OpenCode saved the answer, but the chat never showed it, because no message had started that turn.
+- An OpenCode answer that the agent writes in two steps now shows as two paragraphs. Before, the text of the two steps showed as one line.
+- Text that you type in a side thread and do not send now stays in the message box of that thread. It stays when a turn in another thread of the agent ends, when you open another thread or chat and come back, and after a restart. Before, the text was removed when a turn of the agent ended.
+- Connect Railway works again. OpenBot now registers as a public client when the sign-in server
+  supports it. Before, Railway refused the client secret that it gave, and the sign-in stopped with
+  "Existing OAuth client information is required when exchanging an authorization code".
+- Show a clear message when a sign-in server refuses OpenBot at the end of an MCP sign-in. Before,
+  the message did not say what went wrong.
+- When this computer's server was published, OpenBot publishes it again after a start, also when the
+  account service or Signal does not answer at first, for example at login before the network is
+  ready. It also publishes the server again when Signal disconnects it later. It tries again after
+  1 minute, and then less frequently. Before, the server stayed private after one failed try, and
+  you had to publish it again, for example after an update.
+- A long context compaction with Codex or Pi now runs to its end. Before, OpenBot stopped each
+  compaction after 2 minutes, so the compaction of a long thread did not complete. OpenBot now stops
+  a compaction only when the provider does not start it in 2 minutes, or when it runs for 20 minutes.
+- When Gemini or another ACP agent crashes, the error now shows the first line of the crash report,
+  such as `F… Check failed: …` or `*** SIGABRT received …`. Before, it showed only the last line,
+  `RAW: Raising signal 6`, which does not say why the agent stopped.
+- End a Remote Control session when its stream fails and you go back to OpenBot. Before, the session stayed open, and the Remote Control button showed a green dot on every agent of that server.
+
 ## [0.52.0] - 2026-10-27
 
 ### Added

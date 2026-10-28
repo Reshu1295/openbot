@@ -31,6 +31,7 @@ import {
   decodeInstanceTransferPreview,
   decodeInstanceTransferResult,
   decodeInstanceTransferSummary,
+  decodeMachineAlertSettings,
   decodeMcpServerConfigs,
   decodeMcpSignInAppState,
   decodeMcpSignInPage,
@@ -38,6 +39,7 @@ import {
   decodeMcpSignInStates,
   decodeMcpTestResult,
   decodeOldRuntimeVersions,
+  decodeOptionalMachineMetrics,
   decodeOptionalStorageDisk,
   decodeOptionalStorageUsage,
   decodePromptCacheTtlSetting,
@@ -200,6 +202,7 @@ import {
 } from "./computer-use-decoding";
 import {
   decodeAgentTask,
+  decodeAgentTaskReadState,
   decodeAgentTasks,
   decodeAttachment,
   decodeAttachments,
@@ -222,6 +225,7 @@ import {
   decodeDynamicIslandPresentation,
 } from "./dynamic-island-decoding";
 import { decodeHostReleaseStatusFromMain } from "./host-release-decoding";
+import { decodeMacAutomationResults } from "./mac-automation-decoding";
 import {
   decodeAddOrchestratorReply,
   decodeDiscordAccessReply,
@@ -532,6 +536,7 @@ const agentGroup = bridgeGroup(IPC_ENDPOINTS.agent, {
   reopenTask: decodeVoid,
   renameTask: decodeVoid,
   deleteTask: decodeVoid,
+  markTaskRead: decodeAgentTaskReadState,
   acknowledgeFailedTurn: decodeVoid,
   cancelQueuedMessage: decodeVoid,
   steerQueuedMessage: decodeVoid,
@@ -541,6 +546,7 @@ const agentGroup = bridgeGroup(IPC_ENDPOINTS.agent, {
   interrupt: decodeVoid,
   clearContext: decodeVoid,
   compactContext: decodeVoid,
+  compactTaskContext: decodeVoid,
   respondToPrompt: decodeVoid,
   respondToApproval: decodeVoid,
   respondToBrowserSecret: decodeVoid,
@@ -687,6 +693,9 @@ const openbotApi: OpenBotDesktopApi = {
     startPermissionAppDrag: decodeVoid,
     revealPermissionApp: decodeVoid,
     highlightPlacement: decodeComputerUseHighlightPlacement,
+  }),
+  macAutomation: bridgeGroup(IPC_ENDPOINTS.macAutomation, {
+    request: decodeMacAutomationResults,
   }),
   providerRuntimes: bridgeGroup(IPC_ENDPOINTS.providerRuntimes, {
     getStatus: decodeProviderRuntimeSnapshot,
@@ -990,6 +999,8 @@ const openbotApi: OpenBotDesktopApi = {
     setTimezone: decodeHostTimezoneSettings,
     getAgentMemoryLimit: decodeHostAgentMemoryLimit,
     setAgentMemoryLimit: decodeHostAgentMemoryLimit,
+    getMachineAlerts: decodeMachineAlertSettings,
+    setMachineAlerts: decodeMachineAlertSettings,
     getPromptCacheTtl: decodePromptCacheTtlSetting,
     setPromptCacheTtl: decodePromptCacheTtlSetting,
     getAgentAccess: decodeAgentAccessSnapshot,
@@ -1254,6 +1265,7 @@ const openbotApi: OpenBotDesktopApi = {
   storage: bridgeGroup(IPC_ENDPOINTS.storage, {
     getUsage: decodeOptionalStorageUsage,
     getDisk: decodeOptionalStorageDisk,
+    getMachineMetrics: decodeOptionalMachineMetrics,
     deleteFile: decodeVoid,
     clear: decodeVoid,
     openFile: decodeVoid,

@@ -5,6 +5,12 @@ import {
   VAULT_WIRE_ITEM_LIMIT,
   VAULT_WIRE_NAME_LIMIT,
 } from "@openbot/contracts/team-protocol/vault-v1";
+import {
+  VAULT_V2_CAPABILITY,
+  VAULT_V2_ROUTES,
+  VAULT_V2_WIRE_ITEM_LIMIT,
+  VAULT_V2_WIRE_NAME_LIMIT,
+} from "@openbot/contracts/team-protocol/vault-v2";
 import { isFixedSourceText, sourceText } from "@openbot/i18n/source";
 import { runCauseEffect } from "../../backend/effect-boundary";
 import { decodeVaultSaveInput, decodeVaultSecretRequest } from "../vault-inputs";
@@ -13,53 +19,66 @@ import { HttpError } from "./http-error";
 import type { RouteOutcome, TeamApiRequestContext } from "./request-context";
 import { readJson, requireAdmin, stringField } from "./request-helpers";
 
-const ROUTES: ReadonlySet<string> = new Set(Object.values(VAULT_ROUTES));
+const V1_ROUTES: ReadonlySet<string> = new Set(Object.values(VAULT_ROUTES));
+const V2_ROUTES: ReadonlySet<string> = new Set(Object.values(VAULT_V2_ROUTES));
 
-/** The wire list of `vault-v1`, cut to the codec's bounds, so one long agent name cannot fail the list. */
-function wireState(state: VaultState): VaultState {
+/**
+ * The wire list, cut to the codec's bounds, so one long agent name cannot fail the list. `vault-v1`
+ * has no API keys: its closed item list would refuse the whole answer.
+ */
+function wireState(state: VaultState, v2: boolean): VaultState {
+  const nameLimit = v2 ? VAULT_V2_WIRE_NAME_LIMIT : VAULT_WIRE_NAME_LIMIT;
   return {
     status: state.status,
     items: state.items
-      .slice(0, VAULT_WIRE_ITEM_LIMIT)
-      .map((item) =>
-        item.addedBy === undefined ? item : { ...item, addedBy: item.addedBy.slice(0, VAULT_WIRE_NAME_LIMIT) },
-      ),
+      .filter((item) => v2 || item.kind !== "apiKey")
+      .slice(0, v2 ? VAULT_V2_WIRE_ITEM_LIMIT : VAULT_WIRE_ITEM_LIMIT)
+      .map((item) => (item.addedBy === undefined ? item : { ...item, addedBy: item.addedBy.slice(0, nameLimit) })),
   };
 }
 
 /**
  * The Vault of this host, which an owner or administrator manages from their own computer or browser.
- * Frozen by `vault-v1`.
+ * Frozen by `vault-v1` and `vault-v2`; only `vault-v2` lists and changes API keys.
  *
- * A list never carries a password, a card number or a security code; `reveal` answers one for the
- * user who asked to see or copy it. `requireAdmin` runs on every route.
+ * A list never carries a password, a card number, a security code or an API key; `reveal` answers one
+ * for the user who asked to see or copy it. `requireAdmin` runs on every route.
  */
 export async function routeVault(
   context: TeamApiRequestContext,
   vault: TeamApiVault | undefined,
 ): Promise<RouteOutcome> {
   const { method, url, capabilities, member, request, json } = context;
-  if (method !== "POST" || !ROUTES.has(url.pathname)) return "unmatched";
-  if (!vault || !capabilities.has(VAULT_CAPABILITY))
+  if (method !== "POST") return "unmatched";
+  const v2 = V2_ROUTES.has(url.pathname);
+  if (!v2 && !V1_ROUTES.has(url.pathname)) return "unmatched";
+  if (!vault || !capabilities.has(v2 ? VAULT_V2_CAPABILITY : VAULT_CAPABILITY))
     throw new HttpError(400, sourceText("error.team.vaultUnsupported"));
   requireAdmin(member);
-  // `readJson` has already run the body through the `vault-v1` codec.
+  // `readJson` has already run the body through the codec of the route's version.
   const body = await readJson(request);
+  const routes = v2 ? VAULT_V2_ROUTES : VAULT_ROUTES;
+  const answer = (state: VaultState) => json(200, wireState(state, v2));
   try {
     switch (url.pathname) {
-      case VAULT_ROUTES.save:
-        return json(200, wireState(await runCauseEffect(vault.save(parse(() => decodeVaultSaveInput(body))))));
-      case VAULT_ROUTES.delete:
-        return json(200, wireState(await runCauseEffect(vault.delete(stringField(body, "id", false, 64)))));
-      case VAULT_ROUTES.reveal:
+      case routes.save:
+        return answer(await runCauseEffect(vault.save(parse(() => decodeVaultSaveInput(body)))));
+      case routes.delete: {
+        const id = stringField(body, "id", false, 64);
+        // A `vault-v1` client does not see API keys, so it cannot delete one.
+        if (!v2 && vault.state().items.some((item) => item.id === id && item.kind === "apiKey"))
+          throw new HttpError(400, sourceText("error.vault.itemMissing"));
+        return answer(await runCauseEffect(vault.delete(id)));
+      }
+      case routes.reveal:
         return json(200, { value: vault.reveal(parse(() => decodeVaultSecretRequest(body))) });
-      case VAULT_ROUTES.reset:
+      case routes.reset:
         // Only the way out of a file that the host cannot read: a readable Vault is never deleted here.
         if (vault.state().status !== "unreadable")
           throw new HttpError(409, sourceText("error.team.vaultResetReadable"));
-        return json(200, wireState(await runCauseEffect(vault.reset())));
+        return answer(await runCauseEffect(vault.reset()));
       default:
-        return json(200, wireState(vault.state()));
+        return answer(vault.state());
     }
   } catch (error) {
     // A value typed wrong, a missing item or a Vault that cannot be read is catalog text for the

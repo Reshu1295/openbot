@@ -1,10 +1,12 @@
 import type { BrowserControlSession, BrowserPreview, BrowserTab } from "@openbot/contracts/ipc";
 import { TEAM_BROWSER_NAVIGATION_CAPABILITY } from "@openbot/contracts/team-protocol/current";
+import { classifyFailure } from "@openbot/telemetry";
 import { toast } from "@openbot/ui";
 import type { AgentProfile } from "@openbot/ui/data";
 import { browserAddressUrl } from "@openbot/ui/features/browser/browser-suggestions";
 import { currentText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, untrack } from "solid-js";
+import { actionToast } from "../../../action-toast";
 import { desktopAnalytics } from "../../../analytics";
 import { serverSupportsCapability } from "../../servers/server-capabilities";
 import { conversationPort } from "../conversation-port";
@@ -187,6 +189,10 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
     },
   );
   const latestMessageMarker = createMemo(() => {
+    // An open side thread has its own messages, so a result card there goes with them, not with the chat.
+    const threads = deps.props.threads;
+    if (threads?.open !== undefined)
+      return `thread:${threads.open?.id ?? "new"}:${threads.conversation?.revision ?? 0}`;
     const message = deps.props.messages.at(-1);
     return message
       ? `${message.id}:${message.body.length}:${message.streaming === true ? "streaming" : "settled"}`
@@ -216,7 +222,21 @@ export function createBrowserStore(deps: BrowserStoreDeps) {
       messageMarker: latestMessageMarker(),
       signInBlocked: blockedTakeoverSignIn(),
     } satisfies BrowserTakeoverResolutionState;
-    const completed = await deps.props.onRespondToBrowserTakeover(decision);
+    // The takeover of an open side thread: a failure shows where the person answered, not in the agent's chat.
+    const sideThread = request.threadId === deps.props.threads?.open?.threadId;
+    const completed = await deps.props.onRespondToBrowserTakeover(
+      decision,
+      sideThread
+        ? {
+            onError: (error) => {
+              const { t, errorMessage } = currentText();
+              actionToast.error(errorMessage(error, t("app.errorStatus.browserTakeover")), {
+                report: { operation: "turn", source: "action", cause_code: classifyFailure(error) },
+              });
+            },
+          }
+        : undefined,
+    );
     if (completed && latestMessageMarker() === resolution.messageMarker) setBrowserTakeoverResolution(resolution);
     return completed;
   };

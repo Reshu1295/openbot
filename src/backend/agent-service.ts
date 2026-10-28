@@ -20,6 +20,7 @@ import type {
   AgentSummary,
   AgentTask,
   AgentTaskInput,
+  AgentTaskReadState,
   AgentTasksSnapshot,
   AgentWaitsSnapshot,
   AskSideQuestionInput,
@@ -58,6 +59,7 @@ import type {
   ListChannelRoutineRunsInput,
   ListRoutineRunsInput,
   LocalBrowserSecretResponse,
+  MarkAgentTaskReadInput,
   McpServerConfig,
   McpSignInAppInput,
   McpSignInAppState,
@@ -122,6 +124,7 @@ import {
   WORKFLOWS_USAGE_ID,
   workspaceAccessEnforced,
 } from "@openbot/contracts/ipc";
+import { AGENT_THREAD_READS_LIMIT } from "@openbot/contracts/team-protocol/agent-thread-reads-v1";
 import { CLAUDE_API_KEY_ACCOUNT_ID } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import { ContextResetBusyError } from "@openbot/contracts/team-protocol/context-reset-v1";
 import type { QueueEditRequest } from "@openbot/contracts/team-protocol/queue-edit-v1";
@@ -272,7 +275,10 @@ export interface AgentServiceOptions {
   mailbox: MailboxStore;
   browser: AgentBrowserHost;
   requestTimeoutMs?: number;
-  /** How long a Codex context compaction runs before OpenBot stops it. Tests make it short. */
+  /**
+   * How long a provider takes to start a context compaction before OpenBot stops it. A started
+   * compaction runs ten times as long. Tests make it short.
+   */
   contextCompactionTimeoutMs?: number;
   preferredProvider?: AgentProvider;
   /** The model chosen beside `preferredProvider`, or `null` for that provider's own default. */
@@ -1321,6 +1327,14 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
               ),
             );
         },
+        attachAnswerFiles: (agentId, snapshot, answer, paths) =>
+          this.#attachments
+            .attachAnswerFiles(agentId, snapshot, answer, paths)
+            .pipe(
+              Effect.catch((failure) =>
+                Effect.sync(() => this.#emitError("answer_attachments_failed", failure.cause, agentId)),
+              ),
+            ),
         taskForThread: (threadId) => this.#tasks.taskForThread(threadId),
         taskOpen: (taskId) => this.#tasks.threadId(taskId) !== null,
         taskFailed: (taskId, message) => this.#tasks.failed(taskId, this.#mcp.redact(message)),
@@ -1541,6 +1555,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
   getRuntimeSnapshot(): AgentRuntimeSnapshot {
     return buildRuntimeSnapshot({
       contextStates: this.#compaction.snapshot(),
+      threadContextStates: this.#compaction.threadSnapshot(this.#tasks.openExecutionThreads()),
       agents: this.listAgents(),
       conversation: this.#conversation,
       database: this.#store.database,
@@ -3158,6 +3173,30 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     yield* this.#compaction.request(agentId, externalThreadId);
   }, Effect.uninterruptible).bind(this);
 
+  /** As `compactAgentContext`, for the session of one open side thread of the agent. */
+  readonly compactTaskContext = Effect.fn("AgentService.compactTaskContext")(function* (
+    this: AgentService,
+    input: AgentTaskInput,
+  ) {
+    const externalThreadId = yield* lifecycleStep("compact task context", () => {
+      const agent = this.#conversation.requireKnownAgent(input.agentId);
+      const task = this.#tasks.requireOpen(input.agentId, input.taskId);
+      const session = this.#store.database.activeProviderSession(task.threadId, agent.provider);
+      // A compaction that still runs, or a start that the provider refused, holds the session too.
+      if (
+        this.#conversation.loadedExecutionSnapshot(task.threadId)?.activeTurnId ||
+        this.#store.database.readActiveTurnId(agent.id, task.threadId) ||
+        this.#mailbox.taskBusy(agent.id, task.taskId) ||
+        (session && this.#compaction.heldThreads(agent.id).includes(session.externalSessionId))
+      )
+        throw new Error(sourceText("error.agent.waitBeforeCompactContext"));
+      if (!session || !this.#compaction.reserve(agent.id, session.externalSessionId, true))
+        throw new Error(sourceText("error.agent.compactContextUnavailable"));
+      return session.externalSessionId;
+    });
+    yield* this.#compaction.request(input.agentId, externalThreadId);
+  }, Effect.uninterruptible).bind(this);
+
   /**
    * The new chat that the agent asked for with `start_new_chat`. The drain calls it when the agent's
    * own chat has nothing to start. A turn of a task or a compaction can still run; the request then
@@ -4028,7 +4067,10 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       if (!this.listAgents().some((agent) => agent.id === input.agentId))
         throw new Error(sourceText("error.agent.unknown", { id: input.agentId }));
       this.#requireNotHidden(input.agentId);
-      return this.#tasks.create(input.agentId, input.text, "user");
+      // A start with files and no text takes its title from the first file.
+      const firstDraft = input.attachmentDraftIds?.[0];
+      const titleText = input.text.trim() || (firstDraft ? (this.#mailbox.draftName(firstDraft) ?? "") : "");
+      return this.#tasks.create(input.agentId, titleText, "user");
     });
     this.#tasks.changed(task.agentId);
     yield* this.sendMessage(
@@ -4156,6 +4198,28 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
 
   renameTask(input: AgentTaskInput, title: string): void {
     this.#tasks.rename(this.#tasks.require(input.agentId, input.taskId), title);
+  }
+
+  /** The member's read mark of each open side thread of the agent, at most `AGENT_THREAD_READS_LIMIT`. */
+  listTaskReads(agentId: string, memberId: string, options?: ConversationMarkerExclusions): AgentTaskReadState[] {
+    return this.#tasks
+      .snapshot(agentId)
+      .tasks.filter((task) => task.state !== "closed")
+      .slice(0, AGENT_THREAD_READS_LIMIT)
+      .map((task) => ({ taskId: task.id, ...this.#reader.readThread(memberId, task.threadId, options) }));
+  }
+
+  /** Moves the member's read mark of one side thread to a message of that thread. */
+  markTaskRead(
+    input: MarkAgentTaskReadInput,
+    memberId: string,
+    options?: ConversationMarkerExclusions,
+  ): AgentTaskReadState {
+    const task = this.#tasks.require(input.agentId, input.taskId);
+    return {
+      taskId: task.taskId,
+      ...this.#reader.markThreadRead(memberId, task.threadId, input.throughMessageId, options),
+    };
   }
 
   /**

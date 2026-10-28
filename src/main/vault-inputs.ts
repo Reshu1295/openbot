@@ -2,6 +2,8 @@
 // message; a value that the user typed wrong is refused with text that the page shows.
 
 import {
+  API_KEY_NAME_PATTERN,
+  VAULT_API_KEY_LIMIT,
   VAULT_FILL_SITE_LIMIT,
   VAULT_NOTES_LIMIT,
   VAULT_PASSWORD_LIMIT,
@@ -16,7 +18,7 @@ import { type SourceMessages, sourceText } from "@openbot/i18n/source";
 import { websiteUrl } from "../backend/password-vault";
 import { isObject } from "./ipc/validation";
 
-const SECRET_FIELDS: readonly VaultSecretField[] = ["password", "number", "securityCode"];
+const SECRET_FIELDS: readonly VaultSecretField[] = ["password", "number", "securityCode", "key"];
 
 function isSecretField(value: unknown): value is VaultSecretField {
   return SECRET_FIELDS.some((field) => field === value);
@@ -107,7 +109,8 @@ function siteList(value: unknown): string[] {
 
 /**
  * The item to save. A login's website must be HTTPS; a card number must pass the Luhn check, and its
- * security code has 3 or 4 digits. A null secret keeps the saved value.
+ * security code has 3 or 4 digits. An API key's name is an environment variable name. A null secret
+ * keeps the saved value.
  */
 export function decodeVaultSaveInput(value: unknown): VaultSaveInput {
   if (!isObject(value)) throw new Error("Invalid Vault item.");
@@ -150,6 +153,14 @@ export function decodeVaultSaveInput(value: unknown): VaultSaveInput {
     }
     case "contact":
       return { kind: "contact", id: itemId, ...contactFields(value) };
+    case "apiKey": {
+      const name = text(value.name, "name");
+      if (!API_KEY_NAME_PATTERN.test(name)) throw userError("error.vault.apiKeyNameInvalid");
+      // The ends are trimmed: a program reads the whole file, and a pasted key often has a line break.
+      const key = nullableText(value.key, "key", VAULT_API_KEY_LIMIT);
+      if (key === "") throw userError("error.vault.apiKeyRequired");
+      return { kind: "apiKey", id: itemId, name, notes: text(value.notes, "notes", VAULT_NOTES_LIMIT), key };
+    }
     default:
       throw new Error("Invalid Vault item kind.");
   }

@@ -14,6 +14,10 @@ export const messages = defineMessages("error.vault", {
   "error.vault.expiryInvalid": "Enter a valid expiry month and year.",
   "error.vault.contactEmpty": "Enter a name, an address, a phone number or an email address.",
   "error.vault.contactMissing": "The billing contact is no longer in the Vault.",
+  "error.vault.apiKeyRequired": "Enter an API key.",
+  "error.vault.apiKeyNameInvalid":
+    "Enter a variable name with capital letters A–Z, digits and _, which starts with a letter, such as OPENAI_API_KEY.",
+  "error.vault.apiKeyNameTaken": "The Vault has an API key with this variable name already.",
   "error.vault.csvInvalid": "This file is not a password export in CSV format.",
   "error.vault.csvTooLarge": "The CSV file is too large.",
 });

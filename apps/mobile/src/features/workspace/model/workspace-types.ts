@@ -17,6 +17,7 @@ import type {
   AgentSessionSettings,
   AgentTask,
   AgentTaskInput,
+  AgentTaskReadState,
   AgentTasksSnapshot,
   AgentTemplatePreview,
   AgentTemplatePublication,
@@ -53,6 +54,7 @@ import type {
   InstalledSkill,
   InstallMarketplaceAgentInput,
   InstallSkillInput,
+  MarkAgentTaskReadInput,
   McpServerConfig,
   McpSignInState,
   McpTestResult,
@@ -338,6 +340,8 @@ export interface MobileWorkspaceContextValue {
   canManageVault: (serverId: string) => boolean;
   /** The same for a CSV import from this phone (`vault-import-v1`). */
   canImportVault: (serverId: string) => boolean;
+  /** The same for API keys in the Vault (`vault-v2`). */
+  canManageVaultApiKeys: (serverId: string) => boolean;
   /** Reads or changes the host's GitHub connection. The answer names the GitHub pages that the phone opens. */
   githubConnector: (route: GitHubConnectorRoute, serverId: string) => Promise<HostGitHubConnectorStatus>;
   /** The repositories where the host's GitHub App is installed. The host reads them from GitHub. */
@@ -588,6 +592,12 @@ export interface MobileWorkspaceContextValue {
   searchFiles: (query: string, serverId: string, cursor?: string) => Promise<ConversationFileSearchPage>;
   /** True when the host advertises `agent-tasks-v1`. A member who can message an agent can use its tasks. */
   canUseTasks: (serverId: string) => boolean;
+  /** True when the host advertises `agent-threads-v1`: a member who can message an agent can rename and delete its threads. */
+  canEditThreads: (serverId: string) => boolean;
+  /** True when the host advertises `agent-thread-reads-v1`: the host keeps the person's read mark of each thread. */
+  canReadThreads: (serverId: string) => boolean;
+  /** True when the host advertises `agent-thread-files-v1`: a message in a thread can carry files. */
+  canAttachThreadFiles: (serverId: string) => boolean;
   /** True when the host advertises `workflows-v1`. The host shows each member the workflows of their agents. */
   canUseWorkflows: (serverId: string) => boolean;
   listWorkflows: (serverId: string) => Promise<WorkflowSummary[]>;
@@ -609,18 +619,26 @@ export interface MobileWorkspaceContextValue {
   /** The tasks of one agent. The host answers 404 for an agent that this member cannot see. */
   loadAgentTasks: (agentId: string, serverId: string) => Promise<AgentTasksSnapshot>;
   loadAgentTaskConversation: (input: AgentTaskInput, serverId: string) => Promise<ConversationSnapshot>;
-  /** `agent-tasks-v1` carries text only. */
+  /** Files need `canAttachThreadFiles`: `agent-tasks-v1` carries text only. */
   startAgentTask: (
-    input: { agentId: string; text: string; clientMessageId: string },
+    input: { agentId: string; text: string; attachmentDraftIds?: string[]; clientMessageId: string },
     serverId: string,
   ) => Promise<AgentTask>;
   /** Steers the running turn of the task, or queues the message in the task. */
   sendAgentTaskMessage: (
-    input: AgentTaskInput & { text: string; clientMessageId: string },
+    input: AgentTaskInput & { text: string; attachmentDraftIds?: string[]; clientMessageId: string },
     serverId: string,
   ) => Promise<QueuedMessageReceipt>;
   /** Stops the running turn of a task, closes the task, or reopens it. */
   controlAgentTask: (action: "stop" | "close" | "reopen", input: AgentTaskInput, serverId: string) => Promise<void>;
+  /** Renames a thread. The title then no longer follows its first message. */
+  renameAgentThread: (input: AgentTaskInput & { title: string }, serverId: string) => Promise<void>;
+  /** Deletes a thread, its conversation, its files and its queued messages for good. */
+  deleteAgentThread: (input: AgentTaskInput, serverId: string) => Promise<void>;
+  /** The person's read mark of each open thread of the agent. The member's devices share it. */
+  loadAgentThreadReads: (agentId: string, serverId: string) => Promise<AgentTaskReadState[]>;
+  /** Moves the person's read mark of a thread to a message that they see. */
+  markAgentThreadRead: (input: MarkAgentTaskReadInput, serverId: string) => Promise<AgentTaskReadState>;
   /** Answers a question of a task turn. The host finds the question by its request, on any thread. */
   respondToTaskPrompt: (input: RespondToPromptInput, serverId: string) => Promise<void>;
   loadConversation: (agentId: string, serverId?: string) => Promise<ConversationSnapshot>;
@@ -696,6 +714,9 @@ export type MobileWorkspaceCapabilityCheck =
   | "canInstallAgentTemplate"
   | "canSearchFiles"
   | "canUseTasks"
+  | "canEditThreads"
+  | "canReadThreads"
+  | "canAttachThreadFiles"
   | "canUseWorkflows"
   | "canReadServerStorage";
 
@@ -726,6 +747,7 @@ type MobileWorkspaceStateKey =
   | "canManageBitwardenConnector"
   | "canManageVault"
   | "canImportVault"
+  | "canManageVaultApiKeys"
   | "serverUpdateAccess"
   | "canReadServerRelease"
   | "canViewHostedSites"

@@ -16,7 +16,6 @@ import { ChatScrollRail, createChatScrollRail } from "@openbot/ui/features/conve
 import { ChatSearch } from "@openbot/ui/features/conversation/ChatSearch";
 import { ChatVisual } from "@openbot/ui/features/conversation/ChatVisual";
 import { ContextCompactionMarker, type ContextCompactionView } from "@openbot/ui/features/conversation/ContextUsage";
-import { BrowserTakeoverCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { dayMarkerLabel } from "@openbot/ui/features/conversation/chat-day-markers";
 import { ReplyReturnButton, ScrollToLatestButton } from "@openbot/ui/features/conversation/MessageNavigation";
 import { MessageActions, MessageMenu } from "@openbot/ui/features/conversation/MessageRendering";
@@ -30,7 +29,7 @@ import { useText } from "@openbot/ui/text";
 import { createMemo, createSignal, For, Loading, lazy, onCleanup, Show, untrack } from "solid-js";
 import { useShowAgentSteps } from "../../agent-steps-preference";
 import { planItems, planTitle } from "../../app-message-projection";
-import { currentDevicePlatform, deviceSendShortcut } from "../../send-shortcut-preference";
+import { currentDevicePlatform } from "../../send-shortcut-preference";
 import { remoteRoutineRecovery } from "../servers/server-capabilities";
 import { speechModelReady } from "../speech/speech-model";
 import { recordingGone, speechReading, spokenReply } from "../speech/speech-playback";
@@ -43,13 +42,13 @@ import {
   toggleSpokenReply,
 } from "../speech/speech-replies";
 import { groupedMessageIds } from "./agent-message-timeline";
-import { browserSecretVault } from "./browser-secret-vault";
+import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
+import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
 import { continuesSenderRun } from "./chat-grouping";
 import { isChatVisualAppShortcut } from "./chat-visual-shortcuts";
 import { chatVisualPageUrl } from "./chat-visual-url";
 import { conversationRuntime } from "./conversation-runtime";
 import { useConversationViewScope } from "./conversation-scope";
-import type { ConversationProps } from "./conversation-types";
 import { agentSkillsMode } from "./installed-skills-source";
 import { MarketplaceSuggestionChatCard, marketplaceSuggestionKnown } from "./MarketplaceSuggestionChatCard";
 import { McpSignInChatCard } from "./McpSignInChatCard";
@@ -113,9 +112,6 @@ export function ConversationTimeline() {
     activeChatSearchIndex,
     agentActivitySpaceReserved,
     attachmentAction,
-    browserTakeoverPreview,
-    browserTakeoverResolution,
-    browserTakeoverTab,
     channel,
     chatSearchMatches,
     chatSearchOpen,
@@ -147,8 +143,6 @@ export function ConversationTimeline() {
     moveChatSearch,
     openExternalMessageUrl,
     openReactionMessageId,
-    openBrowserTakeoverTab,
-    localSignIn,
     openRoutineSettings,
     openSkillSettings,
     openSharedFile,
@@ -167,7 +161,6 @@ export function ConversationTimeline() {
     providerSilentMinutes,
     agentProviderName,
     replyJump,
-    respondToBrowserTakeover,
     replyToMessage,
     addPageText,
     setPageContext,
@@ -507,23 +500,6 @@ export function ConversationTimeline() {
     },
   });
   const channelWorkingSteps = createMemo(() => (channel ? turnSteps.workingSteps(channel.workingTurns()) : []));
-  let cachedPrompt: { key: string; prompt: NonNullable<ConversationProps["prompt"]> } | null = null;
-  const keyedPrompt = createMemo(() => {
-    const prompt = props.prompt;
-    if (!prompt) {
-      cachedPrompt = null;
-      return null;
-    }
-    const key = JSON.stringify([prompt.turnId, String(prompt.requestId)]);
-    if (cachedPrompt?.key === key) return cachedPrompt;
-    cachedPrompt = { key, prompt };
-    return cachedPrompt;
-  });
-  /**
-   * The block of the waiting prompt draws it as a card. Until the block's message arrives, or when the
-   * agent asked without one, the prompt's questions draw it.
-   */
-  const pendingPromptBlock = createMemo(() => (keyedPrompt() ? props.promptUiBlock : undefined));
   /**
    * A direct chat with no message yet, and no turn, queued send or question. A queued send leaves the
    * timeline for the queue tray, and the activity line shows only after a delay, so both are read here.
@@ -536,7 +512,7 @@ export function ConversationTimeline() {
     !props.activeTurnId &&
     presentedQueueDeliveries().length === 0 &&
     !renderedAgentActivity() &&
-    !keyedPrompt()
+    !props.prompt
       ? props.agent
       : undefined,
   );
@@ -549,8 +525,8 @@ export function ConversationTimeline() {
   return (
     <>
       <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {keyedPrompt() && !sideThreadOpen()
-          ? t("prompt.inputRequiredAnnouncement", { question: keyedPrompt()?.prompt.questions[0]?.question ?? "" })
+        {props.prompt
+          ? t("prompt.inputRequiredAnnouncement", { question: props.prompt.questions[0]?.question ?? "" })
           : ""}
       </span>
       <Show when={chatSearchOpen() && !sideThreadOpen()}>
@@ -1401,43 +1377,9 @@ export function ConversationTimeline() {
                 </Show>
               </Show>
             </div>
-            <Show when={keyedPrompt()} keyed>
-              {(entry) => {
-                const presentResolution = () =>
-                  props.onPromptResolutionPresented?.(
-                    entry.prompt.agentId,
-                    entry.prompt.turnId,
-                    entry.prompt.requestId,
-                  );
-                return (
-                  <Loading>
-                    <Show
-                      when={pendingPromptBlock()}
-                      fallback={
-                        <QuestionPromptBubble
-                          questions={entry.prompt.questions}
-                          elementRef={setRequiredInteractionElement}
-                          sendShortcut={deviceSendShortcut(props.platform)}
-                          onSubmit={props.onAnswerPrompt}
-                          onResolutionPresented={presentResolution}
-                        />
-                      }
-                    >
-                      {(block) => (
-                        <UiBlockPrompt
-                          block={block()}
-                          agents={props.agents}
-                          onSelectAgent={props.onSelectAgent}
-                          onOpenLink={(url) => void openExternalMessageUrl(url)}
-                          elementRef={setRequiredInteractionElement}
-                          onAnswer={props.onAnswerPrompt}
-                          onAnswered={presentResolution}
-                        />
-                      )}
-                    </Show>
-                  </Loading>
-                );
-              }}
+            {/* Under an open side thread, the thread draws the card of its own question. */}
+            <Show when={!sideThreadOpen()}>
+              <ConversationQuestionPrompt elementRef={setRequiredInteractionElement} />
             </Show>
             <Show keyed when={props.approval}>
               {(approval) => (
@@ -1463,40 +1405,9 @@ export function ConversationTimeline() {
                 />
               )}
             </Show>
-            <Show when={props.browserTakeover}>
-              <Loading>
-                <BrowserTakeoverCard
-                  request={props.browserTakeover}
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={browserTakeoverTab()}
-                  preview={browserTakeoverPreview().preview}
-                  previewStatus={browserTakeoverPreview().status}
-                  onOpen={openBrowserTakeoverTab}
-                  onComplete={() => respondToBrowserTakeover("complete")}
-                  onCancel={() => respondToBrowserTakeover("cancel")}
-                  onSignInLocally={localSignIn.canStartForTakeover() ? localSignIn.startForTakeover : undefined}
-                  signInBlocked={localSignIn.blockedTakeover()}
-                  browserSecret={{
-                    loadPreview: runtime.browser.capturePreview,
-                    vault: browserSecretVault(props.server),
-                    onRespond: runtime.agent.respondToBrowserSecret,
-                  }}
-                />
-              </Loading>
-            </Show>
-            <Show when={!props.browserTakeover && browserTakeoverResolution()}>
-              {(resolution) => (
-                <BrowserTakeoverCard
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={resolution().tab}
-                  preview={resolution().preview}
-                  previewStatus={resolution().previewStatus}
-                  decision={resolution().decision}
-                  signInBlocked={resolution().signInBlocked}
-                  onComplete={async () => false}
-                  onCancel={async () => false}
-                />
-              )}
+            {/* Under an open side thread, the thread draws the card of its own request. */}
+            <Show when={!sideThreadOpen()}>
+              <ConversationBrowserTakeover />
             </Show>
           </div>
         </Show>

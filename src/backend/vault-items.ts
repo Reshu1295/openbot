@@ -1,5 +1,5 @@
-// The cards and contact info of the Vault, as agents use them. The main process implements this port
-// with the encrypted Vault file. Agents read logins through the `PasswordVault` port instead
+// The cards, contact info and API keys of the Vault, as agents use them. The main process implements
+// this port with the encrypted Vault file. Agents read logins through the `PasswordVault` port instead
 // (`list_logins` / `submit_secret`). Agents can add and change contacts, change the fields of a login
 // or card that are not secret, and delete items; a password gets in only from the secure input.
 
@@ -79,6 +79,8 @@ export interface VaultTypedLogin {
 export interface VaultItems {
   /** Whether the Vault can be read and changed now. It cannot without OS encryption or with a damaged file. */
   ready(): boolean;
+  /** The saved API keys, which `AgentApiKeys` writes to files. None while the Vault is not ready. */
+  apiKeys(): { name: string; value: string }[];
   /** Whether a card is saved now. Agents are told about card fill only while one is. */
   hasCards(): boolean;
   /** Whether contact info is saved now. */

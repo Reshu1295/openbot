@@ -7,6 +7,8 @@ import type { VaultStore } from "./stores/vault-store";
 export interface ServerVaultOptions {
   /** The Vault of this computer, or of a joined server for its owner or admin. */
   store: VaultStore;
+  /** False for a joined server without `vault-v2`: it cannot keep API keys. */
+  apiKeys: boolean;
 }
 
 /**
@@ -26,6 +28,7 @@ export function ServerVaultPanel(props: ServerVaultOptions & { menuMount: HTMLEl
       {(vault) => (
         <VaultPanel
           state={vault()}
+          apiKeys={props.apiKeys}
           onSave={props.store.save}
           onDelete={props.store.remove}
           onReveal={props.store.reveal}

@@ -1,4 +1,5 @@
 import {
+  API_KEY_NAME_PATTERN,
   VAULT_COUNTRY_CODES,
   type VaultCardSummary,
   type VaultContactFields,
@@ -81,6 +82,9 @@ export interface VaultDraft extends VaultContactFields {
   securityCode: string;
   billingContactId: string;
   fillSites: string[];
+  /** The environment variable name of an API key. */
+  name: string;
+  key: string;
 }
 
 const EMPTY_CONTACT: VaultContactFields = {
@@ -110,6 +114,8 @@ export function vaultDraft(item: VaultItemSummary | undefined): VaultDraft {
     securityCode: "",
     billingContactId: "",
     fillSites: [],
+    name: "",
+    key: "",
   };
   switch (item?.kind) {
     case "login":
@@ -128,6 +134,8 @@ export function vaultDraft(item: VaultItemSummary | undefined): VaultDraft {
       const { id: _id, kind: _kind, addedBy: _addedBy, ...fields } = item;
       return { ...draft, ...fields };
     }
+    case "apiKey":
+      return { ...draft, name: item.name, notes: item.notes };
     default:
       return draft;
   }
@@ -188,6 +196,11 @@ export function vaultSaveInput(kind: VaultItemKind, id: string | null, draft: Va
       };
       if (!fields.fullName && !fields.address && !fields.phone && !fields.email) return null;
       return { kind, id, ...fields };
+    }
+    case "apiKey": {
+      const name = draft.name.trim();
+      if (!API_KEY_NAME_PATTERN.test(name) || (id === null && !draft.key.trim())) return null;
+      return { kind, id, name, notes: draft.notes.trim(), key: secret(draft.key.trim()) };
     }
   }
 }

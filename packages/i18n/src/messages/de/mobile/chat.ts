@@ -384,9 +384,35 @@ export const messages = {
   "mobile.chat.queue.addedOnPhone": "Auf diesem Telefon hinzugefügt",
   "mobile.chat.queue.addFiles": "Dateien hinzufügen",
   "mobile.chat.queue.addPhotos": "Fotos hinzufügen",
-  "mobile.chat.tasks.open": "Aufgabe {title} öffnen, {status}",
-  "mobile.chat.tasks.close": "Aufgabe {title} schließen",
-  "mobile.chat.tasks.status": "Aufgabe · {status}",
+  "mobile.chat.threads.open": "Thread {title} öffnen, {status}",
+  "mobile.chat.threads.menu": "{name}, Threads",
+  "mobile.chat.threads.menuAttention": {
+    one: "{name}, Threads. {count} Thread wartet auf dich",
+    other: "{name}, Threads. {count} Threads warten auf dich",
+  },
+  "mobile.chat.threads.main": "Haupt-Chat",
+  "mobile.chat.threads.new": "Neuer Thread",
+  "mobile.chat.threads.all": "Alle Threads",
+  "mobile.chat.threads.agentInfo": "Agent-Info",
+  "mobile.chat.threads.draftNote":
+    "Deine erste Nachricht startet einen neuen Thread. Der Haupt-Chat mit {name} bleibt, wie er ist.",
+  "mobile.chat.threads.draftPlaceholder": "Neuer Thread mit {name}",
+  "mobile.chat.threads.rename": "Umbenennen",
+  "mobile.chat.threads.renameTitle": "Thread umbenennen",
+  "mobile.chat.threads.renameSave": "Sichern",
+  "mobile.chat.threads.name": "Thread-Name",
+  "mobile.chat.threads.renameUnavailable":
+    "Du kannst diesen Thread jetzt nicht umbenennen. Verbinde dich mit dem Server oder aktualisiere OpenBot auf dem Host.",
+  "mobile.chat.threads.delete.action": "Löschen",
+  "mobile.chat.threads.delete.title": "Diesen Thread löschen?",
+  "mobile.chat.threads.delete.body":
+    "OpenBot löscht den Thread, seine Nachrichten und seine Dateien endgültig. Der Haupt-Chat bleibt, wie er ist.",
+  "mobile.chat.threads.filesUnsupported":
+    "Dieser Host kann keine Dateien in einem Thread annehmen. Aktualisiere OpenBot auf dem Host.",
+  "mobile.chat.threads.unsupported":
+    "Dieser Host kann Threads nicht umbenennen oder löschen. Aktualisiere OpenBot auf dem Host.",
+  "mobile.chat.threads.error.rename": "Der Thread konnte nicht umbenannt werden.",
+  "mobile.chat.threads.error.delete": "Der Thread konnte nicht gelöscht werden.",
   "mobile.chat.channelWork.working": "Arbeitet in {channel}",
   "mobile.chat.channelWork.waiting": "Wartet in {channel} auf dich",
   "mobile.chat.channelWork.open": "{label}. Öffnet den Kanal.",

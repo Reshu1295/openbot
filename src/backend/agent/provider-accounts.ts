@@ -222,7 +222,7 @@ export class ProviderAccounts {
       Effect.gen({ self: this }, function* () {
         if ("kind" in command) {
           // A Reconnect signs the account out first: its saved token would answer with no browser page.
-          // The server prints Google's page, which a host shows and Linux opens through the desktop.
+          // The server prints Google's page, which a host shows and this computer opens itself.
           const login = yield* startAcpAuthentication({
             executable: cli.executable,
             argv: command.argv,
@@ -231,7 +231,7 @@ export class ProviderAccounts {
             timeoutMs: command.timeoutMs,
             ...(added ? {} : { logout: true }),
             privateTemp: this.#host.signInTemp(provider),
-            ...(onHost || process.platform === "linux" ? { openGoogleSignIn: openExternal } : {}),
+            openGoogleSignIn: openExternal,
           });
           return yield* login.done;
         }

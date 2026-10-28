@@ -15,7 +15,10 @@ import { AGENT_MEMORY_LIMIT_CAPABILITY } from "./agent-memory-limit-v1";
 import { AGENT_PUBLISH_CAPABILITY } from "./agent-publish-v1";
 import { AGENT_SESSION_SETTINGS_CAPABILITY } from "./agent-session-settings-v1";
 import { AGENT_TASK_LIMIT_CAPABILITY } from "./agent-task-limit-v1";
+import { AGENT_TASK_UI_BLOCKS_CAPABILITY } from "./agent-task-ui-blocks-v1";
 import { AGENT_TASKS_CAPABILITY } from "./agent-tasks-v1";
+import { AGENT_THREAD_FILES_CAPABILITY } from "./agent-thread-files-v1";
+import { AGENT_THREAD_READS_CAPABILITY } from "./agent-thread-reads-v1";
 import { AGENT_THREADS_CAPABILITY } from "./agent-threads-v1";
 import { AGENT_UPDATE_CAPABILITY } from "./agent-update-v1";
 import { BITWARDEN_CONNECTOR_CAPABILITY } from "./bitwarden-connector-v1";
@@ -50,6 +53,7 @@ import { HOST_UPDATE_CAPABILITY } from "./host-update-v1";
 import { HOSTED_SITES_CAPABILITY } from "./hosted-sites-v1";
 import { INSTANCE_TRANSFER_CAPABILITY } from "./instance-transfer-v1";
 import { LIVE_ACTIVITY_PUSH_CAPABILITY } from "./live-activity-push-v1";
+import { MACHINE_RESOURCES_CAPABILITY } from "./machine-resources-v1";
 import { MCP_SIGN_IN_APP_CAPABILITY } from "./mcp-sign-in-app-v1";
 import { MCP_SIGN_IN_CAPABILITY } from "./mcp-sign-in-v1";
 import { TEAM_MESSAGE_CLIENT_ID_CAPABILITY } from "./message-client-id-v1";
@@ -85,6 +89,7 @@ import { TEAM_UI_BLOCKS_CAPABILITY } from "./ui-blocks-v1";
 import { TEAM_OPEN_PROVIDERS_CAPABILITY, TEAM_PROTOCOL_V8_CAPABILITIES } from "./v8";
 import { VAULT_IMPORT_CAPABILITY } from "./vault-import-v1";
 import { VAULT_CAPABILITY } from "./vault-v1";
+import { VAULT_V2_CAPABILITY } from "./vault-v2";
 import { WEBHOOK_TESTS_CAPABILITY } from "./webhook-tests-v1";
 import { WORKFLOWS_CAPABILITY } from "./workflows-v1";
 import { WORKSPACE_DIRECTORY_CAPABILITY } from "./workspace-directory-v1";
@@ -136,7 +141,10 @@ export {
   AGENT_PUBLISH_CAPABILITY,
   AGENT_SESSION_SETTINGS_CAPABILITY,
   AGENT_TASK_LIMIT_CAPABILITY,
+  AGENT_TASK_UI_BLOCKS_CAPABILITY,
   AGENT_TASKS_CAPABILITY,
+  AGENT_THREAD_FILES_CAPABILITY,
+  AGENT_THREAD_READS_CAPABILITY,
   AGENT_THREADS_CAPABILITY,
   AGENT_UPDATE_CAPABILITY,
   ANDROID_PUSH_NOTIFICATIONS_CAPABILITY,
@@ -161,6 +169,7 @@ export {
   HOSTED_SITES_CAPABILITY,
   INSTANCE_TRANSFER_CAPABILITY,
   LIVE_ACTIVITY_PUSH_CAPABILITY,
+  MACHINE_RESOURCES_CAPABILITY,
   MCP_SERVERS_CAPABILITY,
   MCP_SIGN_IN_APP_CAPABILITY,
   MCP_SIGN_IN_CAPABILITY,
@@ -204,6 +213,7 @@ export {
   TEAM_UI_BLOCKS_CAPABILITY,
   VAULT_CAPABILITY,
   VAULT_IMPORT_CAPABILITY,
+  VAULT_V2_CAPABILITY,
   WEBHOOK_TESTS_CAPABILITY,
   WORKFLOWS_CAPABILITY,
   WORKSPACE_DIRECTORY_CAPABILITY,
@@ -306,14 +316,19 @@ export const TEAM_CURRENT_CAPABILITIES = [
   BROWSER_PROFILES_CAPABILITY,
   PROVIDER_ACCOUNT_RELAY_CAPABILITY,
   STORAGE_DISK_CAPABILITY,
+  MACHINE_RESOURCES_CAPABILITY,
   PROMPT_CACHE_TTL_CAPABILITY,
   PROVIDER_DEFAULT_CAPABILITY,
   CLAUDE_API_KEY_CAPABILITY,
   WORKFLOWS_CAPABILITY,
   AGENT_THREADS_CAPABILITY,
+  AGENT_THREAD_READS_CAPABILITY,
+  AGENT_THREAD_FILES_CAPABILITY,
   VAULT_CAPABILITY,
   BROWSER_SECRET_VAULT_CAPABILITY,
   VAULT_IMPORT_CAPABILITY,
+  VAULT_V2_CAPABILITY,
+  AGENT_TASK_UI_BLOCKS_CAPABILITY,
 ] as const;
 
 export type TeamCurrentCapability = (typeof TEAM_CURRENT_CAPABILITIES)[number];
@@ -428,15 +443,20 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== BROWSER_PROFILES_CAPABILITY &&
     capability !== PROVIDER_ACCOUNT_RELAY_CAPABILITY &&
     capability !== STORAGE_DISK_CAPABILITY &&
+    capability !== MACHINE_RESOURCES_CAPABILITY &&
     capability !== PROMPT_CACHE_TTL_CAPABILITY &&
     capability !== PROVIDER_DEFAULT_CAPABILITY &&
     capability !== CLAUDE_API_KEY_CAPABILITY &&
     capability !== WORKFLOWS_CAPABILITY &&
     capability !== AGENT_THREADS_CAPABILITY &&
+    capability !== AGENT_THREAD_READS_CAPABILITY &&
+    capability !== AGENT_THREAD_FILES_CAPABILITY &&
     capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY &&
     capability !== VAULT_CAPABILITY &&
     capability !== BROWSER_SECRET_VAULT_CAPABILITY &&
-    capability !== VAULT_IMPORT_CAPABILITY,
+    capability !== VAULT_IMPORT_CAPABILITY &&
+    capability !== VAULT_V2_CAPABILITY &&
+    capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY,
 );
 // A v7 host does not know the v8 markers, so a client sends them only after it negotiates protocol 8.
 const TEAM_PROTOCOL_V7_CURRENT_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
@@ -494,14 +514,19 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== BROWSER_PROFILES_CAPABILITY &&
       capability !== PROVIDER_ACCOUNT_RELAY_CAPABILITY &&
       capability !== STORAGE_DISK_CAPABILITY &&
+      capability !== MACHINE_RESOURCES_CAPABILITY &&
       capability !== PROMPT_CACHE_TTL_CAPABILITY &&
       capability !== PROVIDER_DEFAULT_CAPABILITY &&
       capability !== CLAUDE_API_KEY_CAPABILITY &&
       capability !== WORKFLOWS_CAPABILITY &&
       capability !== AGENT_THREADS_CAPABILITY &&
+      capability !== AGENT_THREAD_READS_CAPABILITY &&
+      capability !== AGENT_THREAD_FILES_CAPABILITY &&
       capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY &&
       capability !== VAULT_CAPABILITY &&
       capability !== BROWSER_SECRET_VAULT_CAPABILITY &&
-      capability !== VAULT_IMPORT_CAPABILITY,
+      capability !== VAULT_IMPORT_CAPABILITY &&
+      capability !== VAULT_V2_CAPABILITY &&
+      capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY,
   );
 }

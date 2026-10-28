@@ -1,5 +1,32 @@
 [
   {
+    "version": "0.52.1",
+    "date": "2026-10-27",
+    "notices": [],
+    "groups": [
+      {
+        "type": "added",
+        "items": [
+          "Keep API keys in the Vault. Add a key with its variable name, such as OPENAI_API_KEY, in Vault → New item → API key. Every agent can use it, and the key does not go into the chat.",
+          "Remove the downloaded CLI of a provider that is off. Open the provider in Settings → Providers and select Remove download.",
+          "The Apple apps listing in the Marketplace can ask macOS for access to Calendar, Contacts, Mail, Notes, Reminders, Messages and Safari when you install it."
+        ]
+      },
+      {
+        "type": "fixed",
+        "items": [
+          "The secure password card can save the password to the Vault of this computer or of a joined server.",
+          "When an agent asks for a password, a code or browser control in a thread, the thread now shows the card.",
+          "Text that you type in a side thread and do not send now stays in that thread.",
+          "OpenBot now quits when a file operation never finishes, so it opens again without a forced quit.",
+          "A long context compaction with Codex or Pi now runs to its end.",
+          "Connect Railway works again.",
+          "OpenBot publishes this computer’s server again when the first try at start fails."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.52.0",
     "date": "2026-10-27",
     "notices": [],
