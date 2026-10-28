@@ -23,6 +23,10 @@ import { createOpenBotLogger } from "@openbot/logging";
 const logger = createOpenBotLogger("windows-home-install-update-e2e");
 
 if (process.platform !== "win32") throw new Error("This test drives the Windows installers and must run on Windows.");
+// It deletes %USERPROFILE%\OpenBot, so it runs only on a GitHub Actions runner.
+if (process.env.GITHUB_ACTIONS !== "true") {
+  throw new Error("This test deletes %USERPROFILE%\\OpenBot and runs only on a GitHub Actions runner.");
+}
 
 const [earlierInstallerArgument, newInstallerArgument] = process.argv.slice(2);
 if (!earlierInstallerArgument || !newInstallerArgument) {
