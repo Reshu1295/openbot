@@ -200,15 +200,19 @@ export function streamReply(handlers: ReplyHandlers, choice?: ReplyVoiceChoice):
   async function playSupertonic(): Promise<void> {
     const directory = supertonicModel.uri();
     if (!directory) return end("not-ready");
-    // Supertonic 3 reads 31 languages; a reply in another script, such as Chinese, is not read. The
-    // language comes from the text written when the voice starts.
-    const language = speechLanguageOf(speechTextFromMarkdown(markdownSoFar), fallbackLanguage());
-    if (!language) return end("language");
     await native?.load(directory, SUPERTONIC_THREADS);
     const speaker = SPEECH_VOICES.indexOf(supertonicVoice);
+    let language: SpeechLanguage | null = null;
     for (let index = 0; ; index++) {
       const part = await nextPart(index);
       if (part === null) return;
+      // Each part takes its own language, with the part before as the fallback, because the reply
+      // plays before it is complete. A short first part, such as "Sure.", is judged with all the text
+      // written so far. Supertonic 3 reads 31 languages; a part in another script, such as Chinese,
+      // ends the reading.
+      const text = index === 0 ? speechTextFromMarkdown(markdownSoFar) : part;
+      language = speechLanguageOf(text, language ?? fallbackLanguage());
+      if (!language) return end("language");
       native?.speak(idOf(index), part, language, speaker, SUPERTONIC_DENOISING_STEPS);
     }
   }
