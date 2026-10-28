@@ -1,10 +1,10 @@
 {
-  "version": "0.52.1",
+  "version": "0.53.0",
   "highlights": [
-    "Keep API keys in the Vault: every agent on the server can use them, and the key never goes into the chat.",
-    "Remove the downloaded CLI of a provider that is off, in Settings > Providers, to free disk space.",
-    "Save a password that you type in the secure card to the Vault of a joined server.",
-    "Text that you do not send in a side thread now stays there after a turn ends or a restart.",
-    "OpenBot now quits fully when a file operation never finishes, and long Codex and Pi compactions run to the end."
+    "See the disk, memory and CPU use of your server in Server settings › Storage, and get an alert when one passes a level.",
+    "Side threads now take images and files, show question cards, and show how full their context is, with a Compact button.",
+    "A thread that you read on one device is read on your other devices too.",
+    "OpenBot starts again after an upgrade when its database has broken links from an earlier version.",
+    "Remote Desktop works again on Windows, and the Apple apps and Messages tools can ask macOS for Automation access."
   ]
 }
