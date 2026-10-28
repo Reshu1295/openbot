@@ -26,7 +26,7 @@ import type { MobileAgent } from "@/features/workspace/model/workspace-types";
 import { type MenuAction, type MenuComponentRef, MenuView } from "@/shared/components/menu-view";
 import { formatUpdatedAt } from "@/shared/lib/format-updated-at";
 import { haptics } from "@/shared/lib/haptics";
-import { androidLongPressDelay, isAndroid } from "@/shared/lib/platform";
+import { isAndroid, longPressDelay } from "@/shared/lib/platform";
 import { currentText, useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 import { ChannelAvatar } from "./channel-avatar";
@@ -301,7 +301,7 @@ export const ChannelListRow = memo(function ChannelListRow({
         if (event.nativeEvent.actionName === "pin") togglePin();
       }}
       className={pinned ? "w-full items-center gap-2 px-1" : "w-full"}
-      delayLongPress={isAndroid ? androidLongPressDelay : undefined}
+      delayLongPress={longPressDelay}
       onLongPress={() => {
         void haptics.longPress();
         if (isAndroid) setMenuKey((key) => key + 1);

@@ -44,7 +44,7 @@ import { devFeatureOverride } from "@/shared/lib/dev-feature-overrides";
 import { haptics } from "@/shared/lib/haptics";
 import { refreshMobileFeatures, useMobileFeature } from "@/shared/lib/mobile-features";
 import { useReducedMotion } from "@/shared/lib/motion";
-import { androidLongPressDelay, isAndroid } from "@/shared/lib/platform";
+import { isAndroid, longPressDelay } from "@/shared/lib/platform";
 import { currentText, useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 import { ServerAvatar } from "./server-avatar";
@@ -264,7 +264,7 @@ export const ServerDrawerContent = memo(function ServerDrawerContent({
         onPress={editing ? undefined : () => onSelectServer(serverItem.id)}
         // The native context menu does not cancel this touch. Without a long-press handler, lifting the
         // finger after the menu opens counts as a tap and closes the drawer under the open menu.
-        delayLongPress={isAndroid ? androidLongPressDelay : undefined}
+        delayLongPress={longPressDelay}
         onLongPress={
           editing
             ? undefined

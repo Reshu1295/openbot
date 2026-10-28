@@ -32,7 +32,7 @@ import { useAgentUnread } from "@/features/workspace/components/use-live-workspa
 import { type MobileAgent, useMobileWorkspaceSelector } from "@/features/workspace/context/mobile-workspace-context";
 import { canToggleAgentPin } from "@/features/workspace/model/agent-pins";
 import { haptics } from "@/shared/lib/haptics";
-import { androidLongPressDelay, isAndroid } from "@/shared/lib/platform";
+import { isAndroid, longPressDelay } from "@/shared/lib/platform";
 import { useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 
@@ -158,7 +158,7 @@ export const AgentListRow = memo(function AgentListRow({ agent, leftInset = 20, 
       }}
       className="w-full"
       onPressIn={agentChatPreview.onPressIn}
-      delayLongPress={isAndroid ? androidLongPressDelay : undefined}
+      delayLongPress={longPressDelay}
       onLongPress={() => {
         void haptics.longPress();
         if (isAndroid) setMenuKey((key) => key + 1);
