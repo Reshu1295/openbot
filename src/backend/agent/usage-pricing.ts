@@ -47,6 +47,11 @@ const PRICES: Readonly<Record<string, Price>> = {
     short: { input: 2, cached: 0.1, cacheWrite: 2.5, output: 10 },
     long: { from: OPENAI_LONG, input: 4, cached: 0.2, cacheWrite: 5, output: 15 },
   },
+  "codex:gpt-6.1-terra": {
+    source: OPENAI,
+    short: { input: 1, cached: 0.05, cacheWrite: 1.25, output: 5 },
+    long: { from: OPENAI_LONG, input: 2, cached: 0.1, cacheWrite: 2.5, output: 7.5 },
+  },
   "codex:gpt-6-sol": {
     source: OPENAI,
     short: { input: 2, cached: 0.2, cacheWrite: 2.5, output: 10 },
