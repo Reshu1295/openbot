@@ -98,12 +98,23 @@ enum ShareInput {
     }
   }
 
-  private static func copy(_ url: URL, type: ShareType, appGroupId: String) -> SharePayload? {
+  /// The folder of the shared copies. A shared file keeps its name, so it must not go in the App Group
+  /// root, where it could take the place of the app's own data, such as `share-extension.json`.
+  private static func itemFolder(appGroupId: String) -> URL? {
     guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
       return nil
     }
+    let folder = container.appendingPathComponent("share-items", isDirectory: true)
+    guard (try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)) != nil else {
+      return nil
+    }
+    return folder
+  }
+
+  private static func copy(_ url: URL, type: ShareType, appGroupId: String) -> SharePayload? {
+    guard let folder = itemFolder(appGroupId: appGroupId) else { return nil }
     let name = url.lastPathComponent.isEmpty ? UUID().uuidString : url.lastPathComponent
-    let destination = container.appendingPathComponent(name)
+    let destination = folder.appendingPathComponent(name)
     do {
       if FileManager.default.fileExists(atPath: destination.path) {
         try FileManager.default.removeItem(at: destination)
@@ -125,10 +136,8 @@ enum ShareInput {
   private static func save(_ data: Data, name: String, type: ShareType, mimeType: String?, appGroupId: String)
     -> SharePayload?
   {
-    guard let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) else {
-      return nil
-    }
-    let destination = container.appendingPathComponent(name)
+    guard let folder = itemFolder(appGroupId: appGroupId) else { return nil }
+    let destination = folder.appendingPathComponent(name)
     do {
       try data.write(to: destination)
     } catch {
