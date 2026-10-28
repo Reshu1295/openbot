@@ -152,11 +152,12 @@ export class McpServerStore {
 
   setEnabled(mcpServerId: string, enabled: boolean, now = new Date().toISOString()): McpServerConfig {
     const stored = this.read(mcpServerId);
-    if (!stored) throw new McpServerError("This MCP server no longer exists.");
+    if (!stored) throw new McpServerError(sourceText("error.backend.mcpServerGone"));
     const current = stored.config;
-    // The columns that could not be read are stored as they are shown, empty, so a row turned on is
-    // the row the user saw and the next read does not turn it off again.
-    if (stored.unreadable.length > 0) return this.save({ ...current, enabled }, now);
+    // Turned on, the columns that could not be read are stored as they are shown, empty, so the row
+    // that runs is the row the user saw and the next read does not turn it off again. Turned off, the
+    // row already reads as off, and its stored values stay.
+    if (enabled && stored.unreadable.length > 0) return this.save({ ...current, enabled }, now);
     this.database.connection
       .prepare("UPDATE projection_mcp_servers SET enabled = ?, updated_at = ? WHERE mcp_server_id = ?")
       .run(enabled ? 1 : 0, now, mcpServerId);
@@ -241,13 +242,23 @@ export class McpServerStore {
     return databaseRow(row) !== null;
   }
 
+  // The table too: an index in `list()` skips the rows left out, and would share their place.
   private positionOf(mcpServerId: string): number {
-    const index = this.list().findIndex((config) => config.id === mcpServerId);
-    return index < 0 ? this.nextPosition() : index;
+    const row = databaseRow(
+      this.database.connection
+        .prepare("SELECT position FROM projection_mcp_servers WHERE mcp_server_id = ?")
+        .get(mcpServerId),
+    );
+    return row ? requiredNumberColumn(row, "position") : this.nextPosition();
   }
 
   private nextPosition(): number {
-    return this.list().length;
+    const row = databaseRow(
+      this.database.connection
+        .prepare("SELECT COALESCE(MAX(position) + 1, 0) AS position FROM projection_mcp_servers")
+        .get(),
+    );
+    return row ? requiredNumberColumn(row, "position") : 0;
   }
 }
 
@@ -264,14 +275,19 @@ type ReportRow = (row: DynamicRecord, message: string, reason: string) => void;
  * hand-edited database must not be able to put a non-string into a child process environment.
  *
  * Startup reads this table, so one row must not stop the app (#3643). A list column that cannot be
- * read is read as empty and the server as turned off: the user still sees it in Server settings and
- * corrects or removes it there. The row is not changed until the user saves it. A row whose other
- * columns cannot be read has nothing to show, and is left out.
+ * read, or a column past a bound of `isMcpServerConfig`, is read as empty and the server as turned
+ * off: the user still sees it in Server settings and corrects or removes it there. The row is not
+ * changed until the user saves it or turns it on. A row whose text cannot be read at all, or whose id
+ * or name is past a bound, has nothing to show, and is left out.
  */
 // Every read goes through here, so each stored secret is masked in logs before any caller can
 // pass it to a provider or quote it in an error.
 function readServer(row: DynamicRecord, report: ReportRow): StoredServer | null {
   const unreadable: string[] = [];
+  const unread = (key: string): never[] => {
+    unreadable.push(key);
+    return [];
+  };
   // A hand-edited database is untrusted input: a non-string here would reach a spawn's `env`, so
   // every parsed column goes through a guard rather than being believed.
   const list = <T>(key: string, decode: (value: unknown, key: string) => T[]): T[] => {
@@ -279,8 +295,7 @@ function readServer(row: DynamicRecord, report: ReportRow): StoredServer | null 
       return decode(JSON.parse(requiredStringColumn(row, key)), key);
     } catch {
       // The parse error can quote the stored text, which can be a key: only the column is named.
-      unreadable.push(key);
-      return [];
+      return unread(key);
     }
   };
   let config: McpServerConfig;
@@ -305,6 +320,42 @@ function readServer(row: DynamicRecord, report: ReportRow): StoredServer | null 
     report(row, "An MCP server row cannot be read, so it is left out.", error instanceof Error ? error.message : "");
     return null;
   }
+  // The renderer decodes the whole list with `isMcpServerConfig`, so a row past one of its bounds -
+  // from an earlier build or an import - would hide every server from Server settings. Each column
+  // is checked alone; only the id and the name cannot be shown empty.
+  const bare: McpServerConfig = {
+    ...config,
+    command: "",
+    args: [],
+    env: [],
+    envPassthrough: [],
+    workingDirectory: "",
+    url: "",
+    headers: [],
+  };
+  if (!isMcpServerConfig(bare)) {
+    report(row, "An MCP server row cannot be read, so it is left out.", "The id or the name is past its limit.");
+    return null;
+  }
+  const fits = (column: Partial<McpServerConfig>) => isMcpServerConfig({ ...bare, ...column });
+  const unreadText = (key: string): "" => {
+    unreadable.push(key);
+    return "";
+  };
+  config = {
+    ...config,
+    command: fits({ command: config.command }) ? config.command : unreadText("command"),
+    workingDirectory: fits({ workingDirectory: config.workingDirectory })
+      ? config.workingDirectory
+      : unreadText("working_directory"),
+    url: fits({ url: config.url }) ? config.url : unreadText("url"),
+    args: fits({ args: config.args }) ? config.args : unread("args_json"),
+    env: fits({ env: config.env }) ? config.env : unread("env_json"),
+    envPassthrough: fits({ envPassthrough: config.envPassthrough })
+      ? config.envPassthrough
+      : unread("env_passthrough_json"),
+    headers: fits({ headers: config.headers }) ? config.headers : unread("headers_json"),
+  };
   if (unreadable.length > 0) {
     config = { ...config, enabled: false };
     report(row, "An MCP server row has columns that cannot be read, so it is turned off.", unreadable.join(", "));

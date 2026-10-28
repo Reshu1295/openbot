@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import type { McpServerConfig } from "@openbot/contracts/ipc";
+import { decodeMcpServerConfigs, type McpServerConfig } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect } from "effect";
@@ -74,6 +74,17 @@ try {
   insert.run("mcp-object-headers", "object-headers", "http", "", "https://object.example/mcp", objectHeaders, 2);
   // A column that is not text at all: nothing of this row can be shown.
   insert.run("mcp-blob-folder", "blob-folder", "http", new Uint8Array([0]), "https://blob.example/mcp", "[]", 3);
+  // Rows an earlier build or an import could store past the bounds that the renderer decodes with.
+  const insertStdio = database.connection.prepare(
+    `INSERT INTO projection_mcp_servers (
+       mcp_server_id, name, transport, enabled, command, args_json, env_json, env_passthrough_json,
+       working_directory, url, headers_json, position, created_at, updated_at
+     ) VALUES (?, ?, 'stdio', 1, ?, ?, '[]', '[]', '', '', '[]', ?, '2026-10-28T12:00:00.000Z', '2026-10-28T12:00:00.000Z')`,
+  );
+  const manyArgs = JSON.stringify(Array.from({ length: 65 }, (_, index) => `--arg-${index}`));
+  insertStdio.run("mcp-many-args", "many-args", "node", manyArgs, 4);
+  insertStdio.run("mcp-long-command", "long-command", "n".repeat(5_000), "[]", 5);
+  insertStdio.run("mcp-long-name", "x".repeat(100), "node", "[]", 6);
 
   // The startup path of the issue: AgentService.enabledMcpServers() -> McpGateway.enabled().
   const enabled = gateway.enabled().map((config) => config.name);
@@ -83,8 +94,26 @@ try {
   const listed = store.list();
   assert.deepEqual(
     listed.map((config) => config.name),
-    ["alpha", "beta", "object-headers"],
+    ["alpha", "beta", "object-headers", "many-args", "long-command"],
   );
+  // What the preload does with the list: one config past a bound would fail all of them.
+  decodeMcpServerConfigs(listed);
+  const tooMany = listed.find((config) => config.name === "many-args");
+  assert.ok(tooMany);
+  assert.equal(tooMany.enabled, false, "a row past a list bound reads as turned off");
+  assert.deepEqual(tooMany.args, []);
+  assert.equal(tooMany.command, "node");
+  const longCommand = listed.find((config) => config.name === "long-command");
+  assert.ok(longCommand);
+  assert.equal(longCommand.enabled, false, "a row past a text bound reads as turned off");
+  assert.equal(longCommand.command, "");
+  // Turned on as shown, it has no command: the save says what to correct, and the row stays.
+  assert.throws(
+    () => store.setEnabled("mcp-long-command", true),
+    (error: unknown) =>
+      error instanceof McpServerError && error.message === "Enter the command that launches this server.",
+  );
+  steps.push({ step: "rows past a bound read as off", detail: [tooMany, longCommand] });
   const shown = listed.find((config) => config.name === "object-headers");
   assert.ok(shown);
   assert.equal(shown.enabled, false, "an unreadable row reads as turned off");
@@ -105,6 +134,9 @@ try {
     "the row is reported once",
   );
   assert.equal(report.warnings.filter((line) => line.includes("mcp-blob-folder")).length, 1);
+  assert.equal(report.warnings.filter((line) => line.includes("mcp-many-args")).length, 1);
+  assert.equal(report.warnings.filter((line) => line.includes("mcp-long-command")).length, 1);
+  assert.equal(report.warnings.filter((line) => line.includes("mcp-long-name")).length, 1);
   assert.ok(!report.warnings.join("\n").includes(HEADER_SECRET), "a stored value reached the log");
   steps.push({ step: "logged once without values", detail: report.warnings.length });
 
@@ -137,6 +169,11 @@ try {
   );
   steps.push({ step: "save refuses a row it cannot read back", detail: "mcpServerInvalid" });
 
+  // The row already reads as off: turning it off keeps its stored values.
+  assert.equal(store.setEnabled("mcp-object-headers", false).enabled, false);
+  assert.deepEqual({ ...raw() }, { enabled: 0, headers_json: objectHeaders }, "turning off erased the row");
+  steps.push({ step: "turn off keeps the row", detail: "enabled 0, headers kept" });
+
   // Turning the row on stores it as it is shown, so it stays on after the next read.
   const turnedOn = store.setEnabled("mcp-object-headers", true);
   assert.equal(turnedOn.enabled, true);
@@ -155,6 +192,9 @@ try {
 
   store.remove("mcp-object-headers");
   store.remove("mcp-blob-folder");
+  store.remove("mcp-many-args");
+  store.remove("mcp-long-command");
+  store.remove("mcp-long-name");
   assert.deepEqual(
     store.list().map((config) => config.name),
     ["alpha", "beta"],
