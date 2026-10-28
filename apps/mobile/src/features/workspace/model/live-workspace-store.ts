@@ -2,6 +2,7 @@ import type { BrowserTakeoverRequest } from "@openbot/contracts/ipc";
 import type { MobileBrowserTabs } from "@/features/browser/model/browser-tabs";
 import type { MobileAgentActivities } from "./agent-activity";
 import type { PendingApproval } from "./pending-approvals";
+import type { PendingPrompt } from "./pending-prompts";
 
 /** Workspace state that host events change many times in one turn. */
 export interface LiveWorkspaceState {
@@ -13,6 +14,8 @@ export interface LiveWorkspaceState {
   /** The host's browser tabs, by server. Absent for a host that serves no live view. */
   browserTabs: Record<string, MobileBrowserTabs>;
   approvalRequests: Record<string, readonly PendingApproval[]>;
+  /** The questions that the host waits on, by server, also for a question that the open chat has no message for. */
+  promptRequests: Record<string, readonly PendingPrompt[]>;
 }
 
 /**
@@ -27,6 +30,7 @@ export class LiveWorkspaceStore {
     browserRequests: {},
     browserTabs: {},
     approvalRequests: {},
+    promptRequests: {},
   };
   readonly #listeners = new Set<() => void>();
 

@@ -2,7 +2,7 @@ import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
 import type { AnchoredEndSpaceConfig } from "@legendapp/list/react-native";
 import { expandAttachmentReferences } from "@openbot/contracts/attachment-references";
 import { expandChatTagReferences } from "@openbot/contracts/chat-tag-references";
-import type { AttachmentSummary, BrowserTakeoverRequest } from "@openbot/contracts/ipc";
+import type { AttachmentSummary, BrowserTakeoverRequest, ConversationQuestionPrompt } from "@openbot/contracts/ipc";
 import { markdownPlainText } from "@openbot/contracts/markdown-preview-text";
 import type { MobileTextKey } from "@openbot/i18n/mobile";
 import { useIsFocused } from "expo-router";
@@ -245,6 +245,11 @@ interface ChatMessageListProps {
   appActive: boolean;
   activeTurnId: string | null;
   questionForm?: QuestionPromptController;
+  /**
+   * A question that waits on the host and that this chat has no message row for. It draws its form
+   * above the composer, where the approvals are, so nothing that the host waits on is invisible.
+   */
+  pendingQuestion?: { prompt: ConversationQuestionPrompt; controller?: QuestionPromptController };
   /** Opens the form of an open question, in a channel where several agents can ask. */
   onSelectQuestion?: (messageId: string) => void;
   /** Rows under the activity, such as the tasks that the agent works on. */
@@ -906,6 +911,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   appActive,
   activeTurnId,
   questionForm,
+  pendingQuestion,
   onSelectQuestion,
   activityAccessory,
   approvals = NO_APPROVALS,
@@ -1425,6 +1431,15 @@ export const ChatMessageList = memo(function ChatMessageList({
                     ))}
                   </Animated.View>
                   {activityAccessory}
+                  {pendingQuestion ? (
+                    <View className="pb-3">
+                      <ChatQuestionPrompt
+                        prompt={pendingQuestion.prompt}
+                        controller={pendingQuestion.controller}
+                        canSend={canSend}
+                      />
+                    </View>
+                  ) : null}
                   {onRespondApproval && approvals.length ? (
                     <View className="gap-3 pb-3">
                       {approvals.map((approval) => (

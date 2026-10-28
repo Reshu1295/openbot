@@ -135,6 +135,7 @@ import {
   InactiveRequestError,
   reducePendingApprovals,
 } from "@/features/workspace/model/pending-approvals";
+import { dropPrompt, reducePendingPrompts } from "@/features/workspace/model/pending-prompts";
 import { type QueryScope, queryKeys } from "@/features/workspace/model/query-keys";
 import {
   hasCapability,
@@ -420,6 +421,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       liveState.update("unreadCounts", (current) => withoutKeys(current, removedAgentIds));
       liveState.update("activityByServer", (current) => withoutKeys(current, serverIds));
       liveState.update("approvalRequests", (current) => withoutKeys(current, serverIds));
+      liveState.update("promptRequests", (current) => withoutKeys(current, serverIds));
       liveState.update("browserRequests", (current) => withoutKeys(current, serverIds));
       liveState.update("browserTabs", (current) => withoutKeys(current, serverIds));
     },
@@ -1018,6 +1020,11 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
         const next = reducePendingApprovals(previous, event);
         return next === previous ? current : { ...current, [serverId]: next };
       });
+      liveState.update("promptRequests", (current) => {
+        const previous = current[serverId] ?? [];
+        const next = reducePendingPrompts(previous, event);
+        return next === previous ? current : { ...current, [serverId]: next };
+      });
       applyBrowserEvent(liveState, serverId, event);
       if (event.type === "sidebar-layout-changed") {
         applySidebarLayout(serverId, event.layout);
@@ -1460,27 +1467,27 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       respondToPrompt: async (agentId, input) => {
         const activeServer = currentActiveServer();
         const agent = agentsRef.current.find((candidate) => candidate.id === agentId);
-        const snapshot = conversationStore.get(agentId);
-        const message = snapshot?.messages.find(
-          (item) =>
-            item.turnId === snapshot.activeTurnId &&
-            item.questionPrompt?.requestId === input.requestId &&
-            item.questionPrompt.resolution === null,
-        );
-        if (
-          agent?.serverId !== activeServer.id ||
-          !showsOnline(activeServer) ||
-          !message?.questionPrompt ||
-          message.questionPrompt.resolution ||
-          !snapshot?.activeTurnId ||
-          message.turnId !== snapshot.activeTurnId
-        ) {
+        // The request belongs to the host, not to a message of the chat: an agent can ask in a thread
+        // that this chat does not show, and the message can be outside the page the phone holds. The
+        // host refuses a request that no longer waits, which the transport reads as an inactive form.
+        const asked = liveState
+          .get()
+          .promptRequests[activeServer.id]?.some((item) => String(item.requestId) === String(input.requestId));
+        const message = conversationStore
+          .get(agentId)
+          ?.messages.find(
+            (item) => item.questionPrompt?.requestId === input.requestId && item.questionPrompt.resolution === null,
+          );
+        if (agent?.serverId !== activeServer.id || !showsOnline(activeServer) || !(asked || message?.questionPrompt)) {
           throw new Error(currentText().t("mobile.workspace.error.formUnavailable"));
         }
         await request("POST", TEAM_API_ROUTES.respond.prompt, ignoreResponse, {
           requestId: input.requestId,
           answers: input.answers,
         });
+        // The host answered the agent. Its resolved event can arrive later, or not at all on a
+        // connection that drops now, so the form goes at once.
+        liveState.update("promptRequests", (current) => dropPrompt(current, activeServer.id, input.requestId));
         // The answer is committed even if a subsequent refresh loses connection.
         void loadConversation(agentId).catch(() => undefined);
       },
