@@ -42,6 +42,20 @@
   }
 }
 
+/* The sidebar, the card and the top row are clear, so no ring colour matches what shows through them:
+ * an avatar outline there would be a halo. A row that paints its own hover or selected fill sets the
+ * outline again. */
+:root[data-openbot-window-glass] .app-window > .app-frame-edge > .sidebar,
+:root[data-openbot-window-glass] .app-window > .app-frame-edge :is(.channel-empty, .channel-title),
+:root[data-openbot-window-glass]
+  .app-window
+  > .app-frame-edge
+  > .sidebar
+  :is(.sidebar-section-agent-drop-target, .sidebar-pinned-group-agent-drop-target)
+  > * {
+  --agent-avatar-outline: transparent;
+}
+
 /* The pages in the card are clear, so the card's tint shows once and not twice. */
 :root[data-openbot-window-glass]
   .app-window
