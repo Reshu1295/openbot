@@ -18,6 +18,8 @@ interface Rates {
 }
 interface Price {
   source: string;
+  /** The date these rates were read, when it is later than `EFFECTIVE_DATE`. */
+  verified?: string;
   short: Rates;
   /** A request whose prompt has at least `from` input tokens bills all its tokens at these rates. */
   long?: Rates & { from: number };
@@ -43,8 +45,10 @@ const claude = (input: number, cached: number, output: number): Price => ({
 // Gemini 4 Argon and Gemini 3.8 Flash list no long-context rates and no cache-write rate (Argon
 // caches only implicitly), and each list doubles on a set date. Antigravity also runs Claude models.
 // Its cache lifetime is unknown, so a Claude update through it that writes the cache stays unpriced.
+const ANTIGRAVITY_VERIFIED = "2026-10-28";
 const antigravityClaude = (input: number, cached: number, output: number): Price => ({
   source: CLAUDE,
+  verified: ANTIGRAVITY_VERIFIED,
   short: { input, cached, output },
 });
 const PRICES: Readonly<Record<string, Price>> = {
@@ -121,11 +125,13 @@ const PRICES: Readonly<Record<string, Price>> = {
   "claude:claude-haiku-4-5": claude(1, 0.1, 5),
   "antigravity:gemini-4-argon": {
     source: GEMINI,
+    verified: ANTIGRAVITY_VERIFIED,
     short: { input: 2, cached: 0.1, output: 10 },
     change: { on: "2026-12-01", short: { input: 4, cached: 0.2, output: 20 } },
   },
   "antigravity:gemini-3.8-flash": {
     source: GEMINI,
+    verified: ANTIGRAVITY_VERIFIED,
     short: { input: 0.75, cached: 0.075, output: 3.75 },
     change: { on: "2027-01-01", short: { input: 1.5, cached: 0.15, output: 7.5 } },
   },
@@ -179,7 +185,7 @@ export function estimateUsageCost(
         tokens.output * rates.output) /
       1_000_000,
     basis: JSON.stringify({
-      effectiveDate: changed?.on ?? EFFECTIVE_DATE,
+      effectiveDate: changed?.on ?? price.verified ?? EFFECTIVE_DATE,
       model,
       context,
       input: rates.input,
