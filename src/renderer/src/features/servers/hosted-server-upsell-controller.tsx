@@ -34,6 +34,11 @@ interface HostedServerUpsellProps {
   canOffer: boolean;
   /** A routine that waits for the modal is dropped when the user opens another server. */
   serverId: string;
+  /**
+   * The id of each routine on the open host, or null when the open host is not this computer. The
+   * modal opens only on this computer, after the first routine there. Without it, the modal never opens.
+   */
+  hostRoutineIds?: (() => Promise<readonly string[] | null>) | undefined;
   host: HostedUpsellHost;
   busy: (agentId: string) => boolean;
   openPlans: () => void;
@@ -90,7 +95,7 @@ const WINDOW_OPENED_AT = Date.now();
 const HOST_CLOCK_SLACK_MS = 2 * 60 * 1000;
 
 /** A routine made before this window opened is not new, also when its list loads for the first time. */
-export function routineMadeThisSession(createdAt: string): boolean {
+function routineMadeThisSession(createdAt: string): boolean {
   return Date.parse(createdAt) >= WINDOW_OPENED_AT - HOST_CLOCK_SLACK_MS;
 }
 
@@ -138,7 +143,7 @@ export function HostedServerUpsell(props: HostedServerUpsellProps) {
     if (!accountId) return;
     const now = Date.now();
     const saved = readHostedUpsellState(window.localStorage, accountId);
-    if (!saved || !modalAllowed(saved, now)) return;
+    if (!saved || !modalAllowed(saved)) return;
     const next = withModalShown(saved, now);
     if (!writeHostedUpsellState(window.localStorage, accountId, next)) return;
     setState(next);
@@ -177,13 +182,32 @@ export function HostedServerUpsell(props: HostedServerUpsellProps) {
     untrack(() => props.openPlans)();
   }
 
+  /**
+   * The modal waits for a routine only when it is the first on this computer: every routine on the
+   * host is new in this window. A failed read shows nothing.
+   */
+  function waitIfFirst(routine: HostedUpsellRoutine): void {
+    const hostRoutineIds = untrack(() => props.hostRoutineIds);
+    const saved = untrack(state);
+    if (!hostRoutineIds || !saved || !modalAllowed(saved)) return;
+    const serverId = untrack(() => props.serverId);
+    hostRoutineIds().then(
+      (ids) => {
+        if (!ids?.every((id) => reported.has(id))) return;
+        if (untrack(() => props.serverId) !== serverId || untrack(modalThisSession) || untrack(pending)) return;
+        setPending({ routine, serverId });
+      },
+      () => undefined,
+    );
+  }
+
   const api: HostedUpsellController = {
     routineCreated(routine) {
       // Each routine counts once, also when the editor and the routine list both report it.
       if (reported.has(routine.id)) return;
       reported.add(routine.id);
       if (untrack(modalThisSession) || untrack(pending)) return;
-      setPending({ routine, serverId: untrack(() => props.serverId) });
+      waitIfFirst(routine);
     },
     canOffer: () => props.canOffer,
     host: () => props.host,

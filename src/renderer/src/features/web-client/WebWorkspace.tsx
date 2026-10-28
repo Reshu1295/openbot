@@ -163,12 +163,7 @@ import { hostSetupProviderProps } from "../onboarding/host-setup-provider-props"
 import { createRoutineTimezonePrompt } from "../schedule/routine-timezone-prompt";
 import type { ScheduleRoutine } from "../schedule/SchedulePanel";
 import { AddServerOverlay, type AddServerResume } from "../servers/AddServerOverlay";
-import {
-  createHostedUpsellOffline,
-  HostedServerUpsell,
-  hostedUpsellRoutineCreated,
-  routineMadeThisSession,
-} from "../servers/hosted-server-upsell-controller";
+import { createHostedUpsellOffline, HostedServerUpsell } from "../servers/hosted-server-upsell-controller";
 import type { HostMemoryLimitCalls } from "../servers/ServerMemoryLimitSetting";
 import type { HostAgentAccessCalls } from "../servers/ServerRolesSection";
 import type { ServerHostedSitesOptions, ServerSettingsSection } from "../servers/ServerSettingsModal";
@@ -1408,27 +1403,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       return current.open ? (current.conversation ?? null) : null;
     },
   });
-  // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.
-  // The marker does not tell whether the routine is paused; an agent makes an active routine unless told otherwise.
-  createEffect(
-    () => {
-      const agentId = workspace.conversation()?.page?.agentId;
-      if (!agentId) return [];
-      return view.messages.flatMap((message) => {
-        const marker = message.actionMarker;
-        return message.turnId && marker?.kind === "routine-lifecycle" && marker.action === "created"
-          ? [{ id: marker.routineId, name: marker.routineName, createdAt: marker.timestamp, agentId }]
-          : [];
-      });
-    },
-    (created) => {
-      for (const routine of created) {
-        if (routineMadeThisSession(routine.createdAt)) {
-          hostedUpsellRoutineCreated({ id: routine.id, name: routine.name, agentId: routine.agentId });
-        }
-      }
-    },
-  );
   createEffect(
     () => workspace.state.error,
     (error) => {
