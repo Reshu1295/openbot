@@ -27,7 +27,7 @@ export interface ShareExtensionDirectory {
   accent: string;
 }
 
-export interface ShareExtensionServer {
+interface ShareExtensionServer {
   id: string;
   name: string;
   /** The key the app connects with. The extension connects only to a server with this key. */
