@@ -40,6 +40,7 @@ import { TEAM_CHANNEL_ATTENTION_CAPABILITY } from "./channel-attention-v1";
 import { CLAUDE_API_KEY_CAPABILITY } from "./claude-api-key-v1";
 import { CONNECTORS_CAPABILITY } from "./connectors-v1";
 import { CONTEXT_RESET_CAPABILITY } from "./context-reset-v1";
+import { TEAM_CONTEXT_USAGE_CAPABILITY } from "./context-usage-v1";
 import { CONVERSATION_FILE_SEARCH_CAPABILITY } from "./conversation-file-search-v1";
 import { DISCORD_ACCESS_CAPABILITY } from "./discord-access-v1";
 import { EVENTS_CAPABILITY } from "./events-v1";
@@ -206,6 +207,7 @@ export {
   TEAM_BROWSER_VIEW_FRAME_POINT_CAPABILITY,
   TEAM_BROWSER_VIEW_VIEWPORT_CAPABILITY,
   TEAM_CHANNEL_ATTENTION_CAPABILITY,
+  TEAM_CONTEXT_USAGE_CAPABILITY,
   TEAM_HISTORY_EXTENT_CAPABILITY,
   TEAM_MESSAGE_CLIENT_ID_CAPABILITY,
   TEAM_PROMPT_MULTI_SELECT_CAPABILITY,
@@ -329,6 +331,7 @@ export const TEAM_CURRENT_CAPABILITIES = [
   VAULT_IMPORT_CAPABILITY,
   VAULT_V2_CAPABILITY,
   AGENT_TASK_UI_BLOCKS_CAPABILITY,
+  TEAM_CONTEXT_USAGE_CAPABILITY,
 ] as const;
 
 export type TeamCurrentCapability = (typeof TEAM_CURRENT_CAPABILITIES)[number];
@@ -456,11 +459,15 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== BROWSER_SECRET_VAULT_CAPABILITY &&
     capability !== VAULT_IMPORT_CAPABILITY &&
     capability !== VAULT_V2_CAPABILITY &&
-    capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY,
+    capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY &&
+    capability !== TEAM_CONTEXT_USAGE_CAPABILITY,
 );
 // A v7 host does not know the v8 markers, so a client sends them only after it negotiates protocol 8.
 const TEAM_PROTOCOL_V7_CURRENT_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
-  (capability) => capability !== TEAM_OPEN_PROVIDERS_CAPABILITY && capability !== PROVIDERS_V8_CAPABILITY,
+  (capability) =>
+    capability !== TEAM_OPEN_PROVIDERS_CAPABILITY &&
+    capability !== PROVIDERS_V8_CAPABILITY &&
+    capability !== TEAM_CONTEXT_USAGE_CAPABILITY,
 );
 export function teamCapabilitiesForProtocol(protocol: number | null | undefined): readonly TeamCurrentCapability[] {
   if (protocol === null || protocol === undefined || protocol < 7) return TEAM_BOOTSTRAP_CAPABILITIES;
@@ -527,6 +534,7 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== BROWSER_SECRET_VAULT_CAPABILITY &&
       capability !== VAULT_IMPORT_CAPABILITY &&
       capability !== VAULT_V2_CAPABILITY &&
-      capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY,
+      capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY &&
+      capability !== TEAM_CONTEXT_USAGE_CAPABILITY,
   );
 }

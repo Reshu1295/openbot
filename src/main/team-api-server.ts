@@ -97,6 +97,7 @@ import {
   supportsTeamSemanticTags,
   TEAM_AGENT_ACTIVITY_CAPABILITY,
   TEAM_CHANNEL_ATTENTION_CAPABILITY,
+  TEAM_CONTEXT_USAGE_CAPABILITY,
   TEAM_CURRENT_CAPABILITIES,
   TEAM_HISTORY_EXTENT_CAPABILITY,
   TEAM_PROMPT_MULTI_SELECT_CAPABILITY,
@@ -1129,8 +1130,9 @@ export class TeamApiServer {
       )(visible, {
         ...options,
         preserveBrowserSecrets: capabilities.has("browser-secret-handoff"),
-        // Only the V8 encoder reads it.
+        // Only the V8 encoder reads them.
         browserSignIn: capabilities.has(BROWSER_SIGN_IN_CAPABILITY),
+        contextUsage: capabilities.has(TEAM_CONTEXT_USAGE_CAPABILITY),
         // Only the V7 and V8 encoders read them.
         uiBlocks: capabilities.has(TEAM_UI_BLOCKS_CAPABILITY),
         subagents: capabilities.has(TEAM_SUBAGENTS_CAPABILITY),

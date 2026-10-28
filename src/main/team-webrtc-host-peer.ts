@@ -11,6 +11,7 @@ import {
   supportsTeamSemanticTags,
   TEAM_AGENT_CREATE_MODEL_CAPABILITY,
   TEAM_CHANNEL_ATTENTION_CAPABILITY,
+  TEAM_CONTEXT_USAGE_CAPABILITY,
   TEAM_CURRENT_CAPABILITIES,
   TEAM_HISTORY_EXTENT_CAPABILITY,
   TEAM_PROMPT_MULTI_SELECT_CAPABILITY,
@@ -816,8 +817,9 @@ export class TeamWebRtcHostPeer {
                         : createTeamProtocolV2Event)(this.#nextEventSequence, event, {
                 preserveSemanticTags: supportsTeamSemanticTags(this.#peerCapabilities),
                 preserveBrowserSecrets: this.#peerCapabilities.has("browser-secret-handoff"),
-                // Only the V8 event reads it.
+                // Only the V8 event reads them.
                 browserSignIn: this.#peerCapabilities.has(BROWSER_SIGN_IN_CAPABILITY),
+                contextUsage: this.#peerCapabilities.has(TEAM_CONTEXT_USAGE_CAPABILITY),
                 // Only the V7 and V8 events read them.
                 uiBlocks: this.#peerCapabilities.has(TEAM_UI_BLOCKS_CAPABILITY),
                 subagents: this.#peerCapabilities.has(TEAM_SUBAGENTS_CAPABILITY),

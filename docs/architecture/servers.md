@@ -307,6 +307,22 @@ closed. The WebRTC host peer encodes the local response and the events again wit
 The iPhone app advertises it through the shared team client, but it still shows the question as a
 single choice.
 
+### Context usage
+
+`context-usage-v1` carries how full the context window of each agent is, so a desktop joined to a
+server shows the context meter of that server's agents (see `team-protocol/context-usage-v1.ts`). It
+adds `contextStates` and `threadContextStates` beside the frozen keys of the `snapshot` of the
+`runtime-snapshot` event, with the frozen keys of `AgentContextState` and the `botId` spelling of the
+rest of that snapshot. The host adds them only on protocol 8 and only for a connection that
+advertises the capability, so a released client gets the snapshot that it got before and shows no
+meter. The host filters the states as the rest of the snapshot, so a member gets only the agents that
+the member can see, and it drops a category that the capability does not name. A host without the
+capability never sends the fields, so a client keeps them whenever they are present, and a value that
+the runtime snapshot decoder refuses fails closed. A new socket gets a new snapshot, so the meter
+comes back after a reconnect. The WebRTC host peer encodes the events again with the same option.
+Compacting the context of a joined server's agent stays local only: the Team API has no route for it.
+The iPhone app advertises the capability through the shared team client, but it shows no meter.
+
 ### Queue window
 
 `queue-window-v1` keeps the queue snapshot of a long-lived agent inside one WebRTC frame. The
