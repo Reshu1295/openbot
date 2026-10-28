@@ -510,7 +510,7 @@ function DrawerServerTools({
       {values.tasks ? (
         <DrawerRow
           icon={SquareCheck}
-          label={t("mobile.app.route.tasks")}
+          label={t("mobile.app.route.threads")}
           value={values.tasks.value}
           accentValue={values.tasks.needsYou}
           href={routes.tasks}

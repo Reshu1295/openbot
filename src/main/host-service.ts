@@ -5,6 +5,7 @@ import type { HostKeyHandover } from "@openbot/contracts/host-key-handover";
 import { createInviteUrl, selfHostedApiOrigin } from "@openbot/contracts/invite-links";
 import type {
   AgentEvent,
+  AgentTaskReadState,
   AvatarImageInput,
   CentralAuthUser,
   ChannelSummary,
@@ -21,6 +22,7 @@ import type {
   DirectTypingRealtimeEvent,
   HostStatus,
   InviteSummary,
+  MarkAgentTaskReadInput,
   MarkConversationReadInput,
   MarkDirectReadInput,
   RemoteDesktopDisplay,
@@ -111,7 +113,7 @@ interface HostServiceOptions {
   focusUse?: ForwardedApiOptions["focusUse"];
   appVersion: string;
   store: TeamStore;
-  agents: ForwardedApiOptions["agents"] & Pick<AgentService, "adoptConversationReads">;
+  agents: ForwardedApiOptions["agents"] & Pick<AgentService, "adoptConversationReads" | "markTaskRead">;
   agentsReady: NonNullable<ForwardedApiOptions["agentsReady"]>;
   skills: NonNullable<ForwardedApiOptions["skills"]>;
   sidebarLayout: NonNullable<ForwardedApiOptions["sidebarLayout"]>;
@@ -1133,6 +1135,11 @@ export class HostService extends EventEmitter<HostEvents> {
         this.#options.agents.markConversationRead(input.agentId, readerId, input.throughMessageId),
       ),
     );
+  }
+
+  /** Moves this computer's reader's mark of a side thread, the mark that the member's other devices read. */
+  markAgentTaskRead(input: MarkAgentTaskReadInput): AgentTaskReadState {
+    return this.#options.agents.markTaskRead(input, this.#currentAgentReaderId());
   }
 
   listDirectThreads(): DirectThreadSummary[] {

@@ -100,7 +100,9 @@ import type {
 import type {
   AgentTask,
   AgentTaskInput,
+  AgentTaskReadState,
   AgentTasksSnapshot,
+  MarkAgentTaskReadInput,
   RenameAgentTaskInput,
   RunQueuedMessageAsTaskInput,
   StartAgentTaskInput,
@@ -1350,6 +1352,8 @@ export const IPC_ENDPOINTS = {
     // A joined server takes these through `agent-threads-v1`.
     renameTask: scopedRequest<RenameAgentTaskInput, void>()("agent:tasks:rename"),
     deleteTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:delete"),
+    // A joined server takes this through `agent-thread-reads-v1`.
+    markTaskRead: scopedRequest<MarkAgentTaskReadInput, AgentTaskReadState>()("agent:tasks:mark-read"),
     acknowledgeFailedTurn: scopedRequest<AcknowledgeFailedTurnInput, void>()("agent:acknowledge-failed-turn"),
     cancelQueuedMessage: scopedRequest<CancelQueuedMessageInput, void>()("agent:cancel-queued-message"),
     steerQueuedMessage: scopedRequest<SteerQueuedMessageInput, void>()("agent:steer-queued-message"),

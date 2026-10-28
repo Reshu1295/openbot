@@ -28,6 +28,7 @@ import { ChatComposer, type MentionSkill, VOICE_BUTTON_SIZE } from "@/features/c
 import { ChatGlassIconButton } from "@/features/chat/components/chat-glass-icon-button";
 import { ChatHeader } from "@/features/chat/components/chat-header";
 import { ChatMessageList } from "@/features/chat/components/chat-message-list";
+import type { ChatThreadMenu } from "@/features/chat/components/chat-thread-menu";
 import { useChatAttachments } from "@/features/chat/components/use-chat-attachments";
 import { useChatMotion } from "@/features/chat/components/use-chat-motion";
 import type { QuestionPromptController } from "@/features/chat/components/use-question-prompt";
@@ -110,6 +111,8 @@ export interface ChatViewProps {
   channelLeadAgentId?: string | null;
   /** Rows under the agent's activity, such as the tasks that the agent works on. */
   activityAccessory?: ReactNode;
+  /** The agent's threads, in the menu of the agent's name in the header. */
+  threadMenu?: ChatThreadMenu;
   /** This chat's thread. Browser requests of the agent's other threads, such as its tasks, do not show here. */
   threadId?: string | null;
   /** The threads of a channel's member agents, from a host with `channel-attention-v1`. */
@@ -205,6 +208,7 @@ export function ChatView({
   needsAction = false,
   channelLeadAgentId = null,
   activityAccessory,
+  threadMenu,
   threadId = null,
   channelThreadIds = null,
   approvals,
@@ -899,6 +903,7 @@ export function ChatView({
               liquidGlassAvailable={liquidGlassAvailable}
               topInset={insets.top}
               onBack={leaveConversation}
+              threadMenu={threadMenu}
               // The voice overlay covers the chat. It blocks touches, and this
               // keeps screen readers on the transcript and the voice controls.
               accessibilityHidden={voiceOpen}

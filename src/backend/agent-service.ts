@@ -20,6 +20,7 @@ import type {
   AgentSummary,
   AgentTask,
   AgentTaskInput,
+  AgentTaskReadState,
   AgentTasksSnapshot,
   AgentWaitsSnapshot,
   AskSideQuestionInput,
@@ -58,6 +59,7 @@ import type {
   ListChannelRoutineRunsInput,
   ListRoutineRunsInput,
   LocalBrowserSecretResponse,
+  MarkAgentTaskReadInput,
   McpServerConfig,
   McpSignInAppInput,
   McpSignInAppState,
@@ -122,6 +124,7 @@ import {
   WORKFLOWS_USAGE_ID,
   workspaceAccessEnforced,
 } from "@openbot/contracts/ipc";
+import { AGENT_THREAD_READS_LIMIT } from "@openbot/contracts/team-protocol/agent-thread-reads-v1";
 import { CLAUDE_API_KEY_ACCOUNT_ID } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import { ContextResetBusyError } from "@openbot/contracts/team-protocol/context-reset-v1";
 import type { QueueEditRequest } from "@openbot/contracts/team-protocol/queue-edit-v1";
@@ -4192,6 +4195,28 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
 
   renameTask(input: AgentTaskInput, title: string): void {
     this.#tasks.rename(this.#tasks.require(input.agentId, input.taskId), title);
+  }
+
+  /** The member's read mark of each open side thread of the agent, at most `AGENT_THREAD_READS_LIMIT`. */
+  listTaskReads(agentId: string, memberId: string, options?: ConversationMarkerExclusions): AgentTaskReadState[] {
+    return this.#tasks
+      .snapshot(agentId)
+      .tasks.filter((task) => task.state !== "closed")
+      .slice(0, AGENT_THREAD_READS_LIMIT)
+      .map((task) => ({ taskId: task.id, ...this.#reader.readThread(memberId, task.threadId, options) }));
+  }
+
+  /** Moves the member's read mark of one side thread to a message of that thread. */
+  markTaskRead(
+    input: MarkAgentTaskReadInput,
+    memberId: string,
+    options?: ConversationMarkerExclusions,
+  ): AgentTaskReadState {
+    const task = this.#tasks.require(input.agentId, input.taskId);
+    return {
+      taskId: task.taskId,
+      ...this.#reader.markThreadRead(memberId, task.threadId, input.throughMessageId, options),
+    };
   }
 
   /**

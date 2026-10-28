@@ -17,6 +17,8 @@ import { AGENT_SESSION_SETTINGS_CAPABILITY } from "./agent-session-settings-v1";
 import { AGENT_TASK_LIMIT_CAPABILITY } from "./agent-task-limit-v1";
 import { AGENT_TASK_UI_BLOCKS_CAPABILITY } from "./agent-task-ui-blocks-v1";
 import { AGENT_TASKS_CAPABILITY } from "./agent-tasks-v1";
+import { AGENT_THREAD_FILES_CAPABILITY } from "./agent-thread-files-v1";
+import { AGENT_THREAD_READS_CAPABILITY } from "./agent-thread-reads-v1";
 import { AGENT_THREADS_CAPABILITY } from "./agent-threads-v1";
 import { AGENT_UPDATE_CAPABILITY } from "./agent-update-v1";
 import { BITWARDEN_CONNECTOR_CAPABILITY } from "./bitwarden-connector-v1";
@@ -141,6 +143,8 @@ export {
   AGENT_TASK_LIMIT_CAPABILITY,
   AGENT_TASK_UI_BLOCKS_CAPABILITY,
   AGENT_TASKS_CAPABILITY,
+  AGENT_THREAD_FILES_CAPABILITY,
+  AGENT_THREAD_READS_CAPABILITY,
   AGENT_THREADS_CAPABILITY,
   AGENT_UPDATE_CAPABILITY,
   ANDROID_PUSH_NOTIFICATIONS_CAPABILITY,
@@ -318,6 +322,8 @@ export const TEAM_CURRENT_CAPABILITIES = [
   CLAUDE_API_KEY_CAPABILITY,
   WORKFLOWS_CAPABILITY,
   AGENT_THREADS_CAPABILITY,
+  AGENT_THREAD_READS_CAPABILITY,
+  AGENT_THREAD_FILES_CAPABILITY,
   VAULT_CAPABILITY,
   BROWSER_SECRET_VAULT_CAPABILITY,
   VAULT_IMPORT_CAPABILITY,
@@ -443,6 +449,8 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== CLAUDE_API_KEY_CAPABILITY &&
     capability !== WORKFLOWS_CAPABILITY &&
     capability !== AGENT_THREADS_CAPABILITY &&
+    capability !== AGENT_THREAD_READS_CAPABILITY &&
+    capability !== AGENT_THREAD_FILES_CAPABILITY &&
     capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY &&
     capability !== VAULT_CAPABILITY &&
     capability !== BROWSER_SECRET_VAULT_CAPABILITY &&
@@ -512,6 +520,8 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== CLAUDE_API_KEY_CAPABILITY &&
       capability !== WORKFLOWS_CAPABILITY &&
       capability !== AGENT_THREADS_CAPABILITY &&
+      capability !== AGENT_THREAD_READS_CAPABILITY &&
+      capability !== AGENT_THREAD_FILES_CAPABILITY &&
       capability !== TEAM_MP4_ATTACHMENTS_CAPABILITY &&
       capability !== VAULT_CAPABILITY &&
       capability !== BROWSER_SECRET_VAULT_CAPABILITY &&

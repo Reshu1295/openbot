@@ -7,11 +7,13 @@ import type { AgentMessage } from "@openbot/ui/data";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { useText } from "@openbot/ui/text";
-import { createMemo, createProjection, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createProjection, createSignal, Show } from "solid-js";
 import { actionToast } from "../../action-toast";
 import { toAgentMessages } from "../../app-message-projection";
+import { usePlatform } from "../../platform";
 import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
 import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
+import { latestVisibleAgentMessageId } from "./conversation-read-state";
 import { useConversationViewScope } from "./conversation-scope";
 
 /** A thread takes files only from this computer, which reads every supported type. */
@@ -56,6 +58,19 @@ export function ConversationThread() {
     },
     [],
     { key: "id" },
+  );
+  const { appFocused } = usePlatform();
+  // The person reads the open thread while the window has focus. The mark is the member's, so the
+  // phone no longer shows the thread as unread.
+  createEffect(
+    () => ({
+      taskId: props.threads?.open?.id,
+      messageId: appFocused() ? latestVisibleAgentMessageId(messages) : null,
+      read: props.threads?.onRead,
+    }),
+    ({ taskId, messageId, read }) => {
+      if (taskId && messageId && read) read(messageId);
+    },
   );
   const view = () => {
     const agent = props.agent;

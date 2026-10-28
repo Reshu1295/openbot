@@ -414,6 +414,8 @@ export interface ConversationThreads {
   /** `attachmentDraftIds` are the files that the text names. */
   onSend: (text: string, attachmentDraftIds: string[]) => Promise<boolean>;
   onStop: () => void;
+  /** The person sees the open side thread through this message. */
+  onRead: (messageId: string) => void;
   onRespondApproval: (decision: "accept" | "decline", options?: PromptAnswerOptions) => Promise<boolean>;
   /** The context of the open side thread, when its provider reported it. */
   contextState: AgentContextState | undefined;
