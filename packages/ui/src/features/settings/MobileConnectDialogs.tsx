@@ -181,11 +181,14 @@ export function MobileConnectAddPhoneDialog(props: {
     const current = session();
     return Boolean(current && !current.collapsing && !current.successDeviceName && !props.store.expired());
   };
-  const stopCode = () => {
-    if (live() && props.canCancelTicket) void props.store.cancelTicket();
-  };
+  // A code that no phone used is cancelled when its screen closes, also when it arrives after that.
+  createEffect(
+    () => !(props.open && screen() === "signin") && live() && !props.store.state.connect.busy && props.canCancelTicket,
+    (cancel) => {
+      if (cancel) void props.store.cancelTicket();
+    },
+  );
   const close = () => {
-    stopCode();
     setScreen("ask");
     setConnected(null);
     props.onClose();
@@ -200,10 +203,7 @@ export function MobileConnectAddPhoneDialog(props: {
     setScreen("signin");
     if (!live()) void props.store.createTicket();
   };
-  const back = () => {
-    stopCode();
-    setScreen("ask");
-  };
+  const back = () => setScreen("ask");
   const app = () => PHONE_APPS.find((candidate) => candidate.platform === platform()) ?? PHONE_APPS[0];
   const title = () => {
     if (screen() === "install") return t("settings.mobileConnect.add.install.heading");
