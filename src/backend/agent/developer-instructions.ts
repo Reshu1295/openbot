@@ -3,13 +3,13 @@ import {
   essentialMemoryBytes,
   serializeEssentialMemories,
 } from "@openbot/contracts/agent-memory-context";
-import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type { AgentDefaults, AgentMemory, AgentSummary } from "@openbot/contracts/ipc";
 import {
   agentAutomationAllowed,
   agentComputerUseEnabled,
   agentQuickAcknowledgementEnabled,
   COMPUTER_USE_MCP_SERVER_NAME,
+  DEFAULT_AGENT_MEMORY_LIMIT,
   workspaceAccessEnforced,
 } from "@openbot/contracts/ipc";
 import { redactText } from "@openbot/logging";
@@ -154,7 +154,7 @@ export function memoryContext(
   return {
     memories: promptMemories,
     storedCount: options.storedMemoryCount ?? memories.length,
-    limit: options.memoryLimit ?? INPUT_LIMITS.agentMemories,
+    limit: options.memoryLimit ?? DEFAULT_AGENT_MEMORY_LIMIT,
   };
 }
 

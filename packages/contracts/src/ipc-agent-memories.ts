@@ -67,13 +67,17 @@ export interface DeleteAgentMemoryInput {
 }
 
 /**
- * The choices for how many memories one agent can hold on this computer. The first is the default,
- * which was the only cap before the setting existed. A lower cap never deletes memories: an agent
- * over it keeps them and only cannot add another.
+ * The choices for how many memories one agent can hold on this computer. The first was the only cap
+ * before the setting existed. A lower cap never deletes memories: an agent over it keeps them and
+ * only cannot add another.
  */
 export const AGENT_MEMORY_LIMITS = [INPUT_LIMITS.agentMemories, 128, 256, 512] as const;
 export type AgentMemoryLimit = (typeof AGENT_MEMORY_LIMITS)[number];
-export const DEFAULT_AGENT_MEMORY_LIMIT: AgentMemoryLimit = INPUT_LIMITS.agentMemories;
+/**
+ * Background reviews add memories without a request, so the default leaves room for many small ones.
+ * Only essential memories enter each prompt, within their own budget; the rest cost a search.
+ */
+export const DEFAULT_AGENT_MEMORY_LIMIT: AgentMemoryLimit = 256;
 
 export function isAgentMemoryLimit(value: unknown): value is AgentMemoryLimit {
   return isOneOf(AGENT_MEMORY_LIMITS, value);

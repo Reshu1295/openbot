@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { AGENT_MEMORY_CONTEXT_BUDGET_BYTES, essentialMemoryBytes } from "@openbot/contracts/agent-memory-context";
-import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
-import type {
-  AgentMemory,
-  AgentMemorySelection,
-  AgentMemorySelectionChange,
-  AgentMemorySelectionState,
-  MemoryEntry,
+import {
+  type AgentMemory,
+  type AgentMemorySelection,
+  type AgentMemorySelectionChange,
+  type AgentMemorySelectionState,
+  DEFAULT_AGENT_MEMORY_LIMIT,
+  type MemoryEntry,
 } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import { Schema } from "effect";
@@ -60,7 +60,7 @@ function agentMemoryTables(limit: () => number): MemoryTables {
 
 /** Owns saved agent memories, their selection, and local recall. Channel memories remain separate. */
 export class AgentMemoryStore extends MemoryStore {
-  constructor(database: OpenBotDatabase, limit: () => number = () => INPUT_LIMITS.agentMemories) {
+  constructor(database: OpenBotDatabase, limit: () => number = () => DEFAULT_AGENT_MEMORY_LIMIT) {
     super(database, agentMemoryTables(limit));
   }
 

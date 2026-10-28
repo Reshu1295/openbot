@@ -12,3 +12,9 @@
 - Server settings > General > Memory review sets how often the agents on this computer review their
   memories: every 10, 20 or 40 turns, or Off. Off also stops the reviews after a pause, a clear and a
   closed side thread.
+
+### Changed
+
+- An agent can now keep 256 memories by default instead of 64, so the background reviews have room
+  for many small facts. Only the essential memories go into each prompt, so this adds no cost. A
+  limit that you set in Server settings > General > Memories per agent stays as it is.
