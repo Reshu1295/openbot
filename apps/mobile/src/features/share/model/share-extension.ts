@@ -179,9 +179,12 @@ export function writeShareExtensionDirectory(
 }
 
 let writtenSession: string | null = null;
+/** False after sign-out, so a send that ends later does not give iOS a suggestion again. */
+let signedIn = false;
 
 /** Gives the extension the session of the app. The token goes to the keychain only, never to the file. */
 export function setShareExtensionSession(session: { apiUrl: string; userId: string; sessionToken: string }): void {
+  signedIn = true;
   const value = JSON.stringify(session);
   if (!native || value === writtenSession) return;
   writtenSession = value;
@@ -193,6 +196,7 @@ export function setShareExtensionSession(session: { apiUrl: string; userId: stri
 
 /** The share sheet offers agents that get messages from this phone. */
 export function donateShareTarget(serverId: string, agentId: string, agentName: string): void {
+  if (!signedIn) return;
   const conversationId = shareConversationId(serverId, agentId);
   const avatarUri = avatarUris.get(conversationId);
   void native?.donate({ conversationId, agentName, ...(avatarUri ? { avatarUri } : {}) }).catch(() => undefined);
@@ -205,6 +209,7 @@ export function forgetShareTargets(conversationIds: string[]): void {
 
 /** Without a session the extension has nothing: no token, no agents and no suggestions. */
 export function resetShareExtension(): void {
+  signedIn = false;
   writtenSession = null;
   writtenDirectory = null;
   avatarUris = new Map();
