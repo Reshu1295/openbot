@@ -271,10 +271,16 @@ export function AgentEventBridge() {
         return;
       case "prompt":
         setPendingPrompts((current) => ({ ...current, [attentionEventKey(event)]: event }));
-        // The answer marks belong to the agent's own chat. A side thread's question keeps them.
+        // The agent id keys the answer marks of the agent's own chat. A side thread's question keeps
+        // them and clears only the mark of its own thread.
         if (agentList().some((agent) => agent.id === event.agentId && agent.threadId === event.threadId)) {
           setPresentedPromptResolutions((current) => ({ ...current, [event.agentId]: undefined }));
           setSubmittedPromptRequests((current) => ({ ...current, [event.agentId]: undefined }));
+        } else {
+          const mark = attentionEventKey(event);
+          setSubmittedPromptRequests((current) =>
+            current[mark] === undefined ? current : { ...current, [mark]: undefined },
+          );
         }
         return;
       case "agent-input-resolved":

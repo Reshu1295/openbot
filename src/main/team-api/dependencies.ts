@@ -250,6 +250,8 @@ export type TeamApiAgentTasks = Pick<
   | "reopenTask"
   | "renameTask"
   | "deleteTask"
+  | "listTaskReads"
+  | "markTaskRead"
 >;
 
 /**

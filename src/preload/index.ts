@@ -203,6 +203,7 @@ import {
 } from "./computer-use-decoding";
 import {
   decodeAgentTask,
+  decodeAgentTaskReadState,
   decodeAgentTasks,
   decodeAttachment,
   decodeAttachments,
@@ -536,6 +537,7 @@ const agentGroup = bridgeGroup(IPC_ENDPOINTS.agent, {
   reopenTask: decodeVoid,
   renameTask: decodeVoid,
   deleteTask: decodeVoid,
+  markTaskRead: decodeAgentTaskReadState,
   acknowledgeFailedTurn: decodeVoid,
   cancelQueuedMessage: decodeVoid,
   steerQueuedMessage: decodeVoid,

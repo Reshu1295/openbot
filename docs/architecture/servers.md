@@ -270,6 +270,14 @@ in words on a block that has one, is for the owner and admins only; the host ans
 resolution leave it out. The provider transcript of the tool call can keep it, and the agent can
 repeat it in a reply or a thought, which the conversation stores as any other message.
 
+`agent-task-ui-blocks-v1` (`team-protocol/agent-task-ui-blocks-v1.ts`) adds the same `uiBlock`, with
+the same normalization and wire budget, to the task conversations of `agent-tasks-v1`: the response
+of `POST /v1/agent-tasks/read` and the `snapshot` of the `agent-task-conversation` event. A client
+then shows a question in a side thread as its form, such as the API key card. The host adds it only
+for a connection that advertises the capability; the frozen agent-tasks-v1 decoder drops it for
+every other client. The HTTP and WebRTC clients accept it whenever it is present, and the WebRTC host
+peer encodes the local response and the events again with the same option.
+
 ### Subagents
 
 `subagents-v1` carries the subagents that an agent started in one turn (see
@@ -298,6 +306,24 @@ sends the flag, so a client keeps it whenever it is present, and a value that is
 closed. The WebRTC host peer encodes the local response and the events again with the same option.
 The iPhone app advertises it through the shared team client, but it still shows the question as a
 single choice.
+
+### Context usage
+
+`context-usage-v1` carries how full the context window of each agent is, so a desktop joined to a
+server shows the context meter of that server's agents (see `team-protocol/context-usage-v1.ts`). It
+adds `contextStates` and `threadContextStates` beside the frozen keys of the `snapshot` of the
+`runtime-snapshot` event, with the frozen keys of `AgentContextState` and the `botId` spelling of the
+rest of that snapshot. The host adds them only on protocol 8 and only for a connection that
+advertises the capability, so a released client gets the snapshot that it got before and shows no
+meter. The host filters the states as the rest of the snapshot, so a member gets only the agents that
+the member can see. It drops a category that the capability does not name, and a state that the v1
+shape cannot describe, such as a later compaction status, so a client never refuses the snapshot for
+it. A host without the
+capability never sends the fields, so a client keeps them whenever they are present, and a value that
+the runtime snapshot decoder refuses fails closed. A new socket gets a new snapshot, so the meter
+comes back after a reconnect. The WebRTC host peer encodes the events again with the same option.
+Compacting the context of a joined server's agent stays local only: the Team API has no route for it.
+The iPhone app advertises the capability through the shared team client, but it shows no meter.
 
 ### Queue window
 

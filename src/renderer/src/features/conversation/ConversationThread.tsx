@@ -1,12 +1,19 @@
 import { supportedAttachmentExtensions } from "@openbot/contracts/attachment-files";
 import { canPreviewAttachment } from "@openbot/contracts/ipc";
+import type { AppTextKey } from "@openbot/i18n";
+import { classifyFailure } from "@openbot/telemetry";
 import { Input } from "@openbot/ui";
 import type { AgentMessage } from "@openbot/ui/data";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
-import { createProjection, createSignal, Show } from "solid-js";
+import { useText } from "@openbot/ui/text";
+import { createEffect, createMemo, createProjection, createSignal, Show } from "solid-js";
+import { actionToast } from "../../action-toast";
 import { toAgentMessages } from "../../app-message-projection";
+import { usePlatform } from "../../platform";
 import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
+import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
+import { latestVisibleAgentMessageId } from "./conversation-read-state";
 import { useConversationViewScope } from "./conversation-scope";
 
 /** A thread takes files only from this computer, which reads every supported type. */
@@ -27,15 +34,43 @@ export function ConversationThread() {
     mcpServers,
     threadComposer,
   } = useConversationViewScope();
+  const { t, errorMessage } = useText();
   const [picker, setPicker] = createSignal<HTMLInputElement>();
+  /** A failed answer shows here, where the person answered, and not in the agent's own chat. */
+  const failureToast = (fallback: AppTextKey) => ({
+    onError: (error: unknown) => {
+      actionToast.error(errorMessage(error, t(fallback)), {
+        report: { operation: "turn", source: "action", cause_code: classifyFailure(error) },
+      });
+    },
+  });
+  /** The takeover card, or its result, shows when the conversation's takeover is of this thread. */
+  const takeoverShown = () => props.browserTakeover !== undefined || browserTakeoverResolution() !== null;
+  /** Rebuilt only when a card comes or goes, so a card keeps what the person entered. */
+  const hasAttention = createMemo(() => takeoverShown() || props.prompt !== undefined);
   /** Reconciled by id, so a stream chunk redraws only the message that changed. */
   const messages = createProjection<AgentMessage[]>(
     () => {
       const conversation = props.threads?.conversation;
-      return conversation ? toAgentMessages(conversation.messages, props.agent?.id) : [];
+      // The card draws a question that waits, so its message is left out, as in the agent's chat.
+      const messages = conversation?.messages.filter((message) => message.questionPrompt?.resolution !== null);
+      return messages ? toAgentMessages(messages, props.agent?.id) : [];
     },
     [],
     { key: "id" },
+  );
+  const { appFocused } = usePlatform();
+  // The person reads the open thread while the window has focus. The mark is the member's, so the
+  // phone no longer shows the thread as unread.
+  createEffect(
+    () => ({
+      taskId: props.threads?.open?.id,
+      messageId: appFocused() ? latestVisibleAgentMessageId(messages) : null,
+      read: props.threads?.onRead,
+    }),
+    ({ taskId, messageId, read }) => {
+      if (taskId && messageId && read) read(messageId);
+    },
   );
   const view = () => {
     const agent = props.agent;
@@ -53,6 +88,20 @@ export function ConversationThread() {
     if (!input) return;
     input.value = "";
     input.click();
+  };
+  /** The cards that the thread waits for: its browser takeover, and its question as a form. */
+  const attention = () => {
+    if (!hasAttention()) return undefined;
+    return (
+      <>
+        <ConversationQuestionPrompt
+          onAnswer={(answers, options) =>
+            props.onAnswerPrompt(answers, options ?? failureToast("uiBlock.error.answerFailed"))
+          }
+        />
+        <ConversationBrowserTakeover />
+      </>
+    );
   };
   return (
     <Show when={view()}>
@@ -93,13 +142,15 @@ export function ConversationThread() {
             onOpenLink={(url) => void openExternalMessageUrl(url)}
             onPreview={(attachment) => void previewAttachment(attachment)}
             onAttachmentAction={attachmentAction}
+            macWindowControls={props.platform === "darwin"}
             approval={current().threads.approval}
-            onRespondApproval={(decision) => current().threads.onRespondApproval(decision)}
+            onRespondApproval={(decision) =>
+              current().threads.onRespondApproval(decision, failureToast("prompt.approval.answerFailed"))
+            }
             context={contextUsageView(current().threads.contextState)}
             onCompactContext={current().threads.onCompactContext}
-            attention={
-              props.browserTakeover || browserTakeoverResolution() ? <ConversationBrowserTakeover /> : undefined
-            }
+            waitsForAnswer={props.prompt !== undefined || props.browserTakeover !== undefined}
+            attention={attention()}
           />
         </>
       )}

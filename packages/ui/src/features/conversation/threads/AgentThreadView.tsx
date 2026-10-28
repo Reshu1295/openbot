@@ -94,6 +94,8 @@ export interface AgentThreadViewProps {
   onOpenLink: (url: string) => void;
   onPreview: (attachment: AttachmentSummary) => void;
   onAttachmentAction: (attachment: AttachmentSummary, action: "open" | "reveal" | "download") => void;
+  /** The window draws the macOS window controls over the top start corner. The image viewer leaves room. */
+  macWindowControls?: boolean | undefined;
   /** The approval that the thread's running turn waits for. */
   approval?: AgentApproval | undefined;
   onRespondApproval: (decision: "accept" | "decline") => Promise<boolean>;
@@ -101,7 +103,9 @@ export interface AgentThreadViewProps {
   context?: ContextUsageView | undefined;
   /** Compacts the thread's context now. Missing when the host cannot. */
   onCompactContext?: (() => Promise<void>) | undefined;
-  /** Another card that the thread waits for, such as a browser takeover. The app builds it. */
+  /** Whether the thread's running turn waits for the person: a question or a browser takeover. */
+  waitsForAnswer?: boolean | undefined;
+  /** Another card that the thread shows, such as a question or a browser takeover. The app builds it. */
   attention?: JSX.Element | undefined;
 }
 
@@ -169,7 +173,8 @@ export function AgentThreadView(props: AgentThreadViewProps) {
     };
   };
   const failed = () => (props.task?.state === "idle" && props.task.outcome === "failed" ? props.task : undefined);
-  const running = () => (props.task?.state === "running" && !props.approval ? props.task : undefined);
+  const running = () =>
+    props.task?.state === "running" && !props.approval && !props.waitsForAnswer ? props.task : undefined;
   const queued = () => (props.task && props.task.queuedMessages.length > 0 ? props.task : undefined);
   const hold = () => (props.task ? agentThreadHoldText(props.task, props.limit, t) : null);
   return (
@@ -201,6 +206,8 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                   onOpenLink={props.onOpenLink}
                   onPreview={props.onPreview}
                   onAttachmentAction={props.onAttachmentAction}
+                  onDownload={(attachment) => props.onAttachmentAction(attachment, "download")}
+                  macWindowControls={props.macWindowControls}
                 />
               </div>
             )}

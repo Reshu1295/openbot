@@ -16,6 +16,8 @@ import { AGENT_PUBLISH_CODECS } from "./agent-publish-v1";
 import { AGENT_SESSION_SETTINGS_CODECS } from "./agent-session-settings-v1";
 import { AGENT_TASK_LIMIT_CODECS } from "./agent-task-limit-v1";
 import { AGENT_TASKS_CODECS } from "./agent-tasks-v1";
+import { AGENT_THREAD_FILES_CODECS } from "./agent-thread-files-v1";
+import { AGENT_THREAD_READS_CODECS } from "./agent-thread-reads-v1";
 import { AGENT_THREADS_CODECS } from "./agent-threads-v1";
 import { AGENT_UPDATE_CODECS } from "./agent-update-v1";
 import { BITWARDEN_CONNECTOR_CODECS } from "./bitwarden-connector-v1";
@@ -135,6 +137,8 @@ const CODECS: ReadonlyMap<string, OptionalRouteCodec> = new Map([
   ...BROWSER_SIGN_IN_CODECS,
   ...AGENT_TASKS_CODECS,
   ...AGENT_THREADS_CODECS,
+  ...AGENT_THREAD_READS_CODECS,
+  ...AGENT_THREAD_FILES_CODECS,
   ...SIDE_QUESTION_CODECS,
   ...BROWSER_PROFILES_CODECS,
   ...WORKFLOWS_CODECS,

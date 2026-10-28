@@ -2591,6 +2591,15 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         taskConversations.delete(input.taskId);
         emitTasks(input.agentId);
       },
+      markTaskRead: async (input) => {
+        findTask(input.agentId, input.taskId);
+        return {
+          taskId: input.taskId,
+          unreadCount: 0,
+          firstUnreadMessageId: null,
+          throughMessageId: input.throughMessageId,
+        };
+      },
       acknowledgeFailedTurn: async () => undefined,
       cancelQueuedMessage: async (input) => {
         const queue = queues.get(input.agentId) ?? emptyQueue(input.agentId);

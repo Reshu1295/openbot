@@ -7,6 +7,7 @@ export const messages = {
   "error.provider.computerUseConfig":
     "Nie udało się zarejestrować Sterowania komputerem w konfiguracji Codex. Sprawdź, czy plik config.toml Codex jest poprawny i zapisywalny, a potem uruchom ponownie OpenBot. Aby kontynuować bez tej funkcji, wyłącz Sterowanie komputerem w ustawieniach członka zespołu.",
   "error.provider.codexUnresponsive": "Codex przestał odpowiadać, więc OpenBot zakończył jego proces.",
+  "error.provider.acpUnresponsive": "{provider} nie odpowiedział na czas, więc OpenBot zakończył jego proces.",
   "error.provider.endpointsReadOnly":
     "Zapisane endpointy zapisała nowsza wersja OpenBot albo nie można odczytać pliku. Zaktualizuj OpenBot, aby je zmienić.",
   "error.provider.endpointNoSecureStorage":
@@ -265,6 +266,8 @@ export const messages = {
   "error.provider.acpSignInStopped": "Logowanie zatrzymało się przed zakończeniem.",
   "error.provider.geminiBrowserUnavailable":
     "Gemini nie otworzył strony logowania. Zainstaluj przeglądarkę i xdg-utils, a potem połącz się z sesji pulpitu na tym hoście. Serwer bez pulpitu nie może ukończyć tego logowania.",
+  "error.provider.geminiBrowserOpenFailed":
+    "Gemini nie otworzył strony logowania w przeglądarce. Sprawdź domyślną przeglądarkę, a potem połącz się ponownie.",
   "error.provider.acpSignInFailed": "Logowanie nie zostało ukończone.",
   "error.provider.acpSignInFailedReason": "Logowanie nie zostało ukończone: {reason}",
   "error.provider.acpSignInMethodMissing":

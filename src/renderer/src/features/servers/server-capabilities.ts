@@ -86,6 +86,7 @@ export function serverSupportsCapability(
       capability === "agent-hidden-v1" ||
       capability === "agent-tasks-v1" ||
       capability === "agent-threads-v1" ||
+      capability === "agent-thread-reads-v1" ||
       capability === "side-question-v1") &&
     server?.kind === "remote"
   ) {
