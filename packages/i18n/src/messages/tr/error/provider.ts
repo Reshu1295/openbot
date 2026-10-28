@@ -275,6 +275,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Tarayıcıda yalnızca HTTPS oturum açma bağlantıları açılabilir.",
   "error.provider.geminiKeyRefused":
     "Gemini kayıtlı API anahtarını reddetti. Ayarlar'da anahtarı değiştirin veya kaldırın, ardından yeniden bağlanın.",
+  "error.provider.geminiVerificationRequired":
+    "Google, Gemini yanıt vermeden önce hesabınızı doğrulamanızı istiyor. Doğrulamayı tarayıcınızda tamamlayıp tekrar deneyin. Bu tekrarlanırsa Ayarlar'dan Gemini'yi yeniden bağlayın.",
   "error.provider.keyProviderRefused":
     "{provider} kayıtlı API anahtarını reddetti. Ayarlar'da anahtarı değiştirin veya kaldırın, ardından yeniden deneyin.",
   "error.provider.keyProviderNoBalance":

@@ -293,6 +293,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Seuls les liens de connexion HTTPS peuvent s’ouvrir dans le navigateur.",
   "error.provider.geminiKeyRefused":
     "Gemini a refusé la clé d’API enregistrée. Remplacez ou supprimez la clé dans les Réglages, puis reconnectez-vous.",
+  "error.provider.geminiVerificationRequired":
+    "Google vous demande de valider votre compte avant que Gemini puisse répondre. Terminez la validation dans votre navigateur, puis réessayez. Si cela se répète, reconnectez Gemini dans les Paramètres.",
   "error.provider.keyProviderRefused":
     "{provider} a refusé la clé d’API enregistrée. Remplacez ou supprimez la clé dans les Réglages, puis réessayez.",
   "error.provider.keyProviderNoBalance":

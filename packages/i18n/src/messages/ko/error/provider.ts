@@ -269,6 +269,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "브라우저에서는 HTTPS 로그인 링크만 열 수 있어요.",
   "error.provider.geminiKeyRefused":
     "Gemini가 저장된 API 키를 거부했어요. 설정에서 키를 교체하거나 제거한 후 다시 연결하세요.",
+  "error.provider.geminiVerificationRequired":
+    "Google에서 Gemini가 답변하기 전에 계정 인증을 요청합니다. 브라우저에서 인증을 완료한 후 다시 시도하세요. 계속 반복되면 설정에서 Gemini를 다시 연결하세요.",
   "error.provider.keyProviderRefused":
     "{provider}가 저장된 API 키를 거부했어요. 설정에서 키를 교체하거나 제거한 후 다시 시도하세요.",
   "error.provider.keyProviderNoBalance":

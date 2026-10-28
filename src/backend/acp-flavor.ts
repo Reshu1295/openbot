@@ -45,6 +45,12 @@ export interface AcpFlavor {
     turnFailure(text: string): string;
     /** The message of an answer chunk that reports an exhausted quota, or `null`. */
     quota(text: string): string | null;
+    /**
+     * The message of an answer chunk that is the server's own failure notice rather than the
+     * model's reply, or `null`. The chunk is not answer text: the turn fails with this message
+     * and the chunk is neither shown nor stored.
+     */
+    answerFailure?(text: string): string | null;
   };
   /** A stop finishes the turn locally, and the next prompt opens the session again first. */
   cancelLocallyThenResume?: true;

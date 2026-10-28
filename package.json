@@ -235,6 +235,7 @@
     "test:workflow-model-steps": "bun scripts/workflow-model-steps-e2e.ts",
     "test:antigravity-accounts": "bun scripts/antigravity-accounts-e2e.ts",
     "test:antigravity-usage-metering": "bun scripts/antigravity-usage-metering-e2e.ts",
+    "test:antigravity-verification": "bun scripts/antigravity-verification-e2e.ts",
     "test:opencode-usage-metering": "bun scripts/opencode-usage-metering-e2e.ts",
     "test:opencode-anthropic-cache": "bun scripts/opencode-anthropic-cache-e2e.ts",
     "test:opencode-azure-responses": "bun scripts/opencode-azure-responses-e2e.ts",

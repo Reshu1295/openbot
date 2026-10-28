@@ -266,6 +266,8 @@ export const messages = defineMessages("error.provider", {
   "error.provider.httpsSignInLinkOnly": "Only HTTPS sign-in links can open in the browser.",
   "error.provider.geminiKeyRefused":
     "Gemini refused the saved API key. Replace or remove the key in Settings, then connect again.",
+  "error.provider.geminiVerificationRequired":
+    "Google asks you to verify your account before Gemini can answer. Complete the verification in your browser, then try again. If this repeats, reconnect Gemini in Settings.",
   "error.provider.keyProviderRefused":
     "{provider} refused the saved API key. Replace or remove the key in Settings, then try again.",
   "error.provider.keyProviderNoBalance":

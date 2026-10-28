@@ -245,6 +245,8 @@ export const messages = {
   "error.provider.acpSignInMethodMissing": "该服务商在这台电脑上不提供该登录方式。请更新服务商后重试。",
   "error.provider.httpsSignInLinkOnly": "只有 HTTPS 登录链接才能在浏览器中打开。",
   "error.provider.geminiKeyRefused": "Gemini 拒绝了已保存的 API 密钥。请在设置中更换或移除该密钥，然后重新连接。",
+  "error.provider.geminiVerificationRequired":
+    "Google 要求先验证你的账号，Gemini 才能回答。请在浏览器中完成验证，然后重试。如果反复出现，请在设置中重新连接 Gemini。",
   "error.provider.keyProviderRefused": "{provider} 拒绝了已保存的 API 密钥。请在设置中更换或移除该密钥，然后重试。",
   "error.provider.keyProviderNoBalance": "已保存 API 密钥的 {provider} 账户没有余额。请为账户充值，然后重试。",
   "error.provider.messageTooLarge": "由于 {provider} 发送了大于 {limit} MB 的消息，OpenBot 已将其停止。",

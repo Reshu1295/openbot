@@ -2036,6 +2036,14 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         turn.providerError = quota;
         return;
       }
+      // A failure notice sent as answer text, such as Google's account verification (Antigravity):
+      // the turn fails with the notice's message, and the notice itself is not the reply.
+      const answerFailure = this.#flavor.sdkHarness?.answerFailure?.(update.content.text) ?? null;
+      if (answerFailure !== null) {
+        turn.receivedOutput = true;
+        turn.providerError = answerFailure;
+        return;
+      }
       // A harness reports a dropped stream as answer text, and then sends the retried answer (#1471).
       // The report gets its own muted item, so it is not joined to the answer around it. When no
       // retried answer comes, the partial reply and the report become the answer.
