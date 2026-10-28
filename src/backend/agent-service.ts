@@ -4067,7 +4067,10 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       if (!this.listAgents().some((agent) => agent.id === input.agentId))
         throw new Error(sourceText("error.agent.unknown", { id: input.agentId }));
       this.#requireNotHidden(input.agentId);
-      return this.#tasks.create(input.agentId, input.text, "user");
+      // A start with files and no text takes its title from the first file.
+      const firstDraft = input.attachmentDraftIds?.[0];
+      const titleText = input.text.trim() || (firstDraft ? (this.#mailbox.draftName(firstDraft) ?? "") : "");
+      return this.#tasks.create(input.agentId, titleText, "user");
     });
     this.#tasks.changed(task.agentId);
     yield* this.sendMessage(

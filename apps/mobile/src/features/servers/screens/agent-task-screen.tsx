@@ -299,8 +299,9 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
   async function send(value: string) {
     const text = value.trim();
     const files = filesAllowed ? attachments.items : [];
-    // The files of a send in progress are still in the composer, so they do not go twice.
-    if ((!text && files.length === 0) || !canSend || (sending && files.length > 0)) return;
+    // The files of a send in progress are still in the composer, so they do not go twice. A second
+    // start of a new thread would make a second thread.
+    if ((!text && files.length === 0) || !canSend || (sending && (isDraft || files.length > 0))) return;
     if (files.length > INPUT_LIMITS.attachments) {
       void haptics.notification("error");
       setSendError(t("mobile.chat.attachment.limit", { limit: INPUT_LIMITS.attachments }));
@@ -612,7 +613,7 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
                       )
               }
               bottomInset={insets.bottom}
-              disabled={!canSend || (sending && attachments.items.length > 0)}
+              disabled={!canSend || (sending && (isDraft || attachments.items.length > 0))}
               attachments={filesAllowed ? attachments : undefined}
               menuOpen={attachments.menuOpen}
               menuProgress={menuProgress}

@@ -26,7 +26,7 @@ const CONTROL_TEXT = {
 } as const satisfies Record<ControlAction, { label: MobileTextKey; error: MobileTextKey; icon: string }>;
 
 /** A turn runs or waits in the thread. As on desktop, the person stops it before a delete. */
-export const threadBusy = (task: AgentTask) => task.state === "running" || task.state === "queued";
+const threadBusy = (task: AgentTask) => task.state === "running" || task.state === "queued";
 
 /** As on desktop: a running or waiting thread can stop, another open thread can archive, and an archived one can restore. */
 function controlAction(task: AgentTask): ControlAction {
