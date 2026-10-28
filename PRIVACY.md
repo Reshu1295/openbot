@@ -671,7 +671,8 @@ is not included in analytics; provider output uses the application's secret reda
   helper process with its reason word, and the reason that OpenBot quit (such as
   `main_window_closed` or `quit`).
 - `~/Library/Application Support/OpenBot/logs/main/main.log` holds the redacted lines of the main
-  process: startup failures, uncaught errors, and the reason that OpenBot quit. It is kept to two
+  process: startup failures, uncaught errors, the reason that OpenBot quit, and why an update check,
+  download or install failed. It is kept to two
   files of 1 MB each and is never sent.
 - OpenBot keeps crash dumps of its own processes in the `Crashpad` folder of its user data
   (`%APPDATA%\OpenBot\Crashpad` on Windows). A dump holds part of the memory of the process that
