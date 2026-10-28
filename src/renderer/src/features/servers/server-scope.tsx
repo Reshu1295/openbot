@@ -293,6 +293,29 @@ const ServerScope = createSimpleContext({
         }),
     );
 
+    // Read states belong to the signed-in reader. At a cold start the saved account can restore after
+    // the first load, whose reads then fail, so a sign-in, or another account, reads them again.
+    let readsAccount: string | null | undefined;
+    createEffect(
+      () => {
+        const auth = centralAuth();
+        return auth.status === "signed_in" ? auth.user.id : null;
+      },
+      (userId) =>
+        untrack(() => {
+          const changed = readsAccount !== undefined && userId !== readsAccount;
+          readsAccount = userId;
+          if (!changed || !userId || !bootstrapReady() || !transportReady()) return;
+          const serverId = activeServerId();
+          void serversPort()
+            .agent.listConversationReads(serverId)
+            .then((reads) => {
+              if (scopeIsCurrent() && serverId === activeServerId()) applyConversationReads(reads);
+            })
+            .catch(() => undefined);
+        }),
+    );
+
     createEffect(
       () => ({ ready: bootstrapReady() && serversLoaded() && transportReady(), id: activeServerId() }),
       ({ ready }) => {
