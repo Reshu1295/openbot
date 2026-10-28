@@ -11,7 +11,7 @@ import type { MobileAgent } from "@/features/workspace/model/workspace-types";
 import { type MenuAction, type MenuComponentRef, MenuView } from "@/shared/components/menu-view";
 import { formatUpdatedAt } from "@/shared/lib/format-updated-at";
 import { haptics } from "@/shared/lib/haptics";
-import { isAndroid } from "@/shared/lib/platform";
+import { isAndroid, longPressDelay } from "@/shared/lib/platform";
 import { useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 
@@ -70,9 +70,11 @@ export function TaskListRow({
       }}
       // The native context menu does not cancel this touch. Without a long-press handler, lifting the
       // finger after the menu opens counts as a tap. Android opens its menu from the row.
+      delayLongPress={longPressDelay}
       onLongPress={
         menu
           ? () => {
+              void haptics.longPress();
               if (isAndroid) menuRef.current?.show();
             }
           : undefined
