@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { mkdir, mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { BrowserBounds } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isDynamicRecord, isNumber, isString } from "@openbot/contracts/runtime-values";
 import { Effect } from "effect";
@@ -1405,7 +1405,7 @@ async function main(): Promise<void> {
     if (frameUploadInputIds.length !== 2 || frameUploadInputIds[0] !== frameUploadInputIds[1]) {
       throw new Error("V2 frame upload input identity changed between CDP sessions.");
     }
-    await runStagedUploadScenario(browser, v2Tab.id, uploadPath, join(temporaryRoot, "missing-upload.txt"));
+    await runStagedUploadScenario(browser, v2Tab.id, v2Contents, uploadPath, join(temporaryRoot, "missing-upload.txt"));
     await runCauseEffect(browser.setVisible({ visible: true, bounds: { x: 0, y: 0, width: 220, height: 560 } }));
     const narrowFillEnvironment = await callBrowserTool(browser, "set_environment", {
       tabId: v2Tab.id,
@@ -2223,10 +2223,12 @@ async function runLiveViewScenario(browser: BrowserHost, tabId: string, contents
     true,
   );
   const frames: Array<{ sequence: number; at: number }> = [];
+  let frameWaiter: { count: number; resolve: () => void } | null = null;
   const stopView = await runCauseEffect(
     browser.startView(tabId, (frame) => {
       if (frame.image.byteLength === 0) throw new Error("A live view frame carried no image.");
       frames.push({ sequence: frame.sequence, at: Date.now() });
+      if (frameWaiter && frames.length >= frameWaiter.count) frameWaiter.resolve();
     }),
   );
   try {
@@ -2313,12 +2315,21 @@ async function runLiveViewScenario(browser: BrowserHost, tabId: string, contents
     } finally {
       await rm(uploadRoot, { recursive: true, force: true });
     }
-    const afterUpload = frames.length;
-    const uploadDeadline = Date.now() + 5_000;
-    while (frames.length < afterUpload + 5 && Date.now() < uploadDeadline) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    const moreFrames = new Promise<void>((resolve) => {
+      frameWaiter = { count: frames.length + 5, resolve };
+    });
+    let stalled: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        moreFrames,
+        new Promise<never>((_resolve, reject) => {
+          stalled = setTimeout(() => reject(new Error("The live view stopped after a file chooser upload.")), 5_000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(stalled);
+      frameWaiter = null;
     }
-    if (frames.length < afterUpload + 5) throw new Error("The live view stopped after a file chooser upload.");
   } finally {
     await Effect.runPromise(stopView());
   }
@@ -2984,6 +2995,7 @@ async function runCanvasGridScenario(browser: BrowserHost, origin: string): Prom
 async function runStagedUploadScenario(
   browser: BrowserHost,
   tabId: string,
+  contents: WebContents,
   uploadPath: string,
   missingPath: string,
 ): Promise<void> {
@@ -3021,10 +3033,16 @@ async function runStagedUploadScenario(
     if (missing.success) throw new Error("V2 staged upload reported success for a missing file.");
     const staged = await upload({ kind: "css", selector: 'input[aria-label="Files"]' }, [uploadPath]);
     if (!staged.success) throw new Error(`V2 staged upload failed: ${toolError(staged)}`);
+    await contents.executeJavaScript("document.querySelector('output').textContent = 'staged chooser pending'", true);
     const stagedChooser = await upload({ kind: "role", role: "button", name: "Attach files", exact: true }, [
       uploadPath,
     ]);
     if (!stagedChooser.success) throw new Error(`V2 staged file chooser upload failed: ${toolError(stagedChooser)}`);
+    // The staged copy keeps the file name, so the page names the file the agent chose.
+    const stagedOutput = await contents.executeJavaScript("document.querySelector('output').textContent", true);
+    if (stagedOutput !== `chooser:${basename(uploadPath)}`) {
+      throw new Error(`V2 staged file chooser upload did not reach the page: ${String(stagedOutput)}`);
+    }
   } finally {
     await runCauseEffect(uploads.dispose());
   }

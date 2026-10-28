@@ -82,6 +82,7 @@ const MAX_RESULT_BYTES = 64 * 1024;
 const DOCUMENT_ID_PROPERTY = "__openbot_browser_document_id__";
 const MAX_SNAPSHOT_FRAMES = 12;
 const DOM_QUIET_MS = 250;
+const CHOOSER_WAIT_MS = 5_000;
 
 type ActionDispatch = () => void;
 
@@ -606,7 +607,8 @@ export class BrowserCdpEngine {
         const attachedSessionId = stringValue(params.sessionId) || sessionId || "";
         const targetInfo = recordValue(params.targetInfo);
         const targetId = stringValue(targetInfo?.targetId);
-        if (attachedSessionId && targetId) {
+        // Frames only: the upload attaches its own session to the page itself, which is not a frame.
+        if (attachedSessionId && targetId && targetInfo?.type === "iframe") {
           this.#targetSessions.set(targetId, { sessionId: attachedSessionId, url: stringValue(targetInfo?.url) });
         }
       }
@@ -1510,7 +1512,8 @@ export class BrowserCdpEngine {
                 stopWaitingForChooser();
                 Deferred.doneUnsafe(chooser, Effect.succeed(null));
               },
-              deadline === undefined ? 2_000 : Math.max(0, deadline - Date.now()),
+              // A page can open a chooser only while the click's user activation lasts, about 5 s.
+              Math.min(CHOOSER_WAIT_MS, deadline === undefined ? CHOOSER_WAIT_MS : Math.max(0, deadline - Date.now())),
             );
             stopWaitingForChooser = () => {
               clearTimeout(timeout);
@@ -1522,6 +1525,7 @@ export class BrowserCdpEngine {
           yield* Effect.gen(function* () {
             yield* send("Page.enable", {}, chooserSessionId);
             yield* send("Page.setInterceptFileChooserDialog", { enabled: true }, chooserSessionId);
+            yield* browserSync(() => assertBeforeDeadline(deadline));
             onDispatch?.();
             yield* dispatchMouseClick(send, point, "left", 1, 0, sessionId);
             const opened = yield* Deferred.await(chooser);
