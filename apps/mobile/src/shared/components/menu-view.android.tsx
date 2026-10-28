@@ -374,7 +374,9 @@ function OpenedMenu({
           presentation="popover"
           placement={room?.placement ?? "bottom"}
           align="start"
-          className="min-w-52"
+          // A fixed width. With a content width, Android sizes the menu with each title on one line and
+          // then wraps a long title, so the menu is shorter than its items and the last item goes out.
+          className="w-52"
           style={scrolls ? { maxHeight: room?.height ?? height - safeArea.top - safeArea.bottom - 24 } : undefined}
         >
           {title ? (
