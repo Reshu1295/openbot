@@ -2946,6 +2946,8 @@ export class ProviderRuntime implements ProviderPort {
     firstInstall: boolean,
   ) {
     if (!this.#clients.has(provider)) {
+      // A slow start comes from the computer, not the version: the new CLI starts with the wait learned so far.
+      const learnedWaitMs = this.#slowStarts.get(provider);
       yield* providerStep(() => {
         this.#clearProviderConnectionState(provider);
         this.#cli.delete(provider);
@@ -2957,9 +2959,11 @@ export class ProviderRuntime implements ProviderPort {
       yield* this.#connect("starting", [provider], {
         preserveCheckErrors: true,
         notifyReady: false,
-        startTimeoutMs: this.#longStartTimeoutMs,
+        startTimeoutMs: learnedWaitMs ?? this.#longStartTimeoutMs,
       });
-      if (firstInstall && this.#slowStarts.has(provider)) return;
+      const timedOut = this.#slowStarts.has(provider);
+      if (!timedOut && learnedWaitMs !== undefined) this.#slowStarts.set(provider, learnedWaitMs);
+      if (firstInstall && timedOut) return;
       const status = this.status().providers?.find((row) => row.id === provider);
       if (status?.version !== cli.version || !["available", "sign-in-required"].includes(status.state)) {
         // The update reason keeps catalog text only, so other text would leave only "Try again.".
@@ -3571,11 +3575,12 @@ export class ProviderRuntime implements ProviderPort {
   }
 
   /**
-   * Gives the next start of a provider that did not answer `initialize` in `timedOutAfterMs` (the
-   * request timeout when undefined) twice that time: at least `#longStartTimeoutMs`, at most four times it.
+   * Gives the next start of a provider that did not answer `initialize` in `timedOutAfterMs` twice
+   * that time: at least `#longStartTimeoutMs` and the wait it has, at most four times
+   * `#longStartTimeoutMs`. A start of several providers (undefined) does not shorten the wait.
    */
   #countSlowStart(provider: AgentProvider, timedOutAfterMs: number | undefined): void {
-    const nextMs = Math.max(this.#longStartTimeoutMs, 2 * (timedOutAfterMs ?? 0));
+    const nextMs = Math.max(this.#longStartTimeoutMs, this.#slowStarts.get(provider) ?? 0, 2 * (timedOutAfterMs ?? 0));
     this.#slowStarts.set(provider, Math.min(nextMs, 4 * this.#longStartTimeoutMs));
   }
 
