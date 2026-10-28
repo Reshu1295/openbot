@@ -1,5 +1,21 @@
 [
   {
+    "version": "0.53.2",
+    "date": "2026-10-28",
+    "notices": [
+      "On Windows, if OpenBot was installed in the folder that holds your agents, it now runs from a new folder. If the taskbar pin no longer opens OpenBot, pin it again from the Start menu."
+    ],
+    "groups": [
+      {
+        "type": "fixed",
+        "items": [
+          "On Windows, updates work again when OpenBot was installed in the folder that holds your agents. Your agents, Shared and Downloads stay where they are.",
+          "The Windows installer no longer lets you choose the folder that holds your agents or your user data."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.53.1",
     "date": "2026-10-28",
     "notices": [],

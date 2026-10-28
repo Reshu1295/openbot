@@ -1,10 +1,9 @@
 {
-  "version": "0.53.1",
+  "version": "0.53.2",
   "highlights": [
-    "Usage now shows an estimated cost for Gemini (Antigravity) turns.",
-    "Queued messages show Steer only for providers that can steer a running turn, so Steer no longer fails for Gemini, OpenCode, Cursor, Cline and custom agents.",
-    "The model picker shows the Gemini models also when Gemini starts slowly.",
-    "The activity line now says when the agent waits for your answer or approval.",
-    "Server settings › Storage no longer shows machine use and alerts for now."
+    "On Windows, do not uninstall OpenBot from Windows Settings to fix a failed update, because that can delete your agent folders. Install this version instead.",
+    "On Windows, updates work again when OpenBot was installed in the folder that holds your agents. Your agents, Shared and Downloads stay where they are.",
+    "If the taskbar pin no longer opens OpenBot after this update, pin it again from the Start menu.",
+    "The Windows installer no longer lets you choose the folder that holds your agents or your user data."
   ]
 }

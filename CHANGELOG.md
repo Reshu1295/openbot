@@ -6,6 +6,22 @@ All notable changes to OpenBot will be documented here. The project follows
 
 ## [Unreleased]
 
+## [0.53.2] - 2026-10-28
+
+### Fixed
+
+- On Windows, OpenBot updates again when it was installed in `%USERPROFILE%\OpenBot`, the folder that
+  also holds your agent folders. Before, each update stopped with "Failed to uninstall old application
+  files. Please try running the installer again.: 2", also after a restart. The update now installs
+  OpenBot in `%LOCALAPPDATA%\Programs\OpenBot` and removes only the app files from the earlier folder.
+  Your agents, `Shared` and `Downloads` stay where they are. **A taskbar pin of the earlier copy stops
+  working: pin OpenBot again from the Start menu.** The Start menu and desktop shortcuts, the
+  openbot:// links and the open-at-login setting move to the new copy. **Do not uninstall OpenBot from Windows
+  Settings to repair this: in that folder, the uninstaller of 0.53.1 or earlier also deletes your
+  agent folders.**
+- The Windows installer no longer accepts `%USERPROFILE%\OpenBot`, `%APPDATA%\OpenBot`, or a folder
+  that holds one of them, as the install folder. It uses the default folder instead.
+
 ## [0.53.1] - 2026-10-28
 
 ### Changed
