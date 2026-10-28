@@ -1996,6 +1996,11 @@ export class ProviderRuntime implements ProviderPort {
     if (busy) return null;
     const previousVersion = this.#cli.get(provider)?.version ?? null;
     const previousExecutable = this.#bundledExecutables[provider];
+    // Main names the install path of a managed provider also before its first download, so only a
+    // file on disk is a version to go back to.
+    const firstInstall = yield* providerStep(
+      () => !previousExecutable || !statSync(previousExecutable, { throwIfNoEntry: false }),
+    );
     // A reprobe that finds no account leaves the provider released, so only an available row keeps it.
     const wasAvailable = this.#status.providers?.find((row) => row.id === provider)?.state === "available";
     let installed = false;
@@ -2017,7 +2022,7 @@ export class ProviderRuntime implements ProviderPort {
             return yield* new ProviderOperationFailed({
               cause: new Error(sourceText("error.provider.cliSelectFailed")),
             });
-          yield* this.#reloadProviderCli(provider, cli, previousExecutable === undefined);
+          yield* this.#reloadProviderCli(provider, cli, firstInstall);
         }).pipe(
           Effect.mapError((error) => {
             if (previousExecutable === undefined) delete this.#bundledExecutables[provider];

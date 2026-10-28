@@ -210,7 +210,8 @@ function runtime(
     ...(firstInstall ? { longStartTimeoutMs: FIRST_INSTALL_START_TIMEOUT_MS } : {}),
     preferredProvider: "antigravity",
     clientFactory: null,
-    bundledExecutables: firstInstall ? {} : { antigravity: executable },
+    // As main does, a first install names the path before the file is there.
+    bundledExecutables: { antigravity: firstInstall ? firstInstallExecutable : executable },
     credentials: { ...NO_PROVIDER_CREDENTIALS, providerTempDirectory: tempRoot, availableDiskBytes: freeBytes },
     redactMcp: (text) => text,
   });
@@ -226,12 +227,20 @@ function antigravityRow(providers: ProviderRuntime) {
   return providers.status().providers?.find((row) => row.id === ("antigravity" satisfies AgentProvider));
 }
 
+/** Writes the fake server as a managed install of version 1.2.1 under `installRoot`. */
+async function installFakeAgy(installRoot: string): Promise<string> {
+  const path = join(installRoot, "1.2.1", "bin", "agy_acp_server");
+  await mkdir(join(installRoot, "1.2.1", "bin"), { recursive: true });
+  await writeFile(join(installRoot, "1.2.1", ANTIGRAVITY_MANIFEST), JSON.stringify({ version: "1.2.1" }));
+  await writeFile(path, FAKE_AGY);
+  await chmod(path, 0o755);
+  return path;
+}
+
 const executable = join(root, "agy", "1.2.1", "bin", "agy_acp_server");
+const firstInstallExecutable = join(root, "agy-first-install", "1.2.1", "bin", "agy_acp_server");
 try {
-  await mkdir(join(root, "agy", "1.2.1", "bin"), { recursive: true });
-  await writeFile(join(root, "agy", "1.2.1", ANTIGRAVITY_MANIFEST), JSON.stringify({ version: "1.2.1" }));
-  await writeFile(executable, FAKE_AGY);
-  await chmod(executable, 0o755);
+  await installFakeAgy(join(root, "agy"));
   const cli: AgentCliInfo = { executable, version: "1.2.1", source: "managed" };
 
   // 1. A process that is stopped while it unpacks: its folder is in OpenBot's root and is removed.
@@ -464,7 +473,7 @@ try {
     firstInstall
       .updateProviderCli(
         "antigravity",
-        () => Effect.succeed(executable),
+        () => Effect.promise(() => installFakeAgy(join(root, "agy-first-install"))),
         new AbortController().signal,
         () => undefined,
       )
