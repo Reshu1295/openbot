@@ -26,6 +26,8 @@ android {
   defaultConfig {
     versionCode 1
     versionName '1.0.0'
+    // The app's release build applies these rules when it shrinks the code with R8.
+    consumerProguardFiles 'consumer-rules.pro'
   }
 }
 

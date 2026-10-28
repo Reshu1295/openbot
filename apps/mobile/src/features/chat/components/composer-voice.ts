@@ -20,18 +20,19 @@ export interface ComposerVoice {
   hearing: boolean;
   level: SharedValue<number>;
   presence: SharedValue<number>;
-  split: SharedValue<number>;
+  /** Dictation only: 0 with one round button, 1 with its two side buttons out. */
+  split?: SharedValue<number>;
   /** The mic of the composer opens the voice mode. */
   start: () => void;
   /** The name of the mic of the composer. */
   startLabel: string;
   center: { label: string; glyph: VoiceGlyph; pressable: boolean; busy: boolean; onPress: () => void };
-  /** The side buttons take presses. */
-  sides: boolean;
+  /** Dictation only: the side buttons take presses. */
+  sides?: boolean;
   leading: { label: string; onPress: () => void };
   trailing: { label: string; icon: "send" | "interrupt"; enabled: boolean; onPress: () => void };
   /** The call bar of a live conversation: who speaks or what it does, and the words heard or read. */
-  bar?: { title: string; caption: string; muted: boolean };
+  bar?: { title: string; caption: string };
 }
 
 const LIVE_PHASES = {
@@ -80,7 +81,7 @@ export function dictationVoice(voice: VoiceMode, t: MobileTranslate): ComposerVo
 }
 
 /**
- * A live conversation, as the voice pane on desktop: the round button mutes and unmutes the
+ * A live conversation, as the voice pane on desktop, drawn as the call bar: Mute mutes and unmutes the
  * microphone, End closes the conversation, and Interrupt stops the agent's reply or the wait for it.
  */
 export function liveVoice(live: LiveConversation, name: string, t: MobileTranslate): ComposerVoice {
@@ -93,7 +94,6 @@ export function liveVoice(live: LiveConversation, name: string, t: MobileTransla
     hearing,
     level: live.level,
     presence: live.presence,
-    split: live.split,
     start: live.start,
     startLabel: t("mobile.chat.liveVoice.start"),
     center: {
@@ -109,7 +109,6 @@ export function liveVoice(live: LiveConversation, name: string, t: MobileTransla
       busy: live.phase === "starting" || live.phase === "sending" || live.phase === "thinking",
       onPress: live.toggleMute,
     },
-    sides: !live.exit,
     leading: { label: t("mobile.chat.liveVoice.end"), onPress: live.end },
     trailing: {
       label: t("mobile.chat.liveVoice.interrupt"),
@@ -126,7 +125,6 @@ export function liveVoice(live: LiveConversation, name: string, t: MobileTransla
       }),
       // An error says why the conversation waits; otherwise the words heard, or the part read.
       caption: live.error ?? (live.caption || (hearing ? t("mobile.chat.liveVoice.speakNow") : "")),
-      muted: live.muted,
     },
   };
 }

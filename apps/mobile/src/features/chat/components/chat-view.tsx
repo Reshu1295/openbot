@@ -18,7 +18,6 @@ import { KeyboardGestureArea } from "react-native-keyboard-controller";
 import Animated, { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
-import { BloubAvatar } from "@/features/agents/components/bloub-avatar";
 import { getBloubAvatarColor } from "@/features/agents/model/bloub-activity";
 import { MobileConversationAnalytics } from "@/features/analytics/conversation";
 import { reportMobileNotification } from "@/features/analytics/failure-reports";
@@ -34,7 +33,7 @@ import type { ChatThreadMenu } from "@/features/chat/components/chat-thread-menu
 import { useChatAttachments } from "@/features/chat/components/use-chat-attachments";
 import { useChatMotion } from "@/features/chat/components/use-chat-motion";
 import type { QuestionPromptController } from "@/features/chat/components/use-question-prompt";
-import { VOICE_BAR_AVATAR_SIZE } from "@/features/chat/components/voice-call-bar";
+import { VoiceAgentAvatar } from "@/features/chat/components/voice-call-bar";
 import { useOutbox } from "@/features/chat/context/outbox-context";
 import { usePublishedQueuedChat } from "@/features/chat/context/queued-messages-context";
 import {
@@ -81,7 +80,7 @@ import { ChatQueueButton } from "./chat-queue-button";
 import { ChatSelectionBar } from "./chat-selection-bar";
 import { type ComposerVoice, dictationVoice, liveVoice } from "./composer-voice";
 import type { ChatQueueController } from "./use-chat-queue";
-import { useLiveConversation } from "./use-live-conversation";
+import { type LiveChannel, useLiveConversation } from "./use-live-conversation";
 import { useVoiceMode } from "./use-voice-mode";
 import { VoiceOverlay } from "./voice-overlay";
 
@@ -106,8 +105,10 @@ export interface ChatViewProps {
   /** The activity of each member agent that works in a channel. */
   activities?: MobileAgentActivity[];
   activeTurnId: string | null;
-  /** The agent's conversation, for the live voice conversation. Absent for a channel, which has none. */
+  /** The agent's conversation, for the live voice conversation. Absent for a channel. */
   conversation?: { messages: readonly ConversationMessage[]; activeTurnId: string | null } | null;
+  /** The channel's messages and leader, for the live voice conversation. Absent for an agent chat. */
+  liveChannel?: LiveChannel | null;
   /** Absent for a chat that cannot stop a turn, such as a channel. */
   stopTurn?: (turnId: string) => Promise<void>;
   questionForm?: QuestionPromptController;
@@ -212,6 +213,7 @@ export function ChatView({
   activities,
   activeTurnId,
   conversation = null,
+  liveChannel = null,
   stopTurn,
   questionForm,
   onSelectQuestion,
@@ -547,17 +549,24 @@ export function ChatView({
   });
   const writable = canSend && !readOnly && !notice;
   // Hands-free, as the voice pane on desktop: the agent hears a pause as the end of a turn, and its
-  // reply is read aloud. Only an agent chat has one conversation to follow.
+  // reply is read aloud. In a channel the leader answers, or the member the words name.
   const live = useLiveConversation({
     enabled: isFocused && writable,
     online: serverOnline,
     focused: isFocused,
     foreground: foregroundVisit,
     conversation,
+    channel: liveChannel,
     deliveries: queue?.deliveries ?? NO_DELIVERIES,
     outboxMessages,
     send: (text) => (writable ? deliver(text, null, []) : null),
   });
+  // The agent who speaks in a voice conversation: the agent of the chat, or the channel's leader, who
+  // gives out the channel's tasks.
+  const voiceAgent =
+    target.kind === "agent"
+      ? target
+      : (target.members.find((member) => member.id === (live.speakerId ?? channelLeadAgentId)) ?? null);
   // Not gated on `appActive`. Notification Center and other system overlays make iOS report the app
   // inactive, and a request must stay with its typed value. It goes when the app leaves.
   const showBrowserRequests = serverOnline && foregroundVisit && isFocused && !readOnly;
@@ -568,7 +577,7 @@ export function ChatView({
   const composerVoice: ComposerVoice =
     live.available || live.open
       ? {
-          ...liveVoice(live, target.name, t),
+          ...liveVoice(live, voiceAgent?.name ?? target.name, t),
           start: () => (replyVoiceReady() ? live.start() : router.push("/settings/voice")),
         }
       : dictationVoice(voice, t);
@@ -581,14 +590,16 @@ export function ChatView({
   const secretRequest =
     showBrowserRequests && !voiceOpen && !attachments.menuOpen ? chatBrowserRequests.find(asksForSecret) : undefined;
   const dark = useColorScheme() === "dark";
-  // The glow and the filled voice controls take the agent's own colour. A channel mixes the colours
-  // of its first members.
+  // The glow and the filled voice controls take that agent's colour. A channel with no leader mixes
+  // the colours of its first members.
   const voiceColors = useMemo(
     () =>
-      target.kind === "agent"
-        ? [getBloubAvatarColor(target.avatarSeed, target.avatarHue)]
-        : target.members.slice(0, 4).map((member) => getBloubAvatarColor(member.avatarSeed, member.avatarHue)),
-    [target],
+      voiceAgent
+        ? [getBloubAvatarColor(voiceAgent.avatarSeed, voiceAgent.avatarHue)]
+        : target.kind === "channel"
+          ? target.members.slice(0, 4).map((member) => getBloubAvatarColor(member.avatarSeed, member.avatarHue))
+          : [],
+    [voiceAgent, target],
   );
   const palette = useMemo(() => voicePalette(voiceColors, dark), [voiceColors, dark]);
   const accent = useMemo(() => voiceAccent(palette), [palette]);
@@ -1013,7 +1024,6 @@ export function ChatView({
             {dictating ? (
               <VoiceOverlay
                 voice={voice}
-                palette={palette}
                 hint={voice.phase === "listening" ? t("mobile.chat.voice.listening") : ""}
                 reply={replyTarget ? mentionDraft(replyTarget.body).text || t("mobile.chat.reply.attachment") : null}
                 muted={muted}
@@ -1170,16 +1180,16 @@ export function ChatView({
                   menuProgress={menuProgress}
                   stopping={stopping}
                   voice={composerVoice}
-                  voiceAccent={accent}
+                  // An agent's own colour; a channel keeps the default controls.
+                  voiceAccent={target.kind === "agent" ? accent : undefined}
                   voicePalette={palette}
                   voiceAvatar={
-                    target.kind === "agent" ? (
-                      <BloubAvatar
-                        agentId={target.id}
+                    voiceAgent ? (
+                      <VoiceAgentAvatar
+                        agentId={voiceAgent.id}
                         serverId={target.serverId}
-                        hue={target.avatarHue}
-                        seed={target.avatarSeed}
-                        size={VOICE_BAR_AVATAR_SIZE}
+                        seed={voiceAgent.avatarSeed}
+                        hue={voiceAgent.avatarHue}
                       />
                     ) : undefined
                   }

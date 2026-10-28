@@ -1,3 +1,4 @@
+import type { AvatarHue } from "@openbot/contracts/ipc";
 import { Spinner, Typography } from "heroui-native";
 import { useThemeColor } from "heroui-native/hooks";
 import Mic from "lucide-react-native/icons/mic";
@@ -7,16 +8,52 @@ import X from "lucide-react-native/icons/x";
 import { type ReactNode, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, { Extrapolation, interpolate, useAnimatedStyle } from "react-native-reanimated";
+import { useAgentColorTransition } from "@/features/agents/components/agent-color-glow";
+import { BloubAvatarPreview } from "@/features/agents/components/bloub-avatar";
+import { getBloubAvatarColor } from "@/features/agents/model/bloub-activity";
+import { useAgentActivity } from "@/features/workspace/components/use-agent-activity";
+import { agentActivityMood } from "@/features/workspace/model/agent-activity";
 import type { VoicePalette } from "../model/voice-palette";
 import type { ComposerVoice } from "./composer-voice";
 import { VoiceAurora } from "./voice-aurora";
 
-export const VOICE_BAR_AVATAR_SIZE = 40;
+const VOICE_BAR_AVATAR_SIZE = 40;
 /** The bar is as tall as the round voice button of dictation. */
 const VOICE_BUTTON_HEIGHT = 64;
 const BUTTON_SIZE = 40;
 /** The content rises this far into place while it fades in, after the card has its shape. */
 const CONTENT_RISE = 6;
+
+/**
+ * The agent of the call bar. It stays mounted when another channel member takes over, so the face
+ * morphs into the new agent's shape and the colour eases to its own, as in the agent editor, instead
+ * of one avatar replacing the other. Both run on the UI thread.
+ */
+export function VoiceAgentAvatar({
+  agentId,
+  serverId,
+  seed,
+  hue,
+}: {
+  agentId: string;
+  serverId: string;
+  seed: string;
+  hue: AvatarHue | null;
+}) {
+  const animatedColor = useAgentColorTransition(getBloubAvatarColor(seed, hue));
+  const activity = useAgentActivity(agentId);
+  return (
+    <BloubAvatarPreview
+      agentId={agentId}
+      serverId={serverId}
+      seed={seed}
+      hue={hue}
+      size={VOICE_BAR_AVATAR_SIZE}
+      mood={agentActivityMood(activity)}
+      animatedColor={animatedColor}
+    />
+  );
+}
 
 function BarButton({
   label,
@@ -79,15 +116,16 @@ export function VoiceCallBar({
   bar,
   avatar,
   palette,
+  accent,
 }: {
   voice: ComposerVoice;
   bar: NonNullable<ComposerVoice["bar"]>;
   avatar?: ReactNode;
   palette?: VoicePalette;
+  /** The agent's colour for End, and the glyph colour on it. Without it End looks like Mute and Stop. */
+  accent?: { fill: string; glyph: string };
 }) {
   const text = String(useThemeColor("foreground"));
-  const danger = String(useThemeColor("danger"));
-  const onDanger = String(useThemeColor("danger-foreground"));
   const [width, setWidth] = useState(0);
   const presence = voice.presence;
   const contentStyle = useAnimatedStyle(() => {
@@ -145,16 +183,21 @@ export function VoiceCallBar({
           busy={voice.center.busy}
           onPress={voice.center.onPress}
         >
-          {voice.center.busy ? (
+          {voice.center.glyph === "spinner" ? (
             <Spinner size="sm" color={text} />
-          ) : bar.muted ? (
+          ) : voice.center.glyph === "micOff" ? (
             <MicOff color={text} size={19} strokeWidth={1.8} />
           ) : (
             <Mic color={text} size={19} strokeWidth={1.8} />
           )}
         </BarButton>
-        <BarButton label={voice.leading.label} tint={danger} background={text} onPress={voice.leading.onPress}>
-          <X color={onDanger} size={19} strokeWidth={2} />
+        <BarButton
+          label={voice.leading.label}
+          tint={accent?.fill ?? null}
+          background={text}
+          onPress={voice.leading.onPress}
+        >
+          <X color={accent?.glyph ?? text} size={19} strokeWidth={2} />
         </BarButton>
       </Animated.View>
     </View>

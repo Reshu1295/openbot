@@ -109,12 +109,14 @@ class SpeechModule : Module() {
     }
 
     /**
-     * The directory for downloaded voice models, outside Auto Backup: the phone can download them
-     * again, and a 145 MB model is over the backup quota of the whole app.
+     * The directory for downloaded voice models. It is in the app's files, because the app's file
+     * system API writes only there and in the cache. Auto Backup leaves it out: the app's backup rules,
+     * from expo-secure-store, include only shared preferences. A model is over the backup quota of the
+     * whole app, and the phone can download it again.
      */
     Function("modelRoot") {
       val context = appContext.reactContext ?: throw SpeechModelException()
-      val root = File(context.noBackupFilesDir, "voice").apply { mkdirs() }
+      val root = File(context.filesDir, "voice").apply { mkdirs() }
       Uri.fromFile(root).toString()
     }
 

@@ -524,7 +524,6 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
         {voiceOpen ? (
           <VoiceOverlay
             voice={voice}
-            palette={palette}
             hint={voice.phase === "listening" ? t("mobile.chat.voice.listening") : ""}
             reply={null}
             muted={muted}

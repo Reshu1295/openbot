@@ -1,4 +1,11 @@
-import { type ConversationMessage, latestTurnAnswer, type QueueDelivery } from "@openbot/contracts/ipc";
+import {
+  type ChannelMessage,
+  type ChannelTask,
+  type ConversationMessage,
+  isAgentAnswer,
+  latestTurnAnswer,
+  type QueueDelivery,
+} from "@openbot/contracts/ipc";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useEffect, useId, useRef, useState } from "react";
 import { BackHandler } from "react-native";
@@ -8,7 +15,6 @@ import {
   ReduceMotion,
   type SharedValue,
   useSharedValue,
-  withDelay,
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
@@ -31,8 +37,6 @@ const TURN_END_SILENCE_MS = 1_300;
 const REPLY_GRACE_MS = 5_000;
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 const OPEN_MS = 460;
-const SPLIT_MS = 320;
-const MERGE_MS = 180;
 const CLOSE_MS = 400;
 const SPEAKING_PULSE_MS = 420;
 
@@ -43,6 +47,18 @@ interface PendingReply {
   turnId: string | null;
   /** When the turn showed as ended with no answer yet. */
   endedAt: number | null;
+  /**
+   * In a channel: the messages that were there when the words were sent, and the member that the
+   * words name at their start, whose answer is read. A channel send has no host message id.
+   */
+  channel: { known: ReadonlySet<string>; knownTasks: ReadonlySet<string>; namedId: string | null } | null;
+}
+
+/** A channel's messages, tasks and leader, for a voice conversation in the channel. */
+export interface LiveChannel {
+  messages: readonly ChannelMessage[];
+  tasks: readonly Pick<ChannelTask, "id" | "ownerAgentId">[];
+  leadAgentId: string | null;
 }
 
 interface LiveConversationInput {
@@ -52,8 +68,10 @@ interface LiveConversationInput {
   online: boolean;
   focused: boolean;
   foreground: boolean;
-  /** The agent's conversation; null for a chat that has none, such as a channel. */
+  /** The agent's conversation; null in a channel. */
   conversation: { messages: readonly ConversationMessage[]; activeTurnId: string | null } | null;
+  /** The channel; null in an agent chat. */
+  channel: LiveChannel | null;
   deliveries: readonly Pick<QueueDelivery, "messageId" | "turnId">[];
   outboxMessages: readonly OutboxMessage[];
   /** Sends what the user said. Null when the chat could not take it. */
@@ -67,6 +85,8 @@ interface LiveConversationState {
   caption: string;
   error: string | null;
   exit: "cancel" | null;
+  /** In a channel, the agent whose answer is read now; null before an answer, and in an agent chat. */
+  speakerId: string | null;
 }
 
 const CLOSED: LiveConversationState = {
@@ -76,6 +96,7 @@ const CLOSED: LiveConversationState = {
   caption: "",
   error: null,
   exit: null,
+  speakerId: null,
 };
 
 export interface LiveConversation extends LiveConversationState {
@@ -85,8 +106,6 @@ export interface LiveConversation extends LiveConversationState {
   level: SharedValue<number>;
   /** 0 with the chat, 1 with the conversation. */
   presence: SharedValue<number>;
-  /** 0 with one round button, 1 with End and Interrupt beside it. */
-  split: SharedValue<number>;
   start: () => void;
   toggleMute: () => void;
   /** Stops the reply, or the wait for it, and listens again. The agent's turn goes on. */
@@ -106,7 +125,6 @@ export function useLiveConversation(input: LiveConversationInput): LiveConversat
   const inputRef = useRef(input);
   inputRef.current = input;
   const presence = useSharedValue(0);
-  const split = useSharedValue(0);
   const speechLevel = useSharedValue(0);
   const dictationRef = useRef<VoiceDictation | null>(null);
   const [controller] = useState(() =>
@@ -115,7 +133,6 @@ export function useLiveConversation(input: LiveConversationInput): LiveConversat
       dictation: () => dictationRef.current,
       setState,
       presence,
-      split,
       speechLevel,
     }),
   );
@@ -125,12 +142,12 @@ export function useLiveConversation(input: LiveConversationInput): LiveConversat
     onSpeaking: controller.speaking,
   });
   dictationRef.current = dictation;
-  const { conversation, deliveries, outboxMessages } = input;
-  const available = dictation.available && Boolean(speechNative) && conversation !== null;
+  const { conversation, channel, deliveries, outboxMessages } = input;
+  const available = dictation.available && Boolean(speechNative) && (conversation !== null || channel !== null);
 
   useEffect(() => {
-    controller.followReply({ conversation, deliveries, outboxMessages });
-  }, [controller, conversation, deliveries, outboxMessages]);
+    controller.followReply({ conversation, channel, deliveries, outboxMessages });
+  }, [controller, conversation, channel, deliveries, outboxMessages]);
 
   useEffect(() => {
     controller.recognizerPhase(dictation.phase);
@@ -175,7 +192,6 @@ export function useLiveConversation(input: LiveConversationInput): LiveConversat
     available,
     level: state.phase === "speaking" ? speechLevel : dictation.level,
     presence,
-    split,
     start: controller.start,
     toggleMute: controller.toggleMute,
     interrupt: controller.interrupt,
@@ -192,14 +208,12 @@ function createController({
   dictation,
   setState,
   presence,
-  split,
   speechLevel,
 }: {
   input: () => LiveConversationInput;
   dictation: () => VoiceDictation | null;
   setState: (change: (current: LiveConversationState) => LiveConversationState) => void;
   presence: SharedValue<number>;
-  split: SharedValue<number>;
   speechLevel: SharedValue<number>;
 }) {
   let open = false;
@@ -211,6 +225,7 @@ function createController({
   /** The reply that is read aloud now, and the answer messages of its turn in order. */
   let reading: ReplyReading | null = null;
   let readIds: string[] = [];
+  let speakerId: string | null = null;
   const readTexts = new Map<string, string>();
   /** Each turn, interruption and the end make the work of the turn before them stale. */
   let generation = 0;
@@ -263,6 +278,8 @@ function createController({
     heard = "";
     setPhase("listening");
     setCaption("");
+    // The next words go to the channel, so the leader listens again.
+    setSpeaker(null);
     if (muted || !open) return;
     sessionListened = false;
     if (!dictation()?.start("")) setMuted(true);
@@ -293,7 +310,20 @@ function createController({
       return;
     }
     turns += 1;
-    pending = { clientMessageId: message.clientMessageId, messageId: message.messageId, turnId: null, endedAt: null };
+    const room = input().channel;
+    pending = {
+      clientMessageId: message.clientMessageId,
+      messageId: message.messageId,
+      turnId: null,
+      endedAt: null,
+      channel: room
+        ? {
+            known: new Set(room.messages.map((entry) => entry.id)),
+            knownTasks: new Set(room.tasks.map((task) => task.id)),
+            namedId: message.target.kind === "channel" ? message.target.recipientAgentId : null,
+          }
+        : null,
+    };
     setPhase("thinking");
     update({ caption: text, error: null });
     followReply();
@@ -347,18 +377,24 @@ function createController({
   function followReply(
     {
       conversation,
+      channel,
       deliveries,
       outboxMessages,
-    }: Pick<LiveConversationInput, "conversation" | "deliveries" | "outboxMessages"> = input(),
+    }: Pick<LiveConversationInput, "conversation" | "channel" | "deliveries" | "outboxMessages"> = input(),
   ): void {
     const current = pending;
-    if (!current || !conversation || (phase !== "thinking" && phase !== "speaking")) return;
+    if (!current || (phase !== "thinking" && phase !== "speaking")) return;
     const outboxMessage = outboxMessages.find((message) => message.clientMessageId === current.clientMessageId);
     if (outboxMessage && (outboxMessage.state === "failed" || outboxMessage.returned || outboxMessage.stopped)) {
       listen();
       update({ caption: outboxMessage.text, error: currentText().t("mobile.chat.liveVoice.notSent") });
       return;
     }
+    if (current.channel) {
+      if (channel) followChannelReply(current.channel, channel);
+      return;
+    }
+    if (!conversation) return;
     current.messageId = outboxMessage?.messageId ?? current.messageId;
     current.turnId ??= current.messageId ? liveReplyTurn(conversation.messages, deliveries, current.messageId) : null;
     const turnId = current.turnId;
@@ -410,6 +446,37 @@ function createController({
     else setMuted(true);
   }
 
+  /** The agent in the call bar. Null shows the channel's leader. */
+  function setSpeaker(agentId: string | null): void {
+    if (speakerId === agentId) return;
+    speakerId = agentId;
+    update({ speakerId });
+  }
+
+  /**
+   * In a channel the answer is the first new answer of any agent: the leader's, or the answer of the
+   * member that the leader gave the task to. Words that name a member at their start wait for that
+   * member. The call bar shows the member as soon as a new task is given to it, and then the agent
+   * that answers. The answer is read while it streams.
+   */
+  function followChannelReply(sent: NonNullable<PendingReply["channel"]>, channel: LiveChannel): void {
+    const assignee = channel.tasks.find((task) => !sent.knownTasks.has(task.id) && task.ownerAgentId)?.ownerAgentId;
+    if (assignee && phase === "thinking") setSpeaker(assignee);
+    const entry = channel.messages.find(
+      (candidate) =>
+        !sent.known.has(candidate.id) &&
+        candidate.author.kind === "agent" &&
+        (sent.namedId === null || candidate.author.id === sent.namedId) &&
+        isAgentAnswer(candidate.message),
+    );
+    if (!entry) return;
+    setSpeaker(entry.author.id);
+    const { status } = entry.message;
+    if (status === "streaming" || status === "completed") readAnswer(entry.message, status === "completed");
+    // A stopped or failed answer is not read, as in an agent chat.
+    else listen();
+  }
+
   /** No reply comes while the server is away, so the conversation stops until it is back. */
   function connection(online: boolean): void {
     if (!open || exiting) return;
@@ -455,8 +522,8 @@ function createController({
     recognizerPhase,
     connection,
     start(): void {
-      const { conversation, enabled, online } = input();
-      if (open || !speechNative || !conversation || !enabled) return;
+      const { conversation, channel, enabled, online } = input();
+      if (open || !speechNative || (!conversation && !channel) || !enabled) return;
       open = true;
       exiting = false;
       muted = false;
@@ -469,15 +536,8 @@ function createController({
         server_kind: "remote",
         result: "succeeded",
       });
+      // The composer turns into the call bar on this progress.
       presence.set(withTiming(1, { duration: OPEN_MS, easing: EASE_OUT, reduceMotion: ReduceMotion.System }));
-      // End and Interrupt come out of the round button once it has formed.
-      split.set(
-        withDelay(
-          OPEN_MS,
-          withTiming(1, { duration: SPLIT_MS, easing: EASE_OUT, reduceMotion: ReduceMotion.System }),
-          ReduceMotion.System,
-        ),
-      );
       // Started while the server is away, it waits for the server as it would after a disconnect.
       if (online) listen();
       else {
@@ -520,16 +580,11 @@ function createController({
         duration_ms: performance.now() - startedAt,
         turn_count: turns,
       });
-      // The side buttons go back into the circle first, then the circle opens into the composer.
-      split.set(withTiming(0, { duration: MERGE_MS, easing: EASE_OUT, reduceMotion: ReduceMotion.System }));
+      // The call bar opens back into the composer.
       presence.set(
-        withDelay(
-          MERGE_MS / 2,
-          withTiming(0, { duration: CLOSE_MS, easing: EASE_OUT, reduceMotion: ReduceMotion.System }, (finished) => {
-            if (finished) scheduleOnRN(closed);
-          }),
-          ReduceMotion.System,
-        ),
+        withTiming(0, { duration: CLOSE_MS, easing: EASE_OUT, reduceMotion: ReduceMotion.System }, (finished) => {
+          if (finished) scheduleOnRN(closed);
+        }),
       );
     },
     dispose(): void {

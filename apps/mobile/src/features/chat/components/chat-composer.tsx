@@ -298,8 +298,8 @@ export const ChatComposer = memo(function ChatComposer({
   const isFocused = useIsFocused();
   const latestTextRef = useRef(draft);
   const [sendGate] = useState(createComposerSendGate);
-  // The chat owns the voice mode: its overlay covers the whole chat. The
-  // composer only changes shape for it.
+  // The chat owns the voice mode. The composer only changes shape for it: the
+  // round button of dictation, or the call bar of a live conversation.
   const voiceOpen = voice?.open ?? false;
   // A live conversation turns the card into a call bar of the full width, not the round button.
   const voiceBar = voice?.bar;
@@ -1295,7 +1295,13 @@ export const ChatComposer = memo(function ChatComposer({
               </View>
             </View>
             {voiceOpen && voice && voiceBar ? (
-              <VoiceCallBar voice={voice} bar={voiceBar} avatar={voiceAvatar} palette={voicePalette} />
+              <VoiceCallBar
+                voice={voice}
+                bar={voiceBar}
+                avatar={voiceAvatar}
+                palette={voicePalette}
+                accent={voiceAccent}
+              />
             ) : null}
           </AnimatedGlassView>
         </GestureDetector>
