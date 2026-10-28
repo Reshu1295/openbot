@@ -101,5 +101,6 @@
   font-size: var(--openbot-text-sm);
   line-height: 1;
   font-weight: var(--openbot-weight-semibold);
+  font-variant-numeric: tabular-nums;
   letter-spacing: -0.04em;
 }

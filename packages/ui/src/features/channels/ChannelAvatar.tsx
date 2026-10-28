@@ -27,8 +27,8 @@ export function ChannelAvatar(props: { members: ChannelMember[]; agents: AgentPr
   const shown = () => {
     if (!cluster()) return props.members.slice(0, ROW_LIMIT);
     if (props.members.length <= CLUSTER_CELLS) return props.members;
-    const faces = props.members.length - (CLUSTER_CELLS - 1) >= 10 ? CLUSTER_CELLS - 2 : CLUSTER_CELLS - 1;
-    return props.members.slice(0, faces);
+    const countWithThreeFaces = props.members.length - (CLUSTER_CELLS - 1);
+    return props.members.slice(0, countWithThreeFaces >= 10 ? CLUSTER_CELLS - 2 : CLUSTER_CELLS - 1);
   };
   const hidden = () => props.members.length - shown().length;
   return (
