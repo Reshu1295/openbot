@@ -197,6 +197,15 @@
   font-weight: var(--openbot-weight-medium);
 }
 
+/* The agent keeps its name up to half the row. A long model name gives up its room, so it stays in the field. */
+.wfn-stage .wfn-agent-pill {
+  max-width: 50%;
+}
+
+.wfn-stage .wfn-model-pill {
+  flex-shrink: 1;
+}
+
 .wfn-stage .wfn-field-foot .provider-model-trigger {
   gap: var(--openbot-space-1);
   height: 20px;
