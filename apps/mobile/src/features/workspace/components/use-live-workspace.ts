@@ -6,9 +6,11 @@ import {
   useMobileWorkspaceSelector,
 } from "@/features/workspace/context/mobile-workspace-context";
 import type { PendingApproval } from "@/features/workspace/model/pending-approvals";
+import type { PendingPrompt } from "@/features/workspace/model/pending-prompts";
 
 const NO_REQUESTS: BrowserTakeoverRequest[] = [];
 const NO_APPROVALS: readonly PendingApproval[] = [];
+const NO_PROMPTS: readonly PendingPrompt[] = [];
 
 /** The store does not change, so reading it does not render the component again. */
 export function selectLiveState(workspace: MobileWorkspaceContextValue) {
@@ -74,5 +76,11 @@ export function useBrowserTabsLoaded(serverId: string) {
 export function useApprovalRequests(serverId: string) {
   const liveState = useMobileWorkspaceSelector(selectLiveState);
   const select = useCallback(() => liveState.get().approvalRequests[serverId] ?? NO_APPROVALS, [liveState, serverId]);
+  return useSyncExternalStore(liveState.subscribe, select);
+}
+/** The questions this server waits on, in the order they arrived. Re-renders only when that list changes. */
+export function usePromptRequests(serverId: string) {
+  const liveState = useMobileWorkspaceSelector(selectLiveState);
+  const select = useCallback(() => liveState.get().promptRequests[serverId] ?? NO_PROMPTS, [liveState, serverId]);
   return useSyncExternalStore(liveState.subscribe, select);
 }

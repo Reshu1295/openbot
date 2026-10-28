@@ -37,7 +37,11 @@ import type { AgentChatTarget } from "@/features/chat/model/chat-target";
 import { voiceAccent, voicePalette } from "@/features/chat/model/voice-palette";
 import { agentTaskHoldText } from "@/features/servers/model/agent-task-text";
 import { ConnectionStatus } from "@/features/workspace/components/connection-status";
-import { useApprovalRequests, useBrowserRequests } from "@/features/workspace/components/use-live-workspace";
+import {
+  useApprovalRequests,
+  useBrowserRequests,
+  usePromptRequests,
+} from "@/features/workspace/components/use-live-workspace";
 import { useMobileWorkspace } from "@/features/workspace/context/mobile-workspace-context";
 import type { MobileAgentActivity } from "@/features/workspace/model/agent-activity";
 import { queryKeys } from "@/features/workspace/model/query-keys";
@@ -155,6 +159,7 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
     [conversation.data],
   );
   const activeTurnId = task?.activeTurnId ?? null;
+  const threadId = conversation.data?.threadId ?? null;
   // As in the agent's chat: the open question of the running turn has the form; earlier ones show their result.
   const activePrompt = messages.findLast(
     (row) => row.kind === "question" && !row.prompt.resolution && activeTurnId !== null && row.turnId === activeTurnId,
@@ -163,15 +168,40 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
     (_agentId: string, input: RespondToPromptInput) => respondToTaskPrompt(input, serverId),
     [respondToTaskPrompt, serverId],
   );
+  const serverPrompts = usePromptRequests(serverId);
+  /**
+   * A question of this task that the task's messages do not hold, such as one whose message the host
+   * did not put in the conversation: the request belongs to the host, so the form still shows here.
+   */
+  const pendingQuestion = useMemo(() => {
+    if (activePrompt?.kind === "question" || threadId === null) return undefined;
+    const request = serverPrompts.find(
+      (item) =>
+        item.agentId === agentId &&
+        item.threadId === threadId &&
+        !messages.some(
+          (message) =>
+            message.kind === "question" &&
+            String(message.prompt.requestId) === String(item.requestId) &&
+            message.prompt.resolution !== null,
+        ),
+    );
+    if (!request) return undefined;
+    return {
+      id: `asked:${request.requestId}`,
+      kind: "question" as const,
+      turnId: request.turnId,
+      prompt: { requestId: request.requestId, questions: request.questions, resolution: null },
+    };
+  }, [activePrompt, serverPrompts, agentId, threadId, messages]);
   const questionForm = useQuestionPrompt(
     agentId,
-    activePrompt?.kind === "question" ? activePrompt : undefined,
+    activePrompt?.kind === "question" ? activePrompt : pendingQuestion,
     online,
     respond,
   );
   // The composer answers only after the person chooses it in the form. A private answer has its own field.
   const answersQuestion = Boolean(questionForm.question && !questionForm.question.isSecret && questionForm.replyInChat);
-  const threadId = conversation.data?.threadId ?? null;
   const browserRequests = useBrowserRequests(serverId);
   // Only the browser requests of the task's own thread; the agent's chat shows those of its thread.
   const taskBrowserRequests = useMemo(
@@ -449,6 +479,7 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
           appActive={appActive}
           activeTurnId={activeTurnId}
           questionForm={questionForm}
+          pendingQuestion={pendingQuestion ? { prompt: pendingQuestion.prompt, controller: questionForm } : undefined}
           activityAccessory={taskNotes}
           approvals={approvals}
           browserRequests={taskBrowserRequests}

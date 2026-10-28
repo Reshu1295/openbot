@@ -5,7 +5,7 @@ import { ChatChannelWorkRow } from "@/features/channels/components/chat-channel-
 import { useChannels } from "@/features/channels/components/use-channels";
 import { useAgentViewOnly } from "@/features/servers/model/use-server-roles";
 import { useAgentActivity } from "@/features/workspace/components/use-agent-activity";
-import { useApprovalRequests } from "@/features/workspace/components/use-live-workspace";
+import { useApprovalRequests, usePromptRequests } from "@/features/workspace/components/use-live-workspace";
 import {
   type MobileAgent,
   useMobileWorkspaceReader,
@@ -196,9 +196,37 @@ export function MobileChatView({
   );
   const viewOnly = useAgentViewOnly(agent.serverId, agent.id);
   const mentionSkills = useAgentMentionSkills(agent.id, agent.serverId, showsOnline(server));
+  const serverPrompts = usePromptRequests(agent.serverId);
+  /**
+   * A question that this chat shows no message for. The host owns the request, not the message: an
+   * agent can ask in another thread than this chat, or the message can be outside the page that the
+   * phone holds, and the person must still answer it here instead of walking to a computer.
+   */
+  const pendingQuestion = useMemo(() => {
+    if (activePrompt?.kind === "question") return undefined;
+    const request = serverPrompts.find(
+      (item) =>
+        item.agentId === agent.id &&
+        (threadId === null || item.threadId === threadId) &&
+        // A question that this list already shows as answered keeps its own row.
+        !messages.some(
+          (message) =>
+            message.kind === "question" &&
+            String(message.prompt.requestId) === String(item.requestId) &&
+            message.prompt.resolution !== null,
+        ),
+    );
+    if (!request) return undefined;
+    return {
+      id: `asked:${request.requestId}`,
+      kind: "question" as const,
+      turnId: request.turnId,
+      prompt: { requestId: request.requestId, questions: request.questions, resolution: null },
+    };
+  }, [activePrompt, serverPrompts, agent.id, threadId, messages]);
   const questionForm = useQuestionPrompt(
     agent.id,
-    activePrompt?.kind === "question" ? activePrompt : undefined,
+    activePrompt?.kind === "question" ? activePrompt : pendingQuestion,
     showsOnline(server) && !viewOnly,
     respondToPrompt,
   );
@@ -233,6 +261,7 @@ export function MobileChatView({
       activeTurnId={conversation?.activeTurnId ?? null}
       stopTurn={stopTurn}
       questionForm={questionForm}
+      pendingQuestion={pendingQuestion ? { prompt: pendingQuestion.prompt, controller: questionForm } : undefined}
       activityAccessory={activityAccessory}
       threadId={threadId}
       approvals={approvals}

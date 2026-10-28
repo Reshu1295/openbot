@@ -1,4 +1,5 @@
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
+import type { ConversationQuestionPrompt } from "@openbot/contracts/ipc";
 import { markdownPlainText } from "@openbot/contracts/markdown-preview-text";
 import { serializeSelectionInstruction } from "@openbot/contracts/selection-instruction";
 import { type CauseCode, classifyFailure, type FailureProperties } from "@openbot/telemetry";
@@ -102,6 +103,11 @@ export interface ChatViewProps {
   /** Absent for a chat that cannot stop a turn, such as a channel. */
   stopTurn?: (turnId: string) => Promise<void>;
   questionForm?: QuestionPromptController;
+  /**
+   * A question that waits on the host and that this chat has no message row for. Its form sits above
+   * the composer, as the approvals do, so a question asked in another thread stays answerable.
+   */
+  pendingQuestion?: { prompt: ConversationQuestionPrompt; controller?: QuestionPromptController };
   /** Opens the form of an open question, in a channel where several agents can ask. */
   onSelectQuestion?: (messageId: string) => void;
   /** A channel task needs the user. */
@@ -201,6 +207,7 @@ export function ChatView({
   activeTurnId,
   stopTurn,
   questionForm,
+  pendingQuestion,
   onSelectQuestion,
   needsAction = false,
   channelLeadAgentId = null,
@@ -932,6 +939,7 @@ export function ChatView({
               // The form is a new object on each render. Without a question the list does not read it,
               // so it is left out and does not draw the list again.
               questionForm={questionForm?.messageId ? questionForm : undefined}
+              pendingQuestion={readOnly ? undefined : pendingQuestion}
               onSelectQuestion={readOnly ? undefined : onSelectQuestion}
               activityAccessory={activityAccessory}
               approvals={readOnly ? undefined : approvals}
