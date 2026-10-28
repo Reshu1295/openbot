@@ -42,6 +42,7 @@ import {
   type PendingChatMessage,
   presentChatMessages,
 } from "@/features/chat/model/chat-messages";
+import { replyVoiceReady } from "@/features/voice/model/reply-voice";
 import { ConnectionStatus } from "@/features/workspace/components/connection-status";
 import { useBrowserRequests } from "@/features/workspace/components/use-live-workspace";
 import type { MobileAgent } from "@/features/workspace/context/mobile-workspace-context";
@@ -570,7 +571,15 @@ export function ChatView({
   const showBrowserRequests = serverOnline && foregroundVisit && isFocused && !readOnly;
   // The mic of the composer: a live conversation in an agent chat, as on desktop. A channel has no
   // one conversation to follow, so its mic dictates a message for review.
-  const composerVoice: ComposerVoice = live.available || live.open ? liveVoice(live, t) : dictationVoice(voice, t);
+  // With no voice ready, the mic opens Settings > Voice, where the user downloads Supertonic 3 or adds
+  // an ElevenLabs key.
+  const composerVoice: ComposerVoice =
+    live.available || live.open
+      ? {
+          ...liveVoice(live, t),
+          start: () => (replyVoiceReady() ? live.start() : router.push("/settings/voice")),
+        }
+      : dictationVoice(voice, t);
   const voiceOpen = voice.stage !== "closed" || live.open;
   // A password or a code is typed where the composer is, so the screen has one field. The voice
   // mode and the attachment card keep the composer until they close. Other secret requests wait.

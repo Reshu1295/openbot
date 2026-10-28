@@ -164,6 +164,12 @@ export const messages = {
   "mobile.chat.liveVoice.notSent": "Сообщение не отправлено. Скажите ещё раз.",
   "mobile.chat.liveVoice.offline": "Сервер не подключён. Разговор продолжится, когда он снова подключится.",
   "mobile.chat.liveVoice.speakFailed": "Не удалось прочитать ответ вслух.",
+  "mobile.chat.liveVoice.voiceNotReady": "Выберите голос ответов в Настройки > Голос.",
+  "mobile.chat.liveVoice.languageUnsupported": "Supertonic 3 не читает этот язык.",
+  "mobile.chat.liveVoice.elevenLabsKeyInvalid": "ElevenLabs не принял ключ API.",
+  "mobile.chat.liveVoice.elevenLabsPermission":
+    "У ключа ElevenLabs нет нужного разрешения. Проверьте его в Настройки > Голос.",
+  "mobile.chat.liveVoice.networkNeeded": "ElevenLabs нужно подключение к сети.",
   "mobile.chat.composer.addAttachment": "Добавить вложение",
   "mobile.chat.composer.ask": "Спросить: {name}",
   "mobile.chat.composer.stopFailed": "Не удалось остановить агента. Возможно, он уже закончил.",

@@ -37,6 +37,8 @@
     "./markdown-lists": "./src/markdown-lists.ts",
     "./markdown-preview-text": "./src/markdown-preview-text.ts",
     "./selection-instruction": "./src/selection-instruction.ts",
+    "./speech-language": "./src/speech-language.ts",
+    "./speech-models": "./src/speech-models.ts",
     "./speech-text": "./src/speech-text.ts",
     "./agent-memory-context": "./src/agent-memory-context.ts",
     "./ipc": "./src/ipc.ts",

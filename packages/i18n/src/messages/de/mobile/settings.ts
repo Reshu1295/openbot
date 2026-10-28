@@ -170,4 +170,68 @@ export const messages = {
   "mobile.settings.profile.signOutBody":
     "Verbinde dich erneut, indem du einen neuen Code aus OpenBot auf deinem Desktop scannst.",
   "mobile.settings.profile.signOut": "Abmelden",
+  "mobile.settings.voice.title": "Stimme",
+  "mobile.settings.voice.sample": "Hallo. So lese ich dir meine Antworten vor.",
+  "mobile.settings.voice.voice": "Stimme",
+  "mobile.settings.voice.listen": "Anhören",
+  "mobile.settings.voice.stop": "Stopp",
+  "mobile.settings.voice.unavailable":
+    "Diese App-Version kann Antworten nicht vorlesen. Aktualisiere die App für Sprachgespräche.",
+  "mobile.settings.voice.removeFailed": "Entfernen fehlgeschlagen. Versuche es erneut.",
+  "mobile.settings.voice.engine.title": "Antwortstimme",
+  "mobile.settings.voice.engine.footer": "Die markierte Stimme liest die Antworten des Agenten im Sprachgespräch vor.",
+  "mobile.settings.voice.engine.supertonic": "Supertonic 3",
+  "mobile.settings.voice.engine.elevenLabs": "ElevenLabs",
+  "mobile.settings.voice.supertonic.title": "Supertonic 3",
+  "mobile.settings.voice.supertonic.footer":
+    "Lade das Modell einmal herunter, am besten im WLAN. Es bleibt auf diesem Telefon, bis du es entfernst.",
+  "mobile.settings.voice.supertonic.model": "Sprachmodell",
+  "mobile.settings.voice.supertonic.downloading": "Lädt… {percent}",
+  "mobile.settings.voice.supertonic.ready": "Heruntergeladen · {size}",
+  "mobile.settings.voice.supertonic.missing": "Nicht heruntergeladen · {size}",
+  "mobile.settings.voice.supertonic.verifyFailed": "Eine Datei war beschädigt. Lade erneut herunter.",
+  "mobile.settings.voice.supertonic.downloadFailed":
+    "Der Download wurde unterbrochen. Prüfe die Verbindung und lade erneut herunter.",
+  "mobile.settings.voice.supertonic.download": "Laden",
+  "mobile.settings.voice.supertonic.remove": "Entfernen",
+  "mobile.settings.voice.supertonic.removeTitle": "Sprachmodell entfernen?",
+  "mobile.settings.voice.supertonic.removeBody":
+    "Supertonic 3 liest Antworten erst wieder vor, wenn du es erneut herunterlädst.",
+  "mobile.settings.voice.supertonic.female": "Weibliche Stimme {number}",
+  "mobile.settings.voice.supertonic.male": "Männliche Stimme {number}",
+  "mobile.settings.voice.elevenLabs.title": "ElevenLabs",
+  "mobile.settings.voice.elevenLabs.footer":
+    "OpenBot sendet den Text jeder Antwort mit deinem Schlüssel an ElevenLabs, und ElevenLabs berechnet dein Konto. Der Schlüssel bleibt im Schlüsselbund dieses Telefons.",
+  "mobile.settings.voice.elevenLabs.key": "API-Schlüssel",
+  "mobile.settings.voice.elevenLabs.keySaved": "Auf diesem Telefon gespeichert",
+  "mobile.settings.voice.elevenLabs.chooseVoice": "Stimme wählen",
+  "mobile.settings.voice.elevenLabs.voicesFailed": "Deine ElevenLabs-Stimmen konnten nicht geladen werden.",
+  "mobile.settings.voice.elevenLabs.removeKey": "Schlüssel entfernen",
+  "mobile.settings.voice.elevenLabs.removeTitle": "ElevenLabs-Schlüssel entfernen?",
+  "mobile.settings.voice.elevenLabs.removeBody": "Supertonic 3 liest die Antworten wieder vor.",
+  "mobile.settings.voice.elevenLabs.saveKey": "Schlüssel speichern",
+  "mobile.settings.voice.elevenLabs.testing": "Schlüssel wird geprüft",
+  "mobile.settings.voice.elevenLabs.keyHint": "OpenBot prüft beide Berechtigungen vor dem Speichern.",
+  "mobile.settings.voice.elevenLabs.testFailed": "ElevenLabs hat nicht geantwortet. Versuche es erneut.",
+  "mobile.settings.voice.elevenLabs.getKey": "API-Schlüssel holen",
+  "mobile.settings.voice.engine.supertonicReady": "Auf diesem Telefon · {voice}",
+  "mobile.settings.voice.engine.supertonicMissing": "Download nötig · {size}",
+  "mobile.settings.voice.engine.elevenLabsNoKey": "Füge einen API-Schlüssel hinzu",
+  "mobile.settings.voice.choiceFooter":
+    "Tippe auf eine Stimme, um sie zu verwenden. Tippe auf Abspielen, um sie vorher zu hören.",
+  "mobile.settings.voice.choiceDownloadFirst":
+    "Lade Supertonic 3 unter Einstellungen > Stimme herunter, um die Stimmen zu hören.",
+  "mobile.settings.voice.playVoice": "{name} abspielen",
+  "mobile.settings.voice.stopVoice": "{name} stoppen",
+  "mobile.settings.voice.elevenLabs.missingVoicesPermission":
+    "Dem Schlüssel fehlt die Berechtigung Voices: Read. Aktiviere sie für diesen Schlüssel in ElevenLabs.",
+  "mobile.settings.voice.elevenLabs.missingSpeechPermission":
+    "Dem Schlüssel fehlt die Berechtigung Text to Speech: Access. Aktiviere sie für diesen Schlüssel in ElevenLabs.",
+  "mobile.settings.voice.elevenLabs.permissionsTitle": "Nötige Berechtigungen",
+  "mobile.settings.voice.elevenLabs.permissionSpeech": "Text to Speech: Access",
+  "mobile.settings.voice.elevenLabs.permissionSpeechHint": "Liest die Antworten vor.",
+  "mobile.settings.voice.elevenLabs.permissionVoices": "Voices: Read",
+  "mobile.settings.voice.elevenLabs.permissionVoicesHint": "Listet die Stimmen zur Auswahl.",
+  "mobile.settings.voice.elevenLabs.permissionsFooter":
+    "Öffne in ElevenLabs Developers > API keys und erstelle einen Schlüssel. Wenn du Restrict key aktivierst, setze diese zwei Berechtigungen und lass die anderen aus. Ein Schlüssel ohne Einschränkungen funktioniert auch.",
 } as const satisfies PartialTranslation<typeof source>;

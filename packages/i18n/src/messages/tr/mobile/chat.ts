@@ -159,6 +159,12 @@ export const messages = {
   "mobile.chat.liveVoice.notSent": "Mesaj gönderilmedi. Yeniden konuş.",
   "mobile.chat.liveVoice.offline": "Sunucu bağlı değil. Yeniden bağlandığında konuşma devam eder.",
   "mobile.chat.liveVoice.speakFailed": "Yanıt sesli okunamadı.",
+  "mobile.chat.liveVoice.voiceNotReady": "Ayarlar > Ses bölümünden bir yanıt sesi seç.",
+  "mobile.chat.liveVoice.languageUnsupported": "Supertonic 3 bu dili okuyamaz.",
+  "mobile.chat.liveVoice.elevenLabsKeyInvalid": "ElevenLabs API anahtarını kabul etmedi.",
+  "mobile.chat.liveVoice.elevenLabsPermission":
+    "ElevenLabs anahtarında bir izin eksik. Ayarlar > Ses bölümünden kontrol et.",
+  "mobile.chat.liveVoice.networkNeeded": "ElevenLabs için ağ bağlantısı gerekir.",
   "mobile.chat.composer.addAttachment": "Ek ekle",
   "mobile.chat.composer.ask": "{name} ajanına sor",
   "mobile.chat.composer.stopFailed": "Ajan durdurulamadı. Zaten bitmiş olabilir.",

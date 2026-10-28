@@ -162,6 +162,12 @@ export const messages = {
   "mobile.chat.liveVoice.notSent": "Il messaggio non è stato inviato. Parla di nuovo.",
   "mobile.chat.liveVoice.offline": "Il server non è connesso. La conversazione riprende quando si riconnette.",
   "mobile.chat.liveVoice.speakFailed": "Non è stato possibile leggere la risposta ad alta voce.",
+  "mobile.chat.liveVoice.voiceNotReady": "Scegli una voce in Impostazioni > Voce.",
+  "mobile.chat.liveVoice.languageUnsupported": "Supertonic 3 non legge questa lingua.",
+  "mobile.chat.liveVoice.elevenLabsKeyInvalid": "ElevenLabs non ha accettato la chiave API.",
+  "mobile.chat.liveVoice.elevenLabsPermission":
+    "Alla chiave ElevenLabs manca un permesso. Controllalo in Impostazioni > Voce.",
+  "mobile.chat.liveVoice.networkNeeded": "ElevenLabs richiede una connessione di rete.",
   "mobile.chat.composer.addAttachment": "Aggiungi allegato",
   "mobile.chat.composer.ask": "Chiedi a {name}",
   "mobile.chat.composer.stopFailed": "Impossibile fermare l'agente. Potrebbe aver già finito.",

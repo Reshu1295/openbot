@@ -159,6 +159,12 @@ export const messages = {
   "mobile.chat.liveVoice.notSent": "メッセージを送信できませんでした。もう一度話してください。",
   "mobile.chat.liveVoice.offline": "サーバーに接続していません。再接続すると会話を続けます。",
   "mobile.chat.liveVoice.speakFailed": "返信を読み上げられませんでした。",
+  "mobile.chat.liveVoice.voiceNotReady": "設定 > 音声 で返信の声を選んでください。",
+  "mobile.chat.liveVoice.languageUnsupported": "Supertonic 3 はこの言語を読み上げられません。",
+  "mobile.chat.liveVoice.elevenLabsKeyInvalid": "ElevenLabs が API キーを受け付けませんでした。",
+  "mobile.chat.liveVoice.elevenLabsPermission":
+    "ElevenLabs のキーに権限が不足しています。設定 > 音声 で確認してください。",
+  "mobile.chat.liveVoice.networkNeeded": "ElevenLabs にはネットワーク接続が必要です。",
   "mobile.chat.composer.addAttachment": "添付ファイルを追加",
   "mobile.chat.composer.ask": "{name} に質問",
   "mobile.chat.composer.stopFailed": "エージェントを停止できませんでした。すでに終了している可能性があります。",

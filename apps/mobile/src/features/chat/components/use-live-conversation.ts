@@ -14,11 +14,11 @@ import {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { mobileAnalytics } from "@/features/analytics/mobile-analytics";
-import { AUTOMATIC_DICTATION_LANGUAGE, useDictationLanguage } from "@/features/settings/model/dictation-language";
+import { REPLY_VOICE_FAILURE_TEXT, type ReplyReading, readReply } from "@/features/voice/model/reply-voice";
+import { speechNative } from "@/features/voice/model/speech-native";
 import { haptics } from "@/shared/lib/haptics";
-import { speechSynthesis } from "@/shared/lib/speech-synthesis";
 import { currentText } from "@/shared/lib/text";
-import { type LiveConversationPhase, liveReplyTurn, liveSpeechParts } from "../model/live-conversation";
+import { type LiveConversationPhase, liveReplyTurn } from "../model/live-conversation";
 import type { OutboxMessage } from "../model/outbox";
 import { useVoiceDictation, type VoiceDictation } from "./use-voice-dictation";
 
@@ -29,8 +29,6 @@ const TURN_END_SILENCE_MS = 1_300;
  * conversation: the read that the end starts brings it. After this long the conversation listens again.
  */
 const REPLY_GRACE_MS = 5_000;
-/** The phone's voice takes any length on iOS; Android has a limit near 4000 characters. */
-const PART_LIMIT = 3_000;
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 const OPEN_MS = 460;
 const SPLIT_MS = 320;
@@ -100,10 +98,10 @@ export interface LiveConversation extends LiveConversationState {
 
 /**
  * A conversation by voice with one agent, as on desktop. It listens until the user stops speaking,
- * sends the words to the chat, waits for the agent's answer and reads it aloud with the phone's own
- * voice; then it listens again. Speech is recognized and read on the phone. The microphone is off
- * while the agent thinks or speaks, because the recognizer would hear the phone's own voice;
- * Interrupt stops the reply instead.
+ * sends the words to the chat, waits for the agent's answer and reads it aloud with the voice in
+ * Settings > Voice (Supertonic 3 on the phone, or ElevenLabs); then it listens again. The microphone
+ * is off while the agent thinks or speaks, because the recognizer would hear the reply; Interrupt
+ * stops the reply instead.
  */
 export function useLiveConversation(input: LiveConversationInput): LiveConversation {
   const [state, setState] = useState(CLOSED);
@@ -129,7 +127,7 @@ export function useLiveConversation(input: LiveConversationInput): LiveConversat
   });
   dictationRef.current = dictation;
   const { conversation, deliveries, outboxMessages } = input;
-  const available = dictation.available && Boolean(speechSynthesis) && conversation !== null;
+  const available = dictation.available && Boolean(speechNative) && conversation !== null;
 
   useEffect(() => {
     controller.followReply({ conversation, deliveries, outboxMessages });
@@ -211,6 +209,8 @@ function createController({
   let muted = false;
   let heard = "";
   let pending: PendingReply | null = null;
+  /** The reply that is read aloud now. */
+  let reading: ReplyReading | null = null;
   /** Each turn, interruption and the end make the work of the turn before them stale. */
   let generation = 0;
   let pauseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -243,7 +243,8 @@ function createController({
   function stopSpeaking(): void {
     cancelAnimation(speechLevel);
     speechLevel.set(0);
-    void speechSynthesis?.stop().catch(() => {});
+    reading?.stop();
+    reading = null;
   }
 
   /** Ends the current turn's work: its recognizer session, its reply and its timers. */
@@ -297,17 +298,11 @@ function createController({
   }
 
   function speak(markdown: string): void {
-    const synthesis = speechSynthesis;
-    const parts = liveSpeechParts(markdown, Math.min(PART_LIMIT, synthesis?.maxSpeechInputLength ?? PART_LIMIT));
-    if (!synthesis || parts.length === 0) {
-      listen();
-      return;
-    }
     clearTimers();
     pending = null;
     const own = generation;
     setPhase("speaking");
-    newCaption(parts[0] ?? "");
+    newCaption("");
     speechLevel.set(
       withRepeat(
         withTiming(0.55, { duration: SPEAKING_PULSE_MS, easing: Easing.inOut(Easing.ease) }),
@@ -317,24 +312,18 @@ function createController({
         ReduceMotion.System,
       ),
     );
-    // The reply is read in the dictation language when the user chose one, else in the phone's.
-    const chosen = useDictationLanguage.getState().value;
-    const language = chosen === AUTOMATIC_DICTATION_LANGUAGE ? undefined : chosen;
-    parts.forEach((part, index) => {
-      synthesis.speak(part, {
-        ...(language ? { language } : {}),
-        onStart: () => {
-          if (own === generation && index > 0) newCaption(part);
-        },
-        onDone: () => {
-          if (index === parts.length - 1 && own === generation && open) listen();
-        },
-        onError: () => {
-          if (own !== generation || !open) return;
-          listen();
-          update({ error: currentText().t("mobile.chat.liveVoice.speakFailed") });
-        },
-      });
+    reading = readReply(markdown, {
+      onPart: (part) => {
+        if (own === generation) newCaption(part);
+      },
+      onDone: () => {
+        if (own === generation && open) listen();
+      },
+      onError: (failure) => {
+        if (own !== generation || !open) return;
+        listen();
+        update({ error: currentText().t(REPLY_VOICE_FAILURE_TEXT[failure]) });
+      },
     });
   }
 
@@ -438,7 +427,7 @@ function createController({
     connection,
     start(): void {
       const { conversation, enabled, online } = input();
-      if (open || !speechSynthesis || !conversation || !enabled) return;
+      if (open || !speechNative || !conversation || !enabled) return;
       open = true;
       exiting = false;
       muted = false;

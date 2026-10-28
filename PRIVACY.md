@@ -479,6 +479,23 @@ fails before it recognizes any speech, the phone's recognition service, Apple or
 audio. The recognized text goes into the message field and is sent
 only when you send the message. OpenBot does not store or send the audio.
 
+In a mobile voice conversation, the same recognition hears what you say, and the recognized text is
+sent to the agent as a message. The phone then reads the agent's reply aloud with the voice chosen in
+**Settings → Voice**:
+
+- Supertonic 3, the default. When you press Download, the phone downloads the pinned Supertonic 3
+  model from `huggingface.co`, checks the SHA-256 of each file, and keeps it in the app's documents
+  until you remove it. The request carries no user data. The reply text and its audio stay on the
+  phone.
+- ElevenLabs, only after you save your own ElevenLabs API key. The phone tests the key by listing
+  your ElevenLabs voices, and then sends the text of each reply that it reads to `api.elevenlabs.io`
+  with the key, and receives the audio. Nothing else is sent: no conversation history, file or agent
+  instruction. ElevenLabs handles the text and the audio under its own policy and your ElevenLabs
+  plan. The key is kept in the phone's keychain (iOS) or encrypted storage (Android), never in a log
+  or an analytics event. Remove key in **Settings → Voice** deletes it.
+
+The chosen voice settings are kept on the phone. OpenBot does not store the reply audio.
+
 ## Email delivery and infrastructure providers
 
 OpenBot sends sign-in, team invitation, and welcome messages through the configured SMTP provider. The
