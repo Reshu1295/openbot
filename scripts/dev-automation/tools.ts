@@ -271,8 +271,11 @@ export async function typeByRole(
 export function resolveWritablePath(root: string, requested: string, extension: string, subject: string): string {
   const base = resolve(root);
   if (requested === "") throw new Error("--out=<path> cannot be empty.");
-  const target = resolve(base, requested);
-  if (target !== base && !target.startsWith(`${base}${sep}`)) {
+  const inside = (path: string) => path === base || path.startsWith(`${base}${sep}`);
+  // A path that already names the build directory from the working directory, as the error below
+  // suggests, means that file and not a copy of the build directory inside itself.
+  const target = inside(resolve(requested)) ? resolve(requested) : resolve(base, requested);
+  if (!inside(target)) {
     throw new Error(`--out must stay inside ${base}. ${subject} never write outside the build directory.`);
   }
   if (!target.endsWith(extension)) throw new Error(`--out must name a ${extension} file.`);
