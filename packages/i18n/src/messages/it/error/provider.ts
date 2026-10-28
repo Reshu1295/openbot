@@ -278,6 +278,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Solo i link di accesso HTTPS possono aprirsi nel browser.",
   "error.provider.geminiKeyRefused":
     "Gemini ha rifiutato la chiave API salvata. Sostituisci o rimuovi la chiave nelle Impostazioni, poi connettiti di nuovo.",
+  "error.provider.geminiVerificationRequired":
+    "Google ti chiede di verificare il tuo account prima che Gemini possa rispondere. Completa la verifica nel browser e riprova. Se il problema si ripete, ricollega Gemini in Impostazioni.",
   "error.provider.keyProviderRefused":
     "{provider} ha rifiutato la chiave API salvata. Sostituisci o rimuovi la chiave nelle Impostazioni, poi riprova.",
   "error.provider.keyProviderNoBalance":

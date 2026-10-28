@@ -287,6 +287,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Im Browser können nur HTTPS-Anmeldelinks geöffnet werden.",
   "error.provider.geminiKeyRefused":
     "Gemini hat den gespeicherten API-Schlüssel abgelehnt. Ersetze oder entferne den Schlüssel in den Einstellungen und verbinde dich dann erneut.",
+  "error.provider.geminiVerificationRequired":
+    "Google bittet Sie, Ihr Konto zu bestätigen, bevor Gemini antworten kann. Schließen Sie die Bestätigung in Ihrem Browser ab und versuchen Sie es dann erneut. Wenn dies wiederholt auftritt, verbinden Sie Gemini in den Einstellungen erneut.",
   "error.provider.keyProviderRefused":
     "{provider} hat den gespeicherten API-Schlüssel abgelehnt. Ersetze oder entferne den Schlüssel in den Einstellungen und versuche es dann erneut.",
   "error.provider.keyProviderNoBalance":

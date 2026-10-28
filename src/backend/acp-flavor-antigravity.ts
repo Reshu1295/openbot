@@ -9,6 +9,18 @@ const GEMINI_QUOTA_CHUNK = /^\s*Usage Limit Reached\n\n([\s\S]*)$/u;
 const GEMINI_SDK_FAILURE = /\bAntigravity SDK error processing prompt for session (\S+)/u;
 /** `format_execution_error` of Antigravity 1.3.0 when the failure is not a Google API error. */
 const GEMINI_EXECUTION_ERROR_ANSWER = /^\s*Agent execution error: /u;
+/**
+ * Google's answer when the signed-in account must be verified before Gemini may answer: a
+ * sign-in link on `accounts.google.com/signin/continue` whose target is the Gemini Code Assist
+ * success page (#2419). The link is the fingerprint, because a model answer does not carry it,
+ * and Google sends no other signal: the answer text is the only place this state can be read.
+ */
+const GEMINI_VERIFICATION_ANSWER = /https?:\/\/accounts\.google\.com\/signin\/continue\?[^\s<>)]*auth_success_gemini/u;
+/** The answers that are the server's own failure text rather than the model's reply. */
+const GEMINI_FAILURE_ANSWER = new RegExp(
+  `${GEMINI_EXECUTION_ERROR_ANSWER.source}|${GEMINI_VERIFICATION_ANSWER.source}`,
+  "u",
+);
 
 /**
  * The kind of a Gemini request failure, first match wins. Gemini reports usage only for a Google
@@ -37,6 +49,9 @@ const GEMINI_REQUEST_FAILURES = [
 
 /** The message of a Gemini turn that the server failed but reported as answer text. */
 function geminiTurnFailure(text: string): string {
+  // A verification prompt names an account state, not a failed request: the user verifies in the
+  // browser and sends the message again, and no key or model change affects it (#2419).
+  if (GEMINI_VERIFICATION_ANSWER.test(text)) return sourceText("error.provider.geminiVerificationRequired");
   // Google's API answer for a refused key. The key is the user's to fix, not the request.
   if (/\bAPI key not valid\b|\bAPI_KEY_INVALID\b/u.test(text)) return sourceText("error.provider.geminiKeyRefused");
   const key = GEMINI_REQUEST_FAILURES.find(([, pattern]) => pattern.test(text))?.[0];
@@ -47,6 +62,7 @@ function geminiTurnFailure(text: string): string {
 function geminiRequestFailure(error: unknown, detail: string): string {
   if (!(error instanceof RequestError)) return detail;
   const reason = detail.replace(/^(?:RequestError:\s*)?Internal error:\s*/u, "");
+  if (GEMINI_VERIFICATION_ANSWER.test(reason)) return sourceText("error.provider.geminiVerificationRequired");
   const key = GEMINI_REQUEST_FAILURES.find(([, pattern]) => pattern.test(reason))?.[0];
   return key ? sourceText(key, { detail: shownFailureDetail(reason) }) : detail;
 }
@@ -68,8 +84,13 @@ export const ANTIGRAVITY_ACP_FLAVOR: AcpFlavor = {
   turnFailure: (error, detail) => geminiRequestFailure(error, detail),
   sdkHarness: {
     failedSession: (stderrLine) => GEMINI_SDK_FAILURE.exec(stderrLine)?.[1],
-    answerIsFailure: GEMINI_EXECUTION_ERROR_ANSWER,
+    answerIsFailure: GEMINI_FAILURE_ANSWER,
     turnFailure: geminiTurnFailure,
+    // Google sends the verification prompt as one answer chunk and ends the turn as a success.
+    // Read it at the chunk, before it is shown or stored as the reply; the turn-end path above
+    // stays as the backstop for a prompt that arrives split over chunks (#2419).
+    answerFailure: (text) =>
+      GEMINI_VERIFICATION_ANSWER.test(text) ? sourceText("error.provider.geminiVerificationRequired") : null,
     // Antigravity reports an exhausted quota as answer text and ends the turn as a success. Google
     // sends it only for a spent quota, which resets in days, not for a request-rate limit. The
     // server names no bucket, and the usage page of the plan can still show room.

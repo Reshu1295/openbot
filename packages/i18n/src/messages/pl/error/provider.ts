@@ -275,6 +275,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "W przeglądarce można otworzyć tylko linki logowania HTTPS.",
   "error.provider.geminiKeyRefused":
     "Gemini odrzucił zapisany klucz API. Zastąp lub usuń klucz w Ustawieniach, a następnie połącz ponownie.",
+  "error.provider.geminiVerificationRequired":
+    "Google prosi o zweryfikowanie konta, zanim Gemini będzie mógł odpowiadać. Dokończ weryfikację w przeglądarce i spróbuj ponownie. Jeśli problem się powtarza, połącz Gemini ponownie w Ustawieniach.",
   "error.provider.keyProviderRefused":
     "{provider} odrzucił zapisany klucz API. Zastąp lub usuń klucz w Ustawieniach, a następnie spróbuj ponownie.",
   "error.provider.keyProviderNoBalance":

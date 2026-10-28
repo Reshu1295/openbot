@@ -281,6 +281,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "ブラウザーで開けるのは HTTPS のサインインリンクだけです。",
   "error.provider.geminiKeyRefused":
     "Gemini は保存された API キーを拒否しました。設定でキーを置き換えるか削除してから、もう一度接続してください。",
+  "error.provider.geminiVerificationRequired":
+    "Google は、Gemini が応答する前にアカウントの確認を求めています。ブラウザで確認を完了してから、もう一度お試しください。繰り返し表示される場合は、設定で Gemini を再接続してください。",
   "error.provider.keyProviderRefused":
     "{provider} は保存された API キーを拒否しました。設定でキーを置き換えるか削除してから、もう一度お試しください。",
   "error.provider.keyProviderNoBalance":

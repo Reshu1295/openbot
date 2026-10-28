@@ -280,6 +280,8 @@ export const messages = {
   "error.provider.httpsSignInLinkOnly": "Solo se pueden abrir en el navegador enlaces de inicio de sesión HTTPS.",
   "error.provider.geminiKeyRefused":
     "Gemini rechazó la clave de API guardada. Reemplaza o elimina la clave en Ajustes y vuelve a conectar.",
+  "error.provider.geminiVerificationRequired":
+    "Google te pide que verifiques tu cuenta antes de que Gemini pueda responder. Completa la verificación en tu navegador y vuelve a intentarlo. Si se repite, vuelve a conectar Gemini en Ajustes.",
   "error.provider.keyProviderRefused":
     "{provider} rechazó la clave de API guardada. Reemplaza o elimina la clave en Ajustes y vuelve a intentarlo.",
   "error.provider.keyProviderNoBalance":
