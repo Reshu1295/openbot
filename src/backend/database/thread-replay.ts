@@ -301,8 +301,12 @@ export class ThreadReplay {
         activityInsert.run(
           randomUUID(),
           threadId,
-          eventMessage?.turnId ??
-            activityTurnId(eventRecord?.detail, isString(eventActiveTurnId) ? eventActiveTurnId : null),
+          (eventMessage ?? currentConversationMessage(eventRecord?.streamedMessage))?.turnId ??
+            activityTurnId(
+              event.event_type,
+              eventRecord?.detail,
+              isString(eventActiveTurnId) ? eventActiveTurnId : null,
+            ),
           event.event_type,
           JSON.stringify(activityPayload),
           event.occurred_at,
