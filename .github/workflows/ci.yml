@@ -855,7 +855,7 @@ jobs:
     # fails this one.
     name: All required checks pass
     if: always()
-    needs: [detect, check, browser, tests-desktop, signal-e2e, automation-cli-e2e, team-api-routes-e2e, reverse-actions-e2e, provider-fakes-e2e, surfaces, api, storybook]
+    needs: [detect, check, browser, tests-desktop, signal-e2e, automation-cli-e2e, team-api-routes-e2e, reverse-actions-e2e, provider-fakes-e2e, surfaces, mobile-share-sender-e2e, api, storybook]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -881,7 +881,7 @@ jobs:
     # `apps/auth-api`, which `api` already covers: mobile, the site router, the
     # team client and the remote stack all consume the account API, so a red
     # Surfaces is the signal that this deploy is the thing about to break them.
-    needs: [check, browser, tests-desktop, signal-e2e, automation-cli-e2e, team-api-routes-e2e, reverse-actions-e2e, provider-fakes-e2e, api, storybook, surfaces]
+    needs: [check, browser, tests-desktop, signal-e2e, automation-cli-e2e, team-api-routes-e2e, reverse-actions-e2e, provider-fakes-e2e, api, storybook, surfaces, mobile-share-sender-e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: cloudflare-production
