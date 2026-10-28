@@ -26,9 +26,9 @@ const OPENPANEL_API_URL = "https://analytics.openbot.run/api";
  * `reactivated` and `end_reason` on plan events. Generation 11 adds the license to the billing events
  * (`product`, `users`, `direction`), `entry_point` on `checkout_started`, and the license totals of
  * `billing_snapshot`. A billing event without `product` is from a server plan. No generation 10
- * property changes.
+ * property changes. Generation 12 adds `email_sent`.
  */
-export const ACCOUNT_ANALYTICS_SCHEMA_VERSION = 11;
+export const ACCOUNT_ANALYTICS_SCHEMA_VERSION = 12;
 const SEND_TIMEOUT_MS = 5_000;
 const ACCOUNT_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/u;
 
@@ -86,6 +86,15 @@ export type AccountSurface = (typeof ACCOUNT_SURFACES)[number];
 const ATTRIBUTION_SOURCES = ["sign_in", "checkout"] as const;
 export type AttributionSource = (typeof ATTRIBUTION_SOURCES)[number];
 
+/** The kinds of email that the Worker sends from the shared SMTP mailbox. */
+const EMAIL_KINDS = ["sign_in_code", "team_invite", "contact", "welcome"] as const;
+export type EmailKind = (typeof EMAIL_KINDS)[number];
+/** `unknown`: the server got the message but did not confirm it, so it can count against the quota. */
+const EMAIL_RESULTS = ["accepted", "rate_limited", "unknown", "failed"] as const;
+export type EmailResult = (typeof EMAIL_RESULTS)[number];
+/** The `profileId` of `email_sent`. A sign-in code has no account yet, and the quota is per mailbox. */
+export const EMAIL_DELIVERY_PROFILE_ID = "email-delivery";
+
 type AnalyticsProperties = Record<string, string | number | boolean>;
 
 export type AccountAnalyticsEvent =
@@ -120,9 +129,10 @@ export type AccountAnalyticsEvent =
       size?: HostedServerSize;
       reason?: (typeof WAKE_REASONS)[number];
       error?: HostedServerError | null;
-    };
+    }
+  | { name: "email_sent"; kind: EmailKind; result: EmailResult };
 
-/** Account events that only the Worker sees: new accounts, payments and hosted servers. */
+/** Account events that only the Worker sees: new accounts, payments, hosted servers and email sends. */
 export interface AccountAnalytics {
   /** Never throws and never waits: a failed send loses the event, not the request. */
   track(accountId: string, event: AccountAnalyticsEvent): void;
@@ -223,6 +233,10 @@ function accountEventProperties(event: AccountAnalyticsEvent): AnalyticsProperti
     const touch = firstTouchProperties(event.firstTouch);
     if (!isOneOf(ATTRIBUTION_SOURCES, event.via) || !touch.first_touch_source) return null;
     return { ...properties, recorded_via: event.via, ...touch };
+  }
+  if (event.name === "email_sent") {
+    if (!isOneOf(EMAIL_KINDS, event.kind) || !isOneOf(EMAIL_RESULTS, event.result)) return null;
+    return { ...properties, kind: event.kind, result: event.result };
   }
   if (event.name !== "hosted_server_action" || !isOneOf(HOSTED_SERVER_ACTIONS, event.action)) return null;
   properties.action = event.action;
