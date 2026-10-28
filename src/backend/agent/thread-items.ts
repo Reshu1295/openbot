@@ -296,11 +296,15 @@ function openBotTool(item: ThreadItem): string | null {
 
 /**
  * The OpenBot browser tool that an item calls, or null for any other tool: a `tool_call` bridge item
- * names it in its arguments, and a Codex item names its namespace.
+ * names it in its arguments, a Codex item names its namespace, and a Claude item names it
+ * `mcp__openbot_browser__<tool>` (`claudeBridgedToolName`).
  */
 function browserTool(item: ThreadItem): string | null {
   const bridged = bridgedTool(item);
   if (bridged) return bridged.namespace === OPENBOT_BROWSER_NAMESPACE ? bridged.tool : null;
+  if (item.type === "toolCall") {
+    return /^mcp__openbot_browser__(.+)$/u.exec(getString(item, "name") ?? "")?.[1] ?? null;
+  }
   if (item.type !== "dynamicToolCall" || getString(item, "namespace") !== OPENBOT_BROWSER_NAMESPACE) return null;
   return getString(item, "tool");
 }
