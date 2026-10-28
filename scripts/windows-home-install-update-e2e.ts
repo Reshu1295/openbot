@@ -35,6 +35,8 @@ if (!localAppData) throw new Error("LOCALAPPDATA is not set.");
 
 const homeFolder = join(homedir(), "OpenBot");
 const defaultFolder = join(localAppData, "Programs", "OpenBot");
+// Missing on a computer where no program was installed for this user.
+const uninstallKey = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall";
 const runKey = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 const loginItemName = "app.openbot.desktop";
 const reportPath = resolve(".openbot-build/windows-home-install-update-e2e.json");
@@ -117,8 +119,11 @@ function runInstaller(file: string, args: string): Promise<number> {
 
 function registration(): Registration {
   const json = powershell(`
-    $entry = Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall -ErrorAction SilentlyContinue |
-      Get-ItemProperty | Where-Object { $_.DisplayName -like 'OpenBot*' } | Select-Object -First 1
+    $entry = $null
+    if (Test-Path ${uninstallKey}) {
+      $entry = Get-ChildItem ${uninstallKey} | Get-ItemProperty |
+        Where-Object { $_.DisplayName -like 'OpenBot*' } | Select-Object -First 1
+    }
     $location = $null
     if ($entry) { $location = (Get-ItemProperty -LiteralPath "HKCU:\\Software\\$($entry.PSChildName)" -ErrorAction SilentlyContinue).InstallLocation }
     [pscustomobject]@{ displayName = $entry.DisplayName; uninstallString = $entry.UninstallString; installLocation = $location } |
@@ -147,14 +152,19 @@ function setLoginItem(executable: string): void {
 }
 
 async function removeEverything(): Promise<void> {
-  const quiet = powershell(`
-    Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty |
-      Where-Object { $_.DisplayName -like 'OpenBot*' } | ForEach-Object { $_.PSChildName }`);
-  for (const key of quiet.split(/\r?\n/u).filter(Boolean)) {
-    powershell(`Remove-Item -LiteralPath "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${key}" -Recurse -Force -ErrorAction SilentlyContinue
-      Remove-Item -LiteralPath "HKCU:\\Software\\${key}" -Recurse -Force -ErrorAction SilentlyContinue`);
+  const keys = powershell(`
+    if (Test-Path ${uninstallKey}) {
+      Get-ChildItem ${uninstallKey} | Get-ItemProperty |
+        Where-Object { $_.DisplayName -like 'OpenBot*' } | ForEach-Object { $_.PSChildName }
+    }`);
+  // A key or value that is already gone still makes `$?` false, so each cleanup ends with exit 0.
+  for (const key of keys.split(/\r?\n/u).filter(Boolean)) {
+    powershell(`Remove-Item -LiteralPath "${uninstallKey}\\${key}" -Recurse -Force -ErrorAction SilentlyContinue
+      Remove-Item -LiteralPath "HKCU:\\Software\\${key}" -Recurse -Force -ErrorAction SilentlyContinue
+      exit 0`);
   }
-  powershell(`Remove-ItemProperty -LiteralPath '${runKey}' -Name '${loginItemName}' -ErrorAction SilentlyContinue`);
+  powershell(`Remove-ItemProperty -LiteralPath '${runKey}' -Name '${loginItemName}' -ErrorAction SilentlyContinue
+    exit 0`);
   for (const folder of [homeFolder, defaultFolder]) await rm(folder, { recursive: true, force: true });
 }
 
