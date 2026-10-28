@@ -79,6 +79,9 @@ Host networking removes the network isolation of the container:
 - Other programs on the host can connect to the listeners of OpenBot on `127.0.0.1`. These
   listeners take tokens and team requests.
 - Agents can connect to the services of the host that listen only on `127.0.0.1`.
+- The virtual displays `:0` and `:1` of the container use abstract X sockets, which are in the
+  network namespace. When the host has its own display `:0` or `:1`, the container does not start.
+  Other programs on the host can connect to the displays, see the agent display and send input to it.
 
 Use it only on a host where you trust the other programs and users. Do not use it with
 [several instances on one host](#several-instances-on-one-host): their firewall works only on the
