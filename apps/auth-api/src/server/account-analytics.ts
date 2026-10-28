@@ -92,8 +92,6 @@ export type EmailKind = (typeof EMAIL_KINDS)[number];
 /** `unknown`: the server got the message but did not confirm it, so it can count against the quota. */
 const EMAIL_RESULTS = ["accepted", "rate_limited", "unknown", "failed"] as const;
 export type EmailResult = (typeof EMAIL_RESULTS)[number];
-/** The `profileId` of `email_sent`. A sign-in code has no account yet, and the quota is per mailbox. */
-export const EMAIL_DELIVERY_PROFILE_ID = "email-delivery";
 
 type AnalyticsProperties = Record<string, string | number | boolean>;
 
@@ -134,8 +132,11 @@ export type AccountAnalyticsEvent =
 
 /** Account events that only the Worker sees: new accounts, payments, hosted servers and email sends. */
 export interface AccountAnalytics {
-  /** Never throws and never waits: a failed send loses the event, not the request. */
-  track(accountId: string, event: AccountAnalyticsEvent): void;
+  /**
+   * Never throws and never waits: a failed send loses the event, not the request. `null` is for an
+   * event with no account, such as `email_sent`: it has no `profileId`, as `billing_snapshot`.
+   */
+  track(accountId: string | null, event: AccountAnalyticsEvent): void;
 }
 
 export const NO_ACCOUNT_ANALYTICS: AccountAnalytics = { track: () => undefined };
@@ -159,7 +160,7 @@ export function createAccountAnalytics(options: AccountAnalyticsOptions): Accoun
   const clientSecret = options.clientSecret?.trim();
   if (!clientId || !clientSecret) return NO_ACCOUNT_ANALYTICS;
   const send = Effect.fn("AccountAnalytics.send")(function* (
-    accountId: string,
+    accountId: string | null,
     event: AccountAnalyticsEvent,
     properties: AnalyticsProperties,
   ) {
@@ -172,7 +173,10 @@ export function createAccountAnalytics(options: AccountAnalyticsOptions): Accoun
             "openpanel-client-id": clientId,
             "openpanel-client-secret": clientSecret,
           },
-          body: JSON.stringify({ type: "track", payload: { name: event.name, profileId: accountId, properties } }),
+          body: JSON.stringify({
+            type: "track",
+            payload: { name: event.name, ...(accountId === null ? {} : { profileId: accountId }), properties },
+          }),
           signal: AbortSignal.any([signal, AbortSignal.timeout(SEND_TIMEOUT_MS)]),
         }),
       catch: () => new AnalyticsDeliveryError({}),
@@ -182,7 +186,7 @@ export function createAccountAnalytics(options: AccountAnalyticsOptions): Accoun
   return {
     track(accountId, event) {
       const properties = accountEventProperties(event);
-      if (!properties || !ACCOUNT_ID_PATTERN.test(accountId)) return;
+      if (!properties || (accountId !== null && !ACCOUNT_ID_PATTERN.test(accountId))) return;
       options.schedule(
         send(accountId, event, properties).pipe(
           Effect.catch(() => Effect.sync(() => console.warn("Account analytics send failed."))),

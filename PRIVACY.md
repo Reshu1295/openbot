@@ -71,8 +71,8 @@ and an error code. It has
 no email, name, Stripe ID or server ID. The desktop analytics setting does not stop these events,
 because the account service sends them and not your computer.
 
-For each email that the account service sends (a sign-in code, an invitation, a contact message or a
-welcome email), it sends OpenPanel one event with the kind of email and the result of the send. This
+For each email that the account service sends from its mailbox (a sign-in code, an invitation, a contact
+message or a welcome email), it sends OpenPanel one event with the kind of email and the result of the send. This
 event has no account ID, email address, name or message content.
 
 The account service also records a return from Checkout without payment and later payment

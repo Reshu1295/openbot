@@ -69,8 +69,8 @@ be mixed into current conversion or reliability metrics.
   amount in another currency. It uses an OpenPanel server client (`OPENPANEL_CLIENT_ID` and
   `OPENPANEL_CLIENT_SECRET`) of the same project, and only production has these secrets. The desktop
   analytics preference does not apply to these events: the account service records a payment or a
-  server change, not a UI action on the computer. `email_sent` has no account: all its events use
-  the fixed `profileId` `email-delivery`.
+  server change, not a UI action on the computer. `email_sent` has no account, so it has no
+  `profileId`, as `billing_snapshot`.
 - OpenPanel receives the central account ID as `profileId` and the normalized account email as the
   profile email. Email is not copied into individual event properties.
 - Existing profiles are repaired by the controlled identity backfill when their `profileId` matches
@@ -174,7 +174,7 @@ off. Turning analytics off on any surface first sends one `analytics_preference_
 | `revenue` | How much did accounts pay for servers and licenses? | Verified paid invoices only. From account service generation 11, `product` is `server` or `license`, and a license adds `users`. `__revenue` and `amount_usd` in USD cents; `original_amount`, `original_currency`, `fx_rate`, `fx_date`, `plan`, `interval`, `payment_kind`, and optional `recovery` and `first_touch_*` properties. Zero-amount invoices do not emit revenue. |
 | `billing_snapshot` | What is recurring revenue at the sample time? | Daily aggregate without a profile. `snapshot_date`, `as_of`, `reported_at`, `currency`, `mrr`, `arr`, `overdue_mrr`, `paying_accounts`, `paid_servers`, `cancellations_scheduled`, `checkout_mature_accounts`, `checkout_converted_accounts`, `checkout_pending_accounts`, `skipped_subscriptions` (subscriptions left out because Stripe has no valid data for them). From account service generation 11, `mrr`, `arr`, `overdue_mrr` and `paying_accounts` count servers only; `license_mrr`, `license_accounts` and `licensed_users` count licenses; `total_mrr` and `total_arr` count both. `skipped_subscriptions` counts both. Money is USD cents. Never sum snapshots across days. |
 | `hosted_server_action` | Do paid hosted servers start, stay in use and come back? | `action`: `provisioned`, `setup_failed`, `idle_stopped`, `woken`, `resized`, `plan_stopped`, `renewed`, or `deleted`, when the account service changes the server. Optional `plan`, `size`, `reason` (`message`, `restart`, `schedule` or `retention`) and `error` (an allowlisted hosted server error code) |
-| `email_sent` | How much of the hourly quota of the SMTP mailbox (500 messages) does the account service use? | One event for each message that the account service tries to send from `hello@openbot.run`, after its retries. `kind`: `sign_in_code`, `team_invite`, `contact`, or `welcome`. `result`: `accepted`; `rate_limited` (the mail server refused it for its sender limit); `unknown` (the server may have taken it, so count it against the quota); or `failed`. No address, name or content |
+| `email_sent` | How much of the hourly quota of the SMTP mailbox (500 messages) does the account service use? | One event for each message that the account service tries to send by SMTP from `hello@openbot.run`, after its retries. The webhook delivery does not use the mailbox and sends none. `kind`: `sign_in_code`, `team_invite`, `contact`, or `welcome`. `result`: `accepted`; `rate_limited` (the mail server refused it for its sender limit); `unknown` (the send stopped after the server may have taken the message); or `failed` (also a message that a check stopped before the connection). Count `accepted` and `unknown` against the quota. No `profileId`, address, name or content |
 
 ## Privacy and runtime validation
 
@@ -237,8 +237,8 @@ and only a loopback `http:` origin is accepted.
 9. Activation steps: `onboarding_step` `viewed` per `step` over the first step, by `path` and
    surface, then `onboarding_completed`, `provider_action` `connect_completed` by `method`, and the
    first `message_send`.
-10. Dev: `email_sent` per hour by `kind`, and `result = rate_limited` per hour, against the
-    500-message hourly limit of the mailbox. OpenPanel counts clock hours, but the mail server counts
+10. Dev: `email_sent` with `result` `accepted` or `unknown` per hour by `kind`, against the
+    500-message hourly limit of the mailbox, and all results per hour by `result`. OpenPanel counts clock hours, but the mail server counts
     the last 60 minutes, so two hours below the limit can still go above it together.
 
 Every dashboard must filter by the intended `surface` and that surface's current

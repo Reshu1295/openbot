@@ -1,11 +1,7 @@
-import { Effect, Schema } from "effect";
+import { Cause, Effect, Exit, Option, Schema } from "effect";
+import type { AccountAnalytics, EmailKind, EmailResult } from "./account-analytics";
 import {
-  type AccountAnalytics,
-  EMAIL_DELIVERY_PROFILE_ID,
-  type EmailKind,
-  type EmailResult,
-} from "./account-analytics";
-import {
+  AMBIGUOUS_DELIVERY_ERRORS,
   RATE_LIMITED_DELIVERY_ERROR,
   type SmtpEmailConfig,
   sendPrivateContactMessage,
@@ -35,9 +31,6 @@ export type EmailDeliveryBindings = Pick<
   | "EMAIL_DELIVERY_WEBHOOK_URL"
   | "EMAIL_DELIVERY_WEBHOOK_SECRET"
 >;
-
-// The ambiguous results: the server may have taken the message, so it can count against the quota.
-const UNKNOWN_DELIVERY_ERRORS = new Set(["smtp_delivery_unknown", "email_delivery_unknown"]);
 
 export function createEmailCodeDelivery(
   bindings: EmailDeliveryBindings,
@@ -71,7 +64,7 @@ export function createEmailCodeDelivery(
     if (response.status === 429) return yield* new EmailDeliveryError({ message: RATE_LIMITED_DELIVERY_ERROR });
     if (!response.ok) return yield* new EmailDeliveryError({ message: "email_delivery_webhook_failed" });
   });
-  return { send: (message) => tracked(analytics, "sign_in_code", send(message)) };
+  return { send };
 }
 
 export function createTeamInviteEmailDelivery(
@@ -98,23 +91,28 @@ export function createWelcomeEmailDelivery(
   return smtp ? { send: (message) => tracked(analytics, "welcome", sendPrivateWelcomeEmail(smtp, message)) } : null;
 }
 
-/** Sends one `email_sent` event with the result of a send, so a dashboard can show the hourly quota use. */
+/**
+ * Sends one `email_sent` event with the result of an SMTP send, so a dashboard can show the use of the
+ * hourly quota of the mailbox. The webhook path does not use the mailbox, so it sends none.
+ */
 function tracked<E extends { message: string }>(
   analytics: AccountAnalytics,
   kind: EmailKind,
   send: Effect.Effect<void, E>,
 ): Effect.Effect<void, E> {
-  const track = (result: EmailResult) =>
-    Effect.sync(() => analytics.track(EMAIL_DELIVERY_PROFILE_ID, { name: "email_sent", kind, result }));
-  return send.pipe(
-    Effect.tap(() => track("accepted")),
-    Effect.tapError((error) => track(failedSendResult(error.message))),
+  return Effect.onExit(send, (exit) =>
+    Effect.sync(() => analytics.track(null, { name: "email_sent", kind, result: sendResult(exit) })),
   );
 }
 
-function failedSendResult(deliveryError: string): EmailResult {
-  if (deliveryError === RATE_LIMITED_DELIVERY_ERROR) return "rate_limited";
-  return UNKNOWN_DELIVERY_ERRORS.has(deliveryError) ? "unknown" : "failed";
+function sendResult(exit: Exit.Exit<void, { message: string }>): EmailResult {
+  if (Exit.isSuccess(exit)) return "accepted";
+  // A stopped send can stop after the server took the message.
+  if (Cause.hasInterruptsOnly(exit.cause)) return "unknown";
+  const error = Cause.findErrorOption(exit.cause);
+  if (Option.isNone(error)) return "failed";
+  if (error.value.message === RATE_LIMITED_DELIVERY_ERROR) return "rate_limited";
+  return AMBIGUOUS_DELIVERY_ERRORS.has(error.value.message) ? "unknown" : "failed";
 }
 
 function readSmtpConfig(bindings: EmailDeliveryBindings): SmtpEmailConfig | null {
