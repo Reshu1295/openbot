@@ -45,7 +45,7 @@ type DiscordAttachmentData = {
 type DiscordBodyData = {
   content?: string | undefined;
   attachments?: DiscordAttachmentData[] | undefined;
-  message_reference?: { type?: number | undefined } | undefined;
+  message_reference?: { type?: number | undefined; message_id?: string | undefined } | undefined;
   message_snapshots?:
     | { message: { content?: string | undefined; attachments?: DiscordAttachmentData[] | undefined } }[]
     | undefined;
@@ -68,7 +68,6 @@ export interface DiscordMessageData {
         id: string;
         timestamp?: string;
         author: { id: string; username?: string; global_name?: string | null };
-        message_reference?: { type?: number; message_id?: string };
       })
     | null;
   attachments: DiscordAttachmentData[];

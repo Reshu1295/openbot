@@ -348,15 +348,19 @@ export function makeDiscordApi(transport: DiscordTransport, state: DiscordState)
         const botUserId = state.botUserId;
         return {
           messages: messages
-            .map((message) => ({
-              id: message.id,
-              authorId: message.author.id,
-              authorName: discordAuthorName(message),
-              authorIsBot: message.author.bot === true,
-              replyToId: message.message_reference?.message_id ?? null,
-              sentAt: message.timestamp,
-              ...messageBody(message, botUserId),
-            }))
+            .map((message) => {
+              const body = messageBody(message, botUserId);
+              return {
+                id: message.id,
+                authorId: message.author.id,
+                authorName: discordAuthorName(message),
+                authorIsBot: message.author.bot === true,
+                // A forward refers to the message it copies, which it does not reply to.
+                replyToId: body.forwarded ? null : (message.message_reference?.message_id ?? null),
+                sentAt: message.timestamp,
+                ...body,
+              };
+            })
             .sort((left, right) => compareSnowflakes(left.id, right.id)),
         };
       }

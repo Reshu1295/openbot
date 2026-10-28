@@ -762,7 +762,7 @@ try {
         realFetch,
       );
       try {
-        // Kamil replies to a forward of a report that has a screenshot.
+        // Nina replies to a forward of a report that has a screenshot.
         await mention({
           id,
           guildId: GUILD_ONE,
