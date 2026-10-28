@@ -1625,6 +1625,14 @@ export function createConversationViewScope(props: ConversationProps) {
     // A control that used the key, such as the rows of a trace dialog, did not scroll the chat. A key in
     // a side thread does not scroll the agent's own chat under it.
     if (event.defaultPrevented || sideThreadOpen()) return;
+    // A key in a field, such as the composer, moves the caret. A scroll soon after it is not the reader's.
+    const target = event.target;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+    )
+      return;
     if (event.key === "ArrowUp" || event.key === "PageUp" || event.key === "Home") noteReaderIntent(true);
     else if (event.key === "ArrowDown" || event.key === "PageDown" || event.key === "End") noteReaderIntent(false);
     else if (event.key === " ") noteReaderIntent(event.shiftKey);
