@@ -235,20 +235,31 @@ const SIGN_IN_NEXT =
  */
 export const searchSignIns = Effect.fn("McpServerTools.searchSignIns")(function* (
   servers: AgentMcpServers,
-  names: readonly string[],
+  named: readonly McpServerConfig[],
   requestSignIn: McpServerToolCall["requestSignIn"],
 ) {
-  const named = new Set(names);
-  const signedIn = new Set(servers.signIns().flatMap((state) => (state.signedIn ? [state.mcpServerId] : [])));
-  const found = [];
-  for (const config of servers.list()) {
-    if (!named.has(config.name) || !config.enabled || config.transport !== "http" || signedIn.has(config.id)) continue;
-    const outcome = yield* servers.inspect(config);
-    if (outcome.needs !== "sign_in") continue;
-    yield* requestSignIn(config);
-    found.push({ status: "needs_sign_in", server: describeServer(config, servers.signIns()), next: SIGN_IN_NEXT });
-  }
-  return found;
+  const signIns = servers.signIns();
+  const signedIn = new Set(signIns.flatMap((state) => (state.signedIn ? [state.mcpServerId] : [])));
+  const candidates = named.filter(
+    (config) => config.enabled && config.transport === "http" && !signedIn.has(config.id),
+  );
+  // Each probe can wait for its whole deadline, so the search waits for the slowest server only.
+  const found = yield* Effect.forEach(
+    candidates,
+    (config) =>
+      Effect.gen(function* () {
+        const outcome = yield* servers.inspect(config);
+        if (outcome.needs !== "sign_in") return null;
+        yield* requestSignIn(config);
+        return {
+          status: "needs_sign_in",
+          server: describeServer(config, signIns),
+          next: `When the user's request needs this server: ${SIGN_IN_NEXT}`,
+        };
+      }),
+    { concurrency: "unbounded" },
+  );
+  return found.filter((entry) => entry !== null);
 });
 
 /** What a test found, in words the agent acts on. A sign-in also puts its card in the conversation. */

@@ -1261,19 +1261,27 @@ export class OpenBotToolRouter {
     params: DynamicToolCallParams,
   ) {
     const servers = this.#mcpServers;
-    const names = servers
-      ? namesInSearch(
-          params,
-          servers.list().map(({ name }) => name),
-        )
-      : [];
-    if (!servers || names.length === 0) return [];
+    if (!servers || params.tool !== "tool_search") return [];
+    const configs = servers.list();
+    const names = new Set(
+      namesInSearch(
+        params,
+        configs.map(({ name }) => name),
+      ),
+    );
+    if (names.size === 0) return [];
     const threadId = this.#conversation.publicThreadId(agentId, params.threadId);
-    return yield* searchSignIns(servers, names, (config) =>
-      toolStep(() => this.#postMcpSignInCard(agentId, threadId, params.turnId, config)),
+    return yield* searchSignIns(
+      servers,
+      configs.filter(({ name }) => names.has(name)),
+      (config) => toolStep(() => this.#postMcpSignInCard(agentId, threadId, params.turnId, config)),
     ).pipe(
-      Effect.catch(() => Effect.succeed([])),
-      Effect.catchDefect(() => Effect.succeed([])),
+      Effect.catch((failure) => {
+        logger.warn("A tool search could not test an MCP server.", {
+          error: servers.redact(profileToolErrorMessage(failure.cause)),
+        });
+        return Effect.succeed([]);
+      }),
     );
   });
 
