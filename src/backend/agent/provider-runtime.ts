@@ -549,7 +549,9 @@ export class ProviderRuntime implements ProviderPort {
       scope: () => this.#scope,
       resolveCli: (provider) => this.#resolveProviderCli(provider).pipe(toCliLoginFailed),
       authenticate: (provider, cli) =>
-        this.#authenticateClient(provider, cli, { startTimeoutMs: this.#longStartTimeoutMs }).pipe(toCliLoginFailed),
+        this.#authenticateClient(provider, cli, { startTimeoutMs: this.#longStartWaitMs(provider) }).pipe(
+          toCliLoginFailed,
+        ),
       activate: (provider, client, cli, account, activateOptions) =>
         this.#activateProviderClient(provider, client, cli, account, activateOptions).pipe(toCliLoginFailed),
       setConnecting: (provider) => this.#setProviderConnectionState(provider, "connecting"),
@@ -2980,7 +2982,7 @@ export class ProviderRuntime implements ProviderPort {
     }
     const disposals = this.#disposals;
     const candidate = yield* this.#authenticateClient(provider, cli, {
-      startTimeoutMs: this.#longStartTimeoutMs,
+      startTimeoutMs: this.#longStartWaitMs(provider),
     });
     yield* this.#activateProviderClient(provider, candidate.client, cli, candidate.account, {
       notifyReady: false,
@@ -3016,7 +3018,7 @@ export class ProviderRuntime implements ProviderPort {
           const resolved = yield* this.#resolveProviderCli(provider);
           cli = resolved;
           const candidate = yield* this.#authenticateClient(provider, resolved, {
-            startTimeoutMs: this.#longStartTimeoutMs,
+            startTimeoutMs: this.#longStartWaitMs(provider),
           });
           yield* this.#activateProviderClient(provider, candidate.client, resolved, candidate.account, {
             notifyReady: false,
@@ -3572,6 +3574,11 @@ export class ProviderRuntime implements ProviderPort {
         Effect.runFork(this.#restart(provider, afterTimeout).pipe(Effect.forkIn(this.#scope)));
       }, delayMs),
     );
+  }
+
+  /** The wait of a start that may unpack the CLI: the learned wait of a slow provider, else `#longStartTimeoutMs`. */
+  #longStartWaitMs(provider: AgentProvider): number {
+    return this.#slowStarts.get(provider) ?? this.#longStartTimeoutMs;
   }
 
   /**
