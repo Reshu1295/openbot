@@ -14,7 +14,7 @@ import {
 } from "react-native-reanimated";
 import { scheduleOnRN } from "react-native-worklets";
 import { mobileAnalytics } from "@/features/analytics/mobile-analytics";
-import { REPLY_VOICE_FAILURE_TEXT, type ReplyReading, readReply } from "@/features/voice/model/reply-voice";
+import { REPLY_VOICE_FAILURE_TEXT, type ReplyReading, streamReply } from "@/features/voice/model/reply-voice";
 import { speechNative } from "@/features/voice/model/speech-native";
 import { haptics } from "@/shared/lib/haptics";
 import { currentText } from "@/shared/lib/text";
@@ -65,7 +65,6 @@ interface LiveConversationState {
   phase: LiveConversationPhase;
   muted: boolean;
   caption: string;
-  captionKey: number;
   error: string | null;
   exit: "cancel" | null;
 }
@@ -75,7 +74,6 @@ const CLOSED: LiveConversationState = {
   phase: "starting",
   muted: false,
   caption: "",
-  captionKey: 0,
   error: null,
   exit: null,
 };
@@ -98,7 +96,7 @@ export interface LiveConversation extends LiveConversationState {
 
 /**
  * A conversation by voice with one agent, as on desktop. It listens until the user stops speaking,
- * sends the words to the chat, waits for the agent's answer and reads it aloud with the voice in
+ * sends the words to the chat, and reads the answer aloud while the agent writes it, with the voice in
  * Settings > Voice (Supertonic 3 on the phone, or ElevenLabs); then it listens again. The microphone
  * is off while the agent thinks or speaks, because the recognizer would hear the reply; Interrupt
  * stops the reply instead.
@@ -210,8 +208,10 @@ function createController({
   let muted = false;
   let heard = "";
   let pending: PendingReply | null = null;
-  /** The reply that is read aloud now. */
+  /** The reply that is read aloud now, and the answer messages of its turn in order. */
   let reading: ReplyReading | null = null;
+  let readIds: string[] = [];
+  const readTexts = new Map<string, string>();
   /** Each turn, interruption and the end make the work of the turn before them stale. */
   let generation = 0;
   let pauseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -231,8 +231,7 @@ function createController({
     muted = next;
     update({ muted: next });
   };
-  const newCaption = (caption: string) =>
-    setState((current) => ({ ...current, caption, captionKey: current.captionKey + 1 }));
+  const setCaption = (caption: string) => update({ caption });
 
   function clearTimers(): void {
     if (pauseTimer) clearTimeout(pauseTimer);
@@ -246,6 +245,8 @@ function createController({
     speechLevel.set(0);
     reading?.stop();
     reading = null;
+    readIds = [];
+    readTexts.clear();
   }
 
   /** Ends the current turn's work: its recognizer session, its reply and its timers. */
@@ -261,7 +262,7 @@ function createController({
     drop();
     heard = "";
     setPhase("listening");
-    newCaption("");
+    setCaption("");
     if (muted || !open) return;
     sessionListened = false;
     if (!dictation()?.start("")) setMuted(true);
@@ -298,34 +299,45 @@ function createController({
     followReply();
   }
 
-  function speak(markdown: string): void {
-    clearTimers();
-    pending = null;
-    const own = generation;
-    setPhase("speaking");
-    newCaption("");
-    speechLevel.set(
-      withRepeat(
-        withTiming(0.55, { duration: SPEAKING_PULSE_MS, easing: Easing.inOut(Easing.ease) }),
-        -1,
-        true,
-        undefined,
-        ReduceMotion.System,
-      ),
-    );
-    reading = readReply(markdown, {
-      onPart: (part) => {
-        if (own === generation) newCaption(part);
-      },
-      onDone: () => {
-        if (own === generation && open) listen();
-      },
-      onError: (failure) => {
-        if (own !== generation || !open) return;
-        listen();
-        update({ error: currentText().t(REPLY_VOICE_FAILURE_TEXT[failure]) });
-      },
-    });
+  /**
+   * Reads the answer while the agent writes it. A turn can answer in more than one message: their
+   * texts join in order, so the text only grows. The phase turns to speaking when the first part plays.
+   */
+  function readAnswer(answer: ConversationMessage, complete: boolean): void {
+    if (!reading) {
+      const own = generation;
+      reading = streamReply({
+        onPart: (part) => {
+          if (own !== generation) return;
+          if (phase !== "speaking") {
+            clearTimers();
+            setPhase("speaking");
+            speechLevel.set(
+              withRepeat(
+                withTiming(0.55, { duration: SPEAKING_PULSE_MS, easing: Easing.inOut(Easing.ease) }),
+                -1,
+                true,
+                undefined,
+                ReduceMotion.System,
+              ),
+            );
+          }
+          setCaption(part);
+        },
+        onDone: () => {
+          if (own === generation && open) listen();
+        },
+        onError: (failure) => {
+          if (own !== generation || !open) return;
+          listen();
+          update({ error: currentText().t(REPLY_VOICE_FAILURE_TEXT[failure]) });
+        },
+      });
+    }
+    if (!readTexts.has(answer.id)) readIds.push(answer.id);
+    readTexts.set(answer.id, answer.text);
+    reading.update(readIds.map((id) => readTexts.get(id) ?? "").join("\n\n"), complete);
+    if (complete) pending = null;
   }
 
   /**
@@ -340,7 +352,7 @@ function createController({
     }: Pick<LiveConversationInput, "conversation" | "deliveries" | "outboxMessages"> = input(),
   ): void {
     const current = pending;
-    if (!current || !conversation || phase !== "thinking") return;
+    if (!current || !conversation || (phase !== "thinking" && phase !== "speaking")) return;
     const outboxMessage = outboxMessages.find((message) => message.clientMessageId === current.clientMessageId);
     if (outboxMessage && (outboxMessage.state === "failed" || outboxMessage.returned || outboxMessage.stopped)) {
       listen();
@@ -350,20 +362,25 @@ function createController({
     current.messageId = outboxMessage?.messageId ?? current.messageId;
     current.turnId ??= current.messageId ? liveReplyTurn(conversation.messages, deliveries, current.messageId) : null;
     const turnId = current.turnId;
-    if (!turnId || conversation.activeTurnId === turnId) {
+    const active = turnId !== null && conversation.activeTurnId === turnId;
+    const answer = turnId ? latestTurnAnswer(conversation.messages, turnId) : undefined;
+    // The answer plays while it streams. It is complete when it is done and its turn has ended.
+    if (answer && (answer.status === "streaming" || answer.status === "completed")) {
       current.endedAt = null;
       if (graceTimer) clearTimeout(graceTimer);
       graceTimer = null;
-      return;
-    }
-    const answer = latestTurnAnswer(conversation.messages, turnId);
-    if (answer?.status === "completed") {
-      speak(answer.text);
+      readAnswer(answer, answer.status === "completed" && !active);
       return;
     }
     // A stopped or failed answer is not read, as on desktop.
-    if (answer && answer.status !== "streaming") {
+    if (answer) {
       listen();
+      return;
+    }
+    if (!turnId || active) {
+      current.endedAt = null;
+      if (graceTimer) clearTimeout(graceTimer);
+      graceTimer = null;
       return;
     }
     if (current.endedAt !== null) return;
@@ -400,7 +417,7 @@ function createController({
       drop();
       dictation()?.cancel();
       setPhase("offline");
-      newCaption("");
+      setCaption("");
       update({ error: currentText().t("mobile.chat.liveVoice.offline") });
     } else if (online && phase === "offline") {
       update({ error: null });
@@ -478,7 +495,7 @@ function createController({
         clearTimers();
         dictation()?.cancel();
         heard = "";
-        newCaption("");
+        setCaption("");
       } else {
         update({ error: null });
         listen();

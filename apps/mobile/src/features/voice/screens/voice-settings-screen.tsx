@@ -6,6 +6,7 @@ import Check from "lucide-react-native/icons/check";
 import { useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 import { useCSSVariable } from "uniwind";
+import { UsageSegments } from "@/features/agents/components/usage-segments";
 import { modelCaptureAvailable } from "@/features/chat/components/use-model-dictation";
 import {
   SettingsContent,
@@ -349,7 +350,9 @@ function ElevenLabsSection({
   return (
     <SettingsSection
       title={t("mobile.settings.voice.elevenLabs.title")}
-      footer={t("mobile.settings.voice.elevenLabs.footer")}
+      footer={t(
+        readsReplies ? "mobile.settings.voice.elevenLabs.footer" : "mobile.settings.voice.elevenLabs.recognitionFooter",
+      )}
     >
       <SettingsRow
         supportingText={t("mobile.settings.voice.elevenLabs.keySaved")}
@@ -386,10 +389,10 @@ function ElevenLabsSection({
 }
 
 /**
- * Settings > Voice: what recognizes the user's speech, and the voice that reads replies in a voice
- * conversation. Each choice says what is in use, and the section below it has the settings of that
- * choice only. Recognition: the phone's recognizer, Parakeet on the phone, or ElevenLabs Scribe.
- * Replies: Supertonic 3, the default, which runs on the phone as on desktop, or ElevenLabs.
+ * Settings > Voice, in two tabs. Listening: what recognizes the user's speech, the phone's
+ * recognizer, Parakeet on the phone, or ElevenLabs Scribe. Speaking: the voice that reads replies,
+ * Supertonic 3, the default, which runs on the phone as on desktop, or ElevenLabs. Each tab lists its
+ * choices with a check mark, and the section below has the settings of the checked choice only.
  */
 export function VoiceSettingsScreen() {
   const { t } = useText();
@@ -398,6 +401,8 @@ export function VoiceSettingsScreen() {
   const recognition = useVoiceSettings((state) => state.recognition);
   const hasKey = useVoiceSettings((state) => state.hasElevenLabsKey);
   const canRecognize = modelCaptureAvailable();
+  // What hears the user, and what reads the replies: one tab each, so the page stays short.
+  const [tab, setTab] = useState<"listening" | "speaking">("listening");
   const [error, setError] = useState<string | null>(null);
   const showError = useRef((message: string) => {
     setError(message);
@@ -426,22 +431,49 @@ export function VoiceSettingsScreen() {
         <SettingsNote>{t("mobile.settings.voice.unavailable")}</SettingsNote>
       </SettingsContent>
     );
-  return (
-    <SettingsContent>
-      {canRecognize ? <RecognitionSection onError={showError} /> : null}
-      {!canRecognize || recognition === "system" ? <DictationLanguageSection /> : null}
-      {canRecognize && recognition === "parakeet" && parakeetSupported() ? (
-        <ParakeetSection onError={showError} />
-      ) : null}
+  const speaking = (
+    <>
       <EngineSection onError={showError} />
       {engine === "elevenlabs" && hasKey ? (
         <ElevenLabsSection preview={preview} readsReplies onError={showError} />
       ) : (
         <SupertonicSection preview={preview} onError={showError} />
       )}
-      {canRecognize && recognition === "elevenlabs" && engine !== "elevenlabs" && hasKey ? (
-        <ElevenLabsSection preview={preview} readsReplies={false} onError={showError} />
-      ) : null}
+    </>
+  );
+  // An app binary without the speech module's microphone has only the phone's recognizer.
+  if (!canRecognize)
+    return (
+      <SettingsContent>
+        {speaking}
+        <DictationLanguageSection />
+      </SettingsContent>
+    );
+  return (
+    <SettingsContent>
+      <UsageSegments
+        options={[
+          { value: "listening", label: t("mobile.settings.voice.tab.listening") },
+          { value: "speaking", label: t("mobile.settings.voice.tab.speaking") },
+        ]}
+        value={tab}
+        onChange={(next) => {
+          preview.stop();
+          setTab(next);
+        }}
+      />
+      {tab === "listening" ? (
+        <>
+          <RecognitionSection onError={showError} />
+          {recognition === "system" ? <DictationLanguageSection /> : null}
+          {recognition === "parakeet" && parakeetSupported() ? <ParakeetSection onError={showError} /> : null}
+          {recognition === "elevenlabs" && hasKey ? (
+            <ElevenLabsSection preview={preview} readsReplies={false} onError={showError} />
+          ) : null}
+        </>
+      ) : (
+        speaking
+      )}
       {error || preview.error ? (
         <Typography.Paragraph accessibilityRole="alert" type="body-xs" className="px-4 text-danger-text">
           {error ?? preview.error}

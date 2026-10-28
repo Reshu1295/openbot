@@ -248,4 +248,8 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
     "Reconoce tu voz cuando ElevenLabs Scribe está marcado.",
   "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
+  "mobile.settings.voice.tab.listening": "Escuchar",
+  "mobile.settings.voice.tab.speaking": "Hablar",
+  "mobile.settings.voice.elevenLabs.recognitionFooter":
+    "OpenBot transmite tu voz a ElevenLabs con un token de un solo uso, y ElevenLabs lo cobra en tu cuenta. La clave se queda en este teléfono.",
 } as const satisfies PartialTranslation<typeof source>;

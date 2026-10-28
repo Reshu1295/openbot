@@ -165,4 +165,8 @@ export const messages = {
     "Maak opnieuw verbinding door een nieuwe code te scannen in OpenBot op je desktop.",
   "mobile.settings.profile.signOut": "Uitloggen",
   "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
+  "mobile.settings.voice.tab.listening": "Luisteren",
+  "mobile.settings.voice.tab.speaking": "Spreken",
+  "mobile.settings.voice.elevenLabs.recognitionFooter":
+    "OpenBot streamt je spraak met een eenmalige token naar ElevenLabs, en ElevenLabs brengt het in rekening op je account. De sleutel blijft op deze telefoon.",
 } as const satisfies PartialTranslation<typeof source>;

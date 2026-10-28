@@ -11,7 +11,7 @@ import Reply from "lucide-react-native/icons/reply";
 import Sparkles from "lucide-react-native/icons/sparkles";
 import Square from "lucide-react-native/icons/square";
 import X from "lucide-react-native/icons/x";
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AccessibilityInfo,
   Text as NativeText,
@@ -55,12 +55,14 @@ import { largePastedText } from "../model/composer-paste";
 import { deleteComposerFiles } from "../model/composer-requests";
 import { createComposerSendGate } from "../model/composer-send";
 import { composerAction } from "../model/voice-dictation";
+import type { VoicePalette } from "../model/voice-palette";
 import { attachmentTypeLabel, shareLocalAttachment } from "./attachment-preview";
 import { AttachmentPreviewSheet } from "./attachment-preview-sheet";
 import { ComposerAttachmentTile, localPreviewUri } from "./composer-attachment-tile";
 import { ComposerPasteTarget, type PastedFiles } from "./composer-paste-target";
 import type { ComposerVoice } from "./composer-voice";
 import type { ChatAttachments } from "./use-chat-attachments";
+import { VoiceCallBar } from "./voice-call-bar";
 
 // The field grows to this many lines, then keeps its height and scrolls.
 const MAX_INPUT_LINES = 5;
@@ -172,6 +174,10 @@ interface ChatComposerProps {
   voice?: ComposerVoice;
   /** The agent's colour for the filled voice controls, the glyph colour on it, and the glass tint. */
   voiceAccent?: { fill: string; glyph: string; tint: string };
+  /** The agent's avatar in the call bar of a live conversation. */
+  voiceAvatar?: ReactNode;
+  /** The agent's colours for the glow in the call bar. */
+  voicePalette?: VoicePalette;
 }
 
 const NO_FILES: ChatAttachments["items"] = [];
@@ -254,6 +260,8 @@ export const ChatComposer = memo(function ChatComposer({
   onCancelReply,
   voice,
   voiceAccent,
+  voiceAvatar,
+  voicePalette,
 }: ChatComposerProps) {
   const { t, format, sourceText } = useText();
   // A text-only composer has no menu or voice motion of its own; these stay at rest.
@@ -293,6 +301,9 @@ export const ChatComposer = memo(function ChatComposer({
   // The chat owns the voice mode: its overlay covers the whole chat. The
   // composer only changes shape for it.
   const voiceOpen = voice?.open ?? false;
+  // A live conversation turns the card into a call bar of the full width, not the round button.
+  const voiceBar = voice?.bar;
+  const barMode = Boolean(voiceBar);
   const focusedReplyVersion = useRef(0);
   useEffect(() => {
     if (isFocused && !disabled && replyTarget && focusedReplyVersion.current !== replyFocusVersion) {
@@ -466,7 +477,7 @@ export const ChatComposer = memo(function ChatComposer({
     const voiced = morph.get();
     const width = interpolate(expansion.get(), [0, 1], [restWidthValue.get(), cardWidth]);
     return {
-      width: width + (VOICE_BUTTON_SIZE - width) * voiced,
+      width: width + ((barMode ? cardWidth : VOICE_BUTTON_SIZE) - width) * voiced,
       borderRadius: CARD_RADIUS + (VOICE_BUTTON_SIZE / 2 - CARD_RADIUS) * voiced,
     };
   });
@@ -477,7 +488,8 @@ export const ChatComposer = memo(function ChatComposer({
   // so the mic the user pressed is the button they speak with.
   const controlStyle = useAnimatedStyle(() => {
     const progress = expansion.get();
-    const voiced = morph.get();
+    // The call bar has its own controls, so there the control stays at the end and fades out.
+    const voiced = barMode ? 0 : morph.get();
     const x = interpolate(progress, [0, 1], [restControlShift, 0]);
     const y = interpolate(progress, [0, 1], [restControlOffset, 0]);
     const scale = interpolate(progress, [0, 1], [REST_CONTROL_SCALE, 1]);
@@ -487,6 +499,7 @@ export const ChatComposer = memo(function ChatComposer({
         { translateY: y + (VOICE_CONTROL_SHIFT_Y - y) * voiced },
         { scale: scale + (VOICE_CONTROL_SCALE - scale) * voiced },
       ],
+      opacity: barMode ? interpolate(morph.get(), [0, 0.4], [1, 0], Extrapolation.CLAMP) : 1,
     };
   });
   // With Liquid Glass the round button stays glass, so the glow under it shows
@@ -505,7 +518,7 @@ export const ChatComposer = memo(function ChatComposer({
       }),
     );
   }, [listening, voiceFill]);
-  const voiceFillStyle = useAnimatedStyle(() => ({ opacity: voiceFill.get() * morph.get() }));
+  const voiceFillStyle = useAnimatedStyle(() => ({ opacity: barMode ? 0 : voiceFill.get() * morph.get() }));
   // Cancel and Send start behind the round button and come out of its sides.
   // Glass does not fade: iOS does not draw a glass effect under a parent with
   // an opacity below 1. The round button is glass too, so the two show through
@@ -533,7 +546,7 @@ export const ChatComposer = memo(function ChatComposer({
     const progress = expansion.get();
     const voiced = morph.get();
     const openWidth = interpolate(progress, [0, 1], [restWidthValue.get(), cardWidth]);
-    const width = openWidth + (VOICE_BUTTON_SIZE - openWidth) * voiced;
+    const width = openWidth + ((barMode ? cardWidth : VOICE_BUTTON_SIZE) - openWidth) * voiced;
     return {
       opacity: interpolate(voiced, [0, 0.3], [1, 0], Extrapolation.CLAMP),
       transform: [
@@ -856,7 +869,7 @@ export const ChatComposer = memo(function ChatComposer({
         >
           {placeholderText}
         </NativeText>
-        {voiceOpen && voice ? (
+        {voiceOpen && voice && !barMode ? (
           // Drawn before the card, so the two buttons come out from under it.
           <View
             pointerEvents={voice.sides ? "box-none" : "none"}
@@ -1216,8 +1229,8 @@ export const ChatComposer = memo(function ChatComposer({
                   paddingHorizontal: TOOLBAR_PADDING,
                 }}
               >
-                <Animated.View style={controlStyle}>
-                  {voiceOpen && voice ? (
+                <Animated.View style={controlStyle} pointerEvents={barMode && voiceOpen ? "none" : "auto"}>
+                  {voiceOpen && voice && !barMode ? (
                     <Pressable
                       accessibilityLabel={voice.center.label}
                       accessibilityRole="button"
@@ -1281,6 +1294,9 @@ export const ChatComposer = memo(function ChatComposer({
                 </Animated.View>
               </View>
             </View>
+            {voiceOpen && voice && voiceBar ? (
+              <VoiceCallBar voice={voice} bar={voiceBar} avatar={voiceAvatar} palette={voicePalette} />
+            ) : null}
           </AnimatedGlassView>
         </GestureDetector>
         {/* Outside the glass container on purpose. A SwiftUI Menu anchored

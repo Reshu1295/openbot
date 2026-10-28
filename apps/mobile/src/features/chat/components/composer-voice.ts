@@ -1,5 +1,6 @@
-import type { MobileTranslate } from "@openbot/i18n/mobile";
+import type { MobileTextKey, MobileTranslate } from "@openbot/i18n/mobile";
 import type { SharedValue } from "react-native-reanimated";
+import type { LiveConversationPhase } from "../model/live-conversation";
 import type { LiveConversation } from "./use-live-conversation";
 import type { VoiceMode } from "./use-voice-mode";
 
@@ -7,9 +8,9 @@ import type { VoiceMode } from "./use-voice-mode";
 type VoiceGlyph = "spinner" | "level" | "mic" | "micOff";
 
 /**
- * The voice mode as the composer draws it. The mic of the composer turns into one round button, and
- * two buttons come out of its sides while `split` is open. The live conversation and dictation fill
- * the same controls, so the chat has one voice button.
+ * The voice mode as the composer draws it. For dictation the mic of the composer turns into one round
+ * button, and two buttons come out of its sides while `split` is open. A live conversation sets `bar`:
+ * the composer turns into a call bar instead, and the chat above it stays in view.
  */
 export interface ComposerVoice {
   available: boolean;
@@ -29,7 +30,18 @@ export interface ComposerVoice {
   sides: boolean;
   leading: { label: string; onPress: () => void };
   trailing: { label: string; icon: "send" | "interrupt"; enabled: boolean; onPress: () => void };
+  /** The call bar of a live conversation: who speaks or what it does, and the words heard or read. */
+  bar?: { title: string; caption: string; muted: boolean };
 }
+
+const LIVE_PHASES = {
+  starting: "mobile.chat.liveVoice.phase.starting",
+  listening: "mobile.chat.liveVoice.phase.listening",
+  sending: "mobile.chat.liveVoice.phase.thinking",
+  thinking: "mobile.chat.liveVoice.phase.thinking",
+  speaking: "mobile.chat.liveVoice.phase.speaking",
+  offline: "mobile.chat.liveVoice.phase.offline",
+} as const satisfies Record<LiveConversationPhase, MobileTextKey>;
 
 /** Dictation with review: Stop, then Cancel, Continue and Send. Nothing is sent before Send. */
 export function dictationVoice(voice: VoiceMode, t: MobileTranslate): ComposerVoice {
@@ -71,7 +83,7 @@ export function dictationVoice(voice: VoiceMode, t: MobileTranslate): ComposerVo
  * A live conversation, as the voice pane on desktop: the round button mutes and unmutes the
  * microphone, End closes the conversation, and Interrupt stops the agent's reply or the wait for it.
  */
-export function liveVoice(live: LiveConversation, t: MobileTranslate): ComposerVoice {
+export function liveVoice(live: LiveConversation, name: string, t: MobileTranslate): ComposerVoice {
   const hearing = live.phase === "listening" && !live.muted && !live.exit;
   const replying = live.phase === "thinking" || live.phase === "speaking";
   return {
@@ -104,6 +116,17 @@ export function liveVoice(live: LiveConversation, t: MobileTranslate): ComposerV
       icon: "interrupt",
       enabled: replying,
       onPress: live.interrupt,
+    },
+    bar: {
+      title: t("mobile.chat.liveVoice.status", {
+        name,
+        phase: t(
+          live.muted && live.phase === "listening" ? "mobile.chat.liveVoice.phase.muted" : LIVE_PHASES[live.phase],
+        ),
+      }),
+      // An error says why the conversation waits; otherwise the words heard, or the part read.
+      caption: live.error ?? (live.caption || (hearing ? t("mobile.chat.liveVoice.speakNow") : "")),
+      muted: live.muted,
     },
   };
 }

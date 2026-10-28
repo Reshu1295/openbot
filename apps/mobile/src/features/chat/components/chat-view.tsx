@@ -2,7 +2,6 @@ import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type { ConversationMessage } from "@openbot/contracts/ipc";
 import { markdownPlainText } from "@openbot/contracts/markdown-preview-text";
 import { serializeSelectionInstruction } from "@openbot/contracts/selection-instruction";
-import type { MobileTextKey } from "@openbot/i18n/mobile";
 import { type CauseCode, classifyFailure, type FailureProperties } from "@openbot/telemetry";
 import { useQueryClient } from "@tanstack/react-query";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
@@ -19,6 +18,7 @@ import { KeyboardGestureArea } from "react-native-keyboard-controller";
 import Animated, { useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
+import { BloubAvatar } from "@/features/agents/components/bloub-avatar";
 import { getBloubAvatarColor } from "@/features/agents/model/bloub-activity";
 import { MobileConversationAnalytics } from "@/features/analytics/conversation";
 import { reportMobileNotification } from "@/features/analytics/failure-reports";
@@ -34,6 +34,7 @@ import type { ChatThreadMenu } from "@/features/chat/components/chat-thread-menu
 import { useChatAttachments } from "@/features/chat/components/use-chat-attachments";
 import { useChatMotion } from "@/features/chat/components/use-chat-motion";
 import type { QuestionPromptController } from "@/features/chat/components/use-question-prompt";
+import { VOICE_BAR_AVATAR_SIZE } from "@/features/chat/components/voice-call-bar";
 import { useOutbox } from "@/features/chat/context/outbox-context";
 import { usePublishedQueuedChat } from "@/features/chat/context/queued-messages-context";
 import {
@@ -67,7 +68,6 @@ import {
   takeComposerRequest,
   useComposerRequest,
 } from "../model/composer-requests";
-import type { LiveConversationPhase } from "../model/live-conversation";
 import { type OutboxMessage, outboxChatKey, outboxChatMessage, outboxRowId, outboxTargetKey } from "../model/outbox";
 import type { OutboxDraft, OutboxStore } from "../model/outbox-store";
 import { queueReceiptMessages, queueRowsWithHeldEdit } from "../model/queue-edit-draft";
@@ -151,14 +151,6 @@ export interface ChatViewProps {
 
 const CHAT_BACK_EDGE_WIDTH = 24;
 const NO_DELIVERIES: ChatQueueController["deliveries"] = [];
-const LIVE_PHASE_LABELS = {
-  starting: "mobile.chat.liveVoice.phase.starting",
-  listening: "mobile.chat.liveVoice.phase.listening",
-  sending: "mobile.chat.liveVoice.phase.thinking",
-  thinking: "mobile.chat.liveVoice.phase.thinking",
-  speaking: "mobile.chat.liveVoice.phase.speaking",
-  offline: "mobile.chat.liveVoice.phase.offline",
-} as const satisfies Record<LiveConversationPhase, MobileTextKey>;
 /** A host starts a turn within a second or two; this only ends a wait for a turn that never shows. */
 const AWAIT_TURN_MS = 10_000;
 
@@ -576,11 +568,14 @@ export function ChatView({
   const composerVoice: ComposerVoice =
     live.available || live.open
       ? {
-          ...liveVoice(live, t),
+          ...liveVoice(live, target.name, t),
           start: () => (replyVoiceReady() ? live.start() : router.push("/settings/voice")),
         }
       : dictationVoice(voice, t);
   const voiceOpen = voice.stage !== "closed" || live.open;
+  // Dictation covers the chat with its overlay. A live conversation keeps the chat in view and turns
+  // the composer into a call bar.
+  const dictating = voice.stage !== "closed";
   // A password or a code is typed where the composer is, so the screen has one field. The voice
   // mode and the attachment card keep the composer until they close. Other secret requests wait.
   const secretRequest =
@@ -946,15 +941,15 @@ export function ChatView({
               topInset={insets.top}
               onBack={leaveConversation}
               threadMenu={threadMenu}
-              // The voice overlay covers the chat. It blocks touches, and this
+              // The dictation overlay covers the chat. It blocks touches, and this
               // keeps screen readers on the transcript and the voice controls.
-              accessibilityHidden={voiceOpen}
+              accessibilityHidden={dictating}
             />
             <ChatMessageList
               agents={serverAgents}
               rowsShown={rowsShown}
               target={target}
-              accessibilityHidden={voiceOpen}
+              accessibilityHidden={dictating}
               motion={motion}
               sending={Boolean(sendingMessage)}
               awaitingTurn={awaitingTurn}
@@ -1015,27 +1010,7 @@ export function ChatView({
               upload={listUpload}
               outboxStatuses={outboxStatuses}
             />
-            {live.open ? (
-              <VoiceOverlay
-                voice={{ presence: live.presence, exit: live.exit, transcript: live.caption, level: live.level }}
-                palette={palette}
-                hint={live.phase === "listening" && !live.muted ? t("mobile.chat.liveVoice.speakNow") : ""}
-                status={t("mobile.chat.liveVoice.status", {
-                  name: target.name,
-                  phase: t(
-                    live.muted && live.phase === "listening"
-                      ? "mobile.chat.liveVoice.phase.muted"
-                      : LIVE_PHASE_LABELS[live.phase],
-                  ),
-                })}
-                error={live.error}
-                segment={live.captionKey}
-                muted={muted}
-                topInset={insets.top}
-                controlsHeight={Math.max(insets.bottom, 10) + VOICE_BUTTON_SIZE + 48}
-                reducedTransparency={reducedTransparency}
-              />
-            ) : voice.stage !== "closed" ? (
+            {dictating ? (
               <VoiceOverlay
                 voice={voice}
                 palette={palette}
@@ -1196,6 +1171,18 @@ export function ChatView({
                   stopping={stopping}
                   voice={composerVoice}
                   voiceAccent={accent}
+                  voicePalette={palette}
+                  voiceAvatar={
+                    target.kind === "agent" ? (
+                      <BloubAvatar
+                        agentId={target.id}
+                        serverId={target.serverId}
+                        hue={target.avatarHue}
+                        seed={target.avatarSeed}
+                        size={VOICE_BAR_AVATAR_SIZE}
+                      />
+                    ) : undefined
+                  }
                 />
               )}
             </Animated.View>

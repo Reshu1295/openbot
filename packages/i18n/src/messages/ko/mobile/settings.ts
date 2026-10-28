@@ -240,4 +240,8 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
   "mobile.settings.voice.elevenLabs.permissionTranscriptionHint": "ElevenLabs Scribe를 체크하면 음성을 인식해요.",
   "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
+  "mobile.settings.voice.tab.listening": "듣기",
+  "mobile.settings.voice.tab.speaking": "말하기",
+  "mobile.settings.voice.elevenLabs.recognitionFooter":
+    "OpenBot은 일회용 토큰으로 음성을 ElevenLabs에 스트리밍하고, ElevenLabs가 계정에 요금을 청구해요. 키는 이 휴대폰에 남아 있어요.",
 } as const satisfies PartialTranslation<typeof source>;

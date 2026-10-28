@@ -40,7 +40,18 @@ export type ReplyVoiceChoice =
 
 export interface ReplyReading {
   stop: () => void;
+  /**
+   * Gives a reading from `streamReply` the reply so far. The text only grows. Each sentence plays
+   * once a sentence after it is written; `complete` plays the rest, and the reading ends after it.
+   */
+  update: (markdown: string, complete: boolean) => void;
 }
+
+type ReplyHandlers = {
+  onPart: (text: string) => void;
+  onDone: () => void;
+  onError: (failure: ReplyVoiceFailure) => void;
+};
 
 /** The chosen voice can read now: Supertonic 3 is downloaded, or ElevenLabs has a key and a voice. */
 export function replyVoiceReady(engine = useVoiceSettings.getState().engine): boolean {
@@ -82,27 +93,43 @@ function elevenLabsFailure(code: ElevenLabsError["code"]): ReplyVoiceFailure {
 
 let nextReading = 0;
 
+/** Reads a whole Markdown reply aloud, as `streamReply` does with a reply that is complete. */
+export function readReply(markdown: string, handlers: ReplyHandlers, choice?: ReplyVoiceChoice): ReplyReading {
+  const reading = streamReply(handlers, choice);
+  reading.update(markdown, true);
+  return reading;
+}
+
 /**
- * Reads a Markdown reply aloud with the voice in the settings, one part at a time: code, tables and
- * addresses are not read, as on desktop. `onPart` gets the part that starts to play. One reading
- * plays at a time; a new one stops the one before it.
+ * Reads a Markdown reply aloud with the voice in the settings while it is written, one part at a
+ * time: code, tables and addresses are not read, as on desktop. The first sentence plays as soon as
+ * the next one starts, so the voice follows the text instead of waiting for the whole reply.
+ * `onPart` gets the part that starts to play. One reading plays at a time; a new one stops the one
+ * before it.
  */
-export function readReply(
-  markdown: string,
-  handlers: { onPart: (text: string) => void; onDone: () => void; onError: (failure: ReplyVoiceFailure) => void },
-  choice?: ReplyVoiceChoice,
-): ReplyReading {
+export function streamReply(handlers: ReplyHandlers, choice?: ReplyVoiceChoice): ReplyReading {
   const native = speechNative;
   const reading = ++nextReading;
   const abort = new AbortController();
   let ended = false;
-  const parts = liveSpeechParts(markdown, SPEECH_LIMITS.maximumTextLength);
-  const ids = parts.map((_, index) => `${reading}:${index}`);
+  let started = false;
+  let complete = false;
+  let markdownSoFar = "";
+  /** The parts that are fixed: the text after them is written. */
+  const parts: string[] = [];
+  let lastDone = -1;
+  let wake: (() => void) | null = null;
+  const idOf = (index: number) => `${reading}:${index}`;
+  const indexOf = (id: string) => {
+    const [owner, index] = id.split(":");
+    return owner === String(reading) ? Number(index) : -1;
+  };
   const end = (failure?: ReplyVoiceFailure) => {
     if (ended) return;
     ended = true;
     listeners.delete(listener);
     abort.abort();
+    wake?.();
     if (failure) {
       native?.stop();
       handlers.onError(failure);
@@ -110,14 +137,17 @@ export function readReply(
   };
   const listener: Listener = {
     start: (id) => {
-      const index = ids.indexOf(id);
+      const index = indexOf(id);
       if (index >= 0 && !ended) handlers.onPart(parts[index] ?? "");
     },
     done: (id) => {
-      if (id === ids.at(-1)) end();
+      const index = indexOf(id);
+      if (index < 0) return;
+      lastDone = index;
+      if (complete && index === parts.length - 1) end();
     },
     error: (id) => {
-      if (ids.includes(id)) end("speech");
+      if (indexOf(id) >= 0) end("speech");
     },
   };
   const stop = () => {
@@ -125,6 +155,7 @@ export function readReply(
     ended = true;
     listeners.delete(listener);
     abort.abort();
+    wake?.();
     native?.stop();
   };
   const settings = useVoiceSettings.getState();
@@ -135,42 +166,80 @@ export function readReply(
     engine === "elevenlabs" ? settings.hasElevenLabsKey && elevenLabsVoice !== null : replyVoiceReady("supertonic");
   if (!native || !ready) {
     queueMicrotask(() => end("not-ready"));
-    return { stop };
-  }
-  if (parts.length === 0) {
-    queueMicrotask(() => end());
-    return { stop };
+    return { stop, update: () => undefined };
   }
   native.stop();
   listeners.add(listener);
-  void (async () => {
-    try {
-      if (engine === "elevenlabs") {
-        const key = await readElevenLabsKey();
-        const voice = elevenLabsVoice;
-        if (!key || !voice) return end("not-ready");
-        // Each part plays while the next one is fetched.
-        for (const [index, part] of parts.entries()) {
-          const pcm = await elevenLabsSpeech(key, voice.id, part, abort.signal);
-          if (ended) return;
-          native.playPcm(ids[index] ?? "", pcm, ELEVENLABS_SAMPLE_RATE);
-        }
-        return;
-      }
-      const directory = supertonicModel.uri();
-      if (!directory) return end("not-ready");
-      // Supertonic 3 reads 31 languages; a reply in another script, such as Chinese, is not read.
-      const language = speechLanguageOf(speechTextFromMarkdown(markdown), fallbackLanguage());
-      if (!language) return end("language");
-      await native.load(directory, SUPERTONIC_THREADS);
+
+  /** The next part to play; null when the reply is complete and every part is out. */
+  async function nextPart(index: number): Promise<string | null> {
+    while (!ended && index >= parts.length) {
+      if (complete) return null;
+      await new Promise<void>((resolve) => {
+        wake = resolve;
+      });
+    }
+    return ended ? null : (parts[index] ?? null);
+  }
+
+  /** ElevenLabs: each part plays while the next one is fetched. */
+  async function playElevenLabs(): Promise<void> {
+    const key = await readElevenLabsKey();
+    const voice = elevenLabsVoice;
+    if (!key || !voice) return end("not-ready");
+    for (let index = 0; ; index++) {
+      const part = await nextPart(index);
+      if (part === null) return;
+      const pcm = await elevenLabsSpeech(key, voice.id, part, abort.signal);
       if (ended) return;
-      const speaker = SPEECH_VOICES.indexOf(supertonicVoice);
-      for (const [index, part] of parts.entries())
-        native.speak(ids[index] ?? "", part, language, speaker, SUPERTONIC_DENOISING_STEPS);
+      native?.playPcm(idOf(index), pcm, ELEVENLABS_SAMPLE_RATE);
+    }
+  }
+
+  /** Supertonic 3: the next part is synthesized while one plays. */
+  async function playSupertonic(): Promise<void> {
+    const directory = supertonicModel.uri();
+    if (!directory) return end("not-ready");
+    // Supertonic 3 reads 31 languages; a reply in another script, such as Chinese, is not read. The
+    // language comes from the text written when the voice starts.
+    const language = speechLanguageOf(speechTextFromMarkdown(markdownSoFar), fallbackLanguage());
+    if (!language) return end("language");
+    await native?.load(directory, SUPERTONIC_THREADS);
+    const speaker = SPEECH_VOICES.indexOf(supertonicVoice);
+    for (let index = 0; ; index++) {
+      const part = await nextPart(index);
+      if (part === null) return;
+      native?.speak(idOf(index), part, language, speaker, SUPERTONIC_DENOISING_STEPS);
+    }
+  }
+
+  async function play(): Promise<void> {
+    try {
+      await (engine === "elevenlabs" ? playElevenLabs() : playSupertonic());
     } catch (error) {
       if (ended) return;
       end(error instanceof ElevenLabsError ? elevenLabsFailure(error.code) : "speech");
     }
-  })();
-  return { stop };
+  }
+
+  const update = (markdown: string, isComplete: boolean) => {
+    if (ended || complete) return;
+    markdownSoFar = markdown;
+    const all = liveSpeechParts(markdown, SPEECH_LIMITS.maximumTextLength);
+    // The last part can still grow, so it waits until more text follows it or the reply is complete.
+    const fixed = isComplete ? all : all.slice(0, -1);
+    if (fixed.length > parts.length) parts.push(...fixed.slice(parts.length));
+    complete = isComplete;
+    if (complete && lastDone === parts.length - 1) {
+      // Nothing is left to play, such as a reply with only code, or one whose parts all played.
+      queueMicrotask(() => end());
+      return;
+    }
+    if (!started && parts.length > 0) {
+      started = true;
+      void play();
+    }
+    wake?.();
+  };
+  return { stop, update };
 }

@@ -246,4 +246,8 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
     "ElevenLabs Scribe をチェックしたときに音声を認識します。",
   "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
+  "mobile.settings.voice.tab.listening": "聞き取り",
+  "mobile.settings.voice.tab.speaking": "読み上げ",
+  "mobile.settings.voice.elevenLabs.recognitionFooter":
+    "OpenBot は 1 回限りのトークンで音声を ElevenLabs にストリーミングし、料金は ElevenLabs のアカウントに請求されます。キーはこの端末に保存されます。",
 } as const satisfies PartialTranslation<typeof source>;

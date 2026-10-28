@@ -240,4 +240,8 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
   "mobile.settings.voice.elevenLabs.permissionTranscriptionHint": "ElevenLabs Scribe işaretliyken sesini tanır.",
   "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
+  "mobile.settings.voice.tab.listening": "Dinleme",
+  "mobile.settings.voice.tab.speaking": "Konuşma",
+  "mobile.settings.voice.elevenLabs.recognitionFooter":
+    "OpenBot sesini tek kullanımlık bir belirteçle ElevenLabs'e aktarır ve ElevenLabs bunu hesabından ücretlendirir. Anahtar bu telefonda kalır.",
 } as const satisfies PartialTranslation<typeof source>;

@@ -31,8 +31,9 @@ export function liveReplyTurn(
 
 /**
  * The reply as parts to read aloud, one sentence or a few short ones each, so the caption shows the
- * part that plays. Code, tables and addresses are not read, as on desktop. `maximumLength` is the
- * longest text the phone's voice takes in one call.
+ * part that plays. The first sentence is a part of its own, so a reply that streams starts to play
+ * as soon as it is written. Code, tables and addresses are not read, as on desktop. `maximumLength`
+ * is the longest text the phone's voice takes in one call.
  */
 export function liveSpeechParts(markdown: string, maximumLength: number): string[] {
   const text = speechTextFromMarkdown(markdown);
@@ -42,7 +43,7 @@ export function liveSpeechParts(markdown: string, maximumLength: number): string
     const piece = sentence.trim();
     if (!piece) continue;
     current = current ? `${current} ${piece}` : piece;
-    if (current.length >= PART_LENGTH) {
+    if (parts.length === 0 || current.length >= PART_LENGTH) {
       parts.push(current);
       current = "";
     }

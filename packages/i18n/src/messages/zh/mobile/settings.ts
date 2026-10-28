@@ -228,4 +228,8 @@ export const messages = {
   "mobile.settings.voice.elevenLabs.permissionTranscription": "Speech to Text: Access",
   "mobile.settings.voice.elevenLabs.permissionTranscriptionHint": "选中 ElevenLabs Scribe 时识别你的语音。",
   "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
+  "mobile.settings.voice.tab.listening": "聆听",
+  "mobile.settings.voice.tab.speaking": "朗读",
+  "mobile.settings.voice.elevenLabs.recognitionFooter":
+    "OpenBot 使用一次性令牌将你的语音流式传输给 ElevenLabs，费用由 ElevenLabs 从你的账户扣除。密钥保存在此手机上。",
 } as const satisfies PartialTranslation<typeof source>;

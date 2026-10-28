@@ -242,4 +242,8 @@ export const messages = defineMessages("mobile.settings", {
   "mobile.settings.voice.elevenLabs.permissionTranscriptionHint":
     "Recognizes your speech when ElevenLabs Scribe is checked.",
   "mobile.settings.voice.elevenLabs.keyPlaceholder": "sk_…",
+  "mobile.settings.voice.tab.listening": "Listening",
+  "mobile.settings.voice.tab.speaking": "Speaking",
+  "mobile.settings.voice.elevenLabs.recognitionFooter":
+    "OpenBot streams your speech to ElevenLabs with a single-use token, and ElevenLabs bills your account. The key stays on this phone.",
 });
