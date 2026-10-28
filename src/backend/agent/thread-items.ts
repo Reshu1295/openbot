@@ -40,9 +40,18 @@ export function isArchivedThreadError(error: unknown): boolean {
  * The Codex process has no saved rollout for this unloaded thread in its `CODEX_HOME`: the thread
  * never saved a turn, or it belongs to another provider account. Codex 0.163.0 answers
  * `thread/turns/list` with this error then, and with the history of a thread that has a rollout.
+ * Codex 0.165.0 also has no rollout to read while the first turn of a new thread starts. It answers
+ * `thread/turns/list` with `is not materialized yet` or, while that turn is saved, with one of the
+ * `is not supported yet` errors (#3609).
  */
 export function isCodexMissingRollout(error: unknown): boolean {
-  return error instanceof AppServerError && error.code === -32600 && error.message.startsWith("thread not loaded:");
+  if (!(error instanceof AppServerError)) return false;
+  if (error.code === -32600)
+    return error.message.startsWith("thread not loaded:") || error.message.includes(" is not materialized yet;");
+  return (
+    error.code === -32601 &&
+    (error.message === "list_turns is not supported yet" || error.message === "paginated_threads is not supported yet")
+  );
 }
 
 /**
