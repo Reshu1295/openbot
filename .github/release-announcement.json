@@ -1,10 +1,10 @@
 {
-  "version": "0.53.0",
+  "version": "0.53.1",
   "highlights": [
-    "See the disk, memory and CPU use of your server in Server settings › Storage, and get an alert when one passes a level.",
-    "Side threads now take images and files, show question cards, and show how full their context is, with a Compact button.",
-    "A thread that you read on one device is read on your other devices too.",
-    "OpenBot starts again after an upgrade when its database has broken links from an earlier version.",
-    "Remote Desktop works again on Windows, and the Apple apps and Messages tools can ask macOS for Automation access."
+    "Usage now shows an estimated cost for Gemini (Antigravity) turns.",
+    "Queued messages show Steer only for providers that can steer a running turn, so Steer no longer fails for Gemini, OpenCode, Cursor, Cline and custom agents.",
+    "The model picker shows the Gemini models also when Gemini starts slowly.",
+    "The activity line now says when the agent waits for your answer or approval.",
+    "Server settings › Storage no longer shows machine use and alerts for now."
   ]
 }

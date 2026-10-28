@@ -1,5 +1,34 @@
 [
   {
+    "version": "0.53.1",
+    "date": "2026-10-28",
+    "notices": [],
+    "groups": [
+      {
+        "type": "added",
+        "items": ["Usage shows an estimated cost for Gemini (Antigravity) turns."]
+      },
+      {
+        "type": "changed",
+        "items": [
+          "Server settings → Storage no longer shows machine use and alerts, and the sidebar no longer shows the machine card.",
+          "Queued messages show Steer only for providers that can take a message into a running turn."
+        ]
+      },
+      {
+        "type": "fixed",
+        "items": [
+          "The activity line says when the agent waits for your answer, your approval or you in the browser.",
+          "The model picker shows the Gemini models also when Gemini starts slowly.",
+          "Agent chats in the sidebar show their unread replies when the app starts before your account signs in.",
+          "A group chat no longer shows a paused lead as working.",
+          "On macOS, the Computer Use rim no longer shows on top of the OpenBot window.",
+          "A message with a Markdown table is as wide as an agent table."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.53.0",
     "date": "2026-10-28",
     "notices": [],

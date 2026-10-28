@@ -6,6 +6,38 @@ All notable changes to OpenBot will be documented here. The project follows
 
 ## [Unreleased]
 
+## [0.53.1] - 2026-10-28
+
+### Changed
+
+- Server settings › Storage no longer shows the disk, memory and CPU use of the machine or its alert
+  levels. OpenBot no longer sends machine alerts and does not show the machine card in the sidebar.
+
+### Fixed
+
+- While a question, approval or browser request waits for you, the activity line under the chat now
+  says that the agent waits for your answer, your approval or you in the browser. Before, it kept the
+  last tool step, such as "Working through the next tool-assisted step…".
+- A message that you send with a Markdown table is now as wide as an agent table. Before, the message stayed 420px wide, and the table broke names and dates in the middle. In a narrow window, the table scrolls sideways.
+- The model picker shows the Gemini models also when Gemini starts slowly. Before, Gemini had only
+  5 seconds to list its models, and the picker showed "No models are available from Gemini" until
+  the next refresh.
+- Queued messages no longer show Steer for Gemini, OpenCode, Cursor, Cline and custom agents. These
+  providers cannot take a message into a running turn, so Steer always failed. The message still
+  starts when the turn ends.
+- On macOS, the blue Computer Use rim no longer shows on top of the OpenBot window when that window is in front of the agent's window. Before, OpenBot read the windows in the wrong front-to-back order on some macOS versions, and did not cut the rim where the OpenBot window covers it.
+- A failed update check, download or install now writes its reason, error code and HTTP status in
+  `logs/main/main.log`. Before, the logs showed only `check_failed`, with no reason.
+- The activity log in `openbot.db` now records the turn of each `turn.completed` event and keeps the
+  turn of each activity when OpenBot rebuilds a thread. Before, these rows had no turn.
+- In a workflow Agent or LLM step, a long model name now stays inside the field and ends with "…".
+  Before, the model button went past the right edge of the field. A long agent name next to it
+  stays full until the model button has only room for a few letters.
+- Agent chats in the sidebar now show their new replies when the app starts before your account
+  finishes signing in. Before, the unread counts of those chats were missing after the start.
+- A group chat no longer shows its lead as "Working on it…" while the lead is paused. Before, a message that waited for a paused lead showed the lead at work until the user restored it, but the lead did no work.
+- Usage now shows an estimated cost for Gemini (Antigravity) turns that use Gemini 4 Argon, Gemini 3.8 Flash, Claude Sonnet 5.5 or Claude Opus 5.5. Before, these turns had token counts but no cost. The estimate uses the new Gemini rates from the day that Google changes them. Turns from before the upgrade stay without a cost.
+
 ## [0.53.0] - 2026-10-28
 
 ### Added
