@@ -12,7 +12,7 @@
 //    starts a new session and runs, rather than fail each time.
 // 5. A provider start runs the backfill while the first turn of a new session runs. Codex 0.165.0
 //    answers the read with `-32601 paginated_threads is not supported yet` then (#3609). The backfill
-//    shows no error.
+//    shows no error, and the next provider start after that turn imports the session.
 // `bun run test:codex-missing-rollout`. Writes .openbot-build/codex-missing-rollout-e2e/report.json.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -167,7 +167,7 @@ interface Report {
   providerRestart?: { refusedReads: number; accountReadsOnSharedProcess: number; completeReads: number };
   backfillErrors?: { agent: string; message: string }[];
   refusedNextTurn?: { resumeRefused: boolean; newThread: string | null; turnStarted: boolean; errors: string[] };
-  startingSession?: { read: boolean; errors: string[] };
+  startingSession?: { read: boolean; errors: string[]; importedAfterTurn?: boolean };
   error?: string;
 }
 
@@ -403,6 +403,18 @@ try {
   };
   writeFileSync(controlPath, JSON.stringify({}));
   await waitFor("the first turn of the new session to end", () => idle(app, starting.id));
+  // The session is readable once its first turn is saved, so the next provider start imports it.
+  const thirdRestartAt = new Date().toISOString();
+  const lastShared = protocol().findLast((line) => line.start && line.codexHome === defaultHome);
+  if (lastShared) process.kill(lastShared.pid, "SIGTERM");
+  // A third exit in a short time stops the automatic restarts. The user then refreshes the provider.
+  await waitFor(
+    "Codex to exit",
+    () => app.agents.getStatus().providers?.find((provider) => provider.id === "codex")?.state !== "available",
+  );
+  await runCauseEffect(app.agents.refreshProvider("codex"));
+  await waitFor("the backfill after the first turn", () => importedSince(starting.id, thirdRestartAt));
+  report.startingSession.importedAfterTurn = true;
 
   report.passed =
     report.accountHomeUsedForAccountTurn &&
@@ -418,7 +430,8 @@ try {
     report.refusedNextTurn.turnStarted &&
     report.refusedNextTurn.errors.length === 0 &&
     report.startingSession.read &&
-    report.startingSession.errors.length === 0;
+    report.startingSession.errors.length === 0 &&
+    report.startingSession.importedAfterTurn === true;
 } catch (error) {
   report.error = error instanceof Error ? (error.stack ?? error.message) : String(error);
 } finally {
