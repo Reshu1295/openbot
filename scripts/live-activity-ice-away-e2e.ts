@@ -181,20 +181,22 @@ try {
     return { mode };
   });
 
-  await step("a path that comes back stops the host pushes", async () => {
+  await step("a path that comes back stops the host pushes and drops a waiting alert", async () => {
+    // An event alert waits for the event delay. The path comes back before it goes out.
+    assert.equal(service.showsEvent(SESSION, { sound: "default" }, null), true);
     service.reconnected(SESSION);
     assert.equal(service.showsEvent(SESSION, null, null), false);
-    working = true;
-    events.emit("event", { type: "turn-started", agentId: AGENT, threadId: AGENT, turnId: "fixture-turn-2" });
-    assert.equal(pushes.length, 2);
-    return { away: false, pushes: pushes.length };
+    return { away: false };
   });
 
-  await step("a second failed path sends again", async () => {
+  await step("a second failed path sends the same view again, with no old alert", async () => {
+    // The phone showed its own state in between, so the host must not skip a view equal to its last push.
     service.disconnected(SESSION);
-    const mode = shownMode(await pushNumber(3));
-    assert.equal(mode, "working");
-    return { mode };
+    const push = await pushNumber(3);
+    const mode = shownMode(push);
+    assert.equal(mode, "message");
+    assert.equal(push.alert, null);
+    return { mode, alert: push.alert };
   });
   passed = true;
 } catch {

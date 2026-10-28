@@ -161,7 +161,11 @@ export class LiveActivityPushService {
     const registration = this.#registrations.get(sessionId);
     if (!registration) return;
     registration.connected = true;
-    if (!away(registration)) this.#clearTimer(registration);
+    if (away(registration)) return;
+    this.#clearTimer(registration);
+    // As in `register`: the phone shows its own state now. The next update is sent, and an older alert is old.
+    registration.sent = null;
+    registration.alert = null;
   }
 
   /**
