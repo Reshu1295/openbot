@@ -117,7 +117,7 @@ function runInstaller(file: string, args: string): Promise<number> {
 
 function registration(): Registration {
   const json = powershell(`
-    $entry = Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall |
+    $entry = Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall -ErrorAction SilentlyContinue |
       Get-ItemProperty | Where-Object { $_.DisplayName -like 'OpenBot*' } | Select-Object -First 1
     $location = $null
     if ($entry) { $location = (Get-ItemProperty -LiteralPath "HKCU:\\Software\\$($entry.PSChildName)" -ErrorAction SilentlyContinue).InstallLocation }
@@ -148,7 +148,7 @@ function setLoginItem(executable: string): void {
 
 async function removeEverything(): Promise<void> {
   const quiet = powershell(`
-    Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall | Get-ItemProperty |
+    Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty |
       Where-Object { $_.DisplayName -like 'OpenBot*' } | ForEach-Object { $_.PSChildName }`);
   for (const key of quiet.split(/\r?\n/u).filter(Boolean)) {
     powershell(`Remove-Item -LiteralPath "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${key}" -Recurse -Force -ErrorAction SilentlyContinue
