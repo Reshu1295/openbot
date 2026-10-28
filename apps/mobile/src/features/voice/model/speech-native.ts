@@ -18,7 +18,7 @@ type SpeechEvents = {
 };
 
 /** `transcribe` recognizes speech with the loaded recognizer; `stream` sends the audio to JavaScript. */
-export type CaptureMode = "transcribe" | "stream";
+type CaptureMode = "transcribe" | "stream";
 
 declare class SpeechModule extends NativeModule<SpeechEvents> {
   /** A `file://` URI of the directory for downloaded voice models, which the device does not back up. */

@@ -410,7 +410,7 @@ function useSystemDictation({
  * enough memory, ElevenLabs needs a key, and both need a speech module with a microphone. Otherwise
  * the phone's recognizer listens, so the microphone always works.
  */
-export function useActiveRecognition(): "system" | ModelRecognition {
+function useActiveRecognition(): "system" | ModelRecognition {
   const recognition = useVoiceSettings((state) => state.recognition);
   const hasKey = useVoiceSettings((state) => state.hasElevenLabsKey);
   const parakeetReady = useParakeetModel((state) => state.phase === "ready");
