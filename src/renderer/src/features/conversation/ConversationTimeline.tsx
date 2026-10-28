@@ -122,6 +122,7 @@ export function ConversationTimeline() {
     composerHasContent,
     copiedMessageId,
     dismissPendingSend,
+    downloadMessageImageFile,
     editingDeliveryId,
     editPendingSend,
     copyMessage,
@@ -1222,6 +1223,9 @@ export function ConversationTimeline() {
                                   messageId: message()?.id ?? initialMessage.id,
                                   agentId: workspaceAgentId(),
                                 }))
+                            }
+                            onDownloadImageFile={
+                              loadImageFile && ((file) => downloadMessageImageFile(file, workspaceAgentId()))
                             }
                             actions={
                               <>

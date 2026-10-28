@@ -220,6 +220,8 @@ export function ImageLightbox(props: {
   /** Finds the thumbnail of an image, so the viewer closes back into the one it shows. */
   thumbnail?: (attachment: AttachmentSummary) => HTMLElement | undefined;
   onDownload?: ((attachment: AttachmentSummary) => void) | undefined;
+  /** Absent, every image can download. */
+  canDownload?: ((attachment: AttachmentSummary) => boolean) | undefined;
   /** The window draws the macOS window controls over the top start corner, so the toolbar leaves room. */
   macWindowControls?: boolean | undefined;
   onClose: () => void;
@@ -241,6 +243,10 @@ export function ImageLightbox(props: {
   const [failed, setFailed] = createStore<Record<string, boolean>>({});
   const images = () => props.opening.images;
   const current = createMemo(() => images()[Math.min(index(), images().length - 1)]);
+  const downloadable = () => {
+    const image = current();
+    return image && (props.canDownload?.(image) ?? true) ? image : undefined;
+  };
   const imageElements = new Map<string, HTMLImageElement>();
   const tiles = createTileMotion();
   // The thumbnails move only when the viewer grows out of one of them.
@@ -611,7 +617,7 @@ export function ImageLightbox(props: {
                 onFit={() => move(FIT, true)}
                 onZoomIn={() => zoomBy(ZOOM_STEP)}
               />
-              <Show when={props.onDownload && current()}>
+              <Show when={props.onDownload && downloadable()}>
                 {(shown) => (
                   <Button
                     variant="ghost"
