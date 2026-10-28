@@ -269,6 +269,8 @@ export const ServerDrawerContent = memo(function ServerDrawerContent({
           editing
             ? undefined
             : () => {
+                // A row with no actions has no menu, so it gives no menu haptic.
+                if (menuActions(serverItem).length === 0) return;
                 void haptics.longPress();
                 if (isAndroid) menus.current.get(serverItem.id)?.show();
               }
