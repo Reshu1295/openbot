@@ -22,8 +22,11 @@
 //      default model. A model with no known price is reviewed on itself.
 //  11. Memory search finds another form of a word: "closing" finds "closes".
 //  12. Off (interval 0): 20 turns, a closed side thread, a clear and a pause start no review.
-//  13. Deleting a side thread, deleting the agent, or stopping the service during a slow review
-//      applies nothing and shows no error.
+//  13. Deleting a side thread or deleting the agent during a slow review applies nothing and shows
+//      no error.
+//  14. A review does not forget a memory that it sees only redacted, and does not add the text of a
+//      saved memory again, which would change the user's inclusion choice.
+//  15. Stopping the service during a slow review applies nothing and shows no error.
 // No provider, account or network is used. `bun run test:memory-review`.
 // Writes .openbot-build/memory-review-e2e/report.json.
 import assert from "node:assert/strict";
@@ -581,13 +584,46 @@ try {
     return { deleted: fourth.id };
   });
 
+  await check("a review does not forget a memory it sees redacted, or add the text of a saved one", async () => {
+    const guarded = await createAgent("Guarded");
+    const secretText = `The user's key is ${SECRET}.`;
+    await send(guarded.id, `Save it. ${calls({ tool: "remember", arguments: { text: secretText } })}`);
+    const hidden = service.listMemories(guarded.id).find((memory) => memory.text.includes(SECRET))?.id;
+    assert.ok(hidden, "The agent saved the memory.");
+    const manualText = "The user's dog is called Rex.";
+    const written = service.createMemory({ agentId: guarded.id, text: manualText }).id;
+    const inclusion = () =>
+      service.getMemorySelection(guarded.id).selections.find((entry) => entry.memoryId === written)?.inclusion;
+    const before = inclusion();
+    assert.notEqual(before, "essential", "The user's memory is not essential.");
+    control({
+      operations: [
+        { type: "forget", memoryId: hidden },
+        { type: "add", text: manualText, inclusion: "essential" },
+      ],
+    });
+    await send(guarded.id, "My dog is called Rex.");
+    await runCauseEffect(service.clearAgentContext(guarded.id));
+    await reviewed(14);
+    await settle();
+    assert.ok(!reviews()[13]?.includes(SECRET), "The review prompt has no secret.");
+    const memories = service.listMemories(guarded.id);
+    assert.ok(
+      memories.some((memory) => memory.id === hidden),
+      "The memory that the review saw redacted stays.",
+    );
+    assert.equal(memories.filter((memory) => memory.text === manualText).length, 1, "No copy was added.");
+    assert.equal(inclusion(), before, "The user's choice stays.");
+    return { memories: memories.length, inclusion: before };
+  });
+
   await check("stopping the service during a slow review applies nothing", async () => {
     const since = events.length;
     const before = service.listMemories(third.id).length;
     control({ operations: [{ type: "add", text: "Never saved either.", inclusion: "searchable" }] }, 3_000);
     await send(third.id, "Remember that I like pears.");
     await runCauseEffect(service.clearAgentContext(third.id));
-    await reviewed(14);
+    await reviewed(15);
     const started = Date.now();
     await runCauseEffect(service.stop());
     const stopMs = Date.now() - started;

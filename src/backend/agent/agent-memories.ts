@@ -213,7 +213,16 @@ export class AgentMemories {
       ...operations.filter((operation) => operation.type === "update"),
       ...operations.filter((operation) => operation.type === "add"),
     ];
+    const changed = new Set(operations.flatMap((operation) => (operation.type === "add" ? [] : [operation.memoryId])));
+    const saved = new Set(
+      this.#memories
+        .list(agentId)
+        .filter((memory) => !changed.has(memory.id))
+        .map((memory) => memory.text),
+    );
     ordered.forEach((operation, index) => {
+      // An add of a saved text would only change that memory's inclusion, which can be the user's choice.
+      if (operation.type === "add" && saved.has(normalizeMemoryText(operation.text))) return;
       if (operation.type !== "add") {
         const entry = read.get(operation.memoryId);
         const current = this.#memories.get(agentId, operation.memoryId);

@@ -290,6 +290,7 @@ export class MemoryReview {
       const { agentId, threadId } = conversation;
       const messages = yield* Effect.try(() => options.chat(agentId, threadId));
       // The count starts again also when the review fails, so a failing model is not asked each turn.
+      const before = { turns: conversation.turns, cursor: conversation.cursor };
       conversation.turns = 0;
       const excerpt = reviewExcerpt(messages, conversation.cursor);
       this.#moveCursor(conversation, messages);
@@ -297,13 +298,20 @@ export class MemoryReview {
       const agent = options.listAgents().find((candidate) => candidate.id === agentId);
       if (!agent) return;
       const model = reviewModel(agent, yield* options.models(agent));
-      if (!model || options.stopping() || !options.profileClients.hasSpare()) return;
+      if (!model || options.stopping()) return;
+      if (!options.profileClients.hasSpare()) {
+        // A user turn took the spare client while the model list loaded: wait, and read these turns then.
+        conversation.turns += before.turns;
+        conversation.cursor = before.cursor;
+        conversation.waiting = true;
+        return;
+      }
       const base = yield* Effect.try(() => options.memories.reviewBase(agentId));
       const redacted = base.memories.map((entry) => ({
         ...entry,
         memory: { ...entry.memory, text: options.redact(entry.memory.text) },
       }));
-      // The model sees only the redacted text of these, so it must not write them again.
+      // The model sees only the redacted text of these, so it must not write or forget them.
       const hidden = new Set(
         redacted
           .filter((entry, index) => entry.memory.text !== base.memories[index]?.memory.text)
@@ -328,7 +336,7 @@ export class MemoryReview {
         Effect.flatMap(Schema.decodeUnknownEffect(MemoryReviewResult)),
       );
       const operations = result.operations.filter(
-        (operation) => operation.type !== "update" || !hidden.has(operation.memoryId),
+        (operation) => operation.type === "add" || !hidden.has(operation.memoryId),
       );
       if (operations.length === 0 || options.stopping()) return;
       if (!options.listAgents().some((candidate) => candidate.id === agentId)) return;

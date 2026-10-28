@@ -575,7 +575,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         const loaded = sideThreadId
           ? this.#conversation.loadedExecutionSnapshot(sideThreadId)
           : this.#conversation.loadedSnapshot(agentId);
-        if (loaded) return loaded.messages;
+        // The next turn can start before the review reads: it reads that turn after it ends.
+        if (loaded)
+          return loaded.activeTurnId
+            ? loaded.messages.filter((message) => message.turnId !== loaded.activeTurnId)
+            : loaded.messages;
         const threadId = sideThreadId ?? this.#store.list().find((agent) => agent.id === agentId)?.threadId;
         return threadId
           ? this.#store.database.readConversationPage(agentId, threadId, { type: "latest" }, MEMORY_REVIEW_MESSAGES)
