@@ -95,6 +95,8 @@ export interface TeamWebRtcHostPeerOptions {
   appVersion: string;
   transferDirectory: string;
   closeSession?: (sessionId: string) => Effect.Effect<void, RemoteWorkflowError>;
+  /** The path of the session failed or came back. The peer and the session stay open. */
+  pathChanged?: (sessionId: string, lost: boolean) => void;
   verifyClientTicket?:
     | ((ticket: string) => Effect.Effect<VerifiedRemoteSessionTicket, RemoteWorkflowError>)
     | undefined;
@@ -128,6 +130,7 @@ export class TeamWebRtcHostPeer {
   readonly #appVersion: string;
   readonly #files: TeamWebRtcFileTransfer;
   readonly #closeSession: (sessionId: string) => Effect.Effect<void, RemoteWorkflowError>;
+  readonly #pathChanged: (sessionId: string, lost: boolean) => void;
   readonly #verifyClientTicket:
     | ((ticket: string) => Effect.Effect<VerifiedRemoteSessionTicket, RemoteWorkflowError>)
     | null;
@@ -190,10 +193,13 @@ export class TeamWebRtcHostPeer {
       (peerId) => peerId === this.#peerId && this.#localSessionToken !== null,
     );
     this.#closeSession = options.closeSession ?? (() => Effect.void);
+    this.#pathChanged = options.pathChanged ?? (() => undefined);
     this.#verifyClientTicket = options.verifyClientTicket ?? null;
     this.#bridge.on("connected", this.#onConnected);
     this.#bridge.on("data", this.#onData);
     this.#bridge.on("disconnected", this.#onDisconnected);
+    this.#bridge.on("pathLost", this.#onPathLost);
+    this.#bridge.on("pathRestored", this.#onPathRestored);
   }
 
   readonly revokeSession = Effect.fn("TeamHostPeer.revokeSession")(function* (
@@ -229,6 +235,8 @@ export class TeamWebRtcHostPeer {
     this.#bridge.off("connected", this.#onConnected);
     this.#bridge.off("data", this.#onData);
     this.#bridge.off("disconnected", this.#onDisconnected);
+    this.#bridge.off("pathLost", this.#onPathLost);
+    this.#bridge.off("pathRestored", this.#onPathRestored);
     // Transport teardown must not revoke a logical session resumed by another peer.
     yield* this.#closeLocalSession(false);
     this.#peerId = null;
@@ -366,6 +374,14 @@ export class TeamWebRtcHostPeer {
       this.#authenticationCompletion = null;
       this.#dispatch(this.#closeLocalSession(false));
     }
+  };
+
+  readonly #onPathLost = (peerId: string): void => {
+    if (peerId === this.#peerId && this.#localSessionId) this.#pathChanged(this.#localSessionId, true);
+  };
+
+  readonly #onPathRestored = (peerId: string): void => {
+    if (peerId === this.#peerId && this.#localSessionId) this.#pathChanged(this.#localSessionId, false);
   };
 
   readonly #handleAuthentication = Effect.fn("TeamHostPeer.handleAuthentication")(function* (

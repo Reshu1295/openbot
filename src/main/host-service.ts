@@ -470,6 +470,12 @@ export class HostService extends EventEmitter<HostEvents> {
               yield* this.#browserView.revokeTeamSession(sessionId);
               this.#options.browser.releaseUserControlHeldBy({ kind: "session", sessionId });
             }),
+          // iOS suspends the phone app before Signal reports the lost connection, about 150 s later.
+          // The failed path tells it after about 30 s, so the host updates the Live Activity sooner.
+          pathChanged: (sessionId, lost) => {
+            if (lost) this.#liveActivityPush?.disconnected(sessionId);
+            else this.#liveActivityPush?.reconnected(sessionId);
+          },
           ...(options.verifyRemoteSessionTicket ? { verifyClientTicket: options.verifyRemoteSessionTicket } : {}),
           ...(options.privateNetwork ? { privateNetwork: options.privateNetwork } : {}),
         })

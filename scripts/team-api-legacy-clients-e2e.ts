@@ -654,12 +654,14 @@ try {
       role: "member" as const,
       clientPublicKey: clientKeys.publicKey,
     };
+    const pathChanges: [sessionId: string, lost: boolean][] = [];
     const peer = new TeamWebRtcHostPeer(
       {
         bridge,
         store: team,
         appVersion: HOST_VERSION,
         transferDirectory: join(root, "transfers"),
+        pathChanged: (changed, lost) => pathChanges.push([changed, lost]),
         verifyClientTicket: (presented) =>
           presented === ticket
             ? Effect.succeed(claims)
@@ -714,7 +716,7 @@ try {
         signature: sign(null, Buffer.from(signed), clientKeys.privateKey).toString("base64url"),
       }),
     );
-    return { bridge, peer, ticket, sessionId, clientNonce };
+    return { bridge, peer, ticket, sessionId, clientNonce, pathChanges };
   }
 
   function authFrame(data: string) {
@@ -879,6 +881,23 @@ try {
       `The host failed the DELETE: ${JSON.stringify(frame)}.`,
     );
     return { status };
+  });
+
+  await step("v2 path: a failed ICE path marks the session away and keeps it open (#3583)", async () => {
+    v2.bridge.emit("pathLost", "other-peer");
+    assert.deepEqual(v2.pathChanges, [], "The path of another peer must not change this session.");
+    v2.bridge.emit("pathLost", "peer-v2");
+    v2.bridge.emit("pathRestored", "peer-v2");
+    assert.deepEqual(v2.pathChanges, [
+      [v2.sessionId, true],
+      [v2.sessionId, false],
+    ]);
+    assert.deepEqual(v2.bridge.disconnected, [], "A failed path must not drop the peer.");
+    assert.ok(
+      team.listSessions().some((session) => session.id === v2.sessionId),
+      "A failed path must not end the team session.",
+    );
+    return v2.pathChanges;
   });
 
   await step("v2 handshake: a forged proof or an RPC before the proof gets no session", async () => {
