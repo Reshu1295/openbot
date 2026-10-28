@@ -12,7 +12,7 @@ const REVIEW_OPERATION_LIMIT = 20;
  * budget holds them small. Of the searchable ones, those that share the most words with the chat come
  * first, then the newest, so a review stays the same size at any memory limit.
  */
-export const MEMORY_REVIEW_SEARCHABLE_CHARACTERS = 12_000;
+const MEMORY_REVIEW_SEARCHABLE_CHARACTERS = 12_000;
 
 const MemoryText = Schema.Trim.check(Schema.isNonEmpty(), Schema.isMaxLength(INPUT_LIMITS.agentMemoryText));
 const MemoryId = Schema.NonEmptyString.check(Schema.isMaxLength(INPUT_LIMITS.identifier));

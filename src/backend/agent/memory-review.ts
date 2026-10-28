@@ -21,11 +21,11 @@ import { inputPrice } from "./usage-pricing";
 const logger = createOpenBotLogger("memory-review");
 
 /** The completed turns of one conversation between two reviews, by default. */
-export const MEMORY_REVIEW_INTERVAL = 20;
+const MEMORY_REVIEW_INTERVAL = 20;
 /** A conversation with no turn for this long gets its review early, when it has enough new turns. */
-export const MEMORY_REVIEW_IDLE_MS = 15 * 60_000;
+const MEMORY_REVIEW_IDLE_MS = 15 * 60_000;
 /** The fewest new turns for a review after a pause or when a side thread closes. */
-export const MEMORY_REVIEW_IDLE_TURNS = 3;
+const MEMORY_REVIEW_IDLE_TURNS = 3;
 /** The latest chat messages that a review reads when the chat is not loaded. */
 export const MEMORY_REVIEW_MESSAGES = 200;
 
@@ -34,7 +34,7 @@ export const MEMORY_REVIEW_MESSAGES = 200;
  * model, so an agent on a large model reviews at the small model's price. A model with no known
  * price stays as it is. Null when the agent's own model is not available.
  */
-export function reviewModel(agent: AgentSummary, models: readonly AgentModelOption[]): AgentModelOption | null {
+function reviewModel(agent: AgentSummary, models: readonly AgentModelOption[]): AgentModelOption | null {
   const listed = (id: string) => models.find((model) => model.provider === agent.provider && model.id === id);
   const own = listed(agent.model);
   if (!own) return null;
@@ -45,7 +45,7 @@ export function reviewModel(agent: AgentSummary, models: readonly AgentModelOpti
   return ownPrice !== null && smallerPrice !== null && smallerPrice < ownPrice ? smaller : own;
 }
 
-export class MemoryReviewFailed extends Schema.TaggedError<MemoryReviewFailed>()("MemoryReviewFailed", {
+class MemoryReviewFailed extends Schema.TaggedError<MemoryReviewFailed>()("MemoryReviewFailed", {
   cause: Schema.Defect(),
 }) {}
 
