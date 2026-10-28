@@ -293,7 +293,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Nie udało się wczytać limitu wspomnień tego serwera.",
   "server.settings.memoryReview": "Przegląd wspomnień",
   "server.settings.memoryReviewDescription":
-    "Jak często agenci na tym komputerze zapisują w tle trwałe fakty ze swoich czatów.",
+    "Jak często agenci na tym serwerze zapisują w tle trwałe fakty ze swoich czatów.",
   "server.settings.memoryReviewOff": "Wyłączony",
   "server.settings.memoryReviewTurns": {
     one: "Co {count} turę",

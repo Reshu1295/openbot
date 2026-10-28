@@ -572,8 +572,9 @@ the chat, and when the user closes a side thread, OpenBot sends the agent's prof
 memories, the saved memories that relate most to the conversation, and the new part of the
 conversation, with secrets redacted, to the agent's own provider, on the agent's model or on the
 provider's lower-priced default model, which proposes memory changes. Nothing else receives them.
-Server settings > General > Memory review on this computer sets the number of turns (10, 20 or 40)
-or turns these reviews off; off, no review sends anything.
+Server settings > General > Memory review sets the number of turns (10, 20 or 40) for the agents of
+the server, or turns these reviews off; off, no review sends anything. An owner or admin of a joined
+server can change it.
 
 - `~/OpenBot/Agents` contains one workspace per agent. A profile written by a release before the
   bot-to-agent rename holds them under `~/OpenBot/Bots`; the application moves them on first launch.

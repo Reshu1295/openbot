@@ -101,9 +101,30 @@ export function isMemoryReviewInterval(value: unknown): value is MemoryReviewInt
   return isOneOf(MEMORY_REVIEW_INTERVALS, value);
 }
 
-/** The app setting, as it is stored and as it crosses IPC. */
+/** The app setting, as it is stored. */
 export interface MemoryReviewPreference {
   interval: MemoryReviewInterval;
+}
+
+/**
+ * The review cadence of one server's agents (`memory-review-v1`) and the values that host permits.
+ * A newer host can permit other values, so they are numbers here, not `MemoryReviewInterval`.
+ */
+export interface HostMemoryReview {
+  interval: number;
+  choices: number[];
+}
+
+export function hostMemoryReview({ interval }: MemoryReviewPreference): HostMemoryReview {
+  return { interval, choices: [...MEMORY_REVIEW_INTERVALS] };
+}
+
+/** On the wire the route codec has already checked the fields; this fails closed on anything else. */
+export function decodeHostMemoryReview(value: unknown): HostMemoryReview {
+  const count = (item: unknown): item is number => typeof item === "number" && Number.isSafeInteger(item) && item >= 0;
+  if (!isDynamicRecord(value) || !count(value.interval) || !Array.isArray(value.choices) || !value.choices.every(count))
+    throw new Error("Invalid memory review setting.");
+  return { interval: value.interval, choices: [...value.choices] };
 }
 
 /**

@@ -298,7 +298,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Das Erinnerungslimit dieses Servers konnte nicht geladen werden.",
   "server.settings.memoryReview": "Erinnerungsprüfung",
   "server.settings.memoryReviewDescription":
-    "Wie oft Agenten auf diesem Computer im Hintergrund dauerhafte Fakten aus ihren Chats speichern.",
+    "Wie oft Agenten auf diesem Server im Hintergrund dauerhafte Fakten aus ihren Chats speichern.",
   "server.settings.memoryReviewOff": "Aus",
   "server.settings.memoryReviewTurns": { one: "Alle {count} Runde", other: "Alle {count} Runden" },
   "server.settings.memoryReviewLoadFailed": "Die Einstellung für die Erinnerungsprüfung konnte nicht geladen werden.",

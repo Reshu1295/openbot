@@ -77,7 +77,6 @@ import {
   isDetectedAcpAgent,
   isDetectedModelServer,
   isDiscoverModelsResult,
-  isMemoryReviewInterval,
   isProviderDetectionSettings,
   isRemoteDesktopSetupStatus,
   isRemoteDesktopTestStatus,
@@ -85,7 +84,6 @@ import {
   isSpeechVoice,
   isVoiceLanguage,
   isVoiceModelId,
-  type MemoryReviewPreference,
   type MobileConnectedDevice,
   type MobileConnectLink,
   type MobileConnectTicket,
@@ -179,12 +177,6 @@ export function decodeAgentMemoryLimitPreference(value: unknown): AgentMemoryLim
   const preference = decodeRecord(value, "agent memory limit preference");
   if (!isAgentMemoryLimit(preference.limit)) throw new Error("Invalid agent memory limit.");
   return { limit: preference.limit };
-}
-
-export function decodeMemoryReviewPreference(value: unknown): MemoryReviewPreference {
-  const preference = decodeRecord(value, "memory review preference");
-  if (!isMemoryReviewInterval(preference.interval)) throw new Error("Invalid memory review interval.");
-  return { interval: preference.interval };
 }
 
 export function decodeAppLanguagePreference(value: unknown): AppLanguagePreference {

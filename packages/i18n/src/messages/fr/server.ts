@@ -296,7 +296,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Impossible de charger la limite de souvenirs de ce serveur.",
   "server.settings.memoryReview": "Revue des souvenirs",
   "server.settings.memoryReviewDescription":
-    "À quelle fréquence les agents de cet ordinateur enregistrent en arrière-plan les faits durables de leurs discussions.",
+    "À quelle fréquence les agents de ce serveur enregistrent en arrière-plan les faits durables de leurs discussions.",
   "server.settings.memoryReviewOff": "Désactivée",
   "server.settings.memoryReviewTurns": { one: "Tous les {count} tour", other: "Tous les {count} tours" },
   "server.settings.memoryReviewLoadFailed": "Impossible de charger le réglage de revue des souvenirs.",

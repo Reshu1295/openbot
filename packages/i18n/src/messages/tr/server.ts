@@ -298,7 +298,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Bu sunucunun bellek sınırı yüklenemedi.",
   "server.settings.memoryReview": "Bellek incelemesi",
   "server.settings.memoryReviewDescription":
-    "Bu bilgisayardaki ajanların sohbetlerindeki kalıcı bilgileri arka planda ne sıklıkla kaydettiği.",
+    "Bu sunucudaki ajanların sohbetlerindeki kalıcı bilgileri arka planda ne sıklıkla kaydettiği.",
   "server.settings.memoryReviewOff": "Kapalı",
   "server.settings.memoryReviewTurns": { one: "Her {count} turda", other: "Her {count} turda" },
   "server.settings.memoryReviewLoadFailed": "Bellek incelemesi ayarı yüklenemedi.",

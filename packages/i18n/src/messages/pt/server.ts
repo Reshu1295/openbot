@@ -293,7 +293,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Não foi possível carregar o limite de memórias deste servidor.",
   "server.settings.memoryReview": "Revisão de memórias",
   "server.settings.memoryReviewDescription":
-    "Com que frequência os agentes deste computador guardam em segundo plano fatos duradouros das conversas.",
+    "Com que frequência os agentes deste servidor guardam em segundo plano fatos duradouros das conversas.",
   "server.settings.memoryReviewOff": "Desativada",
   "server.settings.memoryReviewTurns": { one: "A cada {count} turno", other: "A cada {count} turnos" },
   "server.settings.memoryReviewLoadFailed": "Não foi possível carregar a configuração de revisão de memórias.",

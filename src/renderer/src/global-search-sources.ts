@@ -193,8 +193,7 @@ export function useGlobalSearchSources(open: () => boolean) {
             run: () => openServerSettings(server.id, globalSearchOpener(), "general"),
           });
         }
-        // An app setting of this computer, so only the local server shows it.
-        if (server.kind === "local") {
+        if (serverCanAdminister(server, "memory-review-v1") && (server.kind === "local" || server.state === "online")) {
           list.push({
             id: "server:memory-review",
             label: t("server.settings.memoryReview"),

@@ -315,7 +315,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Kan de geheugenlimiet van deze server niet laden.",
   "server.settings.memoryReview": "Geheugencontrole",
   "server.settings.memoryReviewDescription":
-    "Hoe vaak agents op deze computer op de achtergrond blijvende feiten uit hun chats bewaren.",
+    "Hoe vaak agents op deze server op de achtergrond blijvende feiten uit hun chats bewaren.",
   "server.settings.memoryReviewOff": "Uit",
   "server.settings.memoryReviewTurns": { one: "Elke {count} beurt", other: "Elke {count} beurten" },
   "server.settings.memoryReviewLoadFailed": "Kan de instelling voor geheugencontrole niet laden.",

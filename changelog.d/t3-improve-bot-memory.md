@@ -9,9 +9,10 @@
   A search also finds other forms of a word, so "closing" finds "closes".
 - A memory review uses the provider's smaller default model when the agent's model costs more, such
   as Claude Haiku for an agent on Opus or Sonnet.
-- Server settings > General > Memory review sets how often the agents on this computer review their
+- Server settings > General > Memory review sets how often the agents on a server review their
   memories: every 10, 20 or 40 turns, or Off. Off also stops the reviews after a pause, a clear and a
-  closed side thread.
+  closed side thread. An owner or admin can set it for this computer and for a joined, hosted or
+  self-hosted server that runs this release.
 
 ### Changed
 

@@ -87,8 +87,10 @@ import {
   type HostedSiteSummary,
   type HostStatus,
   hostAgentMemoryLimit,
+  hostMemoryReview,
   isAgentMemoryLimit,
   isAgentSummary,
+  isMemoryReviewInterval,
   isPromptCacheTtl,
   isReleasedRoutineSchedule,
   type MachineAlertSettings,
@@ -1012,11 +1014,6 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
     onAgentMemoryLimitPreference: (listener) => {
       agentMemoryLimitListeners.add(listener);
       return () => agentMemoryLimitListeners.delete(listener);
-    },
-    getMemoryReviewPreference: async () => clone(memoryReview),
-    setMemoryReviewPreference: async ({ interval }) => {
-      memoryReview = { interval };
-      return clone(memoryReview);
     },
     getAppLanguagePreference: async () => clone(languagePreference),
     setAppLanguagePreference: async ({ language }) => {
@@ -2816,6 +2813,12 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         agentMemoryLimit = { limit };
         for (const listener of agentMemoryLimitListeners) listener(clone(agentMemoryLimit));
         return hostAgentMemoryLimit(agentMemoryLimit);
+      },
+      getMemoryReview: async () => hostMemoryReview(memoryReview),
+      setMemoryReview: async (interval) => {
+        if (!isMemoryReviewInterval(interval)) throw new Error("Memory review interval is required.");
+        memoryReview = { interval };
+        return hostMemoryReview(memoryReview);
       },
       // Preview has one host, so every server shares one set of machine alerts.
       getMachineAlerts: async () => clone(machineAlerts),

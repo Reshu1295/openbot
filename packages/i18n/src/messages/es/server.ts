@@ -293,7 +293,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "No se pudo cargar el límite de recuerdos de este servidor.",
   "server.settings.memoryReview": "Revisión de recuerdos",
   "server.settings.memoryReviewDescription":
-    "Con qué frecuencia los agentes de este ordenador guardan en segundo plano datos duraderos de sus chats.",
+    "Con qué frecuencia los agentes de este servidor guardan en segundo plano datos duraderos de sus chats.",
   "server.settings.memoryReviewOff": "Desactivada",
   "server.settings.memoryReviewTurns": { one: "Cada {count} turno", other: "Cada {count} turnos" },
   "server.settings.memoryReviewLoadFailed": "No se pudo cargar el ajuste de revisión de recuerdos.",

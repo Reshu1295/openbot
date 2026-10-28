@@ -319,7 +319,7 @@ export const messages = defineMessages("server", {
   "server.settings.memoryLimitLoadFailed": "Could not load the memory limit of this server.",
   "server.settings.memoryReview": "Memory review",
   "server.settings.memoryReviewDescription":
-    "How often agents on this computer save lasting facts from their chats in the background.",
+    "How often agents on this server save lasting facts from their chats in the background.",
   "server.settings.memoryReviewOff": "Off",
   "server.settings.memoryReviewTurns": { one: "Every {count} turn", other: "Every {count} turns" },
   "server.settings.memoryReviewLoadFailed": "Could not load the memory review setting.",

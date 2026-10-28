@@ -114,8 +114,7 @@ export function createServerGeneralSection(host: ServerSettingsSectionHost): Ser
   const canEditIdentity = () => serverCanAdminister(props.server, "host-admin-v1") && actionsAvailable();
   const canSetTimezone = () => serverCanAdminister(props.server, "host-timezone-v1") && actionsAvailable();
   const canSetMemoryLimit = () => serverCanAdminister(props.server, "agent-memory-limit-v1") && actionsAvailable();
-  /** An app setting of this computer, so a joined server does not show it. */
-  const memoryReview = () => (local() ? props.memoryReview : undefined);
+  const canSetMemoryReview = () => serverCanAdminister(props.server, "memory-review-v1") && actionsAvailable();
   const trimmedName = () => panels.identity.name.trim();
   const nameError = () => {
     if (!canEditIdentity()) return null;
@@ -399,7 +398,9 @@ export function createServerGeneralSection(host: ServerSettingsSectionHost): Ser
         </SettingsSection>
         <Show
           when={
-            (canSetTimezone() && props.hostTimezone) || (canSetMemoryLimit() && props.hostMemoryLimit) || memoryReview()
+            (canSetTimezone() && props.hostTimezone) ||
+            (canSetMemoryLimit() && props.hostMemoryLimit) ||
+            (canSetMemoryReview() && props.memoryReview)
           }
         >
           <SettingsSection title={t("server.settings.agents")}>
@@ -426,10 +427,11 @@ export function createServerGeneralSection(host: ServerSettingsSectionHost): Ser
                   />
                 )}
               </Show>
-              <Show when={memoryReview()}>
+              <Show when={canSetMemoryReview() && props.memoryReview}>
                 {(options) => (
                   <ServerMemoryReviewSetting
                     {...options()}
+                    serverId={props.server.id}
                     disabled={Boolean(busy())}
                     menuMount={host.menuMount()}
                     run={run}

@@ -297,7 +297,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Не удалось загрузить лимит памяти этого сервера.",
   "server.settings.memoryReview": "Проверка памяти",
   "server.settings.memoryReviewDescription":
-    "Как часто агенты на этом компьютере сохраняют в фоне устойчивые факты из своих чатов.",
+    "Как часто агенты на этом сервере сохраняют в фоне устойчивые факты из своих чатов.",
   "server.settings.memoryReviewOff": "Выкл.",
   "server.settings.memoryReviewTurns": {
     one: "Каждый {count} ход",

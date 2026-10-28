@@ -57,6 +57,7 @@ import { LIVE_ACTIVITY_PUSH_CAPABILITY } from "./live-activity-push-v1";
 import { MACHINE_RESOURCES_CAPABILITY } from "./machine-resources-v1";
 import { MCP_SIGN_IN_APP_CAPABILITY } from "./mcp-sign-in-app-v1";
 import { MCP_SIGN_IN_CAPABILITY } from "./mcp-sign-in-v1";
+import { MEMORY_REVIEW_CAPABILITY } from "./memory-review-v1";
 import { TEAM_MESSAGE_CLIENT_ID_CAPABILITY } from "./message-client-id-v1";
 import { ONEPASSWORD_CONNECTOR_CAPABILITY } from "./onepassword-connector-v1";
 import { PROMPT_CACHE_TTL_CAPABILITY } from "./prompt-cache-ttl-v1";
@@ -174,6 +175,7 @@ export {
   MCP_SERVERS_CAPABILITY,
   MCP_SIGN_IN_APP_CAPABILITY,
   MCP_SIGN_IN_CAPABILITY,
+  MEMORY_REVIEW_CAPABILITY,
   ONEPASSWORD_CONNECTOR_CAPABILITY,
   PROMPT_CACHE_TTL_CAPABILITY,
   PROVIDER_ACCOUNT_RELAY_CAPABILITY,
@@ -332,6 +334,7 @@ export const TEAM_CURRENT_CAPABILITIES = [
   VAULT_V2_CAPABILITY,
   AGENT_TASK_UI_BLOCKS_CAPABILITY,
   TEAM_CONTEXT_USAGE_CAPABILITY,
+  MEMORY_REVIEW_CAPABILITY,
 ] as const;
 
 export type TeamCurrentCapability = (typeof TEAM_CURRENT_CAPABILITIES)[number];
@@ -460,7 +463,8 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== VAULT_IMPORT_CAPABILITY &&
     capability !== VAULT_V2_CAPABILITY &&
     capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY &&
-    capability !== TEAM_CONTEXT_USAGE_CAPABILITY,
+    capability !== TEAM_CONTEXT_USAGE_CAPABILITY &&
+    capability !== MEMORY_REVIEW_CAPABILITY,
 );
 // A v7 host does not know the v8 markers, so a client sends them only after it negotiates protocol 8.
 const TEAM_PROTOCOL_V7_CURRENT_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
@@ -535,6 +539,7 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== VAULT_IMPORT_CAPABILITY &&
       capability !== VAULT_V2_CAPABILITY &&
       capability !== AGENT_TASK_UI_BLOCKS_CAPABILITY &&
-      capability !== TEAM_CONTEXT_USAGE_CAPABILITY,
+      capability !== TEAM_CONTEXT_USAGE_CAPABILITY &&
+      capability !== MEMORY_REVIEW_CAPABILITY,
   );
 }

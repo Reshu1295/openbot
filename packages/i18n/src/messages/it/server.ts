@@ -291,7 +291,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "Impossibile caricare il limite di memorie di questo server.",
   "server.settings.memoryReview": "Revisione delle memorie",
   "server.settings.memoryReviewDescription":
-    "Ogni quanto gli agenti di questo computer salvano in background i fatti duraturi delle loro chat.",
+    "Ogni quanto gli agenti di questo server salvano in background i fatti duraturi delle loro chat.",
   "server.settings.memoryReviewOff": "Disattivata",
   "server.settings.memoryReviewTurns": { one: "Ogni {count} turno", other: "Ogni {count} turni" },
   "server.settings.memoryReviewLoadFailed": "Impossibile caricare l'impostazione della revisione delle memorie.",

@@ -43,6 +43,7 @@ import { LIVE_ACTIVITY_PUSH_CODECS } from "./live-activity-push-v1";
 import { MACHINE_RESOURCES_CODECS } from "./machine-resources-v1";
 import { MCP_SIGN_IN_APP_CODECS } from "./mcp-sign-in-app-v1";
 import { MCP_SIGN_IN_CODECS } from "./mcp-sign-in-v1";
+import { MEMORY_REVIEW_CODECS } from "./memory-review-v1";
 import { ONEPASSWORD_CONNECTOR_CODECS } from "./onepassword-connector-v1";
 import { PROMPT_CACHE_TTL_CODECS } from "./prompt-cache-ttl-v1";
 import { PROVIDER_ACCOUNT_RELAY_CODECS } from "./provider-account-relay-v1";
@@ -94,6 +95,7 @@ const CODECS: ReadonlyMap<string, OptionalRouteCodec> = new Map([
   ...HOST_UPDATE_CODECS,
   ...HOST_TIMEZONE_CODECS,
   ...AGENT_MEMORY_LIMIT_CODECS,
+  ...MEMORY_REVIEW_CODECS,
   ...PROMPT_CACHE_TTL_CODECS,
   ...PROVIDER_DEFAULT_CODECS,
   ...DISCORD_ACCESS_CODECS,

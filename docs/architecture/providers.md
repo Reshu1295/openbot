@@ -98,13 +98,14 @@ itself starts the count again. A deleted side thread is not reviewed, and its ru
 The counts and the last reviewed message are in memory only; after a restart, a review reads the
 latest messages.
 
-The number of turns is an app setting of the computer that runs the agents: Server settings >
-General > Memory review, local server only, with 10, 20 (the default) or 40 turns, or Off. Main owns
+The number of turns is a setting of the server that runs the agents: Server settings > General >
+Memory review, with 10, 20 (the default) or 40 turns, or Off. An owner or admin of a joined server sets
+it through `memory-review-v1` (see [servers.md](servers.md)). Main owns
 `openbot-memory-review-v1.json` (`MemoryReviewPreferenceStore`) and passes
 `memoryReviewInterval()` to the agent service, which reads it at each use, so a change applies from
 the next turn. Off starts no review of any kind: not after turns, a pause, a clear or a closed side
 thread. The counts continue while it is off, so the first turn after it is on again can start a
-review. A joined server uses the setting of the computer that runs it.
+review.
 
 The review is one profile-client generation without tools, on the agent's own provider. It uses
 the provider's default model (`defaultProviderModel`) when that model is listed and its standard

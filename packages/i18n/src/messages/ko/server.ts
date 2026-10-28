@@ -311,7 +311,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "이 서버의 메모리 한도를 불러올 수 없었어요.",
   "server.settings.memoryReview": "메모리 검토",
   "server.settings.memoryReviewDescription":
-    "이 컴퓨터의 에이전트가 채팅에서 오래 쓸 사실을 백그라운드에서 저장하는 빈도예요.",
+    "이 서버의 에이전트가 채팅에서 오래 쓸 사실을 백그라운드에서 저장하는 빈도예요.",
   "server.settings.memoryReviewOff": "끄기",
   "server.settings.memoryReviewTurns": { other: "{count}턴마다" },
   "server.settings.memoryReviewLoadFailed": "메모리 검토 설정을 불러올 수 없었어요.",

@@ -444,6 +444,7 @@ host advertises a capability only when its `TeamApiAdmin` member exists.
 | `host-update-v1` | Check for, download and restart into an app update; cancel a restart that waits | `hostAdmin` |
 | `host-timezone-v1` | Read and set the server timezone | `hostAdmin` |
 | `agent-memory-limit-v1` | Read and set how many memories each agent keeps | `hostAdmin` |
+| `memory-review-v1` | Read and set how often the host's agents review their memories in the background, or Off | `hostAdmin` |
 | `machine-resources-v1` | Read the disk, memory and CPU use of the host machine; read and set the alert levels and the owner or admin who gets the `machine-alert` event | `storage`, `hostAdmin` |
 | `prompt-cache-ttl-v1` | Read and set how long Claude keeps the prompt cache of the host's agents | `hostAdmin` |
 | `provider-default-v1` | Read and set the provider that a new agent of the host starts on | none: only the mobile app sends it |
@@ -506,6 +507,13 @@ agent's memories (`app:agent-memory-limit`). A lower limit deletes no memories. 
 change the 8,192-byte budget of essential memories. Server settings → General → Agents is the only
 place that sets the limit, for this computer (`hostAdmin.setAgentMemoryLimit`, local handler) and for a
 joined server. App Settings does not show it, so that one name does not have two values.
+
+`memory-review-v1` reads and sets how many completed turns of one conversation pass between two
+background memory reviews of the host's agents (`openbot-memory-review-v1.json`; 10, 20 or 40, default
+20; `0` is Off). The snapshot gives the value and the values that the host permits; the host refuses
+other values. The agent service reads the value at each use, so a change applies from the next turn.
+Server settings → General → Agents → Memory review sets it for this computer
+(`hostAdmin.setMemoryReview`, local handler) and for a joined server.
 
 `prompt-cache-ttl-v1` reads and sets how long Claude keeps the prompt cache of the host's agents
 (`openbot-prompt-cache-ttl-v1.json`; `5m` or `1h`, default `5m`). With `1h` the host starts each

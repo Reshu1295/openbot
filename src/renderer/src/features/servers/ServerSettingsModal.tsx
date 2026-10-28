@@ -198,8 +198,8 @@ export interface ServerSettingsModalProps {
    */
   hostMemoryLimit?: ServerMemoryLimitOptions | undefined;
   /**
-   * General shows how often this computer's agents review their memories only when a caller
-   * supplies this, and only for the local server: it is an app setting of this computer.
+   * General shows how often the agents review their memories only when a caller supplies this, and
+   * only for the local server or a remote host with `memory-review-v1` that this member administers.
    */
   memoryReview?: ServerMemoryReviewOptions | undefined;
   /**

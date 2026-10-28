@@ -1,9 +1,4 @@
-import {
-  MEMORY_REVIEW_INTERVALS,
-  type MemoryReviewInterval,
-  type MemoryReviewPreference,
-  type OpenBotDesktopApi,
-} from "@openbot/contracts/ipc";
+import type { HostMemoryReview, OpenBotDesktopApi } from "@openbot/contracts/ipc";
 import {
   Item,
   ItemActions,
@@ -17,53 +12,70 @@ import {
   SelectValue,
 } from "@openbot/ui";
 import { useText } from "@openbot/ui/text";
-import { createSignal, onSettled, Show } from "solid-js";
+import { createEffect, createSignal, Show, untrack } from "solid-js";
 
-/** The memory review calls of this computer. The desktop reaches them through main. */
-export type MemoryReviewCalls = Pick<OpenBotDesktopApi, "getMemoryReviewPreference" | "setMemoryReviewPreference">;
+/** The memory review calls of one server's host. The desktop reaches them through main. */
+export type HostMemoryReviewCalls = Pick<OpenBotDesktopApi["hostAdmin"], "getMemoryReview" | "setMemoryReview">;
 
 export interface ServerMemoryReviewOptions {
-  /** The calls of a client with no `window.openbot`, such as a preview. */
-  calls?: MemoryReviewCalls;
+  /** The calls of a client with no `window.openbot`, such as the web client. */
+  calls?: HostMemoryReviewCalls;
 }
 
 /**
  * Server Settings > General: how many completed turns of one conversation pass between two
- * background memory reviews of this computer's agents, or Off. It is an app setting, so only the
- * local server shows it.
+ * background memory reviews of the agents of this computer or a joined server, or Off
+ * (`memory-review-v1`). The values come from the host. The host checks the role again.
  */
 export function ServerMemoryReviewSetting(
   props: ServerMemoryReviewOptions & {
+    serverId: string;
     disabled: boolean;
     menuMount: HTMLElement | undefined;
     run: (key: string, action: () => Promise<void>) => Promise<boolean>;
   },
 ) {
   const { t, errorMessage } = useText();
-  const calls = (): MemoryReviewCalls => props.calls ?? window.openbot;
-  const [preference, setPreference] = createSignal<MemoryReviewPreference | null>(null);
+  const calls = (): HostMemoryReviewCalls => props.calls ?? window.openbot.hostAdmin;
+  const [settings, setSettings] = createSignal<HostMemoryReview | null>(null);
   const [loadError, setLoadError] = createSignal<string | null>(null);
+  /** Bumped for each server, so an answer for an earlier one is dropped. */
+  let generation = 0;
 
-  onSettled(() => {
-    calls()
-      .getMemoryReviewPreference()
-      .then(setPreference, (error: unknown) =>
-        setLoadError(errorMessage(error, t("server.settings.memoryReviewLoadFailed"))),
-      );
-  });
+  createEffect(
+    () => props.serverId,
+    (serverId) => {
+      const current = ++generation;
+      setSettings(null);
+      setLoadError(null);
+      untrack(calls)
+        .getMemoryReview(serverId)
+        .then(
+          (next) => {
+            if (current === generation) setSettings(next);
+          },
+          (error: unknown) => {
+            if (current === generation) setLoadError(errorMessage(error, t("server.settings.memoryReviewLoadFailed")));
+          },
+        );
+    },
+  );
 
-  const label = (interval: MemoryReviewInterval | null) =>
+  const label = (interval: number | null) =>
     interval === null
       ? ""
       : interval === 0
         ? t("server.settings.memoryReviewOff")
         : t("server.settings.memoryReviewTurns", { count: interval });
 
-  function choose(interval: MemoryReviewInterval | null): void {
-    const current = preference();
+  function choose(interval: number | null): void {
+    const current = settings();
     if (interval === null || !current || interval === current.interval) return;
+    const serverId = props.serverId;
+    const request = generation;
     void props.run("memoryReview", async () => {
-      setPreference(await calls().setMemoryReviewPreference({ interval }));
+      const next = await calls().setMemoryReview(interval, serverId);
+      if (request === generation) setSettings(next);
     });
   }
 
@@ -73,11 +85,16 @@ export function ServerMemoryReviewSetting(
         <ItemTitle id="server-settings-memory-review-label">{t("server.settings.memoryReview")}</ItemTitle>
         <ItemDescription>{loadError() ?? t("server.settings.memoryReviewDescription")}</ItemDescription>
       </ItemContent>
-      <Show when={preference()}>
+      <Show when={settings()}>
         {(current) => (
           <ItemActions>
-            <Select<MemoryReviewInterval>
-              options={[...MEMORY_REVIEW_INTERVALS]}
+            <Select<number>
+              // A host that no longer permits its stored value still shows it.
+              options={
+                current().choices.includes(current().interval)
+                  ? current().choices
+                  : [current().interval, ...current().choices]
+              }
               value={current().interval}
               disabled={props.disabled}
               placement="bottom-end"
@@ -85,7 +102,7 @@ export function ServerMemoryReviewSetting(
               itemComponent={(item) => <SelectItem item={item.item}>{label(item.item.rawValue)}</SelectItem>}
             >
               <SelectTrigger size="sm" aria-labelledby="server-settings-memory-review-label">
-                <SelectValue<MemoryReviewInterval>>{(state) => label(state.selectedOption() ?? null)}</SelectValue>
+                <SelectValue<number>>{(state) => label(state.selectedOption() ?? null)}</SelectValue>
               </SelectTrigger>
               <SelectContent mount={props.menuMount} />
             </Select>

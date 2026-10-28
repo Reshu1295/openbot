@@ -304,7 +304,7 @@ export const messages = {
   "server.settings.memoryLimitDescription": "该服务器上每个助手最多可保留多少条记忆。",
   "server.settings.memoryLimitLoadFailed": "无法加载该服务器的记忆上限。",
   "server.settings.memoryReview": "记忆整理",
-  "server.settings.memoryReviewDescription": "此电脑上的助手在后台从聊天中保存长期事实的频率。",
+  "server.settings.memoryReviewDescription": "该服务器上的助手在后台从聊天中保存长期事实的频率。",
   "server.settings.memoryReviewOff": "关闭",
   "server.settings.memoryReviewTurns": { other: "每 {count} 轮" },
   "server.settings.memoryReviewLoadFailed": "无法加载记忆整理设置。",

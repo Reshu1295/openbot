@@ -49,6 +49,7 @@ import {
   getAgentAdminSettings,
   getHostAgentAccess,
   getHostAgentMemoryLimit,
+  getHostMemoryReview,
   getHostPromptCacheTtl,
   getHostReleaseStatus,
   getHostTimezone,
@@ -57,6 +58,7 @@ import {
   listHostedSites,
   setHostAgentAccess,
   setHostAgentMemoryLimit,
+  setHostMemoryReview,
   setHostPromptCacheTtl,
   setHostTimezone,
   setHostUpdateSettings,
@@ -165,6 +167,7 @@ import type { ScheduleRoutine } from "../schedule/SchedulePanel";
 import { AddServerOverlay, type AddServerResume } from "../servers/AddServerOverlay";
 import { createHostedUpsellOffline, HostedServerUpsell } from "../servers/hosted-server-upsell-controller";
 import type { HostMemoryLimitCalls } from "../servers/ServerMemoryLimitSetting";
+import type { HostMemoryReviewCalls } from "../servers/ServerMemoryReviewSetting";
 import type { HostAgentAccessCalls } from "../servers/ServerRolesSection";
 import type { ServerHostedSitesOptions, ServerSettingsSection } from "../servers/ServerSettingsModal";
 import type { HostTimezoneCalls } from "../servers/ServerTimezoneSetting";
@@ -990,6 +993,12 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       runTeamEffect(
         setHostAgentMemoryLimit(hostRequest(serverId), limit).pipe(Effect.mapError((error) => error.cause)),
       ),
+  };
+  const hostMemoryReviewCalls: HostMemoryReviewCalls = {
+    getMemoryReview: async (serverId) =>
+      runTeamEffect(getHostMemoryReview(hostRequest(serverId)).pipe(Effect.mapError((error) => error.cause))),
+    setMemoryReview: async (interval, serverId) =>
+      runTeamEffect(setHostMemoryReview(hostRequest(serverId), interval).pipe(Effect.mapError((error) => error.cause))),
   };
   const hostPromptCacheTtlCalls: HostPromptCacheTtlCalls = {
     getPromptCacheTtl: async (serverId) =>
@@ -2103,6 +2112,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                       hostUpdate={{ calls: hostUpdateCalls }}
                       hostTimezone={{ calls: hostTimezoneCalls }}
                       hostMemoryLimit={{ calls: hostMemoryLimitCalls }}
+                      memoryReview={{ calls: hostMemoryReviewCalls }}
                       hostPromptCacheTtl={{ calls: hostPromptCacheTtlCalls }}
                       agentAccess={{ calls: hostAgentAccessCalls, listAgents: () => workspace.runtime.listAgents() }}
                       browserProfiles={browserProfileSettings()}

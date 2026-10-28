@@ -67,7 +67,7 @@ import type {
   CreateAgentMemoryInput,
   DeleteAgentMemoryInput,
   HostAgentMemoryLimit,
-  MemoryReviewPreference,
+  HostMemoryReview,
   SetAgentMemoryInclusionInput,
   UpdateAgentMemoryInput,
 } from "./ipc-agent-memories";
@@ -630,8 +630,6 @@ export const IPC_ENDPOINTS = {
     // Server settings set the limit of this computer (`hostAdmin.setAgentMemoryLimit`), here or from a
     // joined admin, so main tells the window.
     agentMemoryLimitPreference: event<AgentMemoryLimitPreference>()("app:agent-memory-limit"),
-    getMemoryReviewPreference: request<undefined, MemoryReviewPreference>()("app:get-memory-review"),
-    setMemoryReviewPreference: request<MemoryReviewPreference, MemoryReviewPreference>()("app:set-memory-review"),
     getRemoteSessionReusePreference: request<undefined, RemoteSessionReusePreference>()("app:get-remote-session-reuse"),
     setRemoteSessionReusePreference: request<RemoteSessionReusePreference, RemoteSessionReusePreference>()(
       "app:set-remote-session-reuse",
@@ -1086,6 +1084,10 @@ export const IPC_ENDPOINTS = {
     // How many memories each agent of the server can keep, and the values its host permits.
     getAgentMemoryLimit: scopedQuery<HostAgentMemoryLimit, "required">()("host-admin:get-agent-memory-limit"),
     setAgentMemoryLimit: scopedRequest<number, HostAgentMemoryLimit, "required">()("host-admin:set-agent-memory-limit"),
+    // How many completed turns of one conversation pass between two background memory reviews of the
+    // server's agents (`0` is off), and the values its host permits.
+    getMemoryReview: scopedQuery<HostMemoryReview, "required">()("host-admin:get-memory-review"),
+    setMemoryReview: scopedRequest<number, HostMemoryReview, "required">()("host-admin:set-memory-review"),
     // The machine alert levels and the member who gets the alert (`machine-resources-v1`).
     getMachineAlerts: scopedQuery<MachineAlertSettings, "required">()("host-admin:get-machine-alerts"),
     setMachineAlerts: scopedRequest<MachineAlertSettings, MachineAlertSettings, "required">()(

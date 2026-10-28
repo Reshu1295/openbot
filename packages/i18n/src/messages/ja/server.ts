@@ -289,7 +289,7 @@ export const messages = {
   "server.settings.memoryLimitLoadFailed": "このサーバーのメモリー上限を読み込めませんでした。",
   "server.settings.memoryReview": "メモリーの見直し",
   "server.settings.memoryReviewDescription":
-    "このコンピューターのエージェントが、チャットから長く使う事実をバックグラウンドで保存する頻度です。",
+    "このサーバーのエージェントが、チャットから長く使う事実をバックグラウンドで保存する頻度です。",
   "server.settings.memoryReviewOff": "オフ",
   "server.settings.memoryReviewTurns": { other: "{count} ターンごと" },
   "server.settings.memoryReviewLoadFailed": "メモリーの見直しの設定を読み込めませんでした。",

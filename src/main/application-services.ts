@@ -2360,6 +2360,7 @@ export async function createApplicationServices({
       },
       timezone: serverTimezone,
       memoryLimit: agentMemoryLimitSetting,
+      memoryReview,
       promptCacheTtl,
       // The local Settings save does the same two steps (`saveSetup`).
       defaultProvider: {
