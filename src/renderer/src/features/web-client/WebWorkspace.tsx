@@ -2238,6 +2238,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                     },
                     approvals: () => workspace.state.approvals,
                     takeovers: () => workspace.state.takeovers,
+                    hiddenAgentIds: () => new Set(workspace.state.userHiddenAgents.map((entry) => entry.agentId)),
                   });
                   return (
                     <Conversation
