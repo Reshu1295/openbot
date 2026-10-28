@@ -77,6 +77,7 @@ export function createTeamProtocolV8Event(
     uiBlocks?: boolean;
     subagents?: boolean;
     promptMultiSelect?: boolean;
+    agentContext?: boolean;
   } = {},
 ): TeamProtocolV2EventFrame {
   const decoded = decodeTeamProtocolV8BaseCurrentEvent(value);

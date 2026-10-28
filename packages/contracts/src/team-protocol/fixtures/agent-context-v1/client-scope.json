@@ -1,0 +1,5 @@
+{
+  "type": "agent-event-scope",
+  "includeConversations": false,
+  "capabilities": ["agent-runtime-snapshots", "local-providers-v3", "open-providers-v1", "agent-context-v1"]
+}

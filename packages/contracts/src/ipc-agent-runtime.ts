@@ -154,7 +154,7 @@ export interface AgentContextCategoryUsage {
   tokens: number;
 }
 
-/** Local desktop context state. Frozen Team adapters do not carry this field. */
+/** Context state; remote hosts carry it through the optional agent-context-v1 capability. */
 export interface AgentContextState {
   agentId: string;
   threadId: string;
@@ -220,7 +220,7 @@ function isAgentContextState(value: unknown): value is AgentContextState {
 
 export interface AgentRuntimeSnapshot {
   contextStates?: AgentContextState[];
-  /** The context of each side thread that reported one, by its `threadId`. Local only, as `contextStates` is. */
+  /** The context of each side thread that reported one, by its `threadId`. */
   threadContextStates?: AgentContextState[];
   agents: AgentRuntimeRosterEntry[];
   activeTurns: Array<{ agentId: string; threadId: string; turnId: string }>;

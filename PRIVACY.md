@@ -105,6 +105,10 @@ A script can send the data elsewhere under its own configuration.
 
 ## Agent and host usage
 
+Connected clients can receive context token counts, category estimates and compaction state for
+agents they can access. These updates include agent and public thread identifiers, but no prompt
+or message text, and travel through the existing encrypted host connection.
+
 The Usage view stores numeric token counts, activity counts, provider and model identifiers,
 internal session and turn identifiers, timestamps, and cost estimates in the host's local SQLite
 database. Collection starts when this feature is installed. It does not import old provider

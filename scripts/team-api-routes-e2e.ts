@@ -19,6 +19,7 @@ import { isDeepStrictEqual } from "node:util";
 import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import {
   AGENT_PROVIDERS,
+  type AgentContextState,
   type AgentModelId,
   type AgentProviderId,
   type AgentStatus,
@@ -55,6 +56,7 @@ import {
   BROWSER_SECRET_VAULT_CAPABILITY,
   BROWSER_SECRET_VAULT_ROUTES,
 } from "@openbot/contracts/team-protocol/browser-secret-vault-v1";
+import { AGENT_CONTEXT_CAPABILITY, teamCapabilitiesForProtocol } from "@openbot/contracts/team-protocol/current";
 import {
   MACHINE_RESOURCES_CAPABILITY,
   MACHINE_RESOURCES_ROUTES,
@@ -83,12 +85,24 @@ import {
   TEAM_CAPABILITIES_HEADER,
   TEAM_PROTOCOL_VERSION_HEADER,
 } from "@openbot/contracts/team-protocol/v1";
+import { decodeTeamProtocolV7BaseCurrentEvent } from "@openbot/contracts/team-protocol/v7-base-adapter";
+import {
+  createTeamProtocolV7Event,
+  decodeTeamProtocolV7CurrentEvent,
+} from "@openbot/contracts/team-protocol/v7-webrtc-adapter";
+import { decodeTeamProtocolV8BaseCurrentEvent } from "@openbot/contracts/team-protocol/v8-base-adapter";
+import {
+  createTeamProtocolV8Event,
+  decodeTeamProtocolV8CurrentEvent,
+} from "@openbot/contracts/team-protocol/v8-webrtc-adapter";
 import { VAULT_IMPORT_CAPABILITY, VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
 import { VAULT_CAPABILITY, VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
 import { VAULT_V2_CAPABILITY, VAULT_V2_ROUTES } from "@openbot/contracts/team-protocol/vault-v2";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
 import { Effect } from "effect";
+import contextScope from "../packages/contracts/src/team-protocol/fixtures/agent-context-v1/client-scope.json";
+import contextEvent from "../packages/contracts/src/team-protocol/fixtures/agent-context-v1/host-event.json";
 import { SteerUnsupportedError } from "../src/backend/agent/queue-controls";
 import { AgentLifecycleFailed } from "../src/backend/agent-service";
 import { BrowserProfileStore } from "../src/backend/browser-profiles/browser-profile-store";
@@ -97,6 +111,7 @@ import { runCauseEffect } from "../src/backend/effect-boundary";
 import { OpenBotDatabase } from "../src/backend/openbot-database";
 import { RoutineResultError } from "../src/backend/routine-results/routine-results";
 import { TeamChatStore } from "../src/backend/team-chat-store";
+import { AgentAccessStore } from "../src/main/agent-access-store";
 import { createAgentHostSettings } from "../src/main/agent-host-settings";
 import { type BitwardenCliRunner, BitwardenConnectorService } from "../src/main/bitwarden-connector-service";
 import { BitwardenConnectorStore } from "../src/main/bitwarden-connector-store";
@@ -289,6 +304,23 @@ const NO_STATUS: AgentStatus = {
 };
 
 let hidden: HiddenAgentsSnapshot = { agents: [{ agentId: "agent-pi", hiddenAt: new Date(0).toISOString() }] };
+let runtimeContext: AgentContextState[] = agents.map((agent) => ({
+  agentId: agent.id,
+  threadId: `thread-${agent.id}`,
+  usage: {
+    usedTokens: 50000,
+    windowTokens: 200000,
+    autoCompactAt: 0.8,
+    nativeManaged: true,
+    estimated: true,
+    categories: [{ category: "messages", tokens: 50000 }],
+  },
+  compaction: null,
+}));
+const threadContext: AgentContextState[] = runtimeContext.map((state) => ({
+  ...state,
+  threadId: `task-${state.agentId}`,
+}));
 
 const fakeAgents: TeamApiAgents = {
   on: () => undefined,
@@ -359,7 +391,28 @@ const fakeAgents: TeamApiAgents = {
         : { path: workspacePath, name: "notes.md", size: readFileSync(workspacePath).length, insideWorkspace: true };
     }),
   deleteAgent: (agentId) => Effect.sync(() => record("deleteAgent", agentId)),
-  getRuntimeSnapshot: unused("getRuntimeSnapshot"),
+  getRuntimeSnapshot: () => ({
+    agents: agents.map(({ id, name, notifications, preview, updatedAt, avatarSeed, avatarHue, avatarUrl }) => ({
+      id,
+      name,
+      notifications,
+      preview,
+      updatedAt,
+      avatarSeed,
+      avatarHue,
+      avatarUrl,
+    })),
+    activeTurns: [],
+    work: [],
+    latestMessages: [],
+    attentionComplete: true,
+    pendingPrompts: [],
+    pendingApprovals: [],
+    pendingBrowserTakeovers: [],
+    failedTurns: [],
+    contextStates: runtimeContext,
+    threadContextStates: threadContext,
+  }),
   getUsage: unused("getUsage"),
   getAnalytics: unused("getAnalytics"),
   getHostAnalytics: unused("getHostAnalytics"),
@@ -599,6 +652,7 @@ const machine = new MachineAlertMonitor({
   onError: (message) => logged.push(message),
 });
 const database = new OpenBotDatabase(join(root, "user-data"));
+const agentAccess = new AgentAccessStore(join(root, "agent-access.json"));
 let server: TeamApiServer | null = null;
 
 try {
@@ -606,6 +660,7 @@ try {
   const OWNER_PASSWORD = "owner-password-e2e";
   await runCauseEffect(store.configure("E2E Server", "owner", OWNER_PASSWORD));
   await runCauseEffect(database.initialize());
+  await runCauseEffect(agentAccess.load());
   const owner = await runCauseEffect(store.login("owner", OWNER_PASSWORD));
   const serverId = store.getIdentity()?.serverId;
   assert.ok(serverId, "The team store has no identity after configure.");
@@ -653,6 +708,7 @@ try {
     appVersion: APP_VERSION,
     store,
     agents: fakeAgents,
+    agentAccess,
     mailbox,
     browser,
     chat: new TeamChatStore(database),
@@ -1063,6 +1119,179 @@ try {
     errorIs(refusedTicket, 401, sourceText("error.team.signInRequired")),
     summary(refusedTicket),
   );
+
+  // ---- Context meter transport, optional capability and access filtering ----
+  {
+    const ids = new Set(agents.map((agent) => agent.id));
+    await Effect.runPromise(
+      agentAccess.set(serverId, { revision: 0, everyone: { "agent-oc": "none" }, roles: [] }, ids, ids),
+    );
+    const snapshot = (socket: WebSocket): Promise<Json> =>
+      new Promise((resolveSnapshot, reject) => {
+        const receive = (message: MessageEvent) => {
+          const event = parseJson(String(message.data));
+          if (field(event, "type") !== "runtime-snapshot") return;
+          socket.removeEventListener("message", receive);
+          resolveSnapshot(event);
+        };
+        socket.addEventListener("message", receive);
+        socket.addEventListener("close", () => reject(new Error("The context event socket closed.")), { once: true });
+      });
+    const connect = async (version: 7 | 8, enabled: boolean, token = bobToken) => {
+      const socket = new WebSocket(`ws://127.0.0.1:${port}${TEAM_API_ROUTES.events}`, [
+        TEAM_PROTOCOL_V1_WEBSOCKET,
+        `openbot-token.${token}`,
+      ]);
+      await new Promise<void>((resolveOpen, reject) => {
+        socket.addEventListener("open", () => resolveOpen(), { once: true });
+        socket.addEventListener("error", () => reject(new Error("The context event socket did not open.")), {
+          once: true,
+        });
+      });
+      const next = snapshot(socket);
+      socket.send(
+        JSON.stringify({
+          ...contextScope,
+          capabilities: contextScope.capabilities.filter(
+            (capability) =>
+              (enabled || capability !== AGENT_CONTEXT_CAPABILITY) &&
+              (version === 8 || capability !== "open-providers-v1"),
+          ),
+        }),
+      );
+      return { socket, event: await next };
+    };
+    for (const version of [7, 8] as const) {
+      runtimeContext = runtimeContext.map((state) => ({
+        ...state,
+        usage: state.usage && { ...state.usage, usedTokens: 50000 },
+      }));
+      const decode = version === 7 ? decodeTeamProtocolV7BaseCurrentEvent : decodeTeamProtocolV8BaseCurrentEvent;
+      const createFrame = version === 7 ? createTeamProtocolV7Event : createTeamProtocolV8Event;
+      const decodeFrame = version === 7 ? decodeTeamProtocolV7CurrentEvent : decodeTeamProtocolV8CurrentEvent;
+      const connected = await connect(version, true);
+      try {
+        const visible = list(field(connected.event, "snapshot", "contextStates"));
+        const tasks = list(field(connected.event, "snapshot", "threadContextStates"));
+        check(
+          `v${version} sends context and filters denied agents in both lists`,
+          visible.length === 2 &&
+            tasks.length === 2 &&
+            [...visible, ...tasks].every((row) => field(row, "botId") !== "agent-oc"),
+          connected.event,
+        );
+        const decoded = decode(connected.event);
+        check(
+          `v${version} decodes context for the existing meter`,
+          decoded.kind === "known" &&
+            decoded.event.type === "runtime-snapshot" &&
+            decoded.event.snapshot.contextStates?.[0]?.usage?.usedTokens === 50000,
+          decoded.kind,
+        );
+        const frame = createFrame(1, connected.event, { agentContext: true });
+        const fromFrame = decodeFrame(frame);
+        check(
+          `v${version} WebRTC preserves context state`,
+          fromFrame.status === "known" &&
+            fromFrame.event.type === "runtime-snapshot" &&
+            fromFrame.event.snapshot.contextStates?.[0]?.agentId === "agent-ada",
+          frame,
+        );
+        const legacyFrame = createFrame(2, connected.event);
+        check(
+          `v${version} WebRTC omits unnegotiated context`,
+          legacyFrame.type === "event" && field(legacyFrame.payload, "snapshot", "contextStates") === undefined,
+          legacyFrame,
+        );
+        const update = snapshot(connected.socket);
+        runtimeContext = runtimeContext.map((state) => ({
+          ...state,
+          usage: state.usage && { ...state.usage, usedTokens: 60000 },
+        }));
+        clock += 2000;
+        connected.socket.send(JSON.stringify({ type: "runtime-snapshot-request" }));
+        const updated = await update;
+        check(
+          `v${version} refreshes context on a snapshot request`,
+          field(updated, "snapshot", "contextStates", 0, "usage", "usedTokens") === 60000,
+          updated,
+        );
+      } finally {
+        connected.socket.close();
+      }
+      const reconnected = await connect(version, true);
+      check(
+        `v${version} reconnect reads current host context`,
+        field(reconnected.event, "snapshot", "contextStates", 0, "usage", "usedTokens") === 60000,
+        reconnected.event,
+      );
+      reconnected.socket.close();
+      const legacy = await connect(version, false);
+      check(
+        `v${version} keeps the old snapshot without the capability`,
+        field(legacy.event, "snapshot", "contextStates") === undefined &&
+          field(legacy.event, "snapshot", "threadContextStates") === undefined &&
+          decode(legacy.event).kind === "known",
+        legacy.event,
+      );
+      legacy.socket.close();
+      const fixture = decode(contextEvent);
+      check(
+        `v${version} reads the frozen context fixture`,
+        fixture.kind === "known" &&
+          fixture.event.type === "runtime-snapshot" &&
+          fixture.event.snapshot.contextStates?.[0]?.usage?.categories?.length === 2 &&
+          fixture.event.snapshot.threadContextStates?.[0]?.compaction?.status === "completed",
+        fixture.kind,
+      );
+      for (const bad of [
+        {
+          ...contextEvent.snapshot.contextStates[0],
+          usage: { ...contextEvent.snapshot.contextStates[0]?.usage, windowTokens: 0 },
+        },
+        {
+          ...contextEvent.snapshot.contextStates[0],
+          usage: { ...contextEvent.snapshot.contextStates[0]?.usage, usedTokens: -1 },
+        },
+        { ...contextEvent.snapshot.contextStates[0], botId: "" },
+        {
+          ...contextEvent.snapshot.contextStates[0],
+          usage: { ...contextEvent.snapshot.contextStates[0]?.usage, categories: [{ category: "unknown", tokens: 1 }] },
+        },
+        { ...contextEvent.snapshot.contextStates[0], compaction: { id: "test", startedAt: 1, status: "unknown" } },
+      ]) {
+        check(
+          `v${version} refuses malformed context`,
+          decode({ ...contextEvent, snapshot: { ...contextEvent.snapshot, contextStates: [bad] } }).kind === "invalid",
+          bad,
+        );
+      }
+    }
+    const admin = await connect(8, true, adaToken);
+    check(
+      "an admin keeps context for all agents",
+      list(field(admin.event, "snapshot", "contextStates")).length === 3,
+      admin.event,
+    );
+    admin.socket.close();
+    runtimeContext = [];
+    const empty = await connect(8, true);
+    check(
+      "an empty host snapshot clears context from earlier reads",
+      isDeepStrictEqual(field(empty.event, "snapshot", "contextStates"), []),
+      empty.event,
+    );
+    empty.socket.close();
+    check(
+      "context capability stays out of bootstrap and old protocol lists",
+      !teamCapabilitiesForProtocol(6).includes(AGENT_CONTEXT_CAPABILITY) &&
+        teamCapabilitiesForProtocol(7).includes(AGENT_CONTEXT_CAPABILITY) &&
+        teamCapabilitiesForProtocol(8).includes(AGENT_CONTEXT_CAPABILITY),
+    );
+    await Effect.runPromise(
+      agentAccess.set(serverId, { revision: agentAccess.get(serverId).revision, everyone: {}, roles: [] }, ids, ids),
+    );
+  }
 
   // ---- Auth gate ----
   {

@@ -6,6 +6,7 @@ import { ACP_REGISTRY_CAPABILITY } from "./acp-registry-v1";
 import { AGENT_ACCESS_CAPABILITY } from "./agent-access-v1";
 import { AGENT_ADMIN_CAPABILITY } from "./agent-admin-v1";
 import { AGENT_BACKUP_MODELS_CAPABILITY } from "./agent-backup-models-v1";
+import { AGENT_CONTEXT_CAPABILITY } from "./agent-context-v1";
 import { AGENT_HIDDEN_CAPABILITY } from "./agent-hidden-v1";
 import { AGENT_HOST_SETTINGS_CAPABILITY } from "./agent-host-settings-v1";
 import { AGENT_IMPORT_CAPABILITY } from "./agent-import-v1";
@@ -130,6 +131,7 @@ export {
   AGENT_ACCESS_CAPABILITY,
   AGENT_ADMIN_CAPABILITY,
   AGENT_BACKUP_MODELS_CAPABILITY,
+  AGENT_CONTEXT_CAPABILITY,
   AGENT_HIDDEN_CAPABILITY,
   AGENT_HOST_SETTINGS_CAPABILITY,
   AGENT_IMPORT_CAPABILITY,
@@ -304,6 +306,7 @@ export const TEAM_CURRENT_CAPABILITIES = [
   TEAM_PROMPT_MULTI_SELECT_CAPABILITY,
   TEAM_CHANNEL_ATTENTION_CAPABILITY,
   AGENT_BACKUP_MODELS_CAPABILITY,
+  AGENT_CONTEXT_CAPABILITY,
   ROUTINE_RESULTS_CAPABILITY,
   WEBHOOK_TESTS_CAPABILITY,
   PROVIDER_USAGE_RESET_CAPABILITY,
@@ -428,6 +431,7 @@ export const TEAM_BOOTSTRAP_CAPABILITIES = TEAM_CURRENT_CAPABILITIES.filter(
     capability !== AGENT_ACCESS_CAPABILITY &&
     capability !== TEAM_PROMPT_MULTI_SELECT_CAPABILITY &&
     capability !== TEAM_CHANNEL_ATTENTION_CAPABILITY &&
+    capability !== AGENT_CONTEXT_CAPABILITY &&
     capability !== AGENT_BACKUP_MODELS_CAPABILITY &&
     capability !== ROUTINE_RESULTS_CAPABILITY &&
     capability !== WEBHOOK_TESTS_CAPABILITY &&
@@ -497,6 +501,7 @@ export function legacyTeamCapabilities(capabilities: readonly string[]): string[
       capability !== AGENT_ACCESS_CAPABILITY &&
       capability !== TEAM_PROMPT_MULTI_SELECT_CAPABILITY &&
       capability !== TEAM_CHANNEL_ATTENTION_CAPABILITY &&
+      capability !== AGENT_CONTEXT_CAPABILITY &&
       capability !== AGENT_BACKUP_MODELS_CAPABILITY &&
       capability !== ROUTINE_RESULTS_CAPABILITY &&
       capability !== WEBHOOK_TESTS_CAPABILITY &&

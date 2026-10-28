@@ -1,0 +1,44 @@
+{
+  "type": "runtime-snapshot",
+  "snapshot": {
+    "bots": [],
+    "activeTurns": [],
+    "work": [],
+    "latestMessages": [],
+    "attentionComplete": true,
+    "pendingPrompts": [],
+    "pendingApprovals": [],
+    "pendingBrowserTakeovers": [],
+    "failedTurns": [],
+    "contextStates": [
+      {
+        "botId": "agent-ada",
+        "threadId": "thread-main",
+        "usage": {
+          "usedTokens": 50000,
+          "windowTokens": 200000,
+          "autoCompactAt": 0.8,
+          "nativeManaged": true,
+          "estimated": true,
+          "categories": [{ "category": "messages", "tokens": 40000 }, { "category": "tools", "tokens": 10000 }]
+        },
+        "compaction": null
+      }
+    ],
+    "threadContextStates": [
+      {
+        "botId": "agent-ada",
+        "threadId": "thread-task",
+        "usage": null,
+        "compaction": {
+          "id": "compaction-test",
+          "startedAt": 1793188800000,
+          "status": "completed",
+          "beforeTokens": 150000,
+          "afterTokens": 30000,
+          "expectedMs": 5000
+        }
+      }
+    ]
+  }
+}

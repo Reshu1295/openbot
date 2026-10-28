@@ -266,6 +266,15 @@ from peers below 8.
 
 Capabilities describe additive behavior. The client sends its capability list when it sets the event scope. The host sends optional events only when the client declared the related capability. A missing capability disables only that feature. An unknown optional event is ignored. A malformed known event closes the connection as `protocol_error` because the client cannot safely apply it.
 
+The optional `agent-context-v1` capability adds `contextStates` and `threadContextStates` to
+`runtime-snapshot` events on protocols 7 and 8. Each row contains a `botId`, public `threadId`,
+context token counts, optional category estimates and compaction state. It carries no prompt or
+message text. The host filters these rows through the same agent access rules as the rest of the
+snapshot. WebSocket and WebRTC adapters preserve the fields only for a client that advertises the
+capability. New clients accept snapshots without them from older hosts; malformed present fields
+fail closed. Desktop and web reuse the existing context meter, and reconnects replace its state
+from the host snapshot. Manual compaction remains local only.
+
 The optional `agent-memories-v1` capability adds three POST routes. `/v1/agent-memories/page`
 returns up to 256 memories. `/v1/agent-memories/selection` returns up to 256 selection records,
 the agent ID, and essential-memory byte usage. Both use ascending memory IDs and an `after`

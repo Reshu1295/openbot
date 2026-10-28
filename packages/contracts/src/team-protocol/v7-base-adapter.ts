@@ -2,6 +2,7 @@ import { expandChatTagReferences } from "../chat-tag-references";
 import { type AgentEvent, isAgentEvent } from "../ipc-agent-events";
 import { isTeamRealtimeEvent, type TeamRealtimeEvent } from "../ipc-team-host";
 import { isBoolean, isDynamicRecord, isNumber, isString } from "../runtime-values";
+import { withAgentContext } from "./agent-context-v1";
 import { restoreBrowserSecretMetadata } from "./browser-secret-v1";
 import { eventConversationKey, withConversationPlans } from "./conversation-plan-v4";
 import { withConversationSenders } from "./conversation-sender-v5";
@@ -40,9 +41,10 @@ export function decodeTeamProtocolV7BaseCurrentEvent(value: unknown): TeamProtoc
   const decodedValue: TeamProtocolV7BaseJsonValue = JSON.parse(JSON.stringify(decoded.event));
   let current: unknown;
   try {
+    const withContext = withAgentContext(decodedValue, value);
     current = withEventPromptMultiSelect(
       withEventConversationPlans(
-        restoreBrowserSecretMetadata(toCurrentAgentKeys(decodedValue), value),
+        restoreBrowserSecretMetadata(toCurrentAgentKeys(withContext), value),
         value,
         // A host sends a UI block only under ui-blocks-v1, the subagents only under subagents-v1, and
         // a multi-select flag only under prompt-multi-select-v1, so a present one is always kept.
@@ -67,6 +69,7 @@ export function encodeTeamProtocolV7BaseCurrentEvent(
     uiBlocks?: boolean;
     subagents?: boolean;
     promptMultiSelect?: boolean;
+    agentContext?: boolean;
   } = {},
 ): string | null {
   // `turn-progress` bypasses the frozen codec, so it needs the vocabulary swap applied by hand.
@@ -76,7 +79,11 @@ export function encodeTeamProtocolV7BaseCurrentEvent(
   const downconvertedValue = options.preserveSemanticTags ? wireValue : downconvertCurrentTags(wireValue);
   const decoded = decodeTeamProtocolV7BaseEvent(downconvertedValue);
   if (decoded.kind !== "known") return null;
-  const encoded = encodeTeamProtocolV7BaseEvent(decoded.event);
+  const base = encodeTeamProtocolV7BaseEvent(decoded.event);
+  const encoded =
+    base && options.agentContext && event.type === "runtime-snapshot"
+      ? JSON.stringify(withAgentContext(JSON.parse(base), wireValue))
+      : base;
   const promptMultiSelect = options.promptMultiSelect === true && eventHasPromptQuestions(event.type);
   if (!encoded || (!options.preserveBrowserSecrets && !eventConversationKey(event.type) && !promptMultiSelect))
     return encoded;

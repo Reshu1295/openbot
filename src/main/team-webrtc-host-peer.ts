@@ -7,6 +7,7 @@ import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
 import { AGENT_TASK_UI_BLOCKS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-task-ui-blocks-v1";
 import { browserViewStreamSessionId } from "@openbot/contracts/team-protocol/browser-view-v1";
 import {
+  AGENT_CONTEXT_CAPABILITY,
   BROWSER_SIGN_IN_CAPABILITY,
   supportsTeamSemanticTags,
   TEAM_AGENT_CREATE_MODEL_CAPABILITY,
@@ -806,6 +807,7 @@ export class TeamWebRtcHostPeer {
                 uiBlocks: this.#peerCapabilities.has(TEAM_UI_BLOCKS_CAPABILITY),
                 subagents: this.#peerCapabilities.has(TEAM_SUBAGENTS_CAPABILITY),
                 promptMultiSelect: this.#peerCapabilities.has(TEAM_PROMPT_MULTI_SELECT_CAPABILITY),
+                agentContext: this.#peerCapabilities.has(AGENT_CONTEXT_CAPABILITY),
               }),
         );
       } catch {

@@ -42,6 +42,7 @@ import { BROWSER_USER_CONTROL_CAPABILITY } from "@openbot/contracts/team-protoco
 import { CLAUDE_API_KEY_CAPABILITY } from "@openbot/contracts/team-protocol/claude-api-key-v1";
 import {
   AGENT_ADMIN_CAPABILITY,
+  AGENT_CONTEXT_CAPABILITY,
   AGENT_HOST_SETTINGS_CAPABILITY,
   AGENT_IMPORT_CAPABILITY,
   AGENT_INSTALL_CAPABILITY,
@@ -1131,6 +1132,7 @@ export class TeamApiServer {
         uiBlocks: capabilities.has(TEAM_UI_BLOCKS_CAPABILITY),
         subagents: capabilities.has(TEAM_SUBAGENTS_CAPABILITY),
         promptMultiSelect: capabilities.has(TEAM_PROMPT_MULTI_SELECT_CAPABILITY),
+        agentContext: capabilities.has(AGENT_CONTEXT_CAPABILITY),
       });
     return encodeTeamProtocolV1CurrentEvent(visible, options);
   }
