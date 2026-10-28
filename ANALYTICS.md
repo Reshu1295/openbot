@@ -230,7 +230,7 @@ and only a loopback `http:` origin is accepted.
    → `plan_selected` → account service `checkout_started` → `plan_started`, by `entry_point`. Add
    `limit_reached` by `kind` and `action`, and `sales_contact_clicked` by `entry_point`. Client
    steps use `surface` `desktop`, `web` and `mobile` at their current generations; the checkout
-   steps use `account_api` generation 11.
+   steps use `account_api` generation 11 and later.
 8. Licenses: `license_action` steps against account service `billing_action` with
    `product = license` (`checkout_started`, `plan_started`, `plan_changed` by `direction`,
    `cancel_scheduled`, `plan_ended`), license `revenue`, and the license fields of `billing_snapshot`.
