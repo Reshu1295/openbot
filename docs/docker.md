@@ -78,8 +78,7 @@ Host networking removes the network isolation of the container:
 
 - Other programs on the host can connect to the listeners of OpenBot on `127.0.0.1`. These
   listeners take tokens and team requests.
-- Agents can connect to all services on the host and on its local network, also to services that
-  listen only on `127.0.0.1`.
+- Agents can connect to the services of the host that listen only on `127.0.0.1`.
 
 Use it only on a host where you trust the other programs and users. Do not use it with
 [several instances on one host](#several-instances-on-one-host): their firewall works only on the
