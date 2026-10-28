@@ -870,16 +870,26 @@ export class ProviderRuntime implements ProviderPort {
     return this.#modelCatalog.list().filter((model) => !this.#off.has(model.provider));
   }
 
-  createProfileClient(provider: AgentProvider): AgentClient {
+  /**
+   * A client for one generation without tools. With `accountId`, it signs in as that provider account,
+   * as the agent's own process does, so the generation does not spend the limit of the provider's own sign-in.
+   */
+  createProfileClient(provider: AgentProvider, accountId?: string): AgentClient {
     this.requireProviderOn(provider);
     if (provider === "acp" && this.#removingCustomRuntime)
       throw new Error(sourceText("error.provider.registryRemoveBusy"));
     const cli = this.#cli.get(provider);
     if (!cli || !this.#clients.has(provider)) throw new Error(sourceText("error.provider.connectBeforeProfile"));
-    if (this.#clientFactory) return this.#clientFactory(provider, cli);
+    const account = this.#providerAccounts?.account(provider, accountId) ?? null;
+    // A CLI that ignores the account's folder would run the generation on the provider's own sign-in.
+    if (account && !this.#providerAccounts?.supported(provider))
+      throw new Error(sourceText("error.provider.accountsUnsupported", { provider: providerLabel(provider) }));
+    const accountEnvironment = account ? this.#providerAccounts?.environment(account) : undefined;
+    if (this.#clientFactory) return this.#clientFactory(provider, cli, undefined, accountEnvironment);
+    const context = accountEnvironment ? { ...this.#credentials, accountEnvironment } : this.#credentials;
     const driver = requireProviderDriver(provider);
-    if (driver.createProfileClient) return driver.createProfileClient(cli, this.#requestTimeoutMs, this.#credentials);
-    return driver.createClient(cli, this.#requestTimeoutMs, this.#credentials);
+    if (driver.createProfileClient) return driver.createProfileClient(cli, this.#requestTimeoutMs, context);
+    return driver.createClient(cli, this.#requestTimeoutMs, context);
   }
 
   preferredProvider(): AgentProvider {
