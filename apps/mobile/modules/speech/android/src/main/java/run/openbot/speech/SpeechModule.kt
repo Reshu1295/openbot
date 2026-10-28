@@ -274,18 +274,15 @@ class SpeechModule : Module() {
     track = null
   }
 
-  /**
-   * Frames written to the track since its last flush. `stop` pauses and flushes the track, which
-   * sets its head back to zero, so a stale part sets this back to zero too. Only the playback thread
-   * uses it.
-   */
-  private var written = 0L
   private var trackRate = 0
 
   /** Writes the part and waits until it has played. False when a stop came first. */
   private fun play(part: SpeechPart): Boolean {
     val audio = trackFor(part.sampleRate)
     val stale = { part.generation != generation.get() }
+    // The head counts from the last flush: `stop` flushes the track, also while no part plays.
+    val head = { audio.playbackHeadPosition.toLong() and 0xffffffffL }
+    val end = head() + part.samples.size
     if (audio.playState != AudioTrack.PLAYSTATE_PLAYING) audio.play()
     var offset = 0
     // Non-blocking: a write to a track that `stop` paused would otherwise wait for ever.
@@ -294,20 +291,15 @@ class SpeechModule : Module() {
       if (count < 0) break
       if (count == 0) Thread.sleep(10)
       offset += count
-      written += count
     }
     // The track plays what was written after `write` returns: wait for its head to reach the end,
     // and no longer than the part lasts and a little more, in case the track stalls.
     val deadline = System.nanoTime() + (part.samples.size * 1_000_000_000L / part.sampleRate) + 2_000_000_000L
-    while (!stale() && offset == part.samples.size && (audio.playbackHeadPosition.toLong() and 0xffffffffL) < written) {
+    while (!stale() && offset == part.samples.size && head() < end) {
       if (System.nanoTime() > deadline) break
       Thread.sleep(20)
     }
-    if (stale()) {
-      written = 0
-      return false
-    }
-    return offset == part.samples.size
+    return !stale() && offset == part.samples.size
   }
 
   private fun trackFor(sampleRate: Int): AudioTrack {
@@ -316,7 +308,6 @@ class SpeechModule : Module() {
       return current
     }
     current?.release()
-    written = 0
     val minimum = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_FLOAT)
     val created = AudioTrack.Builder()
       .setAudioAttributes(

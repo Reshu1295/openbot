@@ -417,9 +417,11 @@ function createController({
   return {
     /** The words the recognizer heard in this session so far. */
     hear(text: string): void {
-      if (!open || phase !== "listening") return;
+      // The final text of the turn can come after the pause ended it, while `finish` waits for it.
+      if (!open || (phase !== "listening" && phase !== "sending")) return;
       heard = text;
       update({ caption: text });
+      if (phase === "sending") return;
       if (pauseTimer) clearTimeout(pauseTimer);
       pauseTimer = text.trim() ? setTimeout(endTurn, TURN_END_SILENCE_MS) : null;
     },
