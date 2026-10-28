@@ -60,7 +60,7 @@ const MCP_APPROVAL =
 export const MCP_SERVER_TOOL_DEFINITIONS = [
   {
     name: "list_mcp_servers",
-    description: `List the MCP servers of this OpenBot server: name, transport, on or off, address or command, the names of its headers and environment variables, and whether it is signed in. Values are never shown. ${MCP_SCOPE} Read-only.`,
+    description: `List the MCP servers of this OpenBot server: name, transport, on or off, address or command, the names of its headers and environment variables, and whether it is signed in. Values are never shown. ${MCP_SCOPE} Read-only. An http server that is not signed in can need a sign-in: when its tools are missing or refuse with an authorization error, call test_mcp_server, which puts a Sign in card in the conversation.`,
     shape: {},
   },
   {
