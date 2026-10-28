@@ -55,7 +55,8 @@ export interface MemoryReviewOptions {
   listAgents(): AgentSummary[];
   /** The models that the agent's provider lists once it is ready. */
   models(agent: AgentSummary): Effect.Effect<readonly AgentModelOption[], ProviderOperationFailed>;
-  createProfileClient(provider: AgentSummary["provider"]): AgentClient;
+  /** A client signed in to the agent's own provider account. */
+  createProfileClient(agent: AgentSummary): AgentClient;
   /** Records the token usage of one review under its agent. */
   usageObserver(agent: AgentSummary, model: AgentModelOption): GenerationObserver;
   /** The latest messages of the agent's own chat, or of its side thread, oldest first. */
@@ -322,7 +323,7 @@ export class MemoryReview {
         { ...base, memories: redacted },
         excerpt.map((message) => ({ ...message, text: options.redact(message.text) })),
       );
-      const client = yield* Effect.try(() => options.createProfileClient(agent.provider));
+      const client = yield* Effect.try(() => options.createProfileClient(agent));
       const answer = yield* options.profileClients.run(client, (cancelled) =>
         generateTextWithoutTools(
           client,

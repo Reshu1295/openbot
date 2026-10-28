@@ -571,7 +571,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       listAgents: () => this.listAgents(),
       models: (agent) =>
         this.#providers.ensureProvider(agent.provider).pipe(Effect.map(() => this.#endpoints.available())),
-      createProfileClient: (provider) => this.#providers.createProfileClient(provider),
+      createProfileClient: (agent) => this.#providers.createProfileClient(agent.provider, agent.providerAccountId),
       usageObserver: (agent, model) =>
         memoryReviewUsageObserver(this.#store.database.usage, agent.id, agent.provider, model.id),
       chat: (agentId, sideThreadId) => {
