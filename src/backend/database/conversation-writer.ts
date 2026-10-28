@@ -141,7 +141,7 @@ export class ConversationWriter {
         `).run(
           randomUUID(),
           snapshot.threadId,
-          snapshot.activeTurnId,
+          activityTurnId(payload, snapshot.activeTurnId),
           eventType,
           JSON.stringify(payload),
           new Date().toISOString(),
@@ -587,7 +587,7 @@ export class ConversationWriter {
         `).run(
           randomUUID(),
           input.threadId,
-          input.activeTurnId,
+          activityTurnId(input.detail, input.activeTurnId),
           input.eventType,
           JSON.stringify(input.detail ?? {}),
           new Date().toISOString(),
@@ -772,6 +772,11 @@ export class ConversationWriter {
     );
     return result.revision;
   }
+}
+
+/** A turn-end event clears the active turn, so the turn it ends is only in its detail (#3722). */
+export function activityTurnId(detail: unknown, activeTurnId: string | null): string | null {
+  return isDynamicRecord(detail) && isString(detail.turnId) ? detail.turnId : activeTurnId;
 }
 
 function mergeImportedMessage(existing: ConversationMessage, imported: ConversationMessage): ConversationMessage {
