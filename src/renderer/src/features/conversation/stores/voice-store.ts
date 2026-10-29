@@ -167,11 +167,13 @@ export function createVoiceStore(deps: VoiceStoreDeps) {
       let streamed = false;
       // The settings answer at once; a download reports progress only after that.
       const [, modelStatus] = await Promise.all([
-        voice.getSettings().then((settings) => {
+        Promise.all([voice.getSettings(), voice.getServer()]).then(([settings, server]) => {
           preparingModelId = settings.modelId;
           const model = VOICE_MODELS.find((candidate) => candidate.id === settings.modelId);
-          livePreview = model?.livePreview ?? true;
-          streamed = model?.kind === "cloud";
+          // The user's own server takes the whole recording once: it has no live preview or stream.
+          const own = server?.routes.dictation === true;
+          livePreview = !own && (model?.livePreview ?? true);
+          streamed = !own && model?.kind === "cloud";
         }),
         voice.prepareModel(),
       ]);

@@ -76,6 +76,7 @@ import type {
   ProviderRuntimeSnapshot,
   SpeechModelStatus,
   VoiceModelStatus,
+  VoiceServerSettings,
   VoiceStreamTranscript,
 } from "@openbot/contracts/ipc";
 import {
@@ -321,6 +322,7 @@ import {
   WHISPER_TURBO_MODEL_DIRECTORY,
 } from "./voice-model-service";
 import { VoicePreferenceStore } from "./voice-preference-store";
+import { createVoiceServerPreferenceStore, VoiceServerService } from "./voice-server-service";
 import { spawnVoiceSpeechHost } from "./voice-speech-host-process";
 import { VoiceSpeechService } from "./voice-speech-service";
 import { spawnVoiceTranscriptionHost } from "./voice-transcription-host-process";
@@ -498,6 +500,7 @@ export interface ApplicationServiceContext {
   forwardVoiceModelStatus: (status: VoiceModelStatus) => void;
   forwardVoiceStreamTranscript: (transcript: VoiceStreamTranscript) => void;
   forwardSpeechModelStatus: (status: SpeechModelStatus) => void;
+  forwardVoiceServerSettings: (settings: VoiceServerSettings | null) => void;
   forwardWorkflowNotice: (notice: WorkflowNotice) => void;
   prepareForUpdateInstall: () => Promise<void>;
   /** True once a quit starts, also before this function returns. See `CuaDriverRuntimeOptions.quitting`. */
@@ -595,6 +598,7 @@ export interface ApplicationServices {
   instanceTransfer: InstanceTransferService;
   voice: VoiceTranscriptionService;
   speech: VoiceSpeechService;
+  voiceServer: VoiceServerService;
   dynamicIsland: DynamicIslandWindowController;
   cuaDriver: CuaDriverRuntime;
   computerUseHighlight: ComputerUseHighlightController;
@@ -862,6 +866,7 @@ export async function createApplicationServices({
   forwardVoiceModelStatus,
   forwardVoiceStreamTranscript,
   forwardSpeechModelStatus,
+  forwardVoiceServerSettings,
   forwardWorkflowNotice,
   prepareForUpdateInstall,
   quitting,
@@ -2762,6 +2767,16 @@ export async function createApplicationServices({
   });
   teardown.push(TEARDOWN_ORDER.speech, "speech", () => Effect.runPromise(speech.shutdown()));
   speech.on("modelStatus", forwardSpeechModelStatus);
+  // The user's own server for either route. Its key is a file of its own, apart from the ElevenLabs key.
+  const voiceServerPreferences = createVoiceServerPreferenceStore(join(app.getPath("userData"), "voice-server.json"));
+  await runCauseEffect(voiceServerPreferences.load());
+  const voiceServerKeys = new VoiceApiKeyStore({
+    path: join(app.getPath("userData"), "voice-server-key.json"),
+    cipher: secretCipher,
+  });
+  await runCauseEffect(voiceServerKeys.load());
+  const voiceServer = new VoiceServerService({ preferences: voiceServerPreferences, apiKeys: voiceServerKeys });
+  voiceServer.on("settings", forwardVoiceServerSettings);
   const currentVersion = app.getVersion();
   // Skip the file check in dev: unpacked runs never enable updates, so avoid touching resourcesPath.
   const updateMetadataAvailable = app.isPackaged && existsSync(join(process.resourcesPath, "app-update.yml"));
@@ -3130,6 +3145,7 @@ export async function createApplicationServices({
     instanceTransfer,
     voice,
     speech,
+    voiceServer,
     dynamicIsland,
     cuaDriver,
     computerUseHighlight,
