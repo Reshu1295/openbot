@@ -860,6 +860,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       scheduleDrain: (agentId) => this.#drain.scheduleDrain(agentId),
       rotateSession: (agentId, client, threadId) => this.#threads.rotateProviderSession(agentId, client, threadId),
       rotatesSession: (agentId, threadId) => this.#threads.rotatesSession(agentId, threadId),
+      isStopping: () => this.#stopping,
       compacted: (threadId) => {
         this.channels.contextCompacted(threadId);
         this.messaging.contextCompacted(threadId);

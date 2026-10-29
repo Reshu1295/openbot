@@ -5,7 +5,8 @@
 // Four cases: a compaction that ends by itself, one that runs past the start deadline and ends by
 // itself (#3466), one that the run deadline stops, and one that does not stop, so that OpenBot sends
 // a turn that Codex refuses. Then a side thread: the runtime snapshot carries its context, and
-// `compactTaskContext` compacts its session and not the agent's own chat (#3503).
+// `compactTaskContext` compacts its session and not the agent's own chat (#3503). Last, a usage
+// report that Codex sends while the stop ends it does not reach the closed database (#3808).
 // `bun scripts/codex-compaction-queue-e2e.ts`. Writes .openbot-build/codex-compaction-queue-e2e/report.json.
 import assert from "node:assert/strict";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -65,6 +66,16 @@ process.stdout.on("error", (error) => {
   throw error;
 });
 const write = (message) => process.stdout.write(JSON.stringify(message) + "\\n");
+// Like a Codex in the middle of a turn, it can report usage while OpenBot stops it (#3808).
+process.on("SIGTERM", () => {
+  if (!control().usageOnStop) process.exit(0);
+  for (let thread = 1; thread <= threads; thread++) {
+    const tokenUsage = { total: { totalTokens: 95000 }, last: { totalTokens: 95000 }, modelContextWindow: 100000 };
+    write({ method: "thread/tokenUsage/updated", params: { threadId: "thread-" + thread, turnId: "turn-stop", tokenUsage } });
+  }
+  log({ usageOnStop: threads });
+  process.stdout.write("", () => process.exit(0));
+});
 const answer = (message) => {
   const params = message.params || {};
   switch (message.method) {
@@ -155,6 +166,7 @@ interface ProtocolEntry {
   refused: string | null;
   compactionEnded: string | null;
   status: string | null;
+  usageOnStop: number | null;
 }
 
 interface CaseReport {
@@ -216,6 +228,7 @@ function protocolEntry(value: unknown): ProtocolEntry {
     refused: getString(entry, "refused"),
     compactionEnded: getString(entry, "compactionEnded"),
     status: getString(entry, "status"),
+    usageOnStop: typeof entry.usageOnStop === "number" ? entry.usageOnStop : null,
   };
 }
 
@@ -242,6 +255,7 @@ const agents = new AgentService({
   offProviders: AGENT_PROVIDERS.filter((provider) => provider !== "codex"),
   contextCompactionTimeoutMs: COMPACTION_TIMEOUT_MS,
 });
+let stopped = false;
 
 try {
   await runCauseEffect(agents.initialize());
@@ -398,13 +412,35 @@ try {
   assert.deepEqual(sideThread.threadCompactions, ["completed", "completed"], "side thread: compactions");
   assert.equal(sideThread.mainCompactStarts, 0, "side thread: the agent's own chat compacted");
   assert.ok(sideThread.mainContextUnchanged, "side thread: the agent's own context changed");
+
+  // Codex reports usage while the stop ends it. The quit closes the database next, and a late
+  // usage snapshot then failed with "OpenBot database is not initialized." (#3808).
+  await writeFile(controlPath, JSON.stringify({ compactionMs: 200, ignoreInterrupt: false, usageOnStop: true }));
+  const lateErrors: string[] = [];
+  const collect = (error: unknown) => lateErrors.push(error instanceof Error ? error.message : String(error));
+  process.on("uncaughtException", collect);
+  await runCauseEffect(agents.stop());
+  database.close();
+  stopped = true;
+  // Created after the stop, so it fires after a usage timer of the same 250 ms delay that the stop armed.
+  await new Promise((done) => setTimeout(done, 250));
+  process.off("uncaughtException", collect);
+  const usageOnStop = {
+    reportedThreads: protocol().find((line) => line.usageOnStop !== null)?.usageOnStop ?? 0,
+    lateErrors,
+  };
+  Object.assign(report, { usageOnStop });
+  assert.ok(usageOnStop.reportedThreads > 0, "stop: Codex reported no usage");
+  assert.deepEqual(usageOnStop.lateErrors, [], "stop: a late usage report used the closed database");
   report.passed = true;
 } catch (error) {
   report.error = error instanceof Error ? (error.stack ?? error.message) : String(error);
   process.exitCode = 1;
 } finally {
-  await runCauseEffect(agents.stop()).catch(() => {});
-  database.close();
+  if (!stopped) {
+    await runCauseEffect(agents.stop()).catch(() => {});
+    database.close();
+  }
   mkdirSync(OUT, { recursive: true });
   writeFileSync(join(OUT, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   await rm(root, { recursive: true, force: true });
