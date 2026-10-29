@@ -608,6 +608,10 @@ server can change it.
   `~/Library/Application Support/OpenBot/voice-api-key.json`, encrypted by the operating system's
   secret storage. The app window never receives the key back. Remove key in **Settings → Voice**
   deletes the file. The key is redacted from logs, exports and diagnostics.
+- The API key of the voice server is kept in
+  `~/Library/Application Support/OpenBot/voice-server-key.json`, encrypted by the operating system's
+  secret storage. The app window never receives the key back. Remove in the Voice server section of
+  **Settings → Voice** deletes the file. The key is redacted from logs, exports and diagnostics.
   While the connection is on, `provider-state/github` in the same folder holds the access token and
   the OpenBot GitHub App's installation tokens in plain text, with mode 0600, for `gh` and `git` in
   agent tools. OpenBot deletes that folder when you disconnect and when the app closes; after a crash
@@ -784,6 +788,14 @@ Network traffic can also occur when:
   text. Nothing else is sent: no conversation, file or agent instruction. ElevenLabs handles the
   audio and the text under its own policy and the user's ElevenLabs plan. The local models send
   nothing;
+- the user sets up a voice server in **Settings → Voice**. OpenBot sends requests only to the address
+  that the user enters, with the user's API key when there is one. To connect, it lists the server's
+  models and voices. When the server does dictation, OpenBot sends the recorded audio, the chosen
+  model and, when the user set one, the language to `/v1/audio/transcriptions` and receives the text. When the server reads
+  replies aloud, OpenBot sends the text of each reply that it reads, the chosen model and the voice to
+  `/v1/audio/speech` and receives the audio. Nothing else is sent: no conversation, file or agent
+  instruction. The server handles the audio and the text under the policy of the person who runs it.
+  The address and the choices are saved in `voice-server.json` in the application data folder;
 - the user turns on Read replies aloud, opens the Voice pane for the first time, or presses Download
   in the Spoken replies section of **Settings → Voice**. OpenBot downloads the Supertonic 3 voice
   model that it pins from `huggingface.co`, checks its size and SHA-256, and keeps it in `runtimes`

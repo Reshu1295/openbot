@@ -500,6 +500,10 @@ import type {
   VoiceApiKeyInput,
   VoiceModelRequest,
   VoiceModelStatus,
+  VoiceServerConnection,
+  VoiceServerProbe,
+  VoiceServerSave,
+  VoiceServerSettings,
   VoiceSettings,
   VoiceStream,
   VoiceStreamAudio,
@@ -843,6 +847,12 @@ export const IPC_ENDPOINTS = {
      */
     keepRecording: request<VoiceTranscriptionInput, DraftAttachment>()("voice:keep-recording"),
     speechModelStatus: event<SpeechModelStatus>()("voice:speech-model-status"),
+    /** The user's own voice server, or null. While a route is on, `transcribe` or `speak` uses it. */
+    getServer: request<undefined, VoiceServerSettings | null>()("voice:get-server"),
+    /** Lists the models and voices of a server, before the user saves it. */
+    probeServer: request<VoiceServerConnection, VoiceServerProbe>()("voice:probe-server"),
+    setServer: request<VoiceServerSave, VoiceServerSettings | null>()("voice:set-server"),
+    serverSettings: event<VoiceServerSettings | null>()("voice:server-settings"),
   },
   dynamicIsland: {
     getPreference: request<undefined, DynamicIslandPreference>()("dynamic-island:get-preference"),
