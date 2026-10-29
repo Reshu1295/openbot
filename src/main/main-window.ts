@@ -19,7 +19,7 @@ import {
   LOCAL_SERVER_ID,
   type MacPermissionId,
 } from "@openbot/contracts/ipc";
-import type { AppTranslate } from "@openbot/i18n";
+import type { AppTextKey, AppTranslate } from "@openbot/i18n";
 import {
   app,
   BrowserWindow,
@@ -36,6 +36,7 @@ import {
 import type { AgentService } from "../backend/agent-service";
 import type { BrowserHost } from "../backend/browser-host";
 import {
+  type ChatEditAction,
   chatContextMenuItems,
   isCloseBrowserTabShortcut,
   isSelectAllShortcut,
@@ -72,6 +73,33 @@ interface MainWindowApplicationServices {
   remoteServers: RemoteServerManager;
   interfaceSize: InterfaceSizeService;
 }
+
+/**
+ * The chat menu's edit entries. They are not Electron roles: Electron localizes a role's label only
+ * on macOS, and a role acts on whichever window has focus. Each entry runs on its own window's
+ * contents instead, and its accelerator is only the shortcut hint shown beside the label.
+ */
+const CHAT_EDIT_ACTIONS = {
+  undo: { label: "menu.undo", accelerator: "CommandOrControl+Z", run: (contents) => contents.undo() },
+  redo: {
+    label: "menu.redo",
+    accelerator: process.platform === "win32" ? "Control+Y" : "Shift+CommandOrControl+Z",
+    run: (contents) => contents.redo(),
+  },
+  cut: { label: "menu.cut", accelerator: "CommandOrControl+X", run: (contents) => contents.cut() },
+  copy: { label: "menu.copy", accelerator: "CommandOrControl+C", run: (contents) => contents.copy() },
+  paste: { label: "menu.paste", accelerator: "CommandOrControl+V", run: (contents) => contents.paste() },
+  pasteAndMatchStyle: {
+    label: "menu.pasteAndMatchStyle",
+    accelerator: "Command+Option+Shift+V",
+    run: (contents) => contents.pasteAndMatchStyle(),
+  },
+  delete: { label: "menu.delete", accelerator: undefined, run: (contents) => contents.delete() },
+  selectAll: { label: "menu.selectAll", accelerator: "CommandOrControl+A", run: (contents) => contents.selectAll() },
+} as const satisfies Record<
+  ChatEditAction,
+  { label: AppTextKey; accelerator: string | undefined; run: (contents: WebContents) => void }
+>;
 
 /** The two handles that outlive any one window, so `activate` can rebuild into the same slot. */
 export interface MainWindowHolder {
@@ -437,25 +465,43 @@ function attachAppInput(
       return;
     }
     // A chat message opens its own menu, but leaves selected text and links to this one
-    // (`keepNativeMenu` in `ChatMessageRow`). The native edit menu covers copy, select-all and
+    // (`keepNativeMenu` in `ChatMessageRow`). The native edit menu covers editing, spelling and
     // link copying; anything else keeps no menu.
     const items = chatContextMenuItems({
       selectionText: params.selectionText,
       isEditable: params.isEditable,
       linkURL: params.linkURL,
+      misspelledWord: params.misspelledWord,
+      dictionarySuggestions: params.dictionarySuggestions,
+      editFlags: params.editFlags,
+      pasteAndMatchStyle: process.platform === "darwin",
     });
     if (items.length === 0) return;
     event.preventDefault();
     Menu.buildFromTemplate(
       items.map((item) => {
-        if (item === "separator") return { type: "separator" } as const;
-        if (item === "copy-link")
+        if (item.kind === "separator") return { type: "separator" } as const;
+        if (item.kind === "copy-link")
           return {
             label: getTranslate()("menu.copyLink"),
             click: () => clipboard.writeText(params.linkURL),
           };
-        if (item === "copy") return { role: "copy" } as const;
-        return { role: "selectAll" } as const;
+        if (item.kind === "spelling")
+          return {
+            label: item.suggestion,
+            click: () => {
+              if (!window.isDestroyed()) window.webContents.replaceMisspelling(item.suggestion);
+            },
+          };
+        const action = CHAT_EDIT_ACTIONS[item.action];
+        return {
+          label: getTranslate()(action.label),
+          ...(action.accelerator ? { accelerator: action.accelerator, registerAccelerator: false } : {}),
+          enabled: item.enabled,
+          click: () => {
+            if (!window.isDestroyed()) action.run(window.webContents);
+          },
+        };
       }),
     ).popup({ window });
   });
