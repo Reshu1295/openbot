@@ -1568,7 +1568,16 @@ export function createWebWorkspace(
     cancelQueued: (deliveryId: string) => changeQueue((agentId) => runtime.cancelQueued({ agentId, deliveryId })),
     steerQueued(deliveryId: string) {
       const expectedTurnId = conversation()?.page?.activeTurnId;
-      if (expectedTurnId) changeQueue((agentId) => runtime.steerQueued({ agentId, deliveryId, expectedTurnId }));
+      if (!expectedTurnId) return;
+      changeQueue((agentId) =>
+        runtime.steerQueued({ agentId, deliveryId, expectedTurnId }).catch((error: unknown) => {
+          // A message that left the queue is in the turn already: an agent that steers each message
+          // sent while it works can take it first.
+          const delivery = state.queues[agentId]?.deliveries.find((item) => item.id === deliveryId);
+          if (delivery && delivery.status !== "queued") return;
+          throw error;
+        }),
+      );
     },
     reorderQueue: (deliveryIds: string[]) => changeQueue((agentId) => runtime.reorderQueue({ agentId, deliveryIds })),
     async updateQueued(

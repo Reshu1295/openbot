@@ -355,7 +355,13 @@ export function createConversationViewScope(props: ConversationProps) {
     const entry = conversationErrorRuns()[composerDraftKey(target)];
     return entry?.message === message ? entry.run : null;
   });
-  const queue = createQueueStore({ props, hiddenAwaitingReplyIds });
+  const currentPendingSends = createMemo(() => pendingSends.list(currentTarget()));
+  // The host queues a message for a moment before it starts it. A send made while the agent was idle
+  // stays in the chat for that moment, so it does not jump to the queue panel and back.
+  const startingDeliveryIds = createMemo(
+    () => new Set(currentPendingSends().flatMap((send) => (send.starting && send.messageId ? [send.messageId] : []))),
+  );
+  const queue = createQueueStore({ props, hiddenAwaitingReplyIds, startingDeliveryIds });
   const { activeDeliveries, orderedQueuedDeliveries, presentedQueueDeliveries, queuePanelVisible } = queue;
   const awaitingReplies = channel
     ? createMemo(() => {
@@ -468,7 +474,6 @@ export function createConversationViewScope(props: ConversationProps) {
   }
   const viewIsMounted = createScopeGuard();
   let attachmentPicker: HTMLInputElement | undefined;
-  const currentPendingSends = createMemo(() => pendingSends.list(currentTarget()));
   // The host rows on screen: a sent message hands over to its row in the transcript or the queue.
   // Built only while a send waits for its row, so a streaming reply does not rebuild it for nothing.
   const drawnHostIds = createMemo(() =>
@@ -479,10 +484,12 @@ export function createConversationViewScope(props: ConversationProps) {
         ])
       : new Set<string>(),
   );
-  // Filtered here as well as settled below, so the two rows never stand together for a frame.
+  // Filtered here as well as settled below, so the two rows never stand together for a frame. A send
+  // made while the agent works goes to the queue panel; drawn here first, it would jump there.
   const pendingMessages = createMemo(() =>
     currentPendingSends()
       .filter((send) => !(send.messageId && drawnHostIds().has(send.messageId)))
+      .filter((send) => !send.queued || send.state === "failed")
       .map(pendingSendMessage),
   );
   /** The pending send a timeline row draws, by the row's message id. */
@@ -754,6 +761,7 @@ export function createConversationViewScope(props: ConversationProps) {
     cancelQueuedMessageEdit,
     reorderPresentedQueue,
     submitComposer,
+    steerComposer,
     sendSelectionInstruction,
     sendCardMessage,
     retryPendingSend,
@@ -1954,6 +1962,7 @@ export function createConversationViewScope(props: ConversationProps) {
     stopVoiceRecording,
     cancelVoiceRecording,
     submitComposer,
+    steerComposer,
     submitting,
     unreadDividerVisible,
     unreferencedDraftAttachments,

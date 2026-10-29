@@ -93,6 +93,8 @@ interface ComposerEditorProps {
   skillsLoadFailed?: boolean | undefined;
   onValueChange: (value: string) => void;
   onSubmit: () => void;
+  /** Tab sends the message into the agent's running turn. Absent, Tab moves the focus as usual. */
+  onSteer?: (() => void) | undefined;
   /**
    * Which chord sends the message. Enter keeps the current behavior; the platform modifier with
    * Enter sends and plain Enter adds a line. The renderer resolves the platform and passes it.
@@ -745,6 +747,11 @@ export function ComposerEditor(props: ComposerEditorProps) {
      */
     if (isComposing || event.isComposing || event.keyCode === 229 || event.key === "Process") return;
     if (handleMentionPickerKeyDown(event)) return;
+    if (event.key === "Tab" && props.onSteer && !event.shiftKey && !event.altKey && !event.metaKey && !event.ctrlKey) {
+      event.preventDefault();
+      props.onSteer();
+      return;
+    }
     if (event.key === "Backspace" && removeAutomaticMentionSpace()) {
       event.preventDefault();
       return;
@@ -902,6 +909,7 @@ export function ComposerEditor(props: ComposerEditorProps) {
         aria-label={props.ariaLabel}
         aria-disabled={props.disabled ? "true" : "false"}
         aria-multiline="true"
+        aria-keyshortcuts={props.onSteer ? "Tab" : undefined}
         spellcheck="true"
         data-cuelume-type=""
         onFocus={ensureEditorSelection}

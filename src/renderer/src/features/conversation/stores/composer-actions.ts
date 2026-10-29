@@ -681,12 +681,13 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     );
   }
 
-  /** `voice` is set when a voice conversation sends the draft. */
+  /** `voice` is set when a voice conversation sends the draft. `steer` takes it into the running turn. */
   async function submitMessage(
     draftOverride?: ComposerDraft,
     targetOverride?: ConversationTarget,
     submittedSnapshot?: ComposerDraft,
     voice?: VoiceSend,
+    steer = false,
   ): Promise<boolean> {
     if (deps.attachmentBusy()) return false;
     if (!draftOverride && deps.currentEditingDeliveryId()) {
@@ -709,7 +710,7 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     stopTeamTyping();
     deps.setComposerError(null, target);
     deps.clearConversationError(target);
-    queueSend(target, draft, text, voice);
+    queueSend(target, draft, text, voice, steer);
     deps.clearSubmittedDraft(target, submittedSnapshot ?? draft);
     return true;
   }
@@ -718,13 +719,26 @@ export function createComposerActions(deps: ComposerActionsDeps) {
    * Shows a message at once and sends it after the earlier sends of its chat, so the host stores the
    * chat's messages in the order the user sent them. `draft` is what Edit puts back in the composer.
    */
-  function queueSend(target: ConversationTarget, draft: ComposerDraft, text: string, voice?: VoiceSend): void {
-    const activeTarget = deps.currentTarget();
-    if (activeTarget && activeTarget.agentId === target.agentId && activeTarget.serverId === target.serverId) {
-      deps.setStickToLatest(true);
-    }
-    // Read the send function now: the send outlives this view when the user switches server.
+  function queueSend(
+    target: ConversationTarget,
+    draft: ComposerDraft,
+    text: string,
+    voice?: VoiceSend,
+    steer = false,
+  ): void {
+    const onScreen = () => {
+      const activeTarget = deps.currentTarget();
+      return activeTarget?.agentId === target.agentId && activeTarget.serverId === target.serverId;
+    };
+    if (onScreen()) deps.setStickToLatest(true);
+    // A message to a working agent waits behind its turn or its queue. A channel has no such queue.
+    const queued =
+      onScreen() &&
+      !deps.props.channel &&
+      (Boolean(deps.props.activeTurnId) || deps.orderedQueuedDeliveries().length > 0);
+    // Read the send functions now: the send outlives this view when the user switches server.
     const send = deps.props.onSendMessage;
+    const steerQueued = deps.props.onSteerQueuedMessage;
     const server = deps.props.server;
     // A deferred voice send can name a server that is no longer on screen. Its capabilities are not
     // known here, so only the local host, which always drops a repeat, is safe to retry then.
@@ -735,7 +749,7 @@ export function createComposerActions(deps: ComposerActionsDeps) {
           Boolean(server.compatibility?.capabilities.includes(TEAM_MESSAGE_CLIENT_ID_CAPABILITY))));
     const voiceRecordingDraftId = voice?.recordingDraftId ?? null;
     const dictatedSent = claimDictatedSend(target);
-    deps.pendingSends.add(target, { draft, text, retrySafe, voiceRecordingDraftId }, async (pending) => {
+    deps.pendingSends.add(target, { draft, text, retrySafe, voiceRecordingDraftId, queued }, async (pending) => {
       rememberAttachmentKinds(pending.draft.attachments);
       const result = await send(
         pending.text,
@@ -748,7 +762,11 @@ export function createComposerActions(deps: ComposerActionsDeps) {
       if ("error" in result) {
         playActionSound("error");
         voice?.onFailed();
-      } else dictatedSent?.(result.messageId);
+      } else {
+        dictatedSent?.(result.messageId);
+        // The id is the delivery's. Steer acts on the chat on screen, so not after a switch.
+        if (steer && onScreen()) steerQueued(result.messageId);
+      }
       return result;
     });
   }
@@ -830,6 +848,16 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     void submitMessage();
   }
 
+  /**
+   * Sends the draft into the running turn: Send, then Steer on its queue row, in one key. An agent
+   * that steers each message sent while it works does that itself, so a second steer is not asked.
+   */
+  function steerComposer(): void {
+    if (deps.attachmentBusy() || deps.voicePhase() !== "idle" || !deps.agentReady()) return;
+    const hostSteers = (deps.props.agent?.busyMessageMode ?? deps.props.defaultBusyMessageMode) === "steer";
+    void submitMessage(undefined, undefined, undefined, undefined, !hostSteers);
+  }
+
   /** An instruction about selected text is a reply to that message. A failure shows on its row. */
   async function sendSelectionInstruction(messageId: string, body: string): Promise<boolean> {
     const target = deps.currentTarget();
@@ -862,6 +890,7 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     reorderPresentedQueue,
     submitMessage,
     submitComposer,
+    steerComposer,
     sendSelectionInstruction,
     sendCardMessage,
     retryPendingSend,

@@ -9,18 +9,24 @@ import { currentConversationTarget } from "./composer-store";
 export interface QueueStoreDeps {
   props: ConversationProps;
   hiddenAwaitingReplyIds: Accessor<ReadonlySet<string>>;
+  /** Messages sent while the agent was idle that the host is about to start. The chat still shows them. */
+  startingDeliveryIds: Accessor<ReadonlySet<string>>;
 }
 
 export function createQueueStore(deps: QueueStoreDeps) {
   const activeDeliveries = createMemo(() => activeQueueDeliveries(deps.props.queue, deps.props.activeTurnId));
   const orderedQueuedDeliveries = createMemo(() => queuedDeliveriesInOrder(deps.props.queue));
-  const presentedQueueDeliveries = createMemo(() =>
-    presentQueueDeliveries({
+  const presentedQueueDeliveries = createMemo(() => {
+    const presented = presentQueueDeliveries({
       snapshot: deps.props.queue,
       activeTurnId: deps.props.activeTurnId,
       renderedMessageIds: new Set(deps.props.messages.map((message) => message.id)),
-    }),
-  );
+    });
+    // A hold keeps the message waiting, so the panel shows it at once.
+    if (deps.props.queue?.hold) return presented;
+    const starting = deps.startingDeliveryIds();
+    return starting.size ? presented.filter((delivery) => !starting.has(delivery.id)) : presented;
+  });
   // The agents this agent asked, and the answers that wait for it. A queue of another agent, which
   // the view holds for a moment while it switches, answers nothing here.
   // The person can close the block when every agent is done. A closed row that works again shows.
