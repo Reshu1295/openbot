@@ -1495,15 +1495,11 @@ export const IPC_ENDPOINTS = {
   // the Team API does not carry them, as it does not carry `access`.
   agentFolders: {
     listAgentFolders: request<string, AgentFolderList>()("agent:folders:list"),
-    // Opens the folder picker in main, so the renderer never names the folder it adds.
+    // Opens the folder picker in main.
     chooseAgentFolder: request<ChooseAgentFolderInput, AgentFolderChange>()("agent:folders:choose"),
-    // Undo of a removal. The renderer read the path from `listAgentFolders`.
+    // A dropped folder, or the Undo of a removal. Main checks each path as it checks a picked one.
     addAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:add"),
     removeAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:remove"),
-  },
-  // The preload calls it with the path of a folder dropped on the chat or the Folders row.
-  agentFolderDrops: {
-    addDroppedAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:add-dropped"),
   },
   attachmentImports: {
     importAttachments: scopedRequest<ImportAttachmentsInput, DraftAttachment[]>()("agent:import-attachments"),
@@ -1829,8 +1825,6 @@ export const IPC_GROUP_PATHS = {
   channelRoutines: "agent",
   agentAttachments: "agent",
   agentFolders: "agent",
-  // The preload calls it from its own drop handler, with the path of the dropped folder.
-  agentFolderDrops: null,
   // The preload calls it from its own drop, paste, and file input handlers.
   attachmentImports: null,
   browser: "browser",

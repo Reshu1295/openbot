@@ -6,7 +6,6 @@ import { dirname, join, parse, resolve } from "node:path";
 import {
   AGENT_FOLDER_LIMIT,
   type AgentFolderChange,
-  type AgentFolderInput,
   type AgentFolderList,
   type AgentSummary,
   agentFolderCoverage,
@@ -43,7 +42,7 @@ export function agentFolderIpcHandlers({
   userDataPath,
   getMainWindow,
   translate,
-}: AgentFolderIpcDependencies): Pick<IpcGroupHandlers, "agentFolders" | "agentFolderDrops"> {
+}: AgentFolderIpcDependencies): Pick<IpcGroupHandlers, "agentFolders"> {
   // Each change reads the list, checks the disk, then saves the whole list. One change at a time for
   // each agent, so an Undo during a remove does not save over it.
   const pending = new Map<string, Promise<unknown>>();
@@ -131,10 +130,6 @@ export function agentFolderIpcHandlers({
     return { outcome: "added", path, replaced: others.filter((folder) => !kept.includes(folder)), list: saved };
   }
 
-  async function addInput({ agentId, path }: AgentFolderInput): Promise<AgentFolderChange> {
-    return add(agentId, path);
-  }
-
   return {
     agentFolders: {
       listAgentFolders: payloadHandler(parseAgentId, (agentId) => list(requireAgent(agentId))),
@@ -157,7 +152,7 @@ export function agentFolderIpcHandlers({
         if (picked === undefined) return { outcome: "cancelled", list: await list(agent) };
         return add(agentId, picked, replace);
       }),
-      addAgentFolder: payloadHandler(parseAgentFolderInput, addInput),
+      addAgentFolder: payloadHandler(parseAgentFolderInput, ({ agentId, path }) => add(agentId, path)),
       removeAgentFolder: payloadHandler(parseAgentFolderInput, ({ agentId, path }) =>
         oneAtATime(agentId, async (): Promise<AgentFolderChange> => {
           const agent = requireAgent(agentId);
@@ -173,9 +168,6 @@ export function agentFolderIpcHandlers({
           };
         }),
       ),
-    },
-    agentFolderDrops: {
-      addDroppedAgentFolder: payloadHandler(parseAgentFolderInput, addInput),
     },
   };
 }

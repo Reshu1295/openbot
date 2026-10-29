@@ -1,5 +1,4 @@
 import {
-  type AgentFolderInput,
   type AgentIpcRequest,
   type AttachmentImportEvent,
   decodeAddedAgent,
@@ -1160,10 +1159,7 @@ const openbotApi: OpenBotDesktopApi = {
           refusal: "missing",
           list: await agentFoldersGroup.listAgentFolders(agentId),
         };
-      const input: AgentFolderInput = { agentId, path };
-      return decodeAgentFolderChangeFromMain(
-        await ipcRenderer.invoke(IPC_ENDPOINTS.agentFolderDrops.addDroppedAgentFolder.channel, input),
-      );
+      return agentFoldersGroup.addAgentFolder({ agentId, path });
     },
     onAttachmentImport: (listener) => {
       attachmentImportListeners.add(listener);
