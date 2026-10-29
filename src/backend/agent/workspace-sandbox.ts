@@ -1,6 +1,7 @@
-import { statSync } from "node:fs";
+import { stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { type AgentSummary, workspaceAccessEnforced } from "@openbot/contracts/ipc";
+import { Effect } from "effect";
 
 type SandboxedAgent = Pick<AgentSummary, "access" | "additionalFolders" | "provider" | "workspacePath">;
 
@@ -18,15 +19,37 @@ export function codexSandboxMode(agent: SandboxedAgent): "workspace-write" | "da
   return workspaceAccessEnforced(agent) ? "workspace-write" : "danger-full-access";
 }
 
+/** Whether each added folder was a folder at its last check. A folder not checked yet counts as missing. */
+const foundFolders = new Map<string, boolean>();
+
 /**
- * The folders the user gave the agent (`additionalFolders`) that are on the disk now. A moved or
- * deleted one is left out: a provider can refuse to start with a root that does not exist, and the
- * instructions must not name a folder that the sandbox leaves out.
+ * Checks the agent's added folders on the disk. Run it before a session, a process or a turn starts:
+ * a synchronous check of a stale network share would stop the whole process.
+ */
+export const checkAgentFolders = Effect.fn("checkAgentFolders")(function* (
+  agent: Pick<AgentSummary, "additionalFolders">,
+) {
+  const folders = agent.additionalFolders ?? [];
+  const found = yield* Effect.promise(() =>
+    Promise.all(
+      folders.map((folder) =>
+        stat(folder).then(
+          (stats) => stats.isDirectory(),
+          () => false,
+        ),
+      ),
+    ),
+  );
+  for (const [index, folder] of folders.entries()) foundFolders.set(folder, found[index] === true);
+});
+
+/**
+ * The folders the user gave the agent (`additionalFolders`) that were on the disk at the last
+ * `checkAgentFolders`. A moved or deleted one is left out: a provider can refuse to start with a root
+ * that does not exist, and the instructions must not name a folder that the sandbox leaves out.
  */
 export function existingAgentFolders(agent: Pick<AgentSummary, "additionalFolders">): string[] {
-  return (agent.additionalFolders ?? []).filter(
-    (folder) => statSync(folder, { throwIfNoEntry: false })?.isDirectory() === true,
-  );
+  return (agent.additionalFolders ?? []).filter((folder) => foundFolders.get(folder) === true);
 }
 
 /**

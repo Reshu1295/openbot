@@ -30,7 +30,7 @@ import {
   hostedSiteTool,
 } from "./hosted-site-events";
 import { type OpenBotToolResponse, openBotToolResult, siteToolString } from "./routine-tools";
-import { workspaceWritableRoots } from "./workspace-sandbox";
+import { checkAgentFolders, workspaceWritableRoots } from "./workspace-sandbox";
 
 /** The openbot.site host, injected so the backend never depends on the account Worker directly. */
 export interface AgentHostedSites {
@@ -321,6 +321,7 @@ export class HostedSiteCoordinator {
       description,
       ...(isBoolean(args.spaFallback) ? { spaFallback: args.spaFallback } : {}),
     };
+    yield* checkAgentFolders(agent);
     const roots = workspaceWritableRoots(agent, this.#store.sharedRoot);
     const siteId =
       context.action === "publish"

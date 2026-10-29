@@ -68,6 +68,7 @@ import { sessionSettingsIdentity } from "./session-settings";
 import { isArchivedThreadError, isMissingProviderSessionError, providerLabel } from "./thread-items";
 import { VISIBLE_DYNAMIC_TOOLS } from "./tool-catalog";
 import {
+  checkAgentFolders,
   codexSandboxConfig,
   codexSandboxMode,
   existingAgentFolders,
@@ -559,6 +560,7 @@ export class ThreadLifecycle {
     publicThreadId: string,
   ) {
     const agent = this.#sessionAgent(owner, publicThreadId);
+    yield* checkAgentFolders(agent);
     // One reading of the MCP set for the request and for the manifest below. Read twice, a change
     // that lands while the provider answers would be recorded as what this session was given, and
     // `hasCurrentTools` would then accept a session that never got it.
@@ -997,6 +999,7 @@ export class ThreadLifecycle {
       if (missingSessionFile(stored.failure.cause)) return false;
       return yield* stored.failure;
     }
+    yield* checkAgentFolders(agent);
     const configs = this.#agentMcpServers(agent);
     const toolRuntimes = this.#toolRuntimes();
     const own = yield* this.codexOwnServersEffect(client, configs, toolRuntimes);
@@ -1100,6 +1103,7 @@ export class ThreadLifecycle {
     const publicThreadId = this.#conversation.publicThreadId(owner.id, externalThreadId);
     const computerUseInOwnChat = this.#computerUseInOwnChat(owner, publicThreadId);
     const agent = this.#sessionAgent(owner, publicThreadId);
+    yield* checkAgentFolders(agent);
     const configs = this.#agentMcpServers(agent);
     const toolRuntimes = this.#toolRuntimes();
     return {
