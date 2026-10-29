@@ -3160,7 +3160,7 @@ index 00000000..24572465
 +}
 +#endif
 diff --git a/src/platform/macos/input.cpp b/src/platform/macos/input.cpp
-index de721819..db7bf802 100644
+index de721819..fbf8d310 100644
 --- a/src/platform/macos/input.cpp
 +++ b/src/platform/macos/input.cpp
 @@ -15,6 +15,7 @@
@@ -3188,20 +3188,30 @@ index de721819..db7bf802 100644
      CGEventPost(kCGHIDEventTap, event);
      // For why this is here, see:
      // https://stackoverflow.com/questions/15194409/simulated-mouseevent-not-working-properly-osx
-@@ -489,7 +491,7 @@ const KeyCodeMap kKeyCodesMap[] = {
-     int wheelY = high_res_distance / 120;
+@@ -485,19 +487,21 @@ const KeyCodeMap kKeyCodesMap[] = {
+     macos_input->last_mouse_event[mac_button][release] = now;
+   }
+ 
++  // Moonlight Web sends the browser's pixel deltas, which are mostly less than one 120 notch. A line
++  // count of distance / 120 is then 0, so the distance goes as pixels.
+   void scroll(input_t &input, const int high_res_distance) {
+-    int wheelY = high_res_distance / 120;
++    int wheelY = high_res_distance;
      int wheelX = 0;
-     CGEventRef upEvent = CGEventCreateScrollWheelEvent(nullptr, kCGScrollEventUnitLine, 2, wheelY, wheelX);
+-    CGEventRef upEvent = CGEventCreateScrollWheelEvent(nullptr, kCGScrollEventUnitLine, 2, wheelY, wheelX);
 -    CGEventPost(kCGHIDEventTap, upEvent);
++    CGEventRef upEvent = CGEventCreateScrollWheelEvent(nullptr, kCGScrollEventUnitPixel, 2, wheelY, wheelX);
 +    if (!openbot_test_input(upEvent)) CGEventPost(kCGHIDEventTap, upEvent);
      CFRelease(upEvent);
    }
  
-@@ -497,7 +499,7 @@ const KeyCodeMap kKeyCodesMap[] = {
+   void hscroll(input_t &input, int high_res_distance) {
      int wheelY = 0;
-     int wheelX = high_res_distance / 120;
-     CGEventRef upEvent = CGEventCreateScrollWheelEvent(nullptr, kCGScrollEventUnitLine, 2, wheelY, wheelX);
+-    int wheelX = high_res_distance / 120;
+-    CGEventRef upEvent = CGEventCreateScrollWheelEvent(nullptr, kCGScrollEventUnitLine, 2, wheelY, wheelX);
 -    CGEventPost(kCGHIDEventTap, upEvent);
++    int wheelX = high_res_distance;
++    CGEventRef upEvent = CGEventCreateScrollWheelEvent(nullptr, kCGScrollEventUnitPixel, 2, wheelY, wheelX);
 +    if (!openbot_test_input(upEvent)) CGEventPost(kCGHIDEventTap, upEvent);
      CFRelease(upEvent);
    }
