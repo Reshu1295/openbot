@@ -642,6 +642,7 @@ const openbotApi: OpenBotDesktopApi = {
     setAppInterfaceSizePreference: decodeAppInterfaceSizePreference,
     appInterfaceSizePreference: decodeAppInterfaceSizePreference,
     openSettings: decodeVoid,
+    openUpdateSettings: decodeVoid,
     openExternal: decodeVoid,
     openUrl: decodeVoid,
     getExternalLinkPreference: decodeExternalLinkPreference,
