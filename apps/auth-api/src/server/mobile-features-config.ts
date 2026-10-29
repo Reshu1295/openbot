@@ -8,11 +8,11 @@ import type { MobileFeatureConfig } from "@openbot/contracts/mobile-features";
  */
 export const MOBILE_FEATURE_CONFIG: MobileFeatureConfig = {
   cloudServers: {
-    ios: { upTo: "1.4.2" },
+    ios: { upTo: "1.4.3" },
     android: { upTo: "1.4.2" },
   },
   browser: {
-    ios: { upTo: "1.4.2" },
+    ios: { upTo: "1.4.3" },
     android: { upTo: "1.4.2" },
   },
 };
