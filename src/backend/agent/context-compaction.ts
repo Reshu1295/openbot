@@ -28,7 +28,7 @@ const CONTEXT_COMPACTION_TIMEOUT_MS = 120_000;
  */
 const CONTEXT_COMPACTION_RUN_FACTOR = 10;
 /** Usage arrives after each model step; one runtime snapshot carries the latest value of a burst. */
-const USAGE_CHANGE_DELAY_MS = 250;
+export const USAGE_CHANGE_DELAY_MS = 250;
 
 export interface ContextCompactionOptions {
   /**
@@ -178,7 +178,7 @@ export class ContextCompaction {
   }
 
   #scheduleUsageChange(): void {
-    // After `dispose`: a timer would read the snapshot after the database closes (#3808).
+    // While the service stops: a timer could read the snapshot after the database closes (#3808).
     if (this.#isStopping()) return;
     this.#usageTimer ??= setTimeout(() => {
       this.#usageTimer = null;

@@ -1482,6 +1482,8 @@ app.on("window-all-closed", () => {
 app.on("before-quit", (event) => {
   // Any other quit is recorded by `prepareForShutdown`.
   if (systemSessionEnding) recordExit("session_end");
+  // Also for a session end, which does not run `prepareForShutdown`.
+  hideExceptionErrorBox();
   isQuitting = true;
   quitStarted = true;
   if (systemSessionEnding) {

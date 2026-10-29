@@ -37,6 +37,7 @@ process.env.OPENBOT_FAKE_CODEX_CONTROL = controlPath;
 mkdirSync(home, { recursive: true });
 
 const { AgentService } = await import("../src/backend/agent-service");
+const { USAGE_CHANGE_DELAY_MS } = await import("../src/backend/agent/context-compaction");
 const { AgentStore } = await import("../src/backend/agent-store");
 const { runCauseEffect } = await import("../src/backend/effect-boundary");
 const { MailboxStore } = await import("../src/backend/mailbox-store");
@@ -422,8 +423,9 @@ try {
   await runCauseEffect(agents.stop());
   database.close();
   stopped = true;
-  // Created after the stop, so it fires after a usage timer of the same 250 ms delay that the stop armed.
-  await new Promise((done) => setTimeout(done, 250));
+  // Not a guessed delay: timers of the same delay fire in creation order, so a usage timer that the
+  // stop started fires before this one.
+  await new Promise((done) => setTimeout(done, USAGE_CHANGE_DELAY_MS));
   process.off("uncaughtException", collect);
   const usageOnStop = {
     reportedThreads: protocol().find((line) => line.usageOnStop !== null)?.usageOnStop ?? 0,
