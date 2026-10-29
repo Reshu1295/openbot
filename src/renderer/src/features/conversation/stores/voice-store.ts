@@ -115,7 +115,7 @@ export interface VoiceStoreDeps {
 }
 
 /** What a recording for a side thread needs. The agent's own chat is covered while a thread is open. */
-export interface VoiceThreadHooks {
+interface VoiceThreadHooks {
   /** The draft key of the open side thread. Undefined while the agent's own chat is open. */
   openDraftKey: () => string | undefined;
   appendTranscript: (key: string, text: string) => void;
