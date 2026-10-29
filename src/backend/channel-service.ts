@@ -367,7 +367,7 @@ export class ChannelService {
                   ...task,
                   state: "paused",
                   revision: task.revision + 1,
-                  error: "The assigned member was removed.",
+                  error: sourceText("error.backend.channelAssigneeRemoved"),
                 }),
               ),
               ...waitingForLead.map(
@@ -1074,7 +1074,7 @@ export class ChannelService {
       ) {
         yield* channelSync(() =>
           this.store.update(channel, {
-            tasks: [{ ...task, state: "paused", error: "The assigned member is unavailable. Reassign this task." }],
+            tasks: [{ ...task, state: "paused", error: sourceText("error.backend.channelAssigneeReassign") }],
           }),
         );
         this.publish(channelId);

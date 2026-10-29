@@ -534,6 +534,17 @@ function AuthenticatedStack() {
           }}
         />
         <Stack.Screen
+          name="turn-thinking"
+          options={{
+            contentStyle: { backgroundColor: sheetBackground },
+            headerShown: false,
+            scrollEdgeEffects: { top: "hidden", bottom: "soft" },
+            presentation: "formSheet",
+            sheetAllowedDetents: [0.85],
+            sheetGrabberVisible: true,
+          }}
+        />
+        <Stack.Screen
           name="settings"
           options={{
             contentStyle: { backgroundColor: sheetBackground },

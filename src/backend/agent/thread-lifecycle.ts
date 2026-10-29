@@ -67,7 +67,13 @@ import { isProviderTimeout } from "./provider-status";
 import { sessionSettingsIdentity } from "./session-settings";
 import { isArchivedThreadError, isMissingProviderSessionError, providerLabel } from "./thread-items";
 import { VISIBLE_DYNAMIC_TOOLS } from "./tool-catalog";
-import { codexSandboxConfig, codexSandboxMode, workspaceWritableRoots } from "./workspace-sandbox";
+import {
+  checkAgentFolders,
+  codexSandboxConfig,
+  codexSandboxMode,
+  existingAgentFolders,
+  workspaceWritableRoots,
+} from "./workspace-sandbox";
 
 const logger = createOpenBotLogger("thread-lifecycle");
 
@@ -554,6 +560,7 @@ export class ThreadLifecycle {
     publicThreadId: string,
   ) {
     const agent = this.#sessionAgent(owner, publicThreadId);
+    yield* checkAgentFolders(agent);
     // One reading of the MCP set for the request and for the manifest below. Read twice, a change
     // that lands while the provider answers would be recorded as what this session was given, and
     // `hasCurrentTools` would then accept a session that never got it.
@@ -887,6 +894,7 @@ export class ThreadLifecycle {
     section: SectionTeammates | null,
     proxy: string | null,
   ): string {
+    const folders = existingAgentFolders(agent);
     return createHash("sha256")
       .update(
         JSON.stringify([
@@ -897,14 +905,16 @@ export class ThreadLifecycle {
           approvals,
           [toolRuntimes.binDirectories, toolRuntimes.commandAliases],
           CODEX_MCP_ADAPTER_VERSION,
-          // Only a sandboxed agent, one that allows local scripts, or one that shows its plan adds a
-          // value: Codex keeps the developer instructions of a loaded session, and other sessions keep
+          // Only a sandboxed agent, one with added folders, one that allows local scripts, or one that
+          // shows its plan adds a value: Codex keeps the developer instructions of a loaded session, and other sessions keep
           // the fingerprint they had.
           [
             agent.name,
             agent.title,
             agent.description,
             ...(workspaceAccessEnforced(agent) ? ["workspace"] : []),
+            // The folders that the instructions name: a drive that is ejected or connected changes them.
+            ...(folders.length ? [["folders", ...folders]] : []),
             ...(agentAutomationAllowed(agent, this.#store.agentDefaults()) ? ["automation"] : []),
             ...(agentQuickAcknowledgementEnabled(agent, this.#store.agentDefaults()) ? ["quick-acknowledgement"] : []),
           ],
@@ -989,6 +999,7 @@ export class ThreadLifecycle {
       if (missingSessionFile(stored.failure.cause)) return false;
       return yield* stored.failure;
     }
+    yield* checkAgentFolders(agent);
     const configs = this.#agentMcpServers(agent);
     const toolRuntimes = this.#toolRuntimes();
     const own = yield* this.codexOwnServersEffect(client, configs, toolRuntimes);
@@ -1092,6 +1103,7 @@ export class ThreadLifecycle {
     const publicThreadId = this.#conversation.publicThreadId(owner.id, externalThreadId);
     const computerUseInOwnChat = this.#computerUseInOwnChat(owner, publicThreadId);
     const agent = this.#sessionAgent(owner, publicThreadId);
+    yield* checkAgentFolders(agent);
     const configs = this.#agentMcpServers(agent);
     const toolRuntimes = this.#toolRuntimes();
     return {

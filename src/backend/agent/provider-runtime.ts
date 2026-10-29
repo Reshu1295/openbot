@@ -105,7 +105,7 @@ import {
   waitForSuccessfulProcess,
 } from "./provider-status";
 import { providerForAgent, providerLabel } from "./thread-items";
-import { workspaceWritableRoots } from "./workspace-sandbox";
+import { checkAgentFolders, workspaceWritableRoots } from "./workspace-sandbox";
 
 const logger = createOpenBotLogger("provider-runtime");
 /**
@@ -2189,6 +2189,7 @@ export class ProviderRuntime implements ProviderPort {
     yield* this.#awaitConfinedStart(agent.id);
     if (provider === "acp" && this.#removingCustomRuntime)
       return yield* new ProviderOperationFailed({ cause: new Error(sourceText("error.provider.registryRemoveBusy")) });
+    yield* checkAgentFolders(agent);
     const own = this.#ownProcessFor(agent);
     const current = this.#confined.get(agent.id);
     const key = own ? this.#confinedKey(provider, own) : null;

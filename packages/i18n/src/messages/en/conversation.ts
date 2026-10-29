@@ -134,6 +134,7 @@ export const messages = defineMessages("conversation", {
   "conversation.panels.tryAgain": "Try again.",
   "conversation.view.label": "Conversation",
   "conversation.view.drop": "Drop files to attach",
+  "conversation.view.dropFolder": "Drop a folder to let {agent} change files in it",
   "conversation.direct.loadingLabel": "Loading direct conversation",
   "conversation.direct.olderFailed": "Older messages could not load.",
   "conversation.direct.unreadFailed": "The unread message could not load.",

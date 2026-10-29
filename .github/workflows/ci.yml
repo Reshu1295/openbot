@@ -593,6 +593,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:antigravity:login-path
 
+      - name: Run the Antigravity MCP load failure E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:antigravity-mcp-load-failure
+
       - name: Run the ACP additional directories E2E test
         if: ${{ !cancelled() }}
         run: bun run test:acp-directories
@@ -653,6 +657,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:cursor-stream-closed
 
+      - name: Run the Cursor model set E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:cursor-model-set
+
       - name: Run the Cline free models E2E test
         if: ${{ !cancelled() }}
         run: bun run test:cline-free-models
@@ -671,6 +679,7 @@ jobs:
             .openbot-build/custom-acp-agent-login-path-e2e/
             .openbot-build/codex-login-path-e2e/
             .openbot-build/antigravity-login-path-e2e/
+            .openbot-build/antigravity-mcp-load-failure-e2e/
             .openbot-build/acp-additional-directories-e2e/
             .openbot-build/acp-flavor-e2e/
             .openbot-build/acp-mcp-server-names-e2e/
@@ -686,6 +695,7 @@ jobs:
             .openbot-build/opencode-thought-interleave-e2e/
             .openbot-build/opencode-background-turn-e2e/
             .openbot-build/cursor-stream-closed-e2e/
+            .openbot-build/cursor-model-set-e2e/
             .openbot-build/cline-free-models-e2e/
             .openbot-build/provider-transcript-replay-e2e/
           if-no-files-found: ignore

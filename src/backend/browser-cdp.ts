@@ -265,28 +265,54 @@ export class BrowserCdpEngine {
     const fingerprint = `function() { return JSON.stringify(${fingerprintFields}); }`;
     const nodes = yield* this.#leaseEffect((send) =>
       Effect.gen({ self: this }, function* () {
-        const inputs = [];
-        for (const target of targets) inputs.push(yield* this.#resolveElementEffect(send, target, Date.now() + 10_000));
-        const button = submitTarget
-          ? yield* this.#resolveElementEffect(send, submitTarget, Date.now() + 10_000)
-          : undefined;
-        for (const node of [...inputs, ...(button ? [button] : [])]) {
+        // Each failure names its target, so the agent can correct the one that is wrong.
+        const labels = [
+          ...targets.map((_, index) => (targets.length === 1 ? "The field target" : `Field target ${index + 1}`)),
+          ...(submitTarget ? ["submitTarget"] : []),
+        ];
+        const nodes = [];
+        for (const [index, target] of [...targets, ...(submitTarget ? [submitTarget] : [])].entries())
+          nodes.push(
+            yield* this.#resolveElementEffect(send, target, Date.now() + 10_000).pipe(
+              Effect.mapError((error) =>
+                browserFailure(
+                  new Error(
+                    `${labels[index]}: ${error.cause instanceof Error ? error.cause.message : String(error.cause)}`,
+                  ),
+                ),
+              ),
+            ),
+          );
+        const inputs = nodes.slice(0, targets.length);
+        const button = submitTarget ? nodes[targets.length] : undefined;
+        for (const [index, node] of nodes.entries()) {
           if (node.sessionId)
-            return yield* browserFailure(new Error("Use takeover for authentication inside a frame."));
+            return yield* browserFailure(
+              new Error(`${labels[index]} is inside a frame. Secure input does not support frames, so use takeover.`),
+            );
+          const input = index < inputs.length;
           const valid = yield* this.#callOnNode(
             send,
             node.backendNodeId,
             `function(origin, input) { return this.isConnected && this.ownerDocument === document && location.origin === origin && (!input || (this.localName === 'input' && !this.disabled && !this.readOnly && ['password','text','tel','number'].includes(this.type))); }`,
-            [origin, inputs.includes(node)],
+            [origin, input],
           );
-          if (valid !== true) return yield* browserFailure(new Error("Authentication target is unavailable."));
+          if (valid !== true)
+            return yield* browserFailure(
+              new Error(
+                input
+                  ? `${labels[index]} is not an enabled, editable password, text, tel, or number input of this page. Target the input itself, not its label or container.`
+                  : `${labels[index]} is not on this page. Take a fresh snapshot and target the page's submit button.`,
+              ),
+            );
         }
         if (new Set(inputs.map((node) => node.backendNodeId)).size !== inputs.length)
           return yield* browserFailure(new Error("Authentication fields must be distinct."));
         const fingerprints: string[] = [];
-        for (const node of [...inputs, ...(button ? [button] : [])]) {
+        for (const [index, node] of nodes.entries()) {
           const value = yield* this.#callOnNode(send, node.backendNodeId, fingerprint, []);
-          if (!isString(value)) return yield* browserFailure(new Error("Authentication target is unavailable."));
+          if (!isString(value))
+            return yield* browserFailure(new Error(`${labels[index]} is no longer available. Take a fresh snapshot.`));
           fingerprints.push(value);
         }
         // A native submission that could send the value in a URL: a form whose effective method is not

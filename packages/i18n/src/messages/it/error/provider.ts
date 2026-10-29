@@ -98,6 +98,8 @@ export const messages = {
   "error.provider.modelsTooMany": "Ci sono troppi modelli.",
   "error.provider.modelIdCharacter": "L'ID di un modello contiene un carattere non utilizzabile.",
   "error.provider.modelIdDuplicate": "Due modelli hanno lo stesso ID.",
+  "error.provider.contextWindowInvalid":
+    "La finestra di contesto di un modello deve essere un numero intero di token tra {min} e {max}.",
   "error.provider.headersTooMany": "Ci sono troppi header.",
   "error.provider.headerNameCharacter": "Il nome di un header contiene un carattere non consentito da HTTP.",
   "error.provider.headerNameTooLong": "Il nome di un header è troppo lungo.",

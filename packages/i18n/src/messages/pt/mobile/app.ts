@@ -18,6 +18,7 @@ export const messages = {
   "mobile.app.route.deletedChannels": "Canais excluídos",
   "mobile.app.route.cropPhoto": "Mover e redimensionar",
   "mobile.app.route.queuedMessages": "Mensagens na fila",
+  "mobile.app.route.thinking": "Raciocínio",
   "mobile.app.route.messageOptions": "Opções da mensagem",
   "mobile.app.route.editMessage": "Editar mensagem",
   "mobile.app.route.serverOptions": "Opções do servidor",

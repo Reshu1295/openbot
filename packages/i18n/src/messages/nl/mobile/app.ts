@@ -18,6 +18,7 @@ export const messages = {
   "mobile.app.route.deletedChannels": "Verwijderde kanalen",
   "mobile.app.route.cropPhoto": "Verplaats en schaal",
   "mobile.app.route.queuedMessages": "Berichten in wachtrij",
+  "mobile.app.route.thinking": "Denkproces",
   "mobile.app.route.messageOptions": "Berichtopties",
   "mobile.app.route.editMessage": "Bewerk bericht",
   "mobile.app.route.serverOptions": "Serveropties",

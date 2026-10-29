@@ -133,6 +133,7 @@ export const messages = {
   "conversation.panels.tryAgain": "もう一度お試しください。",
   "conversation.view.label": "会話",
   "conversation.view.drop": "ファイルをドロップして添付します",
+  "conversation.view.dropFolder": "フォルダーをドロップすると、{agent} がその中のファイルを変更できます",
   "conversation.direct.loadingLabel": "ダイレクト会話を読み込んでいます",
   "conversation.direct.olderFailed": "以前のメッセージを読み込めませんでした。",
   "conversation.direct.unreadFailed": "未読メッセージを読み込めませんでした。",

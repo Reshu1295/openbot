@@ -17,6 +17,7 @@ export const messages = defineMessages("mobile.app", {
   "mobile.app.route.deletedChannels": "Deleted channels",
   "mobile.app.route.cropPhoto": "Move and Scale",
   "mobile.app.route.queuedMessages": "Queued messages",
+  "mobile.app.route.thinking": "Thinking",
   "mobile.app.route.messageOptions": "Message options",
   "mobile.app.route.editMessage": "Edit message",
   "mobile.app.route.serverOptions": "Server options",

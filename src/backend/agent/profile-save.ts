@@ -173,6 +173,7 @@ export function standingProfileChanged(
     previous.workspacePath !== agent.workspacePath ||
     previous.provider !== agent.provider ||
     workspaceAccessEnforced(previous) !== workspaceAccessEnforced(agent) ||
+    (previous.additionalFolders ?? []).join("\n") !== (agent.additionalFolders ?? []).join("\n") ||
     agentComputerUseEnabled(previous) !== agentComputerUseEnabled(agent) ||
     agentAutomationAllowed(previous, previousDefaults) !== agentAutomationAllowed(agent, defaults) ||
     agentQuickAcknowledgementEnabled(previous, previousDefaults) !== agentQuickAcknowledgementEnabled(agent, defaults)

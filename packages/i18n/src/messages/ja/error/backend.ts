@@ -82,6 +82,9 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "チャンネルへの配信を作成できませんでした。",
   "error.backend.channelAssignmentStopped": "このチャンネルの割り当ては停止されたか、置き換えられました。",
   "error.backend.channelAssigneeUnavailable": "割り当てられたエージェントを使用できません。",
+  "error.backend.channelAssigneeRemoved": "割り当てられたメンバーが削除されました。",
+  "error.backend.channelAssigneeReassign":
+    "割り当てられたメンバーを使用できません。このタスクを再割り当てしてください。",
   "error.backend.channelAssignmentChanged": "このチャンネルの割り当ては変更されました。",
   "error.backend.channelMemberRequired": "このチャンネルの使用可能なメンバーを選択してください。",
   "error.backend.memoryEssentialBudget":
@@ -223,6 +226,7 @@ export const messages = {
     "OpenBot はこのサーバーのサインイン情報を読み取れませんでした。サーバーアドレスを確認して再試行してください。",
   "error.backend.mcpServerExited":
     "サーバーは応答する前に停止しました。ターミナルでコマンドを実行してエラーを確認してください。",
+  "error.backend.mcpServerFailedToStart": "サーバーが起動しませんでした: {reason}",
   "error.backend.mcpOAuthProxyUnavailable":
     "OpenBot はこのサーバーのローカルサインイン接続を開始できませんでした。OpenBot を再起動してから、もう一度お試しください。",
   "error.backend.mcpOAuthSignInNeeded":

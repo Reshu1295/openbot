@@ -60,6 +60,7 @@ import { ChatExchangeGroup, ChatExchangeMarker } from "@/features/chat/component
 import { ChatMarkdown } from "@/features/chat/components/chat-markdown";
 import { ChatPlan } from "@/features/chat/components/chat-plan";
 import { ChatQuestionPrompt } from "@/features/chat/components/chat-question-prompt";
+import { ChatTurnStepsRow } from "@/features/chat/components/chat-turn-steps-row";
 import { useActivityPresence } from "@/features/chat/components/use-activity-presence";
 import { CHAT_ROW_GAP, type ChatMotion } from "@/features/chat/components/use-chat-motion";
 import { useFoldScrollAnchor } from "@/features/chat/components/use-fold-scroll-anchor";
@@ -74,6 +75,7 @@ import {
   indexChatMessages,
   type RoutineMarkerEvent,
 } from "@/features/chat/model/chat-messages";
+import type { TurnStepsSummary } from "@/features/chat/model/turn-thinking";
 import { useAgentColorMessages } from "@/features/settings/model/message-color";
 import { useConnectionAppearance } from "@/features/workspace/components/use-connection-appearance";
 import type { MobileAgent } from "@/features/workspace/context/mobile-workspace-context";
@@ -247,6 +249,10 @@ interface ChatMessageListProps {
   online: boolean;
   appActive: boolean;
   activeTurnId: string | null;
+  /** The steps row of each finished turn, by the id of its first answer. */
+  turnSummaries?: ReadonlyMap<string, TurnStepsSummary>;
+  /** Opens the thinking of a turn. Absent where no sheet can show it, such as a channel. */
+  onOpenTurn?: (turnId: string) => void;
   questionForm?: QuestionPromptController;
   /** Opens the form of an open question, in a channel where several agents can ask. */
   onSelectQuestion?: (messageId: string) => void;
@@ -776,6 +782,8 @@ interface RowContextValue {
   upload: ChatUpload | null | undefined;
   outboxStatuses: ReadonlyMap<string, OutboxRowStatus> | undefined;
   selectingMessageId: string | null;
+  turnSummaries: ReadonlyMap<string, TurnStepsSummary> | undefined;
+  onOpenTurn: ((turnId: string) => void) | undefined;
 }
 
 const RowContext = createContext<RowContextValue | null>(null);
@@ -784,12 +792,17 @@ function ChatRow({ message }: { message: VisibleMessage }) {
   const row = useContext(RowContext);
   if (!row) return null;
   const response = row.responseIds.has(message.id);
+  const turn = row.turnSummaries?.get(message.id);
+  const openTurn = row.onOpenTurn;
   return (
     <Animated.View
       style={[ROW_STYLE, response ? row.responseStyle : undefined]}
       accessibilityElementsHidden={response && !row.responseVisible}
       importantForAccessibility={response && !row.responseVisible ? "no-hide-descendants" : "auto"}
     >
+      {turn && openTurn ? (
+        <ChatTurnStepsRow summary={turn} muted={row.shared.themeMuted} onPress={() => openTurn(turn.turnId)} />
+      ) : null}
       <MessageRow
         message={message}
         isFirstUser={message.id === row.firstUserId}
@@ -908,6 +921,8 @@ export const ChatMessageList = memo(function ChatMessageList({
   online,
   appActive,
   activeTurnId,
+  turnSummaries,
+  onOpenTurn,
   questionForm,
   onSelectQuestion,
   activityAccessory,
@@ -1230,6 +1245,8 @@ export const ChatMessageList = memo(function ChatMessageList({
       upload,
       outboxStatuses,
       selectingMessageId,
+      turnSummaries,
+      onOpenTurn,
     }),
     [
       shared,
@@ -1244,6 +1261,8 @@ export const ChatMessageList = memo(function ChatMessageList({
       upload,
       outboxStatuses,
       selectingMessageId,
+      turnSummaries,
+      onOpenTurn,
     ],
   );
   const activitySpec = (activity?: MobileAgentActivity): ChatActivitySpec | null => {
@@ -1297,6 +1316,7 @@ export const ChatMessageList = memo(function ChatMessageList({
       : target.kind === "agent"
         ? target
         : undefined;
+    const turnId = activity?.turnId ?? activeTurnId;
     // As on desktop, the conversation's own turn keeps the row: turn events can arrive late.
     if (!(activity || sending || awaitingTurn || activeTurnId || messages.some(isStreamingReply) || pendingReveal))
       return null;
@@ -1310,6 +1330,7 @@ export const ChatMessageList = memo(function ChatMessageList({
       mood: animateMessages ? agentActivityMood(activity) : "idle",
       online,
       animateAvatar: animateMessages,
+      onPress: onOpenTurn && turnId ? () => onOpenTurn(turnId) : undefined,
       shimmer:
         animateMessages &&
         motion.historyVisible &&

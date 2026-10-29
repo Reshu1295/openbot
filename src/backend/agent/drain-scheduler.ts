@@ -35,7 +35,7 @@ import {
 import type { ThreadLifecycle } from "./thread-lifecycle";
 import { TurnSlots } from "./turn-slots";
 import type { UsageLimitGate } from "./usage-limit-gate";
-import { codexSandboxPolicy, workspaceWritableRoots } from "./workspace-sandbox";
+import { checkAgentFolders, codexSandboxPolicy, workspaceWritableRoots } from "./workspace-sandbox";
 
 /** Shown to the user when a message names a model of an endpoint that was taken out. */
 export const REMOVED_ENDPOINT_MESSAGE = sourceText("error.agent.endpointRemoved");
@@ -612,6 +612,8 @@ export class DrainScheduler {
         this.#mailboxSync.emitQueue(delivery.recipientAgentId);
       }
       const agent = yield* this.#store.getOrCreate(delivery.recipientAgentId).pipe(toDeliveryStartFailed);
+      // Once for the turn: its process, its session and its sandbox roots read the result.
+      yield* checkAgentFolders(agent);
       requestedModel = agent.model;
       // The endpoint was removed while this agent was busy, so no other model could be given to it
       // then. The old process would still answer on the removed endpoint, with the credentials it

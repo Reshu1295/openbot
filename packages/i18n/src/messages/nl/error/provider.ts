@@ -97,6 +97,8 @@ export const messages = {
   "error.provider.modelsTooMany": "Er zijn te veel modellen.",
   "error.provider.modelIdCharacter": "Een model-ID bevat een onbruikbaar teken.",
   "error.provider.modelIdDuplicate": "Twee modellen hebben dezelfde ID.",
+  "error.provider.contextWindowInvalid":
+    "Het contextvenster van een model moet een geheel aantal tokens zijn van {min} tot {max}.",
   "error.provider.headersTooMany": "Er zijn te veel headers.",
   "error.provider.headerNameCharacter": "Een headernaam bevat een teken dat HTTP niet toestaat.",
   "error.provider.headerNameTooLong": "Een headernaam is te lang.",

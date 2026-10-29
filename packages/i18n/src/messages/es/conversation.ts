@@ -136,6 +136,7 @@ export const messages = {
   "conversation.panels.tryAgain": "Vuelve a intentarlo.",
   "conversation.view.label": "Conversación",
   "conversation.view.drop": "Suelta archivos para adjuntarlos",
+  "conversation.view.dropFolder": "Suelta una carpeta para que {agent} pueda modificar sus archivos",
   "conversation.direct.loadingLabel": "Cargando conversación directa",
   "conversation.direct.olderFailed": "No se pudieron cargar los mensajes anteriores.",
   "conversation.direct.unreadFailed": "No se pudo cargar el mensaje sin leer.",
