@@ -51,6 +51,17 @@ export function usageWindowHasReset(limit: AccountUsageLimit): boolean {
   );
 }
 
+/**
+ * True when a window of a kept reading, or of one of its groups, is spent. A spent
+ * reading is the one that shows the usage notice, so it must not stay until its reset
+ * when the provider has quota again before that reset.
+ */
+export function usageWindowSpent(limit: AccountUsageLimit): boolean {
+  return [limit, ...(limit.groups ?? [])].some((group) =>
+    [group.primary, group.secondary].some((window) => window !== null && window.usedPercent >= 100),
+  );
+}
+
 function selectModelRateLimits(
   entries: Array<[string, AccountRateLimitResult]>,
   model: string,
