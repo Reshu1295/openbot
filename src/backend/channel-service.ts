@@ -121,7 +121,13 @@ class ChannelRoutingError extends Schema.TaggedError<ChannelRoutingError>()("Cha
  */
 const ROUTING_RECENT_MESSAGES = 5;
 const ROUTING_TEXT_CHARACTERS = 600;
-const ROUTING_PROMPT_CHARACTERS = 120_000;
+/** A request can hold 100k characters; its start is enough to choose members. */
+const ROUTING_REQUEST_CHARACTERS = 20_000;
+/**
+ * In UTF-8 bytes. Grok CLI 1.0.70 moves a prompt above 100,000 bytes to a file and shows the model
+ * only an excerpt, so a router saw part of the request and stopped at a tool permission.
+ */
+const ROUTING_PROMPT_BYTES = 96_000;
 
 /** One outcome only; reject extra fields when decoding the model response. */
 const RoutingOutcomes = [
@@ -966,7 +972,13 @@ export class ChannelService {
                     channel.members.some((member) => member.agentId === agent.id) && !this.hooks.hidden?.(agent.id),
                 )
                 .map(({ id, name, title, description }) => ({ id, name, title, description })),
-              task,
+              task: {
+                ...task,
+                instruction:
+                  task.instruction.length > ROUTING_REQUEST_CHARACTERS
+                    ? `${task.instruction.slice(0, ROUTING_REQUEST_CHARACTERS)}\n\n[truncated]`
+                    : task.instruction,
+              },
               summary: summary.text || undefined,
               recent: channelResult(
                 yield* Effect.result(
@@ -996,7 +1008,7 @@ export class ChannelService {
                 })),
             }),
           ].join("\n");
-          if (prompt.length > ROUTING_PROMPT_CHARACTERS)
+          if (Buffer.byteLength(prompt) > ROUTING_PROMPT_BYTES)
             throw new ChannelRoutingError(sourceText("error.backend.channelRoutingTooLong"));
           const response = channelResult(
             yield* Effect.result(this.hooks.generate(lead, prompt).pipe(Effect.mapError(channelFailure))),
