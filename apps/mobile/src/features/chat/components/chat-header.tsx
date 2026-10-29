@@ -7,7 +7,7 @@ import ChevronDown from "lucide-react-native/icons/chevron-down";
 import Ellipsis from "lucide-react-native/icons/ellipsis";
 import Globe from "lucide-react-native/icons/globe";
 import TriangleAlert from "lucide-react-native/icons/triangle-alert";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, View, type ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUniwind } from "uniwind";
@@ -83,6 +83,10 @@ export function ChatHeader({
   const splitDetailRoot = useSplitDetailRoot();
   const verticalBar = useVerticalBarShown();
   const barTop = useBarTop();
+  // The vertical bar turns the native header on, and an option stays set after its `Stack.Screen`
+  // unmounts. Once the bar has shown in this chat, the drawn header turns the native one off again.
+  const [nativeHeaderUsed, setNativeHeaderUsed] = useState(false);
+  if (verticalBar && !nativeHeaderUsed) setNativeHeaderUsed(true);
   const splitShown = useSplitLayout() !== null;
   const warning = useThemeColor("warning");
   const disconnected = useMobileWorkspaceSelector(
@@ -350,6 +354,7 @@ export function ChatHeader({
 
   return (
     <>
+      {nativeHeaderUsed ? <Stack.Screen options={{ headerShown: false }} /> : null}
       <View
         className="absolute inset-x-0 z-20 flex-row items-center gap-2"
         pointerEvents="box-none"
