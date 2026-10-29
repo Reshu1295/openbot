@@ -130,9 +130,9 @@ export interface LicenseServiceOptions {
   /** The sales ledger. Without it, a started Checkout goes to `analytics`. */
   sales?: BillingSales | null;
   /**
-   * Runs after a sync stores a license with other users, another status or another period end, or that
-   * stopped giving its users since its last write. The member limit of the owner's servers follows the
-   * license. A failure is logged and does not fail the sync.
+   * Runs after a sync stores a license that opened or closed, has other users, or started or stopped
+   * giving its users since its last write. The member limit of the owner's servers follows the license.
+   * A failure is logged and does not fail the sync.
    */
   onLicenseChanged?: (userId: string) => Effect.Effect<void, RemoteFailure>;
 }
@@ -869,16 +869,12 @@ export class LicenseService {
         });
       }
       // A `past_due` license stops giving its users at its period end with no change to its row. The lapse
-      // sweep reads it after that time, so the change from the previous write's time to this one counts.
+      // sweep reads it after that time, so the view at the previous write's time is the one to compare.
       if (
         this.#onLicenseChanged &&
         written?.meta.changes === 1 &&
-        (!previous ||
-          previous.users !== users ||
-          previous.status !== subscription.status ||
-          previous.current_period_end !== periodEnd ||
-          licenseEntitled(previous, previous.updated_at) !==
-            licenseEntitled({ status: subscription.status, current_period_end: periodEnd }, readAt))
+        memberLimitView(previous, previous?.updated_at ?? readAt) !==
+          memberLimitView({ users, status: subscription.status, current_period_end: periodEnd }, readAt)
       ) {
         // The license is stored, and a retry of this event finds no change. A failed notice does not fail
         // the sync: each client reads the new limit with its next server list.
@@ -1230,6 +1226,19 @@ function sellsLicense(page: { metadata: Readonly<Record<string, string>> }): boo
     page.metadata[LICENSE_METADATA.kind] === LICENSE_METADATA_KIND ||
     page.metadata[ORDER_METADATA.licenseTier] !== undefined
   );
+}
+
+/**
+ * What the member limit of the owner's servers reads from a license at one time: its users while it is
+ * open, and if it gives them. A renewal changes none of these, so it tells no client.
+ */
+function memberLimitView(
+  license: { users: number; status: string; current_period_end: number | null } | null,
+  at: number,
+): string {
+  const status = license?.status;
+  if (!license || !isOneOf(BILLING_SUBSCRIPTION_STATUSES, status) || !isOpenBillingStatus(status)) return "closed";
+  return `${license.users}:${licenseEntitled(license, at)}`;
 }
 
 function licenseExists(): BillingError {

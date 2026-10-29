@@ -44,7 +44,8 @@
  *   10 on Standard.
  * - `license-self-hosted-limit`: a server with no plan takes 3 members with no license, the users of a
  *   Team license while it is active, and 3 again when it ends. Members who are active stay. A custom limit
- *   above the license users shows the license users.
+ *   above the license users shows the license users, and a plan from before the license gives way to more
+ *   license users.
  *
  * The license promotion (`LICENSE_TRIAL_END`, in `wrangler.jsonc`) has its own scenarios. They run only
  * when the Worker sells the free trial, and `order-bundle` runs only when it does not. To run
@@ -3024,6 +3025,26 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
       "a custom limit of 10 and a license of 6 users: the host list shows 6, and a join gets 409 license_users_full",
       customLimit === 6 && overCustom.status === 409 && overCustom.code === "license_users_full",
       { memberLimit: customLimit, join: outcome(overCustom) },
+    );
+
+    // A self-hosted host can keep a plan from before the license. With no hosted row, Starter has its
+    // legacy limit of 3, and the larger license gives the limit.
+    const legacyPlan = `sub_e2e_${account.scenario}_legacy`;
+    d1(
+      `INSERT INTO billing_subscriptions(stripe_subscription_id, user_id, stripe_customer_id, server_id, plan, interval,
+         currency, status, current_period_end, updated_at)
+       VALUES (${quote(legacyPlan)}, ${quote(userId(account.scenario))}, 'cus_e2e', ${quote(hostId)}, 'starter',
+         'month', 'eur', 'active', ${now + 30 * DAY * 1_000}, ${now})`,
+      z.unknown(),
+    );
+    const planLimit = await hostMemberLimit(account, hostId);
+    const overPlan = await account.memberJoins("custom", 0);
+    d1(`DELETE FROM billing_subscriptions WHERE stripe_subscription_id = ${quote(legacyPlan)}`, z.unknown());
+    record(
+      "license-self-hosted-limit",
+      "a Starter plan from before the license (3) and a license of 6 users: the host list shows 6, and a join gets 409 license_users_full",
+      planLimit === 6 && overPlan.status === 409 && overPlan.code === "license_users_full",
+      { memberLimit: planLimit, join: outcome(overPlan) },
     );
 
     await stripe("DELETE", `/v1/subscriptions/${sub}`, idSchema);
