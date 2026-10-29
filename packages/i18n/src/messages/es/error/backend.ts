@@ -81,6 +81,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "No se creó la entrega del canal.",
   "error.backend.channelAssignmentStopped": "Esta asignación del canal se detuvo o se reemplazó.",
   "error.backend.channelAssigneeUnavailable": "El agente asignado no está disponible.",
+  "error.backend.channelAssigneeRemoved": "Se quitó al miembro asignado.",
+  "error.backend.channelAssigneeReassign": "El miembro asignado no está disponible. Reasigna esta tarea.",
   "error.backend.channelAssignmentChanged": "Esta asignación del canal cambió.",
   "error.backend.channelMemberRequired": "Selecciona un miembro disponible de este canal.",
   "error.backend.memoryEssentialBudget":
@@ -223,6 +225,7 @@ export const messages = {
     "OpenBot no pudo leer la información de inicio de sesión de este servidor. Revisa la dirección del servidor y vuelve a intentarlo.",
   "error.backend.mcpServerExited":
     "El servidor se detuvo antes de responder. Ejecuta el comando en una terminal para ver su error.",
+  "error.backend.mcpServerFailedToStart": "El servidor no se inició: {reason}",
   "error.backend.mcpOAuthProxyUnavailable":
     "OpenBot no pudo iniciar su conexión local de inicio de sesión para este servidor. Reinicia OpenBot y vuelve a intentarlo.",
   "error.backend.mcpOAuthSignInNeeded":

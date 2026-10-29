@@ -2,6 +2,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useMobileWorkspaceSelector } from "@/features/workspace/context/mobile-workspace-context";
 import type { MobileAgentActivities, MobileAgentWait } from "@/features/workspace/model/agent-activity";
 import { showsOnline } from "@/features/workspace/model/server-status";
+import type { TurnStepLines } from "@/features/workspace/model/turn-step-lines";
 import { selectLiveState } from "./use-live-workspace";
 
 export function useAgentActivity(agentId: string) {
@@ -65,4 +66,13 @@ function agentWaits(activities: MobileAgentActivities): Record<string, MobileAge
       waits[agentId] = { reason: activity.reason, detail: activity.detail };
   }
   return waits;
+}
+
+const NO_TURN_LINES: TurnStepLines = {};
+
+/** The progress lines that this phone got for the newest turns on the server. */
+export function useTurnStepLines(serverId: string): TurnStepLines {
+  const liveState = useMobileWorkspaceSelector(selectLiveState);
+  const select = useCallback(() => liveState.get().turnLinesByServer[serverId] ?? NO_TURN_LINES, [liveState, serverId]);
+  return useSyncExternalStore(liveState.subscribe, select);
 }

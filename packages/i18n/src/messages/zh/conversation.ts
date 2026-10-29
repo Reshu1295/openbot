@@ -132,6 +132,7 @@ export const messages = {
   "conversation.panels.tryAgain": "请重试。",
   "conversation.view.label": "对话",
   "conversation.view.drop": "拖入文件以附加",
+  "conversation.view.dropFolder": "拖入文件夹，让 {agent} 可以更改其中的文件",
   "conversation.direct.loadingLabel": "正在加载私聊",
   "conversation.direct.olderFailed": "更早的消息加载失败。",
   "conversation.direct.unreadFailed": "未读消息加载失败。",

@@ -4,6 +4,7 @@ import { type Accessor, createEffect, createMemo, createSignal, onCleanup, untra
 import { agentAwaitingReplies } from "../../../awaiting-replies";
 import { activeQueueDeliveries, presentQueueDeliveries, queuedDeliveriesInOrder } from "../../../queue-reconciliation";
 import type { ConversationProps } from "../conversation-types";
+import { currentConversationTarget } from "./composer-store";
 
 export interface QueueStoreDeps {
   props: ConversationProps;
@@ -36,18 +37,29 @@ export function createQueueStore(deps: QueueStoreDeps) {
   const [renderedQueueDeliveries, setRenderedQueueDeliveries] = createSignal<QueueDelivery[]>([]);
   const queuePanelVisible = createMemo(() => renderedQueueDeliveries().length > 0);
   let queueExitTimer: number | undefined;
+  let renderedOwner: string | undefined;
   createEffect(
-    () => presentedQueueDeliveries(),
-    (deliveries) => {
+    () => {
+      const target = currentConversationTarget(deps.props);
+      return { deliveries: presentedQueueDeliveries(), owner: target && `${target.serverId}:${target.agentId}` };
+    },
+    ({ deliveries, owner }) => {
       if (queueExitTimer !== undefined) {
         window.clearTimeout(queueExitTimer);
         queueExitTimer = undefined;
       }
+      const switched = owner !== renderedOwner;
+      renderedOwner = owner;
       if (deliveries.length > 0) {
         setRenderedQueueDeliveries(deliveries);
         return;
       }
       if (untrack(renderedQueueDeliveries).length === 0) return;
+      // The queue of the chat before a switch does not stay open in this one.
+      if (switched) {
+        setRenderedQueueDeliveries([]);
+        return;
+      }
       queueExitTimer = window.setTimeout(() => {
         queueExitTimer = undefined;
         if (untrack(presentedQueueDeliveries).length === 0) setRenderedQueueDeliveries([]);

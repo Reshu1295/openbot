@@ -136,6 +136,7 @@ export const messages = {
   "conversation.panels.tryAgain": "Tekrar deneyin.",
   "conversation.view.label": "Konuşma",
   "conversation.view.drop": "Eklemek için dosyaları bırakın",
+  "conversation.view.dropFolder": "{agent} ajanının içindeki dosyaları değiştirebilmesi için bir klasör bırakın",
   "conversation.direct.loadingLabel": "Doğrudan konuşma yükleniyor",
   "conversation.direct.olderFailed": "Daha eski mesajlar yüklenemedi.",
   "conversation.direct.unreadFailed": "Okunmamış mesaj yüklenemedi.",

@@ -523,6 +523,8 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
         subject: { name: app.name, iconUrl: app.iconUrl, config },
         flow,
         settle: (answer) => {
+          // Each way out of the step that adds nothing also ends the sign-in that the step waits for.
+          if (answer === null) cancelSignIn();
           setConnecting(null);
           resolve(answer);
         },
@@ -540,6 +542,8 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
   /** The relay of a joined server, when both sides can relay a sign-in. */
   const signInRelay = () => (props.pluginSignInRelay ? calls().signInRelay : undefined);
   const [relayed, setRelayed] = createSignal<MarketplaceSignInRelayState | null>(null);
+  /** Ends the sign-in that waits now, on the server and for the address that it started with. */
+  let stopSignIn: (() => void) | undefined;
 
   /**
    * A browser sign-in for a "link" listing: opens the browser when the server asks for one. A joined
@@ -550,10 +554,14 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     if (!serverId) throw new Error(t("marketplace.error.connectNoServer"));
     const relay = signInRelay();
     let waiting = true;
-    const signIn = calls().mcp.signInMcpServer({ config }, serverId);
+    const { mcp } = calls();
+    const signIn = mcp.signInMcpServer({ config }, serverId);
+    const stop = () => void mcp.cancelMcpSignIn({ url: config.url }, serverId).catch(() => undefined);
+    stopSignIn = stop;
     if (relay) void followSignInRelay(relay, config.url, serverId, () => waiting);
     return signIn.finally(() => {
       waiting = false;
+      if (stopSignIn === stop) stopSignIn = undefined;
     });
   }
 
@@ -595,12 +603,14 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     await relay.paste(current.url, address, serverId);
   }
 
-  /** Ends the relayed sign-in on the host; the waiting connect step then reports it as stopped. */
-  function cancelSignInRelay(): void {
-    const relay = signInRelay();
-    const current = relayed();
-    const serverId = props.pluginServerId;
-    if (relay && current && serverId) void relay.cancel(current.url, serverId).catch(() => undefined);
+  /**
+   * Ends the sign-in that the connect step waits for, on this computer or on the host that relays it.
+   * The waiting connect step then reports it as stopped.
+   */
+  function cancelSignIn(): void {
+    const stop = stopSignIn;
+    stopSignIn = undefined;
+    stop?.();
   }
 
   /**
@@ -985,7 +995,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     signInRelayed: relayed,
     openSignInRelay,
     pasteSignInRelay,
-    cancelSignInRelay,
+    cancelSignIn,
     openPluginUrl,
   };
 }

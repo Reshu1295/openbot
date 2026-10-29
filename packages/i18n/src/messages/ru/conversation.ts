@@ -138,6 +138,7 @@ export const messages = {
   "conversation.panels.tryAgain": "Повторите попытку.",
   "conversation.view.label": "Диалог",
   "conversation.view.drop": "Перетащите файлы, чтобы прикрепить",
+  "conversation.view.dropFolder": "Перетащите папку, чтобы агент {agent} мог изменять в ней файлы",
   "conversation.direct.loadingLabel": "Загрузка личного диалога",
   "conversation.direct.olderFailed": "Не удалось загрузить прежние сообщения.",
   "conversation.direct.unreadFailed": "Не удалось загрузить непрочитанное сообщение.",

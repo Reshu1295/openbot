@@ -18,6 +18,7 @@ export const messages = {
   "mobile.app.route.deletedChannels": "Удалённые каналы",
   "mobile.app.route.cropPhoto": "Перемещение и масштаб",
   "mobile.app.route.queuedMessages": "Сообщения в очереди",
+  "mobile.app.route.thinking": "Размышления",
   "mobile.app.route.messageOptions": "Действия с сообщением",
   "mobile.app.route.editMessage": "Изменить сообщение",
   "mobile.app.route.serverOptions": "Параметры сервера",

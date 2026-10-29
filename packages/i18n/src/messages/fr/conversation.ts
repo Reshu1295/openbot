@@ -137,6 +137,7 @@ export const messages = {
   "conversation.panels.tryAgain": "Réessayez.",
   "conversation.view.label": "Conversation",
   "conversation.view.drop": "Déposez des fichiers pour les joindre",
+  "conversation.view.dropFolder": "Déposez un dossier pour que {agent} puisse en modifier les fichiers",
   "conversation.direct.loadingLabel": "Chargement de la conversation privée",
   "conversation.direct.olderFailed": "Les messages plus anciens n’ont pas pu être chargés.",
   "conversation.direct.unreadFailed": "Le message non lu n’a pas pu être chargé.",

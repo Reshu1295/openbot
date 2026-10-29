@@ -4,17 +4,20 @@ import type { AppTextKey } from "@openbot/i18n";
 import { classifyFailure } from "@openbot/telemetry";
 import { Input } from "@openbot/ui";
 import type { AgentMessage } from "@openbot/ui/data";
+import { ChatSearch } from "@openbot/ui/features/conversation/ChatSearch";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo, createProjection, createSignal, Show } from "solid-js";
 import { actionToast } from "../../action-toast";
+import { useShowAgentSteps } from "../../agent-steps-preference";
 import { toAgentMessages } from "../../app-message-projection";
 import { usePlatform } from "../../platform";
 import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
 import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
 import { latestVisibleAgentMessageId } from "./conversation-read-state";
 import { useConversationViewScope } from "./conversation-scope";
+import { createTurnSteps } from "./turn-steps";
 
 /** A thread takes files only from this computer, which reads every supported type. */
 const THREAD_ATTACHMENT_ACCEPT = supportedAttachmentExtensions({ eml: true, media: true, zip: true, mp4: true })
@@ -33,6 +36,13 @@ export function ConversationThread() {
     installedSkillsLoadFailed,
     mcpServers,
     threadComposer,
+    threadSearch,
+    threadSearchOpen,
+    threadSearchQuery,
+    threadSearchMatches,
+    activeThreadSearchIndex,
+    setThreadSearchQuery,
+    setThreadScrollElement,
   } = useConversationViewScope();
   const { t, errorMessage } = useText();
   const [picker, setPicker] = createSignal<HTMLInputElement>();
@@ -59,6 +69,14 @@ export function ConversationThread() {
     [],
     { key: "id" },
   );
+  // The thread gets only the latest progress line of a running turn, so its steps are the thoughts,
+  // and after the turn the tool steps of its stored trace.
+  const turnSteps = createTurnSteps({
+    messages: () => messages,
+    lines: () => undefined,
+    activeTurnId: () => props.threads?.open?.activeTurnId,
+  });
+  const showAgentSteps = useShowAgentSteps();
   const { appFocused } = usePlatform();
   // The person reads the open thread while the window has focus. The mark is the member's, so the
   // phone no longer shows the thread as unread.
@@ -118,7 +136,20 @@ export function ConversationThread() {
               data-openbot-attachment-picker="true"
             />
           </Show>
+          <Show when={threadSearchOpen()}>
+            <ChatSearch
+              query={threadSearchQuery()}
+              current={activeThreadSearchIndex()}
+              total={threadSearchMatches().length}
+              inputRef={threadSearch.setChatSearchInputElement}
+              onQueryChange={setThreadSearchQuery}
+              onPrevious={() => threadSearch.moveChatSearch(-1)}
+              onNext={() => threadSearch.moveChatSearch(1)}
+              onClose={threadSearch.closeChatSearch}
+            />
+          </Show>
           <AgentThreadView
+            scrollRef={setThreadScrollElement}
             task={current().threads.open ?? null}
             limit={current().threads.limit}
             agent={current().agent}
@@ -151,6 +182,10 @@ export function ConversationThread() {
             onCompactContext={current().threads.onCompactContext}
             waitsForAnswer={props.prompt !== undefined || props.browserTakeover !== undefined}
             attention={attention()}
+            stepsAbove={turnSteps.stepsAbove}
+            factsAbove={turnSteps.factsAbove}
+            activeSteps={turnSteps.activeSteps()}
+            stepsOpenByDefault={showAgentSteps()}
           />
         </>
       )}

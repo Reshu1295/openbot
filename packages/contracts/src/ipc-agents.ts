@@ -1,5 +1,6 @@
 import { type AgentProviderRef, isAgentProviderRef } from "./agent-providers";
 import { INPUT_LIMITS } from "./input-limits";
+import { isAgentAdditionalFolders } from "./ipc-agent-folders";
 import {
   type AgentModelId,
   type AgentReasoningEffort,
@@ -218,6 +219,11 @@ export interface AgentSummary {
    */
   access?: AgentAccess;
   /**
+   * The folders that the user gave the agent besides its workspace and the shared folder, as absolute
+   * paths. Local-only, like `access`. Absent means none. Only `agentFolders` changes them.
+   */
+  additionalFolders?: string[];
+  /**
    * Whether the agent gets the Computer Use tools. Local-only, like `access`. Absent means on; see
    * `agentComputerUseEnabled`.
    */
@@ -329,6 +335,7 @@ function hasAgentSummaryFields(value: DynamicRecord): boolean {
     (value.sessionSettingOverrides === undefined || isAgentSessionSettingOverrides(value.sessionSettingOverrides)) &&
     (value.sessionSettingResets === undefined || isAgentSessionSettingResets(value.sessionSettingResets)) &&
     (value.access === undefined || isAgentAccess(value.access)) &&
+    (value.additionalFolders === undefined || isAgentAdditionalFolders(value.additionalFolders)) &&
     (value.computerUse === undefined || isBoolean(value.computerUse)) &&
     (value.allowAutomation === undefined || isBoolean(value.allowAutomation)) &&
     (value.allowNewChat === undefined || isBoolean(value.allowNewChat)) &&

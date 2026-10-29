@@ -81,10 +81,19 @@ export interface AcpConfigurationOptions {
   provider: AgentProvider;
   requestTimeoutMs: number;
   discoveryCwd?: (() => string) | undefined;
+  /** `AcpFlavor.processWideModel`. */
+  processWideModel?: boolean;
 }
 
 /** Owns ACP model discovery and setting translation. The client owns sessions and their state. */
 export class AcpConfiguration {
+  /** The model this agent process last took, for an agent whose model belongs to the process. */
+  #processModel: { connection: ClientSideConnection; value: string } | null = null;
+  /** Model sets sent and not answered. Sets that overlap can apply in an order their answers do not show. */
+  #modelSetsInFlight = 0;
+  #modelSetsOverlapped = false;
+  /** A set that timed out or was interrupted can still apply later, so on this connection each set is sent. */
+  #modelSetTimedOut: ClientSideConnection | null = null;
   constructor(private readonly options: AcpConfigurationOptions) {}
   readonly discoverModels = Effect.fn("AcpConfiguration.discoverModels")(function* (
     this: AcpConfiguration,
@@ -199,6 +208,8 @@ export class AcpConfiguration {
     const probed: AcpModel[] = [];
     let answered = 0;
     let selected = opening;
+    // The sweep selects models on the process too, also while a turn sets its own.
+    this.#processModel = null;
     for (const model of models) {
       const response = yield* this.#requestBeforeEffect(
         () => connection.setSessionConfigOption({ sessionId: probe.sessionId, configId: option.id, value: model.id }),
@@ -231,6 +242,7 @@ export class AcpConfiguration {
         "session/set_config_option",
       );
     }
+    this.#processModel = null;
     logger.info("An agent reported the reasoning efforts of its models.", {
       provider: this.options.provider,
       models: models.length,
@@ -294,6 +306,7 @@ export class AcpConfiguration {
         options[0];
       if (!option) {
         if (category === "model" && thread.currentModelId !== value) {
+          this.#processModel = null;
           yield* this.#timed("session/set_model", () =>
             this.options.connection().request("session/set_model", {
               sessionId: thread.id,
@@ -322,13 +335,57 @@ export class AcpConfiguration {
         );
         thread.configOptions = response.configOptions;
       }
-      const response = yield* this.#timed("session/set_config_option", () =>
-        this.options.connection().setSessionConfigOption({
+      // The process runs every session on the model it took last, so the set is sent only for a change.
+      // A new process is a new connection. A failed set, or one that another set overlapped, leaves
+      // the model unknown.
+      const connection = yield* providerSync(() => this.options.connection());
+      const processWide = category === "model" && this.options.processWideModel === true;
+      if (processWide) {
+        if (this.#processModel?.connection === connection && this.#processModel.value === selected) {
+          thread.currentModelId = selected;
+          thread.configOptions = thread.configOptions.map((entry) =>
+            entry === option ? { ...option, currentValue: selected } : entry,
+          );
+          continue;
+        }
+        this.#processModel = null;
+        if (this.#modelSetsInFlight > 0) this.#modelSetsOverlapped = true;
+        this.#modelSetsInFlight += 1;
+      }
+      const request = this.#timed("session/set_config_option", () =>
+        connection.setSessionConfigOption({
           sessionId: thread.id,
           configId: option.id,
           value: selected,
         }),
       );
+      const response = processWide
+        ? yield* request.pipe(
+            Effect.tap(() =>
+              Effect.sync(() => {
+                if (!this.#modelSetsOverlapped && this.#modelSetTimedOut !== connection) {
+                  this.#processModel = { connection, value: selected };
+                }
+              }),
+            ),
+            Effect.tapError((error) =>
+              Effect.sync(() => {
+                if (error.cause instanceof TimeoutError) this.#modelSetTimedOut = connection;
+              }),
+            ),
+            Effect.onInterrupt(() =>
+              Effect.sync(() => {
+                this.#modelSetTimedOut = connection;
+              }),
+            ),
+            Effect.ensuring(
+              Effect.sync(() => {
+                this.#modelSetsInFlight -= 1;
+                if (this.#modelSetsInFlight === 0) this.#modelSetsOverlapped = false;
+              }),
+            ),
+          )
+        : yield* request;
       thread.configOptions = response.configOptions;
       if (category === "model") thread.currentModelId = selected;
     }
