@@ -142,3 +142,32 @@ export const Empty: Story = {
 export const ErrorState: Story = {
   args: { rows: oneProviderRows, error: "Usage is unavailable." },
 };
+
+// Example quota readings; no account or network is used by this story.
+const zaiRows = accountUsageProviderRows({
+  limits: [
+    {
+      id: "zai",
+      primary: { usedPercent: 25, windowDurationMins: 300, resetsAt: fiveHourReset },
+      secondary: { usedPercent: 60, windowDurationMins: 10_080, resetsAt: weeklyReset },
+      groups: [
+        {
+          name: "GLM",
+          models: [],
+          primary: { usedPercent: 25, windowDurationMins: 300, resetsAt: fiveHourReset },
+          secondary: { usedPercent: 60, windowDurationMins: 10_080, resetsAt: weeklyReset },
+        },
+        {
+          name: "MCP",
+          models: [],
+          primary: { usedPercent: 75, windowDurationMins: null, resetsAt: null },
+          secondary: null,
+        },
+      ],
+    },
+  ],
+});
+
+export const ZaiCodingPlan: Story = {
+  render: () => <UsagePopover rows={zaiRows} />,
+};

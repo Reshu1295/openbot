@@ -71,6 +71,7 @@ import { startProviderTerminalLogin } from "../provider-terminal-login";
 import { recordRestartActivity } from "../restart-activity";
 import { shortenDiagnostic } from "./../stderr-diagnostics";
 import { stopProcessTree } from "../windows-process-tree";
+import { readZaiUsage } from "../zai-usage";
 import { normalizeAccountUsage, usageWindowHasReset } from "./account-usage";
 import { captureBrowser } from "./browser-capture";
 import { startCliCodeLogin } from "./cli-code-login";
@@ -951,6 +952,10 @@ export class ProviderRuntime implements ProviderPort {
                 toProviderOperationFailed,
                 deadline,
               ),
+            );
+          } else if (provider === "zai") {
+            usage = normalizeAccountUsage(
+              yield* readZaiUsage(this.#credentials.apiKey("zai")).pipe(toProviderOperationFailed, deadline),
             );
           } else if (provider === "cursor") {
             // Cursor's usage is two HTTPS requests with the CLI's token, so do not start the CLI for it.
@@ -2901,11 +2906,13 @@ export class ProviderRuntime implements ProviderPort {
           ? sourceText("error.provider.museSignIn")
           : provider === "inception"
             ? sourceText("error.provider.inceptionSignIn")
-            : provider === "deepseek"
-              ? sourceText("error.provider.deepseekSignIn")
-              : provider === "openrouter"
-                ? sourceText("error.provider.openrouterSignIn")
-                : agentProviderDescriptor(provider).signInMessage)
+            : provider === "zai"
+              ? sourceText("error.provider.zaiSignIn")
+              : provider === "deepseek"
+                ? sourceText("error.provider.deepseekSignIn")
+                : provider === "openrouter"
+                  ? sourceText("error.provider.openrouterSignIn")
+                  : agentProviderDescriptor(provider).signInMessage)
     );
   }
 

@@ -22,7 +22,7 @@ export function normalizeAccountUsage(rateLimits: AccountRateLimitsReadResult | 
   // Codex model window mixed into the same unlabeled list.
   const selectedEntries = model ? selectModelRateLimits(entries, model, fallback) : fallback ? [fallback] : entries;
   const limits = selectedEntries.map(([id, limit]) => normalizeAccountLimit(id, limit));
-  // Antigravity's groups belong to the one reading that it sends.
+  // Quota groups belong to the one provider reading that contains them.
   const groups = rateLimits?.groups?.slice(0, MAX_USAGE_GROUPS).map(normalizeUsageGroup);
   if (groups?.length && limits.length === 1 && limits[0]) limits[0] = { ...limits[0], groups };
   if (rateLimits?.sharedQuotaWith && limits.length === 1 && limits[0])

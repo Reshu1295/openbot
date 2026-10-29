@@ -1231,6 +1231,20 @@ DeepSeek's terms apply:
 <https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html>.
 DeepSeek agents stay on this computer: OpenBot does not show them to team members.
 
+### Z.ai
+
+Z.ai agents run in the Pi CLI that OpenBot downloads for Pi. OpenBot encrypts the GLM Coding Plan
+key in its existing provider credential store, gives it to the local Pi process in its environment,
+and redacts it from logs. The temporary extension file contains no key. Prompts, attachments, and
+tool results go to Pi, which sends them to `api.z.ai` through the Coding Plan endpoint. The model
+list comes from Pi's built-in catalog without a request to Z.ai.
+
+OpenBot also sends the saved key to `api.z.ai/api/monitor/usage/quota/limit` to read the plan's
+quota. The request holds the key and a language header, no conversation, file or tool content, and
+OpenBot does not follow redirects. OpenBot does not change a Z.ai key that Pi saved itself. Pi
+keeps its session files in its own folder, as for Pi agents, and OpenBot does not copy or upload
+them. Z.ai's terms apply: <https://docs.z.ai/legal-agreement/terms-of-use>.
+
 ### OpenRouter
 
 OpenRouter agents run in the Pi CLI that OpenBot downloads for Pi. On this computer, Connect on the

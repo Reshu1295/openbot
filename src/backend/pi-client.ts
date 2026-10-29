@@ -31,6 +31,7 @@ import { piMessageItems, piPrompt, piText } from "./pi-messages";
 import { PiRpc } from "./pi-rpc";
 import type { SpawnTarget } from "./process-confinement";
 import {
+  type AccountRateLimitsReadResult,
   type AppServerNotification,
   type AppServerRequest,
   type DynamicToolResult,
@@ -69,6 +70,7 @@ const PiSessionUsage = Schema.Struct({
 
 export interface PiProviderOptions {
   requestTimeoutMs?: number;
+  readRateLimits?: () => Effect.Effect<AccountRateLimitsReadResult, ProviderClientOperationError>;
   discoveryCwd?: () => string;
   confine?: (target: SpawnTarget) => SpawnTarget;
   extraEnv?: () => Record<string, string>;
@@ -240,7 +242,9 @@ export class PiAgentClient extends EventEmitter<ClientEvents> implements AgentCl
         response = {};
         break;
       case "account/rateLimits/read":
-        response = { rateLimits: null, rateLimitsByLimitId: null };
+        response = this.options.readRateLimits
+          ? yield* this.options.readRateLimits()
+          : { rateLimits: null, rateLimitsByLimitId: null };
         break;
       case "plugin/list":
         response = { marketplaces: [] };

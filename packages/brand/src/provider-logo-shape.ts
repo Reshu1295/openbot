@@ -61,6 +61,7 @@ export type ProviderLogoVariant =
   | "muse"
   | "inception"
   | "deepseek"
+  | "zai"
   | "openrouter"
   | "unknown";
 
@@ -102,6 +103,16 @@ export function providerLogoShape(provider: ProviderLogoVariant): ProviderLogoSh
       return { viewBox: GRID_24, paths: [{ d: DEEPSEEK_PATH, evenOdd: true }] };
     case "openrouter":
       return { viewBox: GRID_24, paths: [{ d: OPENROUTER_PATH }] };
+    case "zai":
+      // The official mark in one colour: https://z-cdn.chatglm.cn/z-ai/static/logo.svg
+      return {
+        viewBox: "0 0 30 30",
+        paths: [
+          { d: "M15.47 7.1l-1.3 1.85c-.2.29-.54.47-.9.47h-7.1V7.09C6.16 7.1 15.47 7.1 15.47 7.1z" },
+          { d: "M24.3 7.1 13.14 22.91H5.7L16.86 7.1Z" },
+          { d: "M14.53 22.91l1.31-1.86c.2-.29.54-.47.9-.47h7.09v2.33Z" },
+        ],
+      };
     // Native CLI providers use the neutral terminal mark.
     case "acp":
     case "pi":
