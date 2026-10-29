@@ -208,7 +208,7 @@ export class AcpConfiguration {
     const probed: AcpModel[] = [];
     let answered = 0;
     let selected = opening;
-    // The sweep selects models on the process too.
+    // The sweep selects models on the process too, also while a turn sets its own.
     this.#processModel = null;
     for (const model of models) {
       const response = yield* this.#requestBeforeEffect(
@@ -242,6 +242,7 @@ export class AcpConfiguration {
         "session/set_config_option",
       );
     }
+    this.#processModel = null;
     logger.info("An agent reported the reasoning efforts of its models.", {
       provider: this.options.provider,
       models: models.length,
@@ -337,7 +338,7 @@ export class AcpConfiguration {
       // The process runs every session on the model it took last, so the set is sent only for a change.
       // A new process is a new connection. A failed set, or one that another set overlapped, leaves
       // the model unknown.
-      const connection = this.options.connection();
+      const connection = yield* providerSync(() => this.options.connection());
       const processWide = category === "model" && this.options.processWideModel === true;
       if (processWide) {
         if (this.#processModel?.connection === connection && this.#processModel.value === selected) {
