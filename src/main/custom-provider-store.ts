@@ -11,6 +11,7 @@ import { readFile } from "node:fs/promises";
 import type {
   CustomProviderHeader,
   CustomProviderHeaderInput,
+  CustomProviderModel,
   CustomProviderSummary,
   SaveCustomProviderInput,
   UpdateCustomProviderInput,
@@ -35,7 +36,8 @@ export interface CustomProviderCipher {
   decrypt: (value: Buffer) => string;
 }
 
-const modelSchema = z.object({ id: z.string(), name: z.string() });
+/** `contextWindow` was added in a later release: a file without it still reads, and an older build drops it. */
+const modelSchema = z.object({ id: z.string(), name: z.string(), contextWindow: z.number().optional() });
 const headerSchema = z.object({ name: z.string(), value: z.string() });
 
 /**
@@ -134,7 +136,7 @@ export class CustomProviderStore {
       hasApiKey: Boolean(secret?.apiKey),
       headerNames: (secret?.headers ?? []).map((header) => header.name),
       // Copied, not shared: the renderer's list must not alias the stored entry.
-      models: stored.models.map((model) => ({ id: model.id, name: model.name })),
+      models: stored.models.map(copyModel),
     }));
   }
 
@@ -170,7 +172,7 @@ export class CustomProviderStore {
             id: input.id,
             name: input.name,
             baseUrl: input.baseUrl,
-            models: input.models.map((model) => ({ id: model.id, name: model.name })),
+            models: input.models.map(copyModel),
             secret: secret ? this.#cipher.encrypt(JSON.stringify(secret)).toString("base64") : null,
           },
           secret,
@@ -205,7 +207,7 @@ export class CustomProviderStore {
           id: current.stored.id,
           name: input.name,
           baseUrl: input.baseUrl,
-          models: input.models.map((model) => ({ id: model.id, name: model.name })),
+          models: input.models.map(copyModel),
           secret: sealed,
         },
         secret,
@@ -321,6 +323,12 @@ export class CustomProviderStore {
       Effect.mapError(({ cause }) => new CustomProviderFailure({ cause })),
     );
   });
+}
+
+function copyModel(model: CustomProviderModel): CustomProviderModel {
+  return model.contextWindow === undefined
+    ? { id: model.id, name: model.name }
+    : { id: model.id, name: model.name, contextWindow: model.contextWindow };
 }
 
 /** The same names in the same order, each with its saved value. */

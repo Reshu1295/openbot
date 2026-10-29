@@ -7,10 +7,12 @@ import {
   type ManagedProviderId,
 } from "@openbot/contracts/agent-providers";
 import type {
+  CustomProviderModel,
   CustomProviderResult,
   CustomProviderSummary,
   ProviderRuntimeSnapshot,
   ProviderRuntimeStatus,
+  SaveCustomProviderInput,
 } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isOneOf } from "@openbot/contracts/runtime-values";
 import { PROVIDERS_ADMIN_CAPABILITY, PROVIDERS_ADMIN_ROUTES } from "@openbot/contracts/team-protocol/providers-v1";
@@ -241,7 +243,9 @@ export async function routeProviders(
       case PROVIDERS_ADMIN_ROUTES.customSave:
         return json(
           200,
-          wireCustomProviderResult(await runCauseEffect(customProviders.save(parsed(parseSaveCustomProvider, body)))),
+          wireCustomProviderResult(
+            await runCauseEffect(customProviders.save(wireSaveCustomProvider(parsed(parseSaveCustomProvider, body)))),
+          ),
         );
       default:
         return json(
@@ -278,9 +282,21 @@ function isProvidersRoute(pathname: string): boolean {
   return ROUTES.has(pathname);
 }
 
-/** The `providers-v1` endpoint summary: the header names stay on this computer, as they did. */
+/**
+ * The `providers-v1` endpoint summary: the header names and the model context windows stay on this
+ * computer, as they did.
+ */
 function wireCustomProvider({ headerNames: _headerNames, ...provider }: CustomProviderSummary): CustomProviderSummary {
-  return provider;
+  return { ...provider, models: provider.models.map(wireCustomModel) };
+}
+
+/** A `providers-v1` save names each model by its released fields only. */
+function wireSaveCustomProvider(input: SaveCustomProviderInput): SaveCustomProviderInput {
+  return { ...input, models: input.models.map(wireCustomModel) };
+}
+
+function wireCustomModel({ id, name }: CustomProviderModel): CustomProviderModel {
+  return { id, name };
 }
 
 function wireCustomProviderResult(result: CustomProviderResult): CustomProviderResult {
