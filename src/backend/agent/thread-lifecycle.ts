@@ -67,7 +67,12 @@ import { isProviderTimeout } from "./provider-status";
 import { sessionSettingsIdentity } from "./session-settings";
 import { isArchivedThreadError, isMissingProviderSessionError, providerLabel } from "./thread-items";
 import { VISIBLE_DYNAMIC_TOOLS } from "./tool-catalog";
-import { codexSandboxConfig, codexSandboxMode, workspaceWritableRoots } from "./workspace-sandbox";
+import {
+  codexSandboxConfig,
+  codexSandboxMode,
+  existingAgentFolders,
+  workspaceWritableRoots,
+} from "./workspace-sandbox";
 
 const logger = createOpenBotLogger("thread-lifecycle");
 
@@ -887,6 +892,7 @@ export class ThreadLifecycle {
     section: SectionTeammates | null,
     proxy: string | null,
   ): string {
+    const folders = existingAgentFolders(agent);
     return createHash("sha256")
       .update(
         JSON.stringify([
@@ -905,7 +911,8 @@ export class ThreadLifecycle {
             agent.title,
             agent.description,
             ...(workspaceAccessEnforced(agent) ? ["workspace"] : []),
-            ...(agent.additionalFolders?.length ? [["folders", ...agent.additionalFolders]] : []),
+            // The folders that the instructions name: a drive that is ejected or connected changes them.
+            ...(folders.length ? [["folders", ...folders]] : []),
             ...(agentAutomationAllowed(agent, this.#store.agentDefaults()) ? ["automation"] : []),
             ...(agentQuickAcknowledgementEnabled(agent, this.#store.agentDefaults()) ? ["quick-acknowledgement"] : []),
           ],
