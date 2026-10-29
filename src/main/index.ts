@@ -519,6 +519,8 @@ function attachWindowsSessionEndHandlers(window: BrowserWindow): void {
     isQuitting = true;
     // Windows can stop the Computer Use driver first, and sends no `before-quit` for a session end.
     quitStarted = true;
+    // An error box would hold back the flushes below until Windows ends the process.
+    hideExceptionErrorBox();
     void runCauseEffect(windows.flushMainWindowBounds()).catch((error) =>
       logger.error("Unable to save the main window position during Windows session end:", toLogValue(error)),
     );
@@ -1482,7 +1484,7 @@ app.on("window-all-closed", () => {
 app.on("before-quit", (event) => {
   // Any other quit is recorded by `prepareForShutdown`.
   if (systemSessionEnding) recordExit("session_end");
-  // Also for a session end, which does not run `prepareForShutdown`.
+  // A quit after a Windows session-end query does not run `prepareForShutdown`.
   hideExceptionErrorBox();
   isQuitting = true;
   quitStarted = true;
