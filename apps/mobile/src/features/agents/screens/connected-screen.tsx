@@ -493,12 +493,13 @@ export function ConnectedScreen({ variant = "screen" }: { variant?: "screen" | "
   useEffect(() => {
     if (!searchShows && searchOpen) closeSearch();
   }, [searchShows, searchOpen, closeSearch]);
-  // A quick action waits while the list loads. A ready home without the field drops it. When home
-  // leaves, a request waits again for the next home.
+  // A quick action waits while the list loads. A ready home without the field drops it, also while
+  // What's new hides the field. When home leaves, a request waits again for the next home.
+  const updateExpanded = updateHeader.expanded;
   useEffect(() => {
-    setHomeSearchUnavailable(listReady && !searchShows);
+    setHomeSearchUnavailable(listReady && (!searchShows || updateExpanded));
     return () => setHomeSearchUnavailable(false);
-  }, [listReady, searchShows]);
+  }, [listReady, searchShows, updateExpanded]);
   const finishGate = onboarding.finish;
   const finishOnboarding = useCallback(
     (welcome?: WelcomeHandOff) => {
