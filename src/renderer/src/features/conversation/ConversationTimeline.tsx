@@ -171,6 +171,7 @@ export function ConversationTimeline() {
     setExpandedEmojiMessageId,
     setOpenReactionMessageId,
     setRequiredInteractionElement,
+    registerPromptComposerAnswer,
     showScrollToLatest,
     unreadDividerVisible,
     updateScrollFade,
@@ -1386,7 +1387,10 @@ export function ConversationTimeline() {
             </div>
             {/* Under an open side thread, the thread draws the card of its own question. */}
             <Show when={!sideThreadOpen()}>
-              <ConversationQuestionPrompt elementRef={setRequiredInteractionElement} />
+              <ConversationQuestionPrompt
+                elementRef={setRequiredInteractionElement}
+                registerComposerAnswer={registerPromptComposerAnswer}
+              />
             </Show>
             <Show keyed when={props.approval}>
               {(approval) => (

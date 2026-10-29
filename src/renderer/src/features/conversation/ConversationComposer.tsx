@@ -100,6 +100,7 @@ export function ConversationComposer() {
     cancelVoiceRecording,
     submitComposer,
     steerComposer,
+    composerAnswersPrompt,
     submitting,
     unreferencedDraftAttachments,
     updateCurrentDraft,
@@ -338,7 +339,8 @@ export function ConversationComposer() {
   };
   const sendLabel = () => {
     if (editingDeliveryId()) return t("composer.send.saveQueued");
-    return voicePhase() === "recording" ? t("composer.send.voice") : t("composer.send.message");
+    if (voicePhase() === "recording") return t("composer.send.voice");
+    return composerAnswersPrompt() ? t("composer.send.answer") : t("composer.send.message");
   };
   const sendKeyShortcuts = () =>
     voicePhase() === "recording" ? undefined : sendShortcutAriaKey(deviceSendShortcut(props.platform));
@@ -684,7 +686,9 @@ export function ConversationComposer() {
                       : t("composer.placeholder.cliSetup")
                   : replyTarget()
                     ? t("composer.placeholder.reply")
-                    : messageLabel()
+                    : composerAnswersPrompt()
+                      ? t("composer.placeholder.answer")
+                      : messageLabel()
               }
               ariaLabel={channel ? t("channel.composer.label") : messageLabel()}
               focusRequest={composerFocusRequest()}

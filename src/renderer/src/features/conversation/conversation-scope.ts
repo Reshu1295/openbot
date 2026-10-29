@@ -12,6 +12,7 @@ import {
   type UpdateAgentInput,
 } from "@openbot/contracts/ipc";
 import { toast } from "@openbot/ui";
+import type { QuestionPromptComposerAnswer } from "@openbot/ui/components/QuestionPromptBubble";
 import type { QuoteRequest } from "@openbot/ui/features/conversation/ComposerEditor";
 import { currentText } from "@openbot/ui/text";
 import { usesTouchLayout } from "@openbot/ui/utils";
@@ -730,6 +731,13 @@ export function createConversationViewScope(props: ConversationProps) {
       if (emptied) dismissVoiceLimitNotice();
     },
   );
+  // The open question form. The composer text answers it instead of steering the turn.
+  const [promptComposerAnswer, setPromptComposerAnswer] = createSignal<QuestionPromptComposerAnswer>();
+  const registerPromptComposerAnswer = (answer: QuestionPromptComposerAnswer) => {
+    setPromptComposerAnswer(() => answer);
+    // A new form can arrive before the old one goes, so the old one takes back only its own answer.
+    return () => setPromptComposerAnswer((current) => (current === answer ? undefined : current));
+  };
   const actions = createComposerActions({
     props,
     attachmentBusy,
@@ -808,6 +816,7 @@ export function createConversationViewScope(props: ConversationProps) {
     setStickToLatest,
     pendingSends,
     attachmentPicker: () => attachmentPicker,
+    promptComposerAnswer,
   });
   const {
     updateTeamTyping,
@@ -820,6 +829,7 @@ export function createConversationViewScope(props: ConversationProps) {
     reorderPresentedQueue,
     submitComposer,
     steerComposer,
+    composerAnswersPrompt,
     sendSelectionInstruction,
     sendCardMessage,
     retryPendingSend,
@@ -2006,6 +2016,7 @@ export function createConversationViewScope(props: ConversationProps) {
     setExpandedEmojiMessageId,
     setOpenReactionMessageId,
     setRequiredInteractionElement,
+    registerPromptComposerAnswer,
     handleRoutineSettingsRequest,
     setSettingsPanelWidth,
     setShowComposerActions,
@@ -2025,6 +2036,7 @@ export function createConversationViewScope(props: ConversationProps) {
     cancelVoiceRecording,
     submitComposer,
     steerComposer,
+    composerAnswersPrompt,
     submitting,
     unreadDividerVisible,
     unreferencedDraftAttachments,
