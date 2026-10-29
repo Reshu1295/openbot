@@ -15,7 +15,7 @@ import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } fro
 import { AppState, Keyboard, useColorScheme, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { KeyboardGestureArea } from "react-native-keyboard-controller";
-import Animated, { useSharedValue } from "react-native-reanimated";
+import Animated, { useDerivedValue, useSharedValue } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { getBloubAvatarColor } from "@/features/agents/model/bloub-activity";
@@ -278,6 +278,7 @@ export function ChatView({
   const server = useMobileWorkspaceSelector((current) => current.servers.find((item) => item.id === target.serverId));
   const insets = useSafeAreaInsets();
   const keyboardOffset = Math.max(insets.bottom, 10) - 10;
+  const [chatHeight, setChatHeight] = useState(0);
   const [foreground, muted, fieldBackground, raised, action, actionForeground, background] = useThemeColor([
     "foreground",
     "muted",
@@ -528,6 +529,10 @@ export function ChatView({
     catchingUp,
   );
   const atLatest = motion.atLatest;
+  // The composer moves up by the keyboard as composerStyle does, under the header that the motion is given.
+  const suggestionsRoom = useDerivedValue(
+    () => chatHeight - (insets.top + 84) - Math.max(0, motion.keyboardHeight.get() - keyboardOffset),
+  );
   // The end of a window around a searched message is not the latest message.
   const showLatest = () => {
     if (!detached || !showLatestMessages) {
@@ -919,7 +924,11 @@ export function ChatView({
 
   return (
     <GestureDetector gesture={edgeBackGesture}>
-      <View className="flex-1" style={{ backgroundColor: background }}>
+      <View
+        className="flex-1"
+        style={{ backgroundColor: background }}
+        onLayout={({ nativeEvent }) => setChatHeight(nativeEvent.layout.height)}
+      >
         <View
           className="flex-1"
           // Nothing here may switch on the card: this view is an ancestor of
@@ -1152,6 +1161,7 @@ export function ChatView({
                   mentionSkills={mentionSkills}
                   skillPickerVersion={skillPickerVersion}
                   onSuggestionsVisibleChange={setSuggestionsOpen}
+                  suggestionsRoom={suggestionsRoom}
                   key={target.id}
                   action={action}
                   actionForeground={actionForeground}

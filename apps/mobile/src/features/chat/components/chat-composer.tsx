@@ -141,6 +141,8 @@ interface ChatComposerProps {
   skillPickerVersion?: number;
   /** Tells the chat when the `@` list opens and closes, so that a drag in it does not move the keyboard. */
   onSuggestionsVisibleChange?: (visible: boolean) => void;
+  /** The height from the chat header to the keyboard or the screen bottom. The `@` list and the bar stay in it. */
+  suggestionsRoom?: SharedValue<number>;
   bottomInset: number;
   disabled: boolean;
   draft: string;
@@ -236,6 +238,7 @@ export const ChatComposer = memo(function ChatComposer({
   mentionSkills = NO_SKILLS,
   skillPickerVersion = 0,
   onSuggestionsVisibleChange,
+  suggestionsRoom,
   bottomInset,
   disabled,
   draft,
@@ -656,6 +659,12 @@ export const ChatComposer = memo(function ChatComposer({
   useEffect(() => {
     onSuggestionsVisibleChange?.(suggestionsVisible);
   }, [onSuggestionsVisibleChange, suggestionsVisible]);
+  // A long draft and the keyboard leave less than 240 above the bar. The list then takes what is
+  // left, and scrolls, instead of going under the header where its first names cannot be reached.
+  const barHeight = useSharedValue(0);
+  const suggestionsHeightStyle = useAnimatedStyle(() => ({
+    maxHeight: suggestionsRoom ? Math.max(0, Math.min(240, suggestionsRoom.get() - barHeight.get())) : 240,
+  }));
   const announcedSuggestions = useRef("");
   useEffect(() => {
     // The list opens and closes under the keyboard with no focus change, so a
@@ -749,17 +758,19 @@ export const ChatComposer = memo(function ChatComposer({
   return (
     <View>
       {suggestionsVisible && query ? (
-        <GlassView
+        <AnimatedGlassView
           glassEffectStyle={liquidGlassAvailable ? "regular" : "none"}
-          style={{
-            marginHorizontal: 16,
-            flexGrow: 0,
-            maxHeight: 240,
-            borderRadius: 24,
-            borderCurve: "continuous",
-            overflow: "hidden",
-            backgroundColor: liquidGlassAvailable ? "transparent" : fallbackBackground,
-          }}
+          style={[
+            {
+              marginHorizontal: 16,
+              flexGrow: 0,
+              borderRadius: 24,
+              borderCurve: "continuous",
+              overflow: "hidden",
+              backgroundColor: liquidGlassAvailable ? "transparent" : fallbackBackground,
+            },
+            suggestionsHeightStyle,
+          ]}
         >
           <ScrollView keyboardShouldPersistTaps="always" style={{ flexGrow: 0 }}>
             {suggestions.map((agent) => (
@@ -840,10 +851,11 @@ export const ChatComposer = memo(function ChatComposer({
               );
             })}
           </ScrollView>
-        </GlassView>
+        </AnimatedGlassView>
       ) : null}
       <View
         pointerEvents="box-none"
+        onLayout={({ nativeEvent }) => barHeight.set(nativeEvent.layout.height)}
         style={{
           alignItems: "center",
           paddingHorizontal: BAR_INSET,
