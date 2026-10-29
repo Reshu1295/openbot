@@ -25,7 +25,12 @@ const GEMINI_MCP_LOAD_FAILURES = [
 function geminiMcpLoadFailure(text: string): { name: string; reason: string } | null {
   for (const pattern of GEMINI_MCP_LOAD_FAILURES) {
     const match = pattern.exec(text);
-    if (match?.[1]) return { name: match[1], reason: (match[2] ?? "").replace(/\s+/gu, " ").trim() };
+    // With no reason, Antigravity's own sentence is the reason, so the report is not empty.
+    if (match?.[1])
+      return {
+        name: match[1],
+        reason: (match[2] || match[0].replace(/\s*Fix the MCP server\b.*$/su, "")).replace(/\s+/gu, " ").trim(),
+      };
   }
   return null;
 }

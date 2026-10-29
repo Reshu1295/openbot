@@ -5,7 +5,8 @@
 // without that server. Runs the real Antigravity driver over a fake server that acts as 1.4.4 does.
 // Cases: the turn resumes the session without the server and answers, the server is reported as a
 // drop, a new session of the process does not get it, and a failed server that OpenBot did not give
-// (the user's own `mcp_config.json`) stays the turn's error.
+// (the user's own `mcp_config.json`) stays the turn's error. A last case sends the failure message
+// before the stderr line: the turn still goes on, and the message is not shown as an answer.
 // `bun run test:antigravity-mcp-load-failure`. Writes
 // .openbot-build/antigravity-mcp-load-failure-e2e/report.json.
 import assert from "node:assert/strict";
@@ -16,6 +17,7 @@ import type { McpServerConfig } from "@openbot/contracts/ipc";
 import type { AgentClient } from "../src/backend/agent-client";
 import type { AgentCliInfo } from "../src/backend/cli";
 import type { McpServerDrop } from "../src/backend/mcp-provider-shapes";
+import { getString } from "../src/backend/protocol";
 import { requireProviderDriver } from "../src/backend/provider-drivers";
 import { installFakeAgent, readJsonl, runTurn, startThread, stopClients, type TurnResult } from "./provider-fakes/host";
 
@@ -33,6 +35,7 @@ interface Report {
   turns: Record<string, TurnResult>;
   requests?: LogEntry[];
   drops?: McpServerDrop[];
+  stdoutFirstDeltas?: string[];
   error?: string;
 }
 
@@ -135,6 +138,31 @@ try {
     ["higgsfield", null, null, "cloudflare"],
     "The failed prompt is sent once more, and only once.",
   );
+
+  // 4. The failure message comes before the stderr line.
+  const stdoutFirst = join(root, "agy-stdout-first", "bin", "agy_acp_server");
+  await installFakeAgent(stdoutFirst, "antigravity-mcp-load-failure", {
+    FAKE_LOG: join(root, "stdout-first.jsonl"),
+    FAKE_STDOUT_FIRST: "1",
+  });
+  const late = requireProviderDriver("antigravity").createClient(
+    { executable: stdoutFirst, version: "1.4.4", source: "managed" },
+    20_000,
+    { apiKey: () => null, customProviders: () => [], mcpServers: () => servers },
+  );
+  clients.push(late);
+  const deltas: string[] = [];
+  late.on("notification", (notification) => {
+    if (notification.method === "item/agentMessage/delta") deltas.push(getString(notification.params, "delta") ?? "");
+  });
+  late.start();
+  const lateThread = await startThread(late, { cwd: workspace });
+  const lateTurn = await runTurn(late, lateThread, { text: "Reply with OK only.", timeoutMs: 30_000 });
+  report.turns.stdoutFirst = lateTurn;
+  report.stdoutFirstDeltas = deltas;
+  assert.equal(lateTurn.error, null, "The turn has no error when the message comes first.");
+  assert.equal(lateTurn.reply, "OK", "The turn answers when the message comes first.");
+  assert.deepEqual(deltas, ["OK"], "The failure message is not shown as an answer.");
   report.passed = true;
 } catch (error) {
   report.error = error instanceof Error ? (error.stack ?? error.message) : String(error);

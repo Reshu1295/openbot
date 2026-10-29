@@ -1791,27 +1791,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       thread = yield* providerSync(() => this.#requireThread(threadId));
     }
     if (thread.activeTurn) return yield* providerFailure(this.#turnActiveError(thread.activeTurn));
-    yield* this.#configuration.applyConfig(
-      thread,
-      getString(params, "model"),
-      getString(params, "effort"),
-      this.#models,
-    );
-    const overrides = getRecord(params, "sessionSettings");
-    for (const [configId, value] of Object.entries(overrides ?? {})) {
-      if (typeof value !== "boolean" && typeof value !== "string")
-        return yield* providerFailure(new Error(sourceText("error.provider.sessionSettingInvalid")));
-      const option = sessionSettingsSnapshot(thread.configOptions).options.find((entry) => entry.id === configId);
-      // A provider update can remove an option or choice. Keep the saved override in the
-      // store and report the effective value for correction, without blocking the prompt.
-      const available =
-        option?.type === "boolean"
-          ? typeof value === "boolean"
-          : option?.type === "select" &&
-            typeof value === "string" &&
-            option.options.some((choice) => choice.value === value);
-      if (available && option?.currentValue !== value) yield* this.#configuration.set(thread, configId, value);
-    }
+    yield* this.#applyTurnSettings(thread, params);
     this.#publishSessionSettings(thread);
     const turnId = getString(params, "clientTurnId") ?? getString(params, "clientUserMessageId") ?? randomUUID();
     const blocks = yield* promptBlocksEffect(params);
@@ -1836,11 +1816,40 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       unprompted: false,
       answerOptional: isRecord(params) && params.answerOptional === true,
     });
-    turn.task = yield* Effect.forkIn(this.#consumePrompt(thread, turn, blocks), this.#scope, {
+    turn.task = yield* Effect.forkIn(this.#consumePrompt(thread, turn, blocks, params), this.#scope, {
       startImmediately: true,
     });
     yield* Effect.forkIn(this.#watchStall(thread, turn), this.#scope);
     return { turn: { id: turn.id, status: "inProgress" } };
+  });
+
+  /** The model, effort and session settings that a turn asks for. Applied again after a resume in the turn. */
+  readonly #applyTurnSettings = Effect.fn("AcpAgentClient.applyTurnSettings")(function* (
+    this: AcpAgentClient,
+    thread: AcpThread,
+    params: unknown,
+  ): Effect.fn.Return<void, ProviderClientOperationError> {
+    yield* this.#configuration.applyConfig(
+      thread,
+      getString(params, "model"),
+      getString(params, "effort"),
+      this.#models,
+    );
+    const overrides = getRecord(params, "sessionSettings");
+    for (const [configId, value] of Object.entries(overrides ?? {})) {
+      if (typeof value !== "boolean" && typeof value !== "string")
+        return yield* providerFailure(new Error(sourceText("error.provider.sessionSettingInvalid")));
+      const option = sessionSettingsSnapshot(thread.configOptions).options.find((entry) => entry.id === configId);
+      // A provider update can remove an option or choice. Keep the saved override in the
+      // store and report the effective value for correction, without blocking the prompt.
+      const available =
+        option?.type === "boolean"
+          ? typeof value === "boolean"
+          : option?.type === "select" &&
+            typeof value === "string" &&
+            option.options.some((choice) => choice.value === value);
+      if (available && option?.currentValue !== value) yield* this.#configuration.set(thread, configId, value);
+    }
   });
 
   /** A turn of the agent's own ends when OpenBot sees it end, so a message waits for it rather than joining it. */
@@ -1916,12 +1925,14 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     thread: AcpThread,
     turn: AcpTurn,
     prompt: ContentBlock[],
+    params: unknown,
   ): Effect.fn.Return<void, ProviderClientOperationError> {
     try {
       const send = () =>
         providerCall(() => this.#requireConnection().prompt({ sessionId: thread.id, prompt })).pipe(Effect.result);
       let response = providerResult(yield* send());
-      while (yield* this.#leaveOutFailedMcpServer(thread, turn, response)) response = providerResult(yield* send());
+      while (providerResult(yield* Effect.result(this.#leaveOutFailedMcpServer(thread, turn, response, params))))
+        response = providerResult(yield* send());
       if (thread.activeTurn !== turn || turn.completing) return;
       // `promptId` names this result: a delivery that runs again keeps its turn ID.
       if (response.usage)
@@ -1989,6 +2000,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     thread: AcpThread,
     turn: AcpTurn,
     response: PromptResponse,
+    params: unknown,
   ): Effect.fn.Return<boolean, ProviderClientOperationError> {
     const mcpLoadFailure = this.#flavor.sdkHarness?.mcpLoadFailure;
     if (
@@ -2029,7 +2041,10 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     thread.restore = restore;
     thread.configOptions = restored.configOptions ?? thread.configOptions;
     thread.currentModelId = currentModelFromSessionSetup(restored) ?? thread.currentModelId;
+    // The session that opens again has the model of the thread, then the settings of this turn.
     yield* this.#configuration.applyConfig(thread, model, null, this.#models);
+    yield* this.#applyTurnSettings(thread, params);
+    this.#publishSessionSettings(thread);
     turn.text = "";
     turn.sdkFailureAt = null;
     turn.receivedOutput = false;
@@ -2146,6 +2161,10 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       // An agent can keep session/prompt open while background tasks run (Antigravity). Its text must
       // not wait for that response. A later tool/thought boundary can still classify it as commentary.
       // Text after an SDK failure is the failure, which the turn reports when it ends.
+      // Antigravity can end a turn on a failed MCP server start before its stderr line arrives. That
+      // text is the failure, not an answer, so it is not shown while the turn can still try again.
+      if (turn.sdkFailureAt === null && !turn.text && this.#flavor.sdkHarness?.mcpLoadFailure(text))
+        turn.sdkFailureAt = 0;
       if (this.#flavor.streamAnswerBeforePromptReturns && text && turn.sdkFailureAt === null) {
         if (!turn.text)
           this.emit("notification", {

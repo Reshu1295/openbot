@@ -59,6 +59,13 @@ serveFakeAcpAgent({
       peer.reply(request, { stopReason: "end_turn" });
       return;
     }
+    // `FAKE_STDOUT_FIRST`: the message arrives before the stderr line, which the two pipes allow.
+    if (process.env.FAKE_STDOUT_FIRST) {
+      peer.say(sessionId, failure(failed));
+      peer.reply(request, { stopReason: "end_turn" });
+      process.stderr.write(`E Antigravity SDK error processing prompt for session ${sessionId}\n`);
+      return;
+    }
     // Antigravity logs the failure before it sends the message. stderr and stdout are two pipes, so
     // the answer waits until the test has seen the client read the stderr line: it then writes a file
     // named for the session in `FAKE_RELEASE`.
