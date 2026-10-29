@@ -160,6 +160,11 @@ at most 200 controls within the existing serialized size limit. Visibility filte
 remain in place. Semantic ambiguity still refuses input; its error asks for a fresh snapshot ref and
 does not present native node IDs as actionable references.
 
+The control budget does not stop text collection in later captured documents. Text still uses its
+existing character limit and frame limit. Automatic images require canvas/video to intersect its
+document viewport; a fully offscreen surface does not trigger a screenshot. Low semantic coverage,
+explicit image requests, and `image=never` keep their existing behavior.
+
 Explicit agent snapshots add `pageEvidence`: observed HTTP denial codes (401, 403, 429), sign-in
 text, and challenge text. These are observations, not proof of an expired session or bot protection.
 The identity checks keep the installed Chromium and the Google account exception. Automatic images
@@ -173,6 +178,13 @@ versions, three warm-ups, twenty measurements, CDP command counts, response byte
 A baseline collector can be bundled from the original Git source into an ignored build artifact and
 run with `--benchmark-label=baseline`. Compare on the same computer and fixture; this does not measure
 provider latency or live-site performance.
+
+`--scenario=snapshot-coverage` writes `.openbot-build/browser-snapshot-coverage.json`. The same
+checks also run in the CI-selected `input-recovery` scenario. They cover later-frame text with 200
+parent controls, offscreen and viewport canvas/video, explicit image modes, and low semantic coverage.
+`--scenario=typing-audit` is a separate native diagnostic. It writes
+`.openbot-build/browser-typing-audit.json` before it fails on an unsafe typing result. It tests focus
+redirection, readonly input, ordinary append, and empty replacement without changing typing policy.
 
 ### Fill inspected ordinary fields
 

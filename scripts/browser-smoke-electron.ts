@@ -432,6 +432,8 @@ const SCENARIOS = [
   "hit-testing",
   "dialogs",
   "input-recovery",
+  "snapshot-coverage",
+  "typing-audit",
   "snapshot-performance",
   "identity",
   "background",
@@ -548,6 +550,10 @@ async function main(): Promise<void> {
               await runDialogScenario(browser, tab.id, contents);
             } else if (scenario === "input-recovery") {
               await runInputRecovery(browser, tab.id, contents);
+            } else if (scenario === "snapshot-coverage") {
+              await runSnapshotCoverage(browser, tab.id, contents);
+            } else if (scenario === "typing-audit") {
+              await runTypingAudit(browser, tab.id, contents);
             } else if (scenario === "wait-deadlines") {
               await runWaitDeadlines(browser, tab.id, contents);
             } else if (scenario === "live-view") {
@@ -2646,6 +2652,9 @@ async function runInputRecovery(browser: BrowserHost, tabId: string, contents: W
     assert(!hiddenVisual.contentItems.some((item) => item.type === "inputImage"));
     checks.push("automatic images include visible canvas and skip hidden canvas");
 
+    await runSnapshotCoverage(browser, tabId, contents);
+    checks.push("later-frame text and viewport-only visual triggers retain their existing bounds");
+
     const samples = await measureSnapshots(browser, tabId, contents);
     checks.push("large page preserves all 200 targets across twenty measured snapshots");
     await mkdir(".openbot-build", { recursive: true });
@@ -2666,6 +2675,135 @@ async function runInputRecovery(browser: BrowserHost, tabId: string, contents: W
   } finally {
     contents.debugger.sendCommand = native;
   }
+}
+
+async function runSnapshotCoverage(browser: BrowserHost, tabId: string, contents: WebContents): Promise<void> {
+  const checks: Array<{ name: string; passed: boolean }> = [];
+  const frameOrigin = new URL(contents.getURL());
+  frameOrigin.hostname = "localhost";
+  await contents.executeJavaScript(
+    `(async () => {
+      document.body.innerHTML = Array.from({length: 200}, (_, i) => '<button>Parent control ' + i + '</button>').join('');
+      for (const label of ['First frame budget marker', 'Second frame budget marker']) {
+        const frame = document.createElement('iframe');
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        frame.src = ${JSON.stringify(frameOrigin.origin)} + '/frame?action_label=' + encodeURIComponent(label);
+        document.body.append(frame);
+        await loaded;
+      }
+      scrollTo(0, 0);
+      return true;
+    })()`,
+    true,
+  );
+  const framed = await runCauseEffect(browser.snapshot(tabId));
+  assert.equal(framed.elements.length, 200);
+  assert(Buffer.byteLength(JSON.stringify(framed)) <= 128 * 1024);
+  for (const label of ["First frame budget marker", "Second frame budget marker"])
+    checks.push({ name: `full parent control budget retains ${label}`, passed: framed.text.includes(label) });
+
+  for (const tag of ["canvas", "video"]) {
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button>One</button><button>Two</button><button>Three</button><${tag} style="position:absolute;top:200vh;left:10px;width:100px;height:100px"></${tag}>'; scrollTo(0, 0); true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const outside = await callBrowserTool(browser, "snapshot", { tabId });
+    checks.push({
+      name: `offscreen ${tag} does not add an automatic image`,
+      passed: !outside.contentItems.some((item) => item.type === "inputImage"),
+    });
+    const forced = await callBrowserTool(browser, "snapshot", { tabId, image: "always" });
+    checks.push({
+      name: `requested image remains available with offscreen ${tag}`,
+      passed: forced.contentItems.some((item) => item.type === "inputImage"),
+    });
+    await contents.executeJavaScript(`document.querySelector('${tag}').scrollIntoView(); true`, true);
+    await waitForPresentedFrame(contents);
+    const visible = await callBrowserTool(browser, "snapshot", { tabId });
+    checks.push({
+      name: `viewport ${tag} adds an automatic image`,
+      passed: visible.contentItems.some((item) => item.type === "inputImage"),
+    });
+    const never = await callBrowserTool(browser, "snapshot", { tabId, image: "never" });
+    checks.push({
+      name: `image never remains effective with viewport ${tag}`,
+      passed: !never.contentItems.some((item) => item.type === "inputImage"),
+    });
+  }
+  await contents.executeJavaScript(
+    "document.body.innerHTML = '<p>' + 'Page text with low semantic coverage. '.repeat(20) + '</p>'; scrollTo(0, 0); true",
+    true,
+  );
+  const lowCoverage = await callBrowserTool(browser, "snapshot", { tabId });
+  checks.push({
+    name: "low semantic coverage still adds an automatic image",
+    passed: lowCoverage.contentItems.some((item) => item.type === "inputImage"),
+  });
+  await mkdir(".openbot-build", { recursive: true });
+  await writeFile(
+    ".openbot-build/browser-snapshot-coverage.json",
+    JSON.stringify(
+      { status: checks.every((check) => check.passed) ? "passed" : "failed", versions: process.versions, checks },
+      null,
+      2,
+    ),
+  );
+  assert(
+    checks.every((check) => check.passed),
+    checks
+      .filter((check) => !check.passed)
+      .map((check) => check.name)
+      .join("; "),
+  );
+}
+
+async function runTypingAudit(browser: BrowserHost, tabId: string, contents: WebContents): Promise<void> {
+  const cases: Array<{ name: string; safe: boolean; toolSuccess: boolean; state: string; error: string }> = [];
+  for (const name of ["normal append", "redirected focus", "readonly", "empty replacement"]) {
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<input aria-label="Intended field" value="alpha"><input aria-label="Other field" value="beta">'; globalThis.inputEvents = []; document.querySelectorAll('input').forEach(field => field.oninput = event => globalThis.inputEvents.push({field: field.getAttribute('aria-label'), value: field.value, trusted: event.isTrusted})); ${name === "redirected focus" ? "document.querySelector('input').onfocus = () => document.querySelectorAll('input')[1].focus();" : ""} ${name === "readonly" ? "document.querySelector('input').readOnly = true;" : ""} true`,
+      true,
+    );
+    const snapshot = await runCauseEffect(browser.snapshot(tabId));
+    const target = snapshot.elements.find((element) => element.name === "Intended field");
+    assert(target);
+    const result = await callBrowserTool(browser, "type", {
+      tabId,
+      target: { kind: "ref", ref: target.ref, revision: snapshot.revision },
+      text: name === "empty replacement" ? "" : "X",
+      mode: name === "empty replacement" || name === "readonly" ? "replace" : "append",
+    });
+    const state = await contents.executeJavaScript(
+      "JSON.stringify({intended:document.querySelector('input').value,other:document.querySelectorAll('input')[1].value,events:globalThis.inputEvents})",
+    );
+    assert(isString(state));
+    const observed = JSON.parse(state);
+    const safe =
+      observed.other === "beta" &&
+      (name === "readonly"
+        ? observed.intended === "alpha"
+        : name === "redirected focus" && !result.success
+          ? observed.intended === "alpha"
+          : observed.intended === (name === "empty replacement" ? "" : "alphaX"));
+    cases.push({ name, safe, toolSuccess: result.success, state, error: result.success ? "" : toolError(result) });
+  }
+  await mkdir(".openbot-build", { recursive: true });
+  await writeFile(
+    ".openbot-build/browser-typing-audit.json",
+    JSON.stringify(
+      { status: cases.every((item) => item.safe) ? "passed" : "issues_found", versions: process.versions, cases },
+      null,
+      2,
+    ),
+  );
+  assert(
+    cases.every((item) => item.safe),
+    cases
+      .filter((item) => !item.safe)
+      .map((item) => item.name)
+      .join("; "),
+  );
 }
 
 async function measureSnapshots(browser: BrowserHost, tabId: string, contents: WebContents) {

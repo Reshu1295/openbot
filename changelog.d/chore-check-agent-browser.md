@@ -10,6 +10,9 @@
   reported as covered or unavailable because validation checked another part of the page.
 - Put visible controls first in browser snapshots. On long pages, scrolling now exposes references
   to the visible links instead of keeping only early navigation controls.
+- Keep text from later embedded frames when the snapshot control count is full.
+- Skip automatic screenshots for canvas and video outside the document viewport. Requested images
+  and images for pages with few controls remain available.
 
 ### Changed
 

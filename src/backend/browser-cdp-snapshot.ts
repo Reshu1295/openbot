@@ -104,7 +104,7 @@ export const collectBoundedSnapshot = Effect.fn("Browser.collectBoundedSnapshot"
       }
     }
     const remainingElements = MAX_SNAPSHOT_ELEMENTS - elements.length;
-    if (remainingElements <= 0) break;
+    if (remainingElements <= 0) continue;
     const candidates =
       capture.sessionId && deadline === undefined
         ? yield* collectActionableNodesEffect(send, capture, remainingElements).pipe(
@@ -234,7 +234,11 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
             }
             if (node.nodeType !== 1) continue;
             const tag = node.localName;
-            if ((tag === 'canvas' || tag === 'video') && visibleRects(node) && [...node.getClientRects()].some(rect => rect.width > 0 && rect.height > 0) && getComputedStyle(node).visibility === 'visible' && getComputedStyle(node).opacity !== '0') hasVisualSurface = true;
+            if (tag === 'canvas' || tag === 'video') {
+              const view = node.ownerDocument.defaultView;
+              const style = view?.getComputedStyle(node);
+              if (style?.visibility === 'visible' && style.opacity !== '0' && visibleRects(node)?.some(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < (view?.innerHeight ?? 0) && rect.left < (view?.innerWidth ?? 0))) hasVisualSurface = true;
+            }
             if (tag === 'iframe' || tag === 'frame') {
               hasFrame = true;
               try { if (node.contentDocument) roots.push(node.contentDocument); } catch {}
