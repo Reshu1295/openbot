@@ -572,7 +572,7 @@ try {
     false,
     "a check again opens no page, so the row offers no sign-in to finish",
   );
-  assert.notEqual(keyHang, "still waiting", "the key change ends when `authenticate` does not answer");
+  assert.equal(keyHang, "failed", "the key change fails when `authenticate` does not answer");
   assert.equal(keyHangRow?.connectionState, undefined, "the row does not stay connecting");
   assert.equal(
     report.keyAuthenticateHang.lastError,
