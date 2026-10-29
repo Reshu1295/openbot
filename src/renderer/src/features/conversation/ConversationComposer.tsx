@@ -60,7 +60,7 @@ import { speechReading } from "../speech/speech-playback";
 import { stopSpokenReply } from "../speech/speech-replies";
 import { copyComposerSelection, readComposerCopy } from "./composer-clipboard";
 import { useConversationViewScope } from "./conversation-scope";
-import { conversationOwnerId } from "./stores/composer-store";
+import { currentConversationTarget } from "./stores/composer-store";
 
 // Module scope: the composer remounts on navigation, and a dismissed notice must stay dismissed.
 const [dismissedCompactions, setDismissedCompactions] = createSignal<Record<string, string>>({});
@@ -156,7 +156,10 @@ export function ConversationComposer() {
   // Each chat gets its own queue panel. One shared panel animated the rows and the height of the
   // previous chat's queue into this one, and the chat jumped while it resized (#3770). The keyed
   // <Show> builds its child again only when the child function takes the key as a parameter.
-  const queueOwner = () => `${props.server?.id ?? "local"}:${conversationOwnerId(props) ?? ""}`;
+  const queueOwner = () => {
+    const target = currentConversationTarget(props);
+    return target && `${target.serverId}:${target.agentId}`;
+  };
   const awaitingVisible = () => awaitingReplies().length > 0 && !pickerOpen();
   const waitItems = createMemo(() => openWaitItems(props.waits ?? [], props.queue));
   const waitsVisible = () => waitItems().length > 0 && Boolean(props.onCancelWait) && !pickerOpen();
