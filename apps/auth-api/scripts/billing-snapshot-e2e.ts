@@ -253,7 +253,7 @@ async function snapshotSkipsTerminalAndBadRows() {
   const fxReads = queries.filter((query) => query.includes("FROM billing_fx_rates")).length;
   check("the EUR rate is read once", fxReads === 1, { fxReads });
   const [event] = storedEvents(database);
-  // EUR: round(1000 * 1.1) + round(2000 * 1.1); USD yearly: 12000 / 12. License: 7 users = 10000 + 2 * 1500, round(13000 * 1.1).
+  // EUR: round(1000 * 1.1) + round(2000 * 1.1); USD yearly: 12000 / 12. License: 7 users = 2500 + 5 * 1500, round(10000 * 1.1).
   const expected = {
     snapshot_date: DAY,
     mrr: 1_100 + 2_200 + 1_000,
@@ -262,11 +262,11 @@ async function snapshotSkipsTerminalAndBadRows() {
     paying_accounts: 3,
     paid_servers: 1,
     cancellations_scheduled: 0,
-    license_mrr: 14_300,
+    license_mrr: 11_000,
     license_accounts: 1,
     licensed_users: 7,
-    total_mrr: 1_100 + 2_200 + 1_000 + 14_300,
-    total_arr: (1_100 + 2_200 + 1_000 + 14_300) * 12,
+    total_mrr: 1_100 + 2_200 + 1_000 + 11_000,
+    total_arr: (1_100 + 2_200 + 1_000 + 11_000) * 12,
     skipped_subscriptions: 2,
   };
   check("the event has the expected metrics", JSON.stringify(event) === JSON.stringify(expected), {
