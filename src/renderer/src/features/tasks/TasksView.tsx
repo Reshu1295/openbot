@@ -404,10 +404,16 @@ export function TasksView(props: TasksViewProps) {
         // Agent IDs can repeat on two servers, so the new server starts from its own saved agent.
         draft.agentId = "";
       });
+      // The agents of the new server load again, also an agent ID that the old server had.
+      listRequests.clear();
+      readRequests.clear();
       untrack(() => loadLists(props.agents.map((agent) => agent.id)));
-      const unsubscribe = props.source.onEvent(serverId, applyEvent, () =>
-        loadLists(props.agents.map((agent) => agent.id)),
-      );
+      // A turn can end while the host is away, so the open task reads its whole conversation again.
+      const unsubscribe = props.source.onEvent(serverId, applyEvent, () => {
+        loadLists(props.agents.map((agent) => agent.id));
+        const task = state.selectedId ? taskOf(state.selectedId) : undefined;
+        if (task && !task.id.startsWith("pending:")) readTask(task);
+      });
       return () => {
         // A waiting start goes to the server it was sent on.
         commitNow();
