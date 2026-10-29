@@ -62,9 +62,9 @@ export const LEGACY_MEMBER_LIMITS: Readonly<Record<BillingPlanId, number>> = {
  * year (12 months less 20%) is a whole number.
  */
 const BILLING_PLAN_MONTHLY_PRICES: Readonly<Record<BillingPlanId, Readonly<Record<BillingCurrency, number>>>> = {
-  starter: { eur: 2000, usd: 2500, pln: 9000 },
-  standard: { eur: 5000, usd: 6000, pln: 22000 },
-  pro: { eur: 10000, usd: 12000, pln: 44000 },
+  starter: { eur: 2000, usd: 2500, pln: 8000 },
+  standard: { eur: 5000, usd: 6000, pln: 20000 },
+  pro: { eur: 10000, usd: 12000, pln: 40000 },
 };
 
 /**
