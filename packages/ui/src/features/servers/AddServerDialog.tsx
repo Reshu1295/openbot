@@ -436,6 +436,7 @@ export function AddServerDialog(props: AddServerDialogProps) {
                         <HostedLicensePeople
                           value={people()}
                           min={minPeople()}
+                          used={props.licenseOffer?.used ?? 0}
                           disabled={!work() || creating() || props.serverLimit != null}
                           onChange={setPeople}
                         />

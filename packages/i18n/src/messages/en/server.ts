@@ -92,6 +92,11 @@ export const messages = defineMessages("server", {
   "server.add.use.work": "Work",
   // The row under the plans that sets the users of the license. It is disabled for personal use.
   "server.add.license.people": "People at work",
+  // A toast when "Fewer members" is at the people who use the account's servers now. The license must include them.
+  "server.add.license.minimum": {
+    one: "{count} person uses your servers now, so you cannot choose fewer.",
+    other: "{count} people use your servers now, so you cannot choose fewer.",
+  },
   // On each plan that the people fit, for work. {percent} is a whole number, such as 20.
   "server.add.license.bundle": "Bundle −{percent}%",
   // The plan summary for work: the price includes the license. {license} is the license line, such as

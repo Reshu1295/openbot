@@ -91,6 +91,7 @@ export const messages = {
   "server.add.use.personal": "個人",
   "server.add.use.work": "業務",
   "server.add.license.people": "業務で使う人数",
+  "server.add.license.minimum": { other: "現在 {count} 人がサーバーを使っているため、これより少なくは選べません。" },
   "server.add.license.bundle": "セット −{percent}%",
   "server.add.license.included": "{license}付き",
   "server.add.license.includedTrial": "{license}付き（{date}まで無料）",

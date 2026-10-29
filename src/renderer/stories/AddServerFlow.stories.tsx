@@ -1,5 +1,5 @@
 import type { ServerSummary } from "@openbot/contracts/ipc";
-import { Heading, Text } from "@openbot/ui";
+import { Heading, Text, Toaster } from "@openbot/ui";
 import { AddServerDialog, type HostedServerSetupStatus } from "@openbot/ui/features/servers/AddServerDialog";
 import { hostedServerPlansFromCatalog } from "@openbot/ui/features/servers/HostedServerPricing";
 import { ServerRail } from "@openbot/ui/features/servers/ServerRail";
@@ -73,6 +73,7 @@ function AddServerFlow(props: FlowProps) {
 
   return (
     <>
+      <Toaster />
       <ServerRail
         servers={servers()}
         onSelect={(serverId) =>
@@ -200,7 +201,7 @@ export const Narrow: Story = {
 
 /**
  * The account has no license, and 3 people use its servers. Work adds a license to each plan that fits
- * the people, at the bundle price; the people row starts at 5, the smallest Team license.
+ * the people, at the bundle price; the people row starts at 3, and "Fewer" there tells why in a toast.
  */
 export const WithLicense: Story = {
   render: () => <AddServerFlow startOpen licenseOffer={{ used: 3 }} />,

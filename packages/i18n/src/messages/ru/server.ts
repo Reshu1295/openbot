@@ -92,6 +92,12 @@ export const messages = {
   "server.add.use.personal": "Личное",
   "server.add.use.work": "Рабочее",
   "server.add.license.people": "Сотрудники",
+  "server.add.license.minimum": {
+    one: "Вашими серверами уже пользуется {count} человек, поэтому меньше выбрать нельзя.",
+    few: "Вашими серверами уже пользуются {count} человека, поэтому меньше выбрать нельзя.",
+    many: "Вашими серверами уже пользуются {count} человек, поэтому меньше выбрать нельзя.",
+    other: "Вашими серверами уже пользуются {count} человека, поэтому меньше выбрать нельзя.",
+  },
   "server.add.license.bundle": "Комплект −{percent}%",
   "server.add.license.included": "Включено: {license}",
   "server.add.license.includedTrial": "Включено: {license}, бесплатно до {date}",

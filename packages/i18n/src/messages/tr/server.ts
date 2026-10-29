@@ -92,6 +92,10 @@ export const messages = {
   "server.add.use.personal": "Kişisel",
   "server.add.use.work": "İş",
   "server.add.license.people": "İşteki kişiler",
+  "server.add.license.minimum": {
+    one: "Sunucularınızı şu anda {count} kişi kullanıyor, bu yüzden daha azını seçemezsiniz.",
+    other: "Sunucularınızı şu anda {count} kişi kullanıyor, bu yüzden daha azını seçemezsiniz.",
+  },
   "server.add.license.bundle": "Paket −%{percent}",
   "server.add.license.included": "Dahil: {license}",
   "server.add.license.includedTrial": "Dahil: {license}, {date} tarihine kadar ücretsiz",

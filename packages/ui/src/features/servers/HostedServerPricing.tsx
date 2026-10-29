@@ -28,6 +28,7 @@ import {
   SelectValue,
   Server,
   ShieldCheck,
+  toast,
   UsersRound,
 } from "@openbot/ui";
 import { RollingPrice } from "@openbot/ui/rolling-price";
@@ -587,14 +588,22 @@ export function HostedUseSwitch(props: {
  * The people at work, under the plans. It stays in place for personal use, disabled, so that the dialog
  * does not change size.
  */
+const LICENSE_MINIMUM_TOAST = "hosted-license-minimum";
+
 export function HostedLicensePeople(props: {
   value: number;
   /** The fewest people to choose. */
   min: number;
+  /** The people who use the account's servers now. They set the minimum; "Fewer" there tells why. */
+  used: number;
   disabled: boolean;
   onChange: (value: number) => void;
 }) {
   const { t } = useText();
+  function fewer(): void {
+    if (props.value > props.min) props.onChange(stepLicenseUsers(props.value, -1));
+    else toast(t("server.add.license.minimum", { count: props.used }), { id: LICENSE_MINIMUM_TOAST });
+  }
   return (
     <div class="hosted-license-people" data-disabled={props.disabled ? "" : undefined}>
       <span>{t("server.add.license.people")}</span>
@@ -604,8 +613,8 @@ export function HostedLicensePeople(props: {
           label={t("billing.order.license.fewer")}
           variant="outline"
           size="icon-sm"
-          disabled={props.disabled || props.value <= props.min}
-          onClick={() => props.onChange(stepLicenseUsers(props.value, -1))}
+          disabled={props.disabled || props.value <= 1}
+          onClick={fewer}
         >
           <Minus aria-hidden="true" />
         </IconButton>

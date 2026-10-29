@@ -91,6 +91,10 @@ export const messages = {
   "server.add.use.personal": "Personal",
   "server.add.use.work": "Trabajo",
   "server.add.license.people": "Personas en el trabajo",
+  "server.add.license.minimum": {
+    one: "{count} persona ya usa tus servidores, así que no puedes elegir menos.",
+    other: "{count} personas ya usan tus servidores, así que no puedes elegir menos.",
+  },
   "server.add.license.bundle": "Paquete −{percent}%",
   "server.add.license.included": "Incluye: {license}",
   "server.add.license.includedTrial": "Incluye: {license}, gratis hasta el {date}",
