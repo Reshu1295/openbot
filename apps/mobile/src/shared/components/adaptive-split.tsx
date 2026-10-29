@@ -29,7 +29,7 @@ const PANE_WIDTH_FRACTION = 0.36;
 const PANE_DRAG_MAX_WIDTH = 520;
 const DETAIL_MIN_WIDTH = 380;
 /** The pane with avatars only, without the side inset of the window. */
-export const PANE_RAIL_WIDTH = 76;
+const PANE_RAIL_WIDTH = 76;
 /** The touch area of the divider, which a drag resizes or collapses the pane with. */
 const HANDLE_WIDTH = 24;
 const RESIZE_STEP = 40;

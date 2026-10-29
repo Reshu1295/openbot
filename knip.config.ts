@@ -108,6 +108,8 @@ const config: KnipConfig = {
       ignoreDependencies: [
         // `expo` installs it; Expo config plugins import it by this name.
         "@expo/config-plugins",
+        // Expo CLI loads it as a dev tools plugin (the simulators in a browser tab); no code imports it.
+        "expo-device-hub",
         // `expo` installs it too; plugins/with-share-target.js edits the extension's plist files with it.
         "@expo/plist",
         // A native module that `expo-router` imports. The direct entry keeps its native version
