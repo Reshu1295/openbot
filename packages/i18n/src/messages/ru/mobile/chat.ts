@@ -394,6 +394,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "{name} прочитает ответы, когда закончат все агенты.",
   "mobile.chat.queue.repliesHide": "Скрыть этот список",
   "mobile.chat.queue.replyAgentFallback": "Агент",
+  "mobile.chat.queue.repliesNeedsYou": "{name} ждёт вас",
   "mobile.chat.queue.editing": "Редактируется",
   "mobile.chat.queue.loading": "Загрузка очереди…",
   "mobile.chat.queue.emptyTitle": "Очередь пуста",

@@ -374,6 +374,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "{name} legge le risposte quando tutti i colleghi hanno finito.",
   "mobile.chat.queue.repliesHide": "Nascondi questo elenco",
   "mobile.chat.queue.replyAgentFallback": "Agente",
+  "mobile.chat.queue.repliesNeedsYou": "{name} ha bisogno di te",
   "mobile.chat.queue.editing": "Modifica in corso",
   "mobile.chat.queue.loading": "Caricamento della coda…",
   "mobile.chat.queue.emptyTitle": "Nessun messaggio in coda",

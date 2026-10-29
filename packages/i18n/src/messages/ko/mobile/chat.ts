@@ -364,6 +364,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "모든 팀원이 끝나면 {name}이(가) 답변을 읽어요.",
   "mobile.chat.queue.repliesHide": "이 목록 숨기기",
   "mobile.chat.queue.replyAgentFallback": "에이전트",
+  "mobile.chat.queue.repliesNeedsYou": "{name}에게 확인이 필요해요",
   "mobile.chat.queue.editing": "편집 중",
   "mobile.chat.queue.loading": "대기열을 불러오는 중…",
   "mobile.chat.queue.emptyTitle": "대기 중인 메시지가 없어요",

@@ -372,6 +372,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "{name}, yanıtları her ekip arkadaşı bitirdiğinde okur.",
   "mobile.chat.queue.repliesHide": "Bu listeyi gizle",
   "mobile.chat.queue.replyAgentFallback": "Ajan",
+  "mobile.chat.queue.repliesNeedsYou": "{name} sizi bekliyor",
   "mobile.chat.queue.editing": "Düzenleniyor",
   "mobile.chat.queue.loading": "Kuyruk yükleniyor…",
   "mobile.chat.queue.emptyTitle": "Kuyrukta mesaj yok",

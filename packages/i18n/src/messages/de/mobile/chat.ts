@@ -378,6 +378,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "{name} liest die Antworten, wenn alle Teammitglieder fertig sind.",
   "mobile.chat.queue.repliesHide": "Diese Liste ausblenden",
   "mobile.chat.queue.replyAgentFallback": "Agent",
+  "mobile.chat.queue.repliesNeedsYou": "{name} braucht dich",
   "mobile.chat.queue.editing": "In Bearbeitung",
   "mobile.chat.queue.loading": "Warteschlange wird geladen…",
   "mobile.chat.queue.emptyTitle": "Keine Nachrichten in der Warteschlange",

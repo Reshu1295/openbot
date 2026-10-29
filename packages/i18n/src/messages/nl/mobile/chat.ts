@@ -345,6 +345,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "{name} leest de antwoorden als elk teamlid klaar is.",
   "mobile.chat.queue.repliesHide": "Verberg deze lijst",
   "mobile.chat.queue.replyAgentFallback": "Agent",
+  "mobile.chat.queue.repliesNeedsYou": "{name} heeft je nodig",
   "mobile.chat.queue.editing": "Bewerken",
   "mobile.chat.queue.loading": "Wachtrij laden…",
   "mobile.chat.queue.emptyTitle": "Geen berichten in wachtrij",

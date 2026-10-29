@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 import { useMobileWorkspaceSelector } from "@/features/workspace/context/mobile-workspace-context";
+import type { MobileAgentActivities, MobileAgentWait } from "@/features/workspace/model/agent-activity";
 import { showsOnline } from "@/features/workspace/model/server-status";
 import { selectLiveState } from "./use-live-workspace";
 
@@ -38,4 +39,30 @@ export function useWaitingAgentIds(): ReadonlySet<string> {
   }, [liveState, online, serverId]);
   const key = useSyncExternalStore(liveState.subscribe, select);
   return useMemo(() => new Set(key ? key.split("\n") : []), [key]);
+}
+
+/**
+ * The wait of each agent of a server that waits for the user. The selector returns a key, so
+ * activity that does not change a wait does not re-render the consumer.
+ */
+export function useAgentWaits(serverId: string, online: boolean): Readonly<Record<string, MobileAgentWait>> {
+  const liveState = useMobileWorkspaceSelector(selectLiveState);
+  const waits = useCallback(
+    () => (online ? agentWaits(liveState.get().activityByServer[serverId] ?? {}) : {}),
+    [liveState, online, serverId],
+  );
+  const select = useCallback(() => JSON.stringify(waits()), [waits]);
+  const key = useSyncExternalStore(liveState.subscribe, select);
+  // The key changes with every wait, so the waits are read again then.
+  return useMemo(() => (key === "{}" ? {} : waits()), [key, waits]);
+}
+
+function agentWaits(activities: MobileAgentActivities): Record<string, MobileAgentWait> {
+  const waits: Record<string, MobileAgentWait> = {};
+  for (const agentId of Object.keys(activities).sort()) {
+    const activity = activities[agentId];
+    if (activity?.phase === "waiting" && activity.reason)
+      waits[agentId] = { reason: activity.reason, detail: activity.detail };
+  }
+  return waits;
 }

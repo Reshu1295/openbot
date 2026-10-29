@@ -358,6 +358,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "所有协作助手都完成后，{name} 才会读取这些回复。",
   "mobile.chat.queue.repliesHide": "隐藏该列表",
   "mobile.chat.queue.replyAgentFallback": "助手",
+  "mobile.chat.queue.repliesNeedsYou": "{name} 需要你处理",
   "mobile.chat.queue.editing": "正在编辑",
   "mobile.chat.queue.loading": "正在加载队列…",
   "mobile.chat.queue.emptyTitle": "没有排队的消息",

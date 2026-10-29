@@ -366,6 +366,7 @@ export const messages = defineMessages("mobile.chat", {
   "mobile.chat.queue.repliesWaitForAll": "{name} reads the replies when every teammate is done.",
   "mobile.chat.queue.repliesHide": "Hide this list",
   "mobile.chat.queue.replyAgentFallback": "Agent",
+  "mobile.chat.queue.repliesNeedsYou": "{name} needs you",
   "mobile.chat.queue.editing": "Editing",
   "mobile.chat.queue.loading": "Loading the queue…",
   "mobile.chat.queue.emptyTitle": "No queued messages",

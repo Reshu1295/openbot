@@ -370,6 +370,7 @@ export const messages = {
   "mobile.chat.queue.repliesWaitForAll": "{name} lerá as respostas quando todos os colegas terminarem.",
   "mobile.chat.queue.repliesHide": "Ocultar esta lista",
   "mobile.chat.queue.replyAgentFallback": "Agente",
+  "mobile.chat.queue.repliesNeedsYou": "{name} precisa de você",
   "mobile.chat.queue.editing": "Editando",
   "mobile.chat.queue.loading": "Carregando a fila…",
   "mobile.chat.queue.emptyTitle": "Nenhuma mensagem na fila",
