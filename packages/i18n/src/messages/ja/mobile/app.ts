@@ -18,6 +18,7 @@ export const messages = {
   "mobile.app.route.deletedChannels": "削除したチャンネル",
   "mobile.app.route.cropPhoto": "移動と拡大縮小",
   "mobile.app.route.queuedMessages": "待機中のメッセージ",
+  "mobile.app.route.thinking": "思考",
   "mobile.app.route.messageOptions": "メッセージのオプション",
   "mobile.app.route.editMessage": "メッセージを編集",
   "mobile.app.route.serverOptions": "サーバーのオプション",
