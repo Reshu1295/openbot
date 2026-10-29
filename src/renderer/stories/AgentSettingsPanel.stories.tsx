@@ -62,6 +62,7 @@ const STORY_FOLDERS: AgentFolderList = {
     { path: "/Users/sam/Projects/Leads", found: true },
     { path: "/Users/sam/Documents/Contracts 2026", found: false },
   ],
+  excluded: ["/Users/sam/Projects/Leads/Clients/Private", "/Users/sam/OpenBot/Agents/Chief/archive"],
 };
 
 function storyFolderCalls(): AgentFolderCalls {
@@ -72,10 +73,16 @@ function storyFolderCalls(): AgentFolderCalls {
     add: change,
     remove: change,
     drop: change,
+    exclude: change,
+    addExclusion: change,
+    include: change,
   };
 }
 
-/** Two added folders; one was moved, so the row and the Folders page say that it is not found. */
+/**
+ * Two added folders; one was moved, so the row and the Folders page say that it is not found. Two
+ * folders in them are excluded.
+ */
 export const WorkspaceOnlyFolders: Story = {
   args: {
     agent: {

@@ -1,9 +1,9 @@
-import { memberLimitForPlan } from "@openbot/contracts/billing";
 import {
   HOST_KEY_HANDOVER_LIMIT,
   type HostKeyHandover,
   hostKeyHandoverStatement,
 } from "@openbot/contracts/host-key-handover";
+import { DEFAULT_TEAM_MEMBER_LIMIT } from "@openbot/contracts/input-limits";
 import type { MobileConnectHostBinding } from "@openbot/contracts/mobile-connect";
 import { type DynamicRecord, isDynamicRecord, isString } from "@openbot/contracts/runtime-values";
 import type { RemoteAuthEvent } from "@openbot/contracts/signal-protocol/auth-events";
@@ -2849,10 +2849,10 @@ export class RemoteControlPlane {
       dependencies.database.prepare(SERVER_MEMBER_LIMIT_SQL).bind(hostId).first<{ member_limit: number }>(),
     );
     if (custom) return custom.member_limit;
-    return memberLimitForPlan(
+    return (
       (yield* getServerEntitlement(dependencies.database, hostId, dependencies.now()).pipe(
         Effect.mapError((error) => (error instanceof RemoteControlPlaneError ? error : new RemoteOperationError({}))),
-      ))?.plan ?? null,
+      ))?.memberLimit ?? DEFAULT_TEAM_MEMBER_LIMIT
     );
   });
 

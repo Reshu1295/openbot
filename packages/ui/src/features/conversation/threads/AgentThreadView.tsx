@@ -27,6 +27,7 @@ import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice
 import { ComposerSendControl } from "@openbot/ui/features/conversation/ComposerSendControl";
 import { ContextUsageMeter, type ContextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
+import type { SendShortcut } from "@openbot/ui/features/conversation/send-shortcut";
 import { ComposerVoiceControls, type VoicePhase } from "@openbot/ui/features/conversation/VoiceRecordingMorph";
 import { type TextValue, useText } from "@openbot/ui/text";
 import type { JSX } from "@solidjs/web";
@@ -147,6 +148,10 @@ export interface AgentThreadViewProps {
   activeSteps?: readonly AgentStep[] | undefined;
   /** The "Show agent steps" setting: the steps are open at first. */
   stepsOpenByDefault?: boolean | undefined;
+  /** Receives the message list, where the app searches the thread. */
+  scrollRef?: ((element: HTMLElement) => void) | undefined;
+  /** The user's send shortcut. Enter when absent. */
+  sendShortcut?: SendShortcut | undefined;
 }
 
 /**
@@ -246,6 +251,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
         ref={(element: HTMLElement) => {
           scroller = element;
           fades.bind(element);
+          props.scrollRef?.(element);
         }}
         class={["conversation-scroll agent-thread-scroll", fades.classes()]}
         aria-label={t("conversation.threads.view.label", { title: title() })}
@@ -280,6 +286,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                   onAttachmentAction={props.onAttachmentAction}
                   onDownload={(attachment) => props.onAttachmentAction(attachment, "download")}
                   macWindowControls={props.macWindowControls}
+                  data-chat-search-message={message().id}
                 />
               </div>
             )}
@@ -365,6 +372,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
               skillPickerRequest={skillPickerRequest()}
               dictation={{ text: props.voice?.liveText ?? "", final: voicePhase() === "transcribing" }}
               disabled={sending() || voicePhase() === "transcribing"}
+              sendShortcut={props.sendShortcut}
               onSubmit={() => void send()}
               onValueChange={props.onDraftChange}
               onPasteFiles={props.onPasteFiles}

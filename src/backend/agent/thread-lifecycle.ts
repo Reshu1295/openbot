@@ -72,6 +72,7 @@ import {
   codexSandboxConfig,
   codexSandboxMode,
   existingAgentFolders,
+  workspaceExcludedFolders,
   workspaceWritableRoots,
 } from "./workspace-sandbox";
 
@@ -895,6 +896,7 @@ export class ThreadLifecycle {
     proxy: string | null,
   ): string {
     const folders = existingAgentFolders(agent);
+    const excluded = workspaceExcludedFolders(agent);
     return createHash("sha256")
       .update(
         JSON.stringify([
@@ -915,6 +917,7 @@ export class ThreadLifecycle {
             ...(workspaceAccessEnforced(agent) ? ["workspace"] : []),
             // The folders that the instructions name: a drive that is ejected or connected changes them.
             ...(folders.length ? [["folders", ...folders]] : []),
+            ...(excluded.length ? [["excluded", ...excluded]] : []),
             ...(agentAutomationAllowed(agent, this.#store.agentDefaults()) ? ["automation"] : []),
             ...(agentQuickAcknowledgementEnabled(agent, this.#store.agentDefaults()) ? ["quick-acknowledgement"] : []),
           ],
@@ -976,11 +979,14 @@ export class ThreadLifecycle {
    * A `tool-sandbox` provider (Claude) applies its own Workspace only sandbox, so it is told directly.
    * Codex reads `sandbox`, and `ProviderRuntime` confines a `confined-process` provider.
    */
-  #workspaceOnlyParam(agent: AgentSummary, client: AgentClient): { workspaceOnly?: true } {
-    return agentProviderDescriptor(client.provider).workspaceEnforcement === "tool-sandbox" &&
-      workspaceAccessEnforced(agent)
-      ? { workspaceOnly: true }
-      : {};
+  #workspaceOnlyParam(agent: AgentSummary, client: AgentClient): { workspaceOnly?: true; excludedFolders?: string[] } {
+    if (
+      agentProviderDescriptor(client.provider).workspaceEnforcement !== "tool-sandbox" ||
+      !workspaceAccessEnforced(agent)
+    )
+      return {};
+    const excluded = workspaceExcludedFolders(agent);
+    return { workspaceOnly: true, ...(excluded.length ? { excludedFolders: excluded } : {}) };
   }
 
   /** Claude and the ACP clients read the servers themselves, so they are told to leave Computer Use out. */

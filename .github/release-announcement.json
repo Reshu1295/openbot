@@ -1,10 +1,10 @@
 {
-  "version": "0.53.2",
+  "version": "0.54.0",
   "highlights": [
-    "On Windows, do not uninstall OpenBot from Windows Settings to fix a failed update, because that can delete your agent folders. Install this version instead.",
-    "On Windows, updates work again when OpenBot was installed in the folder that holds your agents. Your agents, Shared and Downloads stay where they are.",
-    "Agents now save lasting preferences and facts from your chats and side threads in the background. Server settings › General › Memory review sets how often, or turns it off.",
-    "Agents search their saved memories before they say that they do not know something about you.",
-    "If the taskbar pin no longer opens OpenBot after this update, pin it again from the Start menu."
+    "Buy a commercial license for work from Billing or from Add server: Starter for 1 user, or Team for 2 to 10 users. A new license is free until 1 December 2026.",
+    "A Workspace only agent can now change files in folders that you add, from the agent's settings or by dropping a folder on the chat.",
+    "openbot.run has a Pricing page with the hosted servers and the licenses in EUR, USD or PLN.",
+    "Set the context window of each model of a custom provider, so OpenCode compacts at the correct size.",
+    "Remote desktop pairing on macOS 27 works again, and Gemini continues when one MCP server does not start."
   ]
 }

@@ -31,6 +31,7 @@ import { actionToast } from "../../action-toast";
 import { createScopeGuard } from "../../scope-lifetime";
 import { appendVoiceTranscript } from "../../voice-recording";
 import { createAttachmentImportSounds } from "./attachment-import-sounds";
+import type { ChatSearchMatch } from "./chat-search";
 import { useConversationController } from "./conversation-controller-context";
 import { agentConversationKey, composerDraftKey } from "./conversation-keys";
 import { conversationRuntime } from "./conversation-runtime";
@@ -359,7 +360,13 @@ export function createConversationViewScope(props: ConversationProps) {
     const entry = conversationErrorRuns()[composerDraftKey(target)];
     return entry?.message === message ? entry.run : null;
   });
-  const queue = createQueueStore({ props, hiddenAwaitingReplyIds });
+  const currentPendingSends = createMemo(() => pendingSends.list(currentTarget()));
+  // The host queues a message for a moment before it starts it. A send made while the agent was idle
+  // stays in the chat for that moment, so it does not jump to the queue panel and back.
+  const startingDeliveryIds = createMemo(
+    () => new Set(currentPendingSends().flatMap((send) => (send.starting && send.messageId ? [send.messageId] : []))),
+  );
+  const queue = createQueueStore({ props, hiddenAwaitingReplyIds, startingDeliveryIds });
   const { activeDeliveries, orderedQueuedDeliveries, presentedQueueDeliveries, queuePanelVisible } = queue;
   const awaitingReplies = channel
     ? createMemo(() => {
@@ -472,7 +479,6 @@ export function createConversationViewScope(props: ConversationProps) {
   }
   const viewIsMounted = createScopeGuard();
   let attachmentPicker: HTMLInputElement | undefined;
-  const currentPendingSends = createMemo(() => pendingSends.list(currentTarget()));
   // The host rows on screen: a sent message hands over to its row in the transcript or the queue.
   // Built only while a send waits for its row, so a streaming reply does not rebuild it for nothing.
   const drawnHostIds = createMemo(() =>
@@ -483,12 +489,18 @@ export function createConversationViewScope(props: ConversationProps) {
         ])
       : new Set<string>(),
   );
-  // Filtered here as well as settled below, so the two rows never stand together for a frame.
-  const pendingMessages = createMemo(() =>
-    currentPendingSends()
+  // Filtered here as well as settled below, so the two rows never stand together for a frame. A send
+  // made while the agent works goes to the queue panel; drawn here first, it would jump there.
+  // A send behind a failed one waits for Retry or Dismiss, and the host does not have it yet, so the
+  // queue panel cannot show it: the chat shows it, queued or not.
+  const pendingMessages = createMemo(() => {
+    const sends = currentPendingSends();
+    const firstFailed = sends.findIndex((send) => send.state === "failed");
+    return sends
       .filter((send) => !(send.messageId && drawnHostIds().has(send.messageId)))
-      .map(pendingSendMessage),
-  );
+      .filter((send) => !send.queued || (firstFailed !== -1 && sends.indexOf(send) >= firstFailed))
+      .map(pendingSendMessage);
+  });
   /** The pending send a timeline row draws, by the row's message id. */
   const pendingSendFor = (messageId: string | undefined) =>
     messageId?.startsWith(PENDING_SEND_ID_PREFIX)
@@ -565,9 +577,53 @@ export function createConversationViewScope(props: ConversationProps) {
     setActiveChatSearchIndex,
   });
   const { closeChatSearch, moveChatSearch, setChatSearchInputElement } = search;
-  /** The search finds messages of the agent's own chat. A side thread covers it, so the shortcut does nothing there. */
+  // The open side thread has its own search. It finds text only in the thread rows on the page, because
+  // the host search (`onSearchMessages`) finds messages of the agent's own chat. The thread shows all
+  // the messages that its snapshot has.
+  const [threadSearchOpen, setThreadSearchOpen] = createSignal(false);
+  const [threadSearchQuery, setThreadSearchQuery] = createSignal("");
+  const [threadSearchMatches, setThreadSearchMatches] = createSignal<ChatSearchMatch[]>([]);
+  const [activeThreadSearchIndex, setActiveThreadSearchIndex] = createSignal(-1);
+  const [threadSearchMessageIds, setThreadSearchMessageIds] = createSignal<string[]>([]);
+  const [threadScrollElement, setThreadScrollElement] = createSignal<HTMLElement>();
+  const threadSearch = createSearchStore({
+    props: {
+      get messages() {
+        return props.threads?.conversation?.messages.map((message) => ({ id: message.id, body: message.text })) ?? [];
+      },
+    },
+    chatSearchOpen: threadSearchOpen,
+    chatSearchQuery: threadSearchQuery,
+    activeChatSearchIndex: activeThreadSearchIndex,
+    scrollElement: threadScrollElement,
+    revealMatch: () => undefined,
+    setChatSearchOpen: setThreadSearchOpen,
+    setChatSearchQuery: setThreadSearchQuery,
+    chatSearchMatches: threadSearchMatches,
+    setChatSearchMatches: setThreadSearchMatches,
+    chatSearchMessageIds: threadSearchMessageIds,
+    setChatSearchMessageIds: setThreadSearchMessageIds,
+    setChatSearchTotal: () => undefined,
+    setActiveChatSearchIndex: setActiveThreadSearchIndex,
+  });
+  // Another thread, or the agent's own chat, has other messages, so the search of the thread closes.
+  // A new thread has no task (`null`), and the agent's own chat has no thread (`undefined`).
+  createEffect(
+    () => {
+      const open = props.threads?.open;
+      return open === undefined ? undefined : (open?.id ?? null);
+    },
+    () => {
+      if (untrack(threadSearchOpen)) threadSearch.closeChatSearch(false);
+    },
+  );
+  // Both searches show the same highlights, so the search of the covered chat closes.
+  createEffect(threadSearchOpen, (open) => {
+    if (open && untrack(chatSearchOpen)) closeChatSearch(false);
+  });
+  /** The shortcut searches the chat that the user sees: the open side thread, or the agent's own chat. */
   const handleChatSearchShortcut = (event: KeyboardEvent) => {
-    if (!sideThreadOpen()) search.handleChatSearchShortcut(event);
+    (sideThreadOpen() ? threadSearch : search).handleChatSearchShortcut(event);
   };
   const threadComposer = createThreadComposerActions({
     props,
@@ -763,6 +819,7 @@ export function createConversationViewScope(props: ConversationProps) {
     cancelQueuedMessageEdit,
     reorderPresentedQueue,
     submitComposer,
+    steerComposer,
     sendSelectionInstruction,
     sendCardMessage,
     retryPendingSend,
@@ -964,6 +1021,11 @@ export function createConversationViewScope(props: ConversationProps) {
       if (browserExpandedOpen() && !props.globalOverlayOpen) {
         event.preventDefault();
         setActiveRightPanel("browser");
+        return;
+      }
+      if (threadSearchOpen() && sideThreadOpen()) {
+        event.preventDefault();
+        threadSearch.closeChatSearch();
         return;
       }
       // A side thread covers the search and the queued message edit of the agent's own chat. Escape in
@@ -1746,6 +1808,13 @@ export function createConversationViewScope(props: ConversationProps) {
 
   return {
     sideThreadOpen,
+    threadSearch,
+    threadSearchOpen,
+    threadSearchQuery,
+    threadSearchMatches,
+    activeThreadSearchIndex,
+    setThreadSearchQuery,
+    setThreadScrollElement,
     threadComposer,
     threadFocusRequest,
     threadVoiceLiveText,
@@ -1955,6 +2024,7 @@ export function createConversationViewScope(props: ConversationProps) {
     stopVoiceRecordingAndSend,
     cancelVoiceRecording,
     submitComposer,
+    steerComposer,
     submitting,
     unreadDividerVisible,
     unreferencedDraftAttachments,

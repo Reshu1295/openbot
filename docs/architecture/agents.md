@@ -332,7 +332,13 @@ approval of a side thread turn also shows in that thread. A provider
 error of a task turn goes to the task: `AgentTasks` stores the redacted text in the task's `error`
 column, and the next turn of the task clears it. The thread shows it after a restart too.
 
-On desktop and the web, a task opens as a thread in the chat header. The phone uses the section and title rules in `@openbot/team-client/agent-tasks`.
+On desktop and the web, a task opens as a thread in the chat header. The Tasks rail page
+(`packages/ui/src/features/tasks/TasksPage.tsx`, `src/renderer/src/features/tasks/`) lists the tasks of all
+agents of the active server and opens a task beside the list in `AgentThreadView`, the view of a thread tab.
+The panel archives, restores and opens the task in the chat. A read there marks the thread read. A running
+task that waits for an approval, a question or a browser takeover goes to Needs you; the chat answers a
+question or takeover, so the panel links there. The Tasks page and the phone share the section and title
+rules in `@openbot/team-client/agent-tasks`.
 On the phone, the server drawer opens the Tasks screen (`apps/mobile/src/app/(app)/server-tasks.tsx`) when
 the host serves the capability. A task opens as a full screen (`apps/mobile/src/app/(app)/task/[taskId].tsx`)
 with the message list and header of the agent's chat, the task actions in place of the browser

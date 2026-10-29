@@ -467,6 +467,8 @@ export const messages = {
     many: "Do {count} członków",
     other: "Do {count} członka",
   },
+  "settings.hostedServers.plan.license.starter": "Licencja komercyjna: {price} / mies.",
+  "settings.hostedServers.plan.license.team": "Praca wymaga licencji Team",
   "settings.hostedServers.plan.speed.base": "Prędkość bazowa",
   "settings.hostedServers.plan.speed.faster": "{factor}× szybciej",
   "settings.hostedServers.plan.starter.name": "Starter",

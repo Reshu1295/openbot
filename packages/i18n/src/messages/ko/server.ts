@@ -87,6 +87,14 @@ export const messages = {
   "server.add.billing.monthly": "월간",
   "server.add.billing.yearly": "연간",
   "server.add.billing.save": "{percent}% 절약",
+  "server.add.use.label": "용도",
+  "server.add.use.personal": "개인",
+  "server.add.use.work": "업무",
+  "server.add.license.people": "업무 사용 인원",
+  "server.add.license.minimum": { other: "현재 {count}명이 서버를 사용하고 있어 이보다 적게 선택할 수 없습니다." },
+  "server.add.license.bundle": "묶음 −{percent}%",
+  "server.add.license.included": "{license} 포함",
+  "server.add.license.includedTrial": "{license} 포함, {date}까지 무료",
   "server.add.billedMonthly": "매월 결제",
   "server.add.billedYearly": "연 {price} 결제",
   // {amount} is a formatted amount, such as "€120". It follows the yearly price.
@@ -432,7 +440,9 @@ export const messages = {
   "server.invite.showQr": "초대 QR 코드 표시",
   "server.invite.permaHint":
     "만료되지 않고 여러 번 사용할 수 있어요. 이 링크가 있는 누구나 참여할 수 있으니, 사용을 중지하려면 취소하세요.",
-  "server.invite.full": "이 서버는 최대 {limit}명까지 멤버를 둘 수 있어요. 새 사람을 초대하려면 멤버를 제거하세요.",
+  "server.invite.full": {
+    other: "이 서버의 멤버는 최대 {count}명이에요. 새 사람을 초대하려면 멤버를 제거하세요.",
+  },
   "server.invite.qrLabel": "초대 QR 코드",
   "server.invite.qrDescription": "OpenBot 모바일에서 이 코드를 스캔하면 이 서버에 참여할 수 있어요.",
   "server.invite.accepted": "초대를 수락했어요",

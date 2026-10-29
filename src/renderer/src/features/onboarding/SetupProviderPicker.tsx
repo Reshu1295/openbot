@@ -216,6 +216,7 @@ export function createSetupProviders(
         message: status?.message,
         email: status?.email,
         connectionState: status?.connectionState,
+        signInPending: status?.signInPending,
         checkError: status?.checkError,
         availableVersion: props.providerAvailableVersions?.[provider.id] ?? null,
         freeModels: provider.id === "opencode",

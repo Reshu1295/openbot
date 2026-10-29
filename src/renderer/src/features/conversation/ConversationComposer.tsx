@@ -99,6 +99,7 @@ export function ConversationComposer() {
     stopVoiceRecording,
     cancelVoiceRecording,
     submitComposer,
+    steerComposer,
     submitting,
     unreferencedDraftAttachments,
     updateCurrentDraft,
@@ -213,6 +214,19 @@ export function ConversationComposer() {
   };
   /** An ACP provider has no steer request, so its queued messages wait for the turn to end (#3689). */
   const steers = () => !props.agent || providerSteersTurns(props.agent.provider);
+  /** Tab sends the draft into the running turn, in place of Send and then Steer on its queue row. */
+  const steerOnTab = () =>
+    props.activeTurnId &&
+    !channel &&
+    steers() &&
+    !editingDeliveryId() &&
+    composerHasContent() &&
+    voicePhase() === "idle" &&
+    agentReady() &&
+    !attachmentBusy() &&
+    !submitting()
+      ? steerComposer
+      : undefined;
   /** Why the running turn has no reply: the computer is offline, or the provider sends nothing. */
   const providerWaitNotice = createMemo(() => {
     const provider = agentProviderName();
@@ -648,6 +662,7 @@ export function ConversationComposer() {
             <ComposerEditor
               agentId={props.agent?.id}
               agents={props.mentionAgents ?? props.agents}
+              everyoneMention={Boolean(channel) && (props.mentionAgents ?? props.agents).length > 1}
               skills={installedSkills()}
               skillsLoadFailed={installedSkillsLoadFailed()}
               mcpServers={mcpServers()}
@@ -681,6 +696,7 @@ export function ConversationComposer() {
                 updateTeamTyping(text);
               }}
               onSubmit={submitComposer}
+              onSteer={steerOnTab()}
               sendShortcut={deviceSendShortcut(props.platform)}
               onPickerOpenChange={setPickerOpen}
               dictation={{ text: voiceLiveText(), final: voicePhase() === "transcribing" }}

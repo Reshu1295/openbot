@@ -14,6 +14,7 @@ import {
   type AgentBrowserProfile,
   type AgentDefaults,
   type AgentEvent,
+  type AgentExclusionChange,
   type AgentFolderChange,
   type AgentFolderList,
   type AgentMemory,
@@ -42,6 +43,7 @@ import {
   agentAutomationAllowed,
   agentBrowserProfile,
   agentComputerUseEnabled,
+  agentExclusionCoverage,
   agentFolderCoverage,
   agentTaskLimit,
   type BrowserProfileSummary,
@@ -697,7 +699,30 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       workspace: agent.workspacePath,
       shared: "/mock/OpenBot/Shared",
       folders: (agent.additionalFolders ?? []).map((path) => ({ path, found: !path.endsWith("(missing)") })),
+      excluded: agent.excludedFolders ?? [],
     };
+  }
+
+  function setMockAgentExclusions(agent: ClientAgentSummary, excluded: string[]): void {
+    const updated: ClientAgentSummary = { ...agent, excludedFolders: excluded };
+    if (excluded.length === 0) delete updated.excludedFolders;
+    agents = agents.map((candidate) => (candidate.id === agent.id ? updated : candidate));
+    emitAgentEvent({ type: "agents-changed", agents });
+  }
+
+  function addMockAgentExclusion(agentId: string, path: string): AgentExclusionChange {
+    const agent = requireMockAgent(agentId);
+    const list = mockAgentFolders(agentId);
+    const roots = [list.workspace, list.shared, ...list.folders.map((folder) => folder.path)];
+    if (roots.includes(path)) return { outcome: "refused", path, refusal: "root", list };
+    if (!roots.some((root) => folderInside(root, path))) return { outcome: "refused", path, refusal: "outside", list };
+    const folder = agentExclusionCoverage(path, list.excluded);
+    if (folder) return { outcome: "covered", path, folder, list };
+    const kept = list.excluded.filter((excluded) => !folderInside(path, excluded));
+    if (kept.length >= AGENT_FOLDER_LIMIT) return { outcome: "refused", path, refusal: "limit", list };
+    setMockAgentExclusions(agent, [...kept, path]);
+    const replaced = list.excluded.filter((excluded) => !kept.includes(excluded));
+    return { outcome: "excluded", path, replaced, list: mockAgentFolders(agentId) };
   }
 
   function setMockAgentFolders(agent: ClientAgentSummary, folders: string[]): void {
@@ -1846,6 +1871,18 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
           (agent.additionalFolders ?? []).filter((folder) => folder !== path),
         );
         return { outcome: "removed", path, list: mockAgentFolders(agentId) };
+      },
+      // The preview has no picker: it excludes a folder in the workspace.
+      chooseAgentExclusion: async (agentId) =>
+        addMockAgentExclusion(agentId, `${requireMockAgent(agentId).workspacePath}/archive`),
+      addAgentExclusion: async ({ agentId, path }) => addMockAgentExclusion(agentId, path),
+      removeAgentExclusion: async ({ agentId, path }) => {
+        const agent = requireMockAgent(agentId);
+        setMockAgentExclusions(
+          agent,
+          (agent.excludedFolders ?? []).filter((folder) => folder !== path),
+        );
+        return { outcome: "included", path, list: mockAgentFolders(agentId) };
       },
       getAgentTaskLimit: async (agentId) => {
         const agent = agents.find((candidate) => candidate.id === agentId);

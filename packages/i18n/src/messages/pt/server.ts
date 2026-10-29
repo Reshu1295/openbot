@@ -87,6 +87,17 @@ export const messages = {
   "server.add.billing.monthly": "Mensal",
   "server.add.billing.yearly": "Anual",
   "server.add.billing.save": "Economize {percent}%",
+  "server.add.use.label": "Uso",
+  "server.add.use.personal": "Pessoal",
+  "server.add.use.work": "Trabalho",
+  "server.add.license.people": "Pessoas no trabalho",
+  "server.add.license.minimum": {
+    one: "{count} pessoa já usa seus servidores, então você não pode escolher menos.",
+    other: "{count} pessoas já usam seus servidores, então você não pode escolher menos.",
+  },
+  "server.add.license.bundle": "Pacote −{percent}%",
+  "server.add.license.included": "Inclui: {license}",
+  "server.add.license.includedTrial": "Inclui: {license}, grátis até {date}",
   "server.add.billedMonthly": "Cobrado mensalmente",
   "server.add.billedYearly": "{price} cobrados anualmente",
   "server.add.yearlySaving": "Economize {amount}",
@@ -389,8 +400,10 @@ export const messages = {
   "server.invite.showQr": "Mostrar código QR do convite",
   "server.invite.permaHint":
     "Nunca expira e pode ser usado várias vezes. Qualquer pessoa com este link pode entrar; revogue-o para desativar.",
-  "server.invite.full":
-    "Este servidor atingiu o máximo de {limit} membros. Remova um membro para convidar uma nova pessoa.",
+  "server.invite.full": {
+    one: "Este servidor atingiu o máximo de {count} membro. Remova um membro para convidar uma nova pessoa.",
+    other: "Este servidor atingiu o máximo de {count} membros. Remova um membro para convidar uma nova pessoa.",
+  },
   "server.invite.qrLabel": "Código QR do convite",
   "server.invite.qrDescription": "Leia este código no OpenBot Mobile para entrar neste servidor.",
   "server.invite.accepted": "Convite aceito",

@@ -4,6 +4,7 @@ import type { AppTextKey } from "@openbot/i18n";
 import { classifyFailure } from "@openbot/telemetry";
 import { Input } from "@openbot/ui";
 import type { AgentMessage } from "@openbot/ui/data";
+import { ChatSearch } from "@openbot/ui/features/conversation/ChatSearch";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView, type AgentThreadVoice } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { useText } from "@openbot/ui/text";
@@ -12,6 +13,7 @@ import { actionToast } from "../../action-toast";
 import { useShowAgentSteps } from "../../agent-steps-preference";
 import { toAgentMessages } from "../../app-message-projection";
 import { usePlatform } from "../../platform";
+import { deviceSendShortcut } from "../../send-shortcut-preference";
 import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
 import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
 import { latestVisibleAgentMessageId } from "./conversation-read-state";
@@ -48,6 +50,13 @@ export function ConversationThread() {
     voiceModelProgress,
     sideQuestionAvailable,
     openSideQuestion,
+    threadSearch,
+    threadSearchOpen,
+    threadSearchQuery,
+    threadSearchMatches,
+    activeThreadSearchIndex,
+    setThreadSearchQuery,
+    setThreadScrollElement,
   } = useConversationViewScope();
   const { t, errorMessage } = useText();
   const [picker, setPicker] = createSignal<HTMLInputElement>();
@@ -175,7 +184,20 @@ export function ConversationThread() {
               data-openbot-attachment-picker="true"
             />
           </Show>
+          <Show when={threadSearchOpen()}>
+            <ChatSearch
+              query={threadSearchQuery()}
+              current={activeThreadSearchIndex()}
+              total={threadSearchMatches().length}
+              inputRef={threadSearch.setChatSearchInputElement}
+              onQueryChange={setThreadSearchQuery}
+              onPrevious={() => threadSearch.moveChatSearch(-1)}
+              onNext={() => threadSearch.moveChatSearch(1)}
+              onClose={threadSearch.closeChatSearch}
+            />
+          </Show>
           <AgentThreadView
+            scrollRef={setThreadScrollElement}
             task={current().threads.open ?? null}
             limit={current().threads.limit}
             agent={current().agent}
@@ -215,6 +237,7 @@ export function ConversationThread() {
             factsAbove={turnSteps.factsAbove}
             activeSteps={turnSteps.activeSteps()}
             stepsOpenByDefault={showAgentSteps()}
+            sendShortcut={deviceSendShortcut(props.platform)}
           />
         </>
       )}

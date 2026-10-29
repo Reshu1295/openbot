@@ -5,9 +5,11 @@ import { realpath, stat } from "node:fs/promises";
 import { dirname, join, parse, resolve } from "node:path";
 import {
   AGENT_FOLDER_LIMIT,
+  type AgentExclusionChange,
   type AgentFolderChange,
   type AgentFolderList,
   type AgentSummary,
+  agentExclusionCoverage,
   agentFolderCoverage,
   folderInside,
   parseAgentFolderInput,
@@ -77,11 +79,16 @@ export function agentFolderIpcHandlers({
       workspace,
       shared,
       folders: folders.map((path, index) => ({ path, found: found[index] === true })),
+      excluded: agent.excludedFolders ?? [],
     };
   }
 
   async function save(agent: AgentSummary, folders: string[]): Promise<AgentFolderList> {
     return list(await runCauseEffect(service.updateAgent({ agentId: agent.id, additionalFolders: folders })));
+  }
+
+  async function saveExcluded(agent: AgentSummary, excluded: string[]): Promise<AgentFolderList> {
+    return list(await runCauseEffect(service.updateAgent({ agentId: agent.id, excludedFolders: excluded })));
   }
 
   /**
@@ -130,6 +137,32 @@ export function agentFolderIpcHandlers({
     return { outcome: "added", path, replaced: others.filter((folder) => !kept.includes(folder)), list: saved };
   }
 
+  /** Excludes `picked`, a folder in the workspace, the shared folder or an added folder. */
+  function exclude(agentId: string, picked: string): Promise<AgentExclusionChange> {
+    return oneAtATime(agentId, async () => {
+      const agent = requireAgent(agentId);
+      if (!(await isDirectory(picked)))
+        return { outcome: "refused", path: picked, refusal: "missing", list: await list(agent) };
+      const path = await realFolder(picked);
+      const current = await list(agent);
+      const roots = [current.workspace, current.shared, ...current.folders.map((folder) => folder.path)];
+      if (roots.includes(path)) return { outcome: "refused", path, refusal: "root", list: current };
+      if (!roots.some((root) => folderInside(root, path)))
+        return { outcome: "refused", path, refusal: "outside", list: current };
+      const folder = agentExclusionCoverage(path, current.excluded);
+      if (folder) return { outcome: "covered", path, folder, list: current };
+      // A folder that holds folders already excluded takes their place.
+      const kept = current.excluded.filter((excluded) => !folderInside(path, excluded));
+      if (kept.length >= AGENT_FOLDER_LIMIT) return { outcome: "refused", path, refusal: "limit", list: current };
+      return {
+        outcome: "excluded",
+        path,
+        replaced: current.excluded.filter((excluded) => !kept.includes(excluded)),
+        list: await saveExcluded(agent, [...kept, path]),
+      };
+    });
+  }
+
   return {
     agentFolders: {
       listAgentFolders: payloadHandler(parseAgentId, (agentId) => list(requireAgent(agentId))),
@@ -153,6 +186,42 @@ export function agentFolderIpcHandlers({
         return add(agentId, picked, replace);
       }),
       addAgentFolder: payloadHandler(parseAgentFolderInput, ({ agentId, path }) => add(agentId, path)),
+      chooseAgentExclusion: payloadHandler(parseAgentId, async (agentId): Promise<AgentExclusionChange> => {
+        const agent = requireAgent(agentId);
+        const parent = getMainWindow();
+        // The picker opens in the first added folder, else in the workspace.
+        const options: OpenDialogOptions = {
+          title: translate("dialog.chooseAgentExclusion", { agent: agent.name }),
+          properties: ["openDirectory"],
+          defaultPath: agent.additionalFolders?.[0] ?? agent.workspacePath,
+        };
+        if (picking) return { outcome: "cancelled", list: await list(agent) };
+        picking = true;
+        const result = await (parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options)).finally(
+          () => {
+            picking = false;
+          },
+        );
+        const picked = result.canceled ? undefined : result.filePaths[0];
+        if (picked === undefined) return { outcome: "cancelled", list: await list(agent) };
+        return exclude(agentId, picked);
+      }),
+      addAgentExclusion: payloadHandler(parseAgentFolderInput, ({ agentId, path }) => exclude(agentId, path)),
+      removeAgentExclusion: payloadHandler(parseAgentFolderInput, ({ agentId, path }) =>
+        oneAtATime(agentId, async (): Promise<AgentExclusionChange> => {
+          const agent = requireAgent(agentId);
+          const excluded = agent.excludedFolders ?? [];
+          if (!excluded.includes(path)) return { outcome: "included", path, list: await list(agent) };
+          return {
+            outcome: "included",
+            path,
+            list: await saveExcluded(
+              agent,
+              excluded.filter((folder) => folder !== path),
+            ),
+          };
+        }),
+      ),
       removeAgentFolder: payloadHandler(parseAgentFolderInput, ({ agentId, path }) =>
         oneAtATime(agentId, async (): Promise<AgentFolderChange> => {
           const agent = requireAgent(agentId);
