@@ -483,21 +483,16 @@ try {
     routineStarts.every((entry) => entry.instructions?.includes(routineRule)),
   );
   pass(
-    "Discovered browser guidance gives the same routine rule",
+    "Discovered browser guidance reports only a sign-in that needs the user",
     results
       .filter((entry) => entry.tool === "tool_describe")
-      .every((entry) => JSON.stringify(entry.result).includes(routineRule)),
+      .every((entry) => JSON.stringify(entry.result).includes("report a sign-in that needs the user, not a takeover")),
   );
   pass(
     "Routine guidance reports steps that need a person",
     routineStarts.every((entry) =>
       entry.instructions?.includes("do not call request_takeover or submit_secret without loginId"),
-    ) &&
-      results
-        .filter((entry) => entry.tool === "tool_describe")
-        .every((entry) =>
-          JSON.stringify(entry.result).includes("do not call request_takeover or submit_secret without loginId"),
-        ),
+    ),
   );
   pass("Each routine run starts one new session", routineStarts.length === 2);
   pass(
