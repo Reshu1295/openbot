@@ -539,7 +539,7 @@ export class ProviderRuntime implements ProviderPort {
       hasActiveClient: (client) => (client ? this.#clients.get("codex") === client : this.#clients.has("codex")),
       activate: (client, cli, account, activateOptions) =>
         this.#activateProviderClient("codex", client, cli, account, activateOptions).pipe(toCodexLoginFailed),
-      setConnecting: () => this.#setProviderConnectionState("codex", "connecting"),
+      setConnecting: () => this.#setProviderConnectionState("codex", "connecting", true),
       isConnecting: () =>
         this.#status.providers?.find((provider) => provider.id === "codex")?.connectionState === "connecting",
       clearConnectionState: () => this.#clearProviderConnectionState("codex"),
@@ -554,7 +554,7 @@ export class ProviderRuntime implements ProviderPort {
         ),
       activate: (provider, client, cli, account, activateOptions) =>
         this.#activateProviderClient(provider, client, cli, account, activateOptions).pipe(toCliLoginFailed),
-      setConnecting: (provider) => this.#setProviderConnectionState(provider, "connecting"),
+      setConnecting: (provider) => this.#setProviderConnectionState(provider, "connecting", true),
       clearConnectionState: (provider) => this.#clearProviderConnectionState(provider),
       setFailure: (provider, error, version) => this.#setProviderConnectionFailure(provider, error, version),
     });
@@ -2035,7 +2035,7 @@ export class ProviderRuntime implements ProviderPort {
       providerStep(() => {
         // The hold passes from the wait to the install with no gap in which a turn could start.
         this.#updatesWhenIdle.delete(provider);
-        this.#setProviderConnectionState(provider, "connecting");
+        this.#setProviderConnectionState(provider, "connecting", false);
         this.#replacingCli.add(provider);
         recordRestartActivity();
       }),
@@ -2879,7 +2879,8 @@ export class ProviderRuntime implements ProviderPort {
     );
   }, Effect.uninterruptible);
 
-  #setProviderConnectionState(provider: AgentProvider, connectionState: "connecting"): void {
+  /** `signInPending` is false for a check again, which opens no browser page and has no sign-in to cancel. */
+  #setProviderConnectionState(provider: AgentProvider, connectionState: "connecting", signInPending: boolean): void {
     const current = this.#status.providers?.find((candidate) => candidate.id === provider);
     this.#setStatus({
       providers: updateProviderStatus(this.#status.providers, provider, {
@@ -2888,6 +2889,7 @@ export class ProviderRuntime implements ProviderPort {
         message: null,
         email: this.#accounts.get(provider)?.email ?? current?.email ?? null,
         connectionState,
+        signInPending,
       }),
     });
   }
@@ -3054,7 +3056,7 @@ export class ProviderRuntime implements ProviderPort {
     let cli: AgentCliInfo | null = null;
     return yield* Effect.acquireUseRelease(
       providerStep(() => {
-        this.#setProviderConnectionState(provider, "connecting");
+        this.#setProviderConnectionState(provider, "connecting", false);
         this.#replacingCli.add(provider);
         recordRestartActivity();
       }),

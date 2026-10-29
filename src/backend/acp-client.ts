@@ -1158,33 +1158,37 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     timeoutMs: number,
   ): Effect.fn.Return<void, ProviderClientOperationError> {
     const connection = yield* providerSync(() => this.#requireConnection());
+    const startTimeout = Effect.timeoutOrElse({
+      duration: timeoutMs,
+      orElse: () =>
+        Effect.fail(
+          providerFailure(
+            new TimeoutError(
+              sourceText("error.provider.acpStartTimedOut", {
+                provider: this.#label,
+                seconds: String(Math.round(timeoutMs / 1_000)),
+              }),
+            ),
+          ),
+        ),
+    });
     this.#initialization = yield* providerCall(() =>
       connection.initialize({
         protocolVersion: 1,
         clientCapabilities: OPENBOT_ACP_CLIENT_CAPABILITIES,
         clientInfo: this.#flavor.clientInfo ?? OPENBOT_ACP_CLIENT_INFO,
       }),
-    ).pipe(
-      Effect.timeoutOrElse({
-        duration: timeoutMs,
-        orElse: () =>
-          Effect.fail(
-            providerFailure(
-              new TimeoutError(
-                sourceText("error.provider.acpStartTimedOut", {
-                  provider: this.#label,
-                  seconds: String(Math.round(timeoutMs / 1_000)),
-                }),
-              ),
-            ),
-          ),
-      }),
-    );
+    ).pipe(startTimeout);
     const initialization = this.#initialization;
     const signInPrompt = Deferred.makeUnsafe<void>();
     this.#signInPrompt = signInPrompt;
     try {
-      providerResult(yield* Effect.result(this.options.authenticate?.(connection, initialization) ?? Effect.void));
+      // A saved key's `authenticate` gets the same wait: a server that never answers it kept the row connecting.
+      providerResult(
+        yield* Effect.result(
+          (this.options.authenticate?.(connection, initialization) ?? Effect.void).pipe(startTimeout),
+        ),
+      );
       const discovery = yield* Effect.raceFirst(
         Effect.result(this.#discoverModels(timeoutMs)),
         Deferred.await(signInPrompt).pipe(Effect.as(null)),

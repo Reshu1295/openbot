@@ -743,7 +743,8 @@ export function ProviderModelPicker(props: ProviderModelPickerProps) {
                   }
                   if (runtimeStatus?.phase === "finishing") return t("provider.status.settingUp");
                   // A sign-in in progress has no message. It is not a failure.
-                  if (status().connectionState === "connecting") return t("provider.connecting.browserHint");
+                  if (status().connectionState === "connecting" && status().signInPending !== false)
+                    return t("provider.connecting.browserHint");
                   const failed = connectError();
                   if (failed) return failed;
                   const message = runtimeStatus?.message ?? status().message;
