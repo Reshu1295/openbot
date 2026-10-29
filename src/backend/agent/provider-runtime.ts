@@ -71,7 +71,7 @@ import { startProviderTerminalLogin } from "../provider-terminal-login";
 import { recordRestartActivity } from "../restart-activity";
 import { shortenDiagnostic } from "./../stderr-diagnostics";
 import { stopProcessTree } from "../windows-process-tree";
-import { normalizeAccountUsage, usageWindowHasReset } from "./account-usage";
+import { normalizeAccountUsage, usageWindowHasReset, usageWindowSpent } from "./account-usage";
 import { captureBrowser } from "./browser-capture";
 import { startCliCodeLogin } from "./cli-code-login";
 import { CliLoginFailed, CliLoginFlow, toCliLoginFailed } from "./cli-login-flow";
@@ -960,7 +960,9 @@ export class ProviderRuntime implements ProviderPort {
             // start on every dock poll.
             if (!agentProviderDescriptor(provider).reportsUsage) return;
             const kept = this.#released.has(provider) ? this.#lastUsage.get(provider) : undefined;
-            if (kept && !usageWindowHasReset(kept)) {
+            // A spent reading is the one that shows the usage notice. The provider can have
+            // quota again before the reported reset, so a spent reading is read again, not kept.
+            if (kept && !usageWindowHasReset(kept) && !usageWindowSpent(kept)) {
               collected.set(provider, kept);
               this.#emit({ type: "usage-changed", usage: { limits: [...collected.values()] } });
               return;
