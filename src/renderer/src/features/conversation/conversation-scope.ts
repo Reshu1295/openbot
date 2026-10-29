@@ -486,12 +486,16 @@ export function createConversationViewScope(props: ConversationProps) {
   );
   // Filtered here as well as settled below, so the two rows never stand together for a frame. A send
   // made while the agent works goes to the queue panel; drawn here first, it would jump there.
-  const pendingMessages = createMemo(() =>
-    currentPendingSends()
+  // A send behind a failed one waits for Retry or Dismiss, and the host does not have it yet, so the
+  // queue panel cannot show it: the chat shows it, queued or not.
+  const pendingMessages = createMemo(() => {
+    const sends = currentPendingSends();
+    const firstFailed = sends.findIndex((send) => send.state === "failed");
+    return sends
       .filter((send) => !(send.messageId && drawnHostIds().has(send.messageId)))
-      .filter((send) => !send.queued || send.state === "failed")
-      .map(pendingSendMessage),
-  );
+      .filter((send) => !send.queued || (firstFailed !== -1 && sends.indexOf(send) >= firstFailed))
+      .map(pendingSendMessage);
+  });
   /** The pending send a timeline row draws, by the row's message id. */
   const pendingSendFor = (messageId: string | undefined) =>
     messageId?.startsWith(PENDING_SEND_ID_PREFIX)
