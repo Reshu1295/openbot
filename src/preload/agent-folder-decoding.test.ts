@@ -39,7 +39,8 @@ describe("decodeAgentFolderChangeFromMain", () => {
   it("keeps each outcome with the fields it needs", () => {
     const changes = [
       { outcome: "cancelled", list: LIST },
-      { outcome: "added", path: "/tmp/a", list: LIST },
+      { outcome: "added", path: "/tmp/a", replaced: [], list: LIST },
+      { outcome: "added", path: "/tmp", replaced: ["/tmp/a", "/tmp/b"], list: LIST },
       { outcome: "replaced", path: "/tmp/a", list: LIST },
       { outcome: "removed", path: "/tmp/a", list: LIST },
       { outcome: "covered", path: "/tmp/a/b", coverage: { reason: "in-folder", folder: "/tmp/a" }, list: LIST },
@@ -48,13 +49,15 @@ describe("decodeAgentFolderChangeFromMain", () => {
     for (const change of changes) expect(decodeAgentFolderChangeFromMain(change)).toEqual(change);
   });
 
-  it("refuses an unknown outcome, reason or refusal", () => {
+  it("refuses an unknown outcome, reason or refusal, or a missing field", () => {
     for (const change of [
       { outcome: "granted", path: "/tmp/a", list: LIST },
       { outcome: "covered", path: "/tmp/a", coverage: { reason: "nearby", folder: "/tmp" }, list: LIST },
       { outcome: "refused", path: "/tmp/a", refusal: "busy", list: LIST },
-      { outcome: "added", list: LIST },
-      { outcome: "added", path: "/tmp/a" },
+      { outcome: "added", replaced: [], list: LIST },
+      { outcome: "added", path: "/tmp/a", replaced: [] },
+      { outcome: "added", path: "/tmp/a", list: LIST },
+      { outcome: "added", path: "/tmp/a", replaced: [7], list: LIST },
     ])
       expect(() => decodeAgentFolderChangeFromMain(change)).toThrow();
   });

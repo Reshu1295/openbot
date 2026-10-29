@@ -40,7 +40,9 @@ export interface AgentFolderList {
 
 export type AgentFolderChange =
   | { outcome: "cancelled"; list: AgentFolderList }
-  | { outcome: "added" | "replaced" | "removed"; path: string; list: AgentFolderList }
+  /** `replaced`: the folders already added that the new folder holds. They are no longer in the list. */
+  | { outcome: "added"; path: string; replaced: string[]; list: AgentFolderList }
+  | { outcome: "replaced" | "removed"; path: string; list: AgentFolderList }
   | { outcome: "covered"; path: string; coverage: AgentFolderCoverage; list: AgentFolderList }
   | { outcome: "refused"; path: string; refusal: AgentFolderRefusal; list: AgentFolderList };
 
@@ -119,7 +121,13 @@ function isAgentFolderChange(value: DynamicRecord): value is AgentFolderChange &
   if (!isAgentFolderList(value.list)) return false;
   if (value.outcome === "cancelled") return true;
   if (!isBoundedString(value.path, INPUT_LIMITS.path)) return false;
-  if (value.outcome === "added" || value.outcome === "replaced" || value.outcome === "removed") return true;
+  if (value.outcome === "added")
+    return (
+      Array.isArray(value.replaced) &&
+      value.replaced.length <= AGENT_FOLDER_LIMIT &&
+      value.replaced.every((path) => isBoundedString(path, INPUT_LIMITS.path))
+    );
+  if (value.outcome === "replaced" || value.outcome === "removed") return true;
   if (value.outcome === "covered") return isCoverage(value.coverage);
   return value.outcome === "refused" && isOneOf(AGENT_FOLDER_REFUSALS, value.refusal);
 }

@@ -126,7 +126,9 @@ export function agentFolderIpcHandlers({
     const next = replacing
       ? current.flatMap((folder) => (folder === replace ? [path] : kept.includes(folder) ? [folder] : []))
       : [...kept, path];
-    return { outcome: replacing ? "replaced" : "added", path, list: await save(agent, next) };
+    const saved = await save(agent, next);
+    if (replacing) return { outcome: "replaced", path, list: saved };
+    return { outcome: "added", path, replaced: others.filter((folder) => !kept.includes(folder)), list: saved };
   }
 
   async function addInput({ agentId, path }: AgentFolderInput): Promise<AgentFolderChange> {

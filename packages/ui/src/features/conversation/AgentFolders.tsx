@@ -111,15 +111,14 @@ export function createAgentFolders(source: () => AgentFolderSource | undefined) 
   }
 
   async function run(change: () => Promise<AgentFolderChange>, current: AgentFolderSource): Promise<void> {
-    const before = state.list?.folders.map((item) => item.path) ?? [];
     try {
-      report(await change(), current, before);
+      report(await change(), current);
     } catch (error) {
       failed(error);
     }
   }
 
-  function report(change: AgentFolderChange, current: AgentFolderSource, before: readonly string[]): void {
+  function report(change: AgentFolderChange, current: AgentFolderSource): void {
     const { agentId, agentName: agent, calls } = current;
     setList(agentId, change.list);
     if (change.outcome === "cancelled") return;
@@ -131,7 +130,7 @@ export function createAgentFolders(source: () => AgentFolderSource | undefined) 
         return;
       case "added": {
         // A folder that holds folders already added took their place: Undo gives them back.
-        const replaced = before.filter((path) => !change.list.folders.some((item) => item.path === path));
+        const { replaced } = change;
         const undo = async (): Promise<AgentFolderChange> => {
           const removed = await calls.remove(agentId, change.path);
           let list = removed.list;

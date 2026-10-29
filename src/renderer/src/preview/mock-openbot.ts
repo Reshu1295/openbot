@@ -716,7 +716,9 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       agent,
       replacing ? current.map((folder) => (folder === replace ? path : folder)) : [...kept, path],
     );
-    return { outcome: replacing ? "replaced" : "added", path, list: mockAgentFolders(agentId) };
+    if (replacing) return { outcome: "replaced", path, list: mockAgentFolders(agentId) };
+    const replaced = others.filter((folder) => !kept.includes(folder));
+    return { outcome: "added", path, replaced, list: mockAgentFolders(agentId) };
   }
 
   function emitAgentEvent(event: AgentEvent): void {
