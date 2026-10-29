@@ -198,6 +198,8 @@ const NO_IDS: string[] = [];
 const NO_AGENTS: MobileAgent[] = [];
 /** The longest that the servers which are not selected wait for the selected one on a return to the app. */
 const OTHER_SERVERS_RETURN_DELAY_MS = 3_000;
+/** How long the app waits at start for the first server before it opens a server that is online. */
+const STARTUP_SERVER_WAIT_MS = 4_000;
 const EMPTY_SERVER: MobileServer = {
   id: "unavailable",
   name: "OpenBot",
@@ -1011,6 +1013,33 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
     if (hold && hold.serverId !== activeServerId) setHold(null);
   }, [hold, activeServerId]);
 
+  // The app starts on the first server of the list. When that server does not connect soon, such as
+  // a computer that sleeps, the first server that is online opens instead. The saved order stays.
+  // A selection by the user, or the start server online, ends this. A hosted server stays selected:
+  // it starts only while it is selected, and a start takes longer than this wait.
+  const startupFallback = useRef(true);
+  const [startupWaitOver, setStartupWaitOver] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setStartupWaitOver(true), STARTUP_SERVER_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!startupFallback.current) return;
+    const active = servers.find((server) => server.id === activeServerId);
+    if (showsOnline(active) || active?.hosted === true) {
+      startupFallback.current = false;
+      return;
+    }
+    const activeFailed = active?.state === "offline" || active?.state === "error";
+    if (!startupWaitOver && !activeFailed) return;
+    const online = sortByPreference(servers).find((server) => server.state === "online");
+    if (!online) return;
+    startupFallback.current = false;
+    loadGeneration.current += 1;
+    conversationStore.cancelRequests();
+    setActiveServerId(online.id);
+  }, [servers, activeServerId, startupWaitOver, sortByPreference, conversationStore]);
+
   const handleTeamEvent = useCallback(
     (serverId: string, event: AgentEvent | TeamRealtimeEvent) => {
       if (removedServers.current.has(serverId)) return;
@@ -1284,6 +1313,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       respondToBrowserTakeover: (serverId, input) => runTeamRequest(respondToBrowserTakeover(teamApi(serverId), input)),
       respondToBrowserSecret: (serverId, input) => runTeamRequest(respondToBrowserSecret(teamApi(serverId), input)),
       selectServer: (id) => {
+        startupFallback.current = false;
         loadGeneration.current += 1;
         conversationStore.cancelRequests();
         setActiveServerId(id);
@@ -1341,6 +1371,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
           ...current.filter((server) => server.id !== host.hostId),
           serverFromHost(host, "remote"),
         ]);
+        startupFallback.current = false;
         setActiveServerId(host.hostId);
         // Membership is already committed. Directory failure must not reuse the consumed invite.
         void refreshHosts().catch(() => undefined);
