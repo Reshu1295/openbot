@@ -301,7 +301,7 @@ export class UsageLimitGate {
 
   /**
    * Reads the reset of the spent window into `limit` and arms it. Null when the reading shows none,
-   * undefined when there is no reading or it fails.
+   * undefined when there is no reading, it fails, or it has no window.
    */
   readonly #readReset = Effect.fn("UsageLimitGate.readReset")(function* (
     this: UsageLimitGate,
@@ -311,13 +311,17 @@ export class UsageLimitGate {
     const usage = yield* this.#hooks
       .readUsage(limit.provider, limit.model, limit.accountId)
       .pipe(Effect.catch(() => Effect.succeed(null)));
-    if (!usage) return undefined;
+    // A provider that does not run, or a reading that does not cover the model, has no window.
+    if (!usage?.limits.some((reading) => reading.primary || reading.secondary)) return undefined;
     const resetsAt = spentWindowReset(usage);
     if (resetsAt === null || this.#limits.get(key) !== limit) return null;
+    // A reset that a refusal named while the reading ran stays.
+    if (limit.resetsAt !== null && !limit.resetFromUsage) return limit.resetsAt;
+    const changed = limit.resetsAt !== resetsAt;
     limit.resetsAt = resetsAt;
     limit.resetFromUsage = true;
     this.#arm(key, limit);
-    this.#hooks.emitRuntimeSnapshot();
+    if (changed) this.#hooks.emitRuntimeSnapshot();
     return resetsAt;
   });
 
