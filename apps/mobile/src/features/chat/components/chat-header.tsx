@@ -25,7 +25,7 @@ import { type MenuAction, MenuView } from "@/shared/components/menu-view";
 import { SheetScrollEdgeEffect } from "@/shared/components/sheet-scroll-edge-effect";
 import { ToolbarMenuItems } from "@/shared/components/toolbar-menu-items";
 import { haptics } from "@/shared/lib/haptics";
-import { NATIVE_BAR_BUTTON_TOP } from "@/shared/lib/native-bar";
+import { BAR_BUTTON_SIZE, NATIVE_BAR_BUTTON_TOP, useBarTop } from "@/shared/lib/native-bar";
 import { useText } from "@/shared/lib/text";
 import { typeScale } from "@/shared/lib/type-scale";
 import { useVerticalBarShown } from "@/shared/lib/vertical-bar";
@@ -81,6 +81,7 @@ export function ChatHeader({
   const insets = useSafeAreaInsets();
   const splitDetailRoot = useSplitDetailRoot();
   const verticalBar = useVerticalBarShown();
+  const barTop = useBarTop();
   const splitShown = useSplitLayout() !== null;
   const warning = useThemeColor("warning");
   const disconnected = useMobileWorkspaceSelector(
@@ -287,8 +288,9 @@ export function ChatHeader({
 
   if (verticalBar) {
     // iOS moves native bar buttons into the vertical bar of iPhone Duo, beside the status bar, as on
-    // home. The header becomes the native bar for that: Back and the buttons go to the vertical bar,
-    // and the title, a custom view, stays at the top.
+    // home. The header becomes the native bar for that: Back and the buttons go to the vertical bar.
+    // iOS hides a custom view of the top bar while the content scrolls, so the title is not one: it
+    // stays drawn at the top, where the empty top bar closed.
     return (
       <>
         <Stack.Screen
@@ -307,9 +309,6 @@ export function ChatHeader({
             hidden={splitDetailRoot || accessibilityHidden}
             onPress={goBack}
           />
-          <Stack.Toolbar.View hidesSharedBackground hidden={accessibilityHidden}>
-            <View style={{ height: 48 }}>{titlePill}</View>
-          </Stack.Toolbar.View>
         </Stack.Toolbar>
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Button
@@ -334,6 +333,15 @@ export function ChatHeader({
         <SheetScrollEdgeEffect
           style={{ height: topInset + 82, left: 0, position: "absolute", right: 0, top: 0, zIndex: 10 }}
         />
+        <View
+          className="absolute z-20 flex-row"
+          pointerEvents="box-none"
+          accessibilityElementsHidden={accessibilityHidden}
+          importantForAccessibility={accessibilityHidden ? "no-hide-descendants" : "auto"}
+          style={{ top: barTop, left: insets.left + 16, right: insets.right + 16, height: BAR_BUTTON_SIZE }}
+        >
+          {titlePill}
+        </View>
       </>
     );
   }

@@ -62,6 +62,7 @@ import { ChatPlan } from "@/features/chat/components/chat-plan";
 import { ChatQuestionPrompt } from "@/features/chat/components/chat-question-prompt";
 import { useActivityPresence } from "@/features/chat/components/use-activity-presence";
 import { CHAT_ROW_GAP, type ChatMotion } from "@/features/chat/components/use-chat-motion";
+import { useFoldScrollAnchor } from "@/features/chat/components/use-fold-scroll-anchor";
 import { useMessageArrivals } from "@/features/chat/components/use-message-arrivals";
 import type { QuestionPromptController } from "@/features/chat/components/use-question-prompt";
 import {
@@ -1057,6 +1058,7 @@ export const ChatMessageList = memo(function ChatMessageList({
   const tailIndex = rows.findLastIndex((message) => message.kind === "message" && message.author === "user");
   const focusIndex = focusMessageId ? chatRowIndex(rows, focusMessageId) : -1;
   const canLoadOlder = online && hasOlder && !olderLoading;
+  useFoldScrollAnchor(motion.listRef);
   // The chat opens at the row of a message from search after the list has its rows in place.
   const placedFocus = useRef<string | null>(null);
   const focusId = historyState === "ready" && rowsShown && focusIndex >= 0 ? (rows[focusIndex]?.id ?? null) : null;
