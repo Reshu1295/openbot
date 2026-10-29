@@ -135,6 +135,7 @@ import { Route as V1SitesUploadsUploadIdFileRouteImport } from './routes/v1/site
 import { Route as V1SkillsSkillIdVersionsVersionIdRouteImport } from './routes/v1/skills/$skillId/versions/$versionId'
 import { Route as V1SkillsAdminFeaturedSkillIdRouteImport } from './routes/v1/skills/admin/featured/$skillId'
 import { Route as V1SkillsAdminSubmissionsVersionIdRouteImport } from './routes/v1/skills/admin/submissions/$versionId'
+import { Route as V1SkillsAdminVerifiedSkillIdRouteImport } from './routes/v1/skills/admin/verified/$skillId'
 import { Route as V2HostingServersServerIdIndexRouteImport } from './routes/v2/hosting/servers/$serverId/index'
 import { Route as V2HostingServersServerIdActivityRouteImport } from './routes/v2/hosting/servers/$serverId/activity'
 import { Route as V2HostingServersServerIdCheckoutRouteImport } from './routes/v2/hosting/servers/$serverId/checkout'
@@ -822,6 +823,12 @@ const V1SkillsAdminSubmissionsVersionIdRoute =
     path: '/$versionId',
     getParentRoute: () => V1SkillsAdminSubmissionsRoute,
   } as any)
+const V1SkillsAdminVerifiedSkillIdRoute =
+  V1SkillsAdminVerifiedSkillIdRouteImport.update({
+    id: '/v1/skills/admin/verified/$skillId',
+    path: '/v1/skills/admin/verified/$skillId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const V2HostingServersServerIdIndexRoute =
   V2HostingServersServerIdIndexRouteImport.update({
     id: '/v2/hosting/servers/$serverId/',
@@ -1135,6 +1142,7 @@ export interface FileRoutesByFullPath {
   '/v1/skills/$skillId/versions/$versionId': typeof V1SkillsSkillIdVersionsVersionIdRouteWithChildren
   '/v1/skills/admin/featured/$skillId': typeof V1SkillsAdminFeaturedSkillIdRoute
   '/v1/skills/admin/submissions/$versionId': typeof V1SkillsAdminSubmissionsVersionIdRoute
+  '/v1/skills/admin/verified/$skillId': typeof V1SkillsAdminVerifiedSkillIdRoute
   '/v2/hosting/servers/$serverId/activity': typeof V2HostingServersServerIdActivityRoute
   '/v2/hosting/servers/$serverId/checkout': typeof V2HostingServersServerIdCheckoutRoute
   '/v2/hosting/servers/$serverId/lifecycle': typeof V2HostingServersServerIdLifecycleRoute
@@ -1294,6 +1302,7 @@ export interface FileRoutesByTo {
   '/v1/skills/$skillId/versions/$versionId': typeof V1SkillsSkillIdVersionsVersionIdRouteWithChildren
   '/v1/skills/admin/featured/$skillId': typeof V1SkillsAdminFeaturedSkillIdRoute
   '/v1/skills/admin/submissions/$versionId': typeof V1SkillsAdminSubmissionsVersionIdRoute
+  '/v1/skills/admin/verified/$skillId': typeof V1SkillsAdminVerifiedSkillIdRoute
   '/v2/hosting/servers/$serverId/activity': typeof V2HostingServersServerIdActivityRoute
   '/v2/hosting/servers/$serverId/checkout': typeof V2HostingServersServerIdCheckoutRoute
   '/v2/hosting/servers/$serverId/lifecycle': typeof V2HostingServersServerIdLifecycleRoute
@@ -1454,6 +1463,7 @@ export interface FileRoutesById {
   '/v1/skills/$skillId/versions/$versionId': typeof V1SkillsSkillIdVersionsVersionIdRouteWithChildren
   '/v1/skills/admin/featured/$skillId': typeof V1SkillsAdminFeaturedSkillIdRoute
   '/v1/skills/admin/submissions/$versionId': typeof V1SkillsAdminSubmissionsVersionIdRoute
+  '/v1/skills/admin/verified/$skillId': typeof V1SkillsAdminVerifiedSkillIdRoute
   '/v2/hosting/servers/$serverId/activity': typeof V2HostingServersServerIdActivityRoute
   '/v2/hosting/servers/$serverId/checkout': typeof V2HostingServersServerIdCheckoutRoute
   '/v2/hosting/servers/$serverId/lifecycle': typeof V2HostingServersServerIdLifecycleRoute
@@ -1615,6 +1625,7 @@ export interface FileRouteTypes {
     | '/v1/skills/$skillId/versions/$versionId'
     | '/v1/skills/admin/featured/$skillId'
     | '/v1/skills/admin/submissions/$versionId'
+    | '/v1/skills/admin/verified/$skillId'
     | '/v2/hosting/servers/$serverId/activity'
     | '/v2/hosting/servers/$serverId/checkout'
     | '/v2/hosting/servers/$serverId/lifecycle'
@@ -1774,6 +1785,7 @@ export interface FileRouteTypes {
     | '/v1/skills/$skillId/versions/$versionId'
     | '/v1/skills/admin/featured/$skillId'
     | '/v1/skills/admin/submissions/$versionId'
+    | '/v1/skills/admin/verified/$skillId'
     | '/v2/hosting/servers/$serverId/activity'
     | '/v2/hosting/servers/$serverId/checkout'
     | '/v2/hosting/servers/$serverId/lifecycle'
@@ -1933,6 +1945,7 @@ export interface FileRouteTypes {
     | '/v1/skills/$skillId/versions/$versionId'
     | '/v1/skills/admin/featured/$skillId'
     | '/v1/skills/admin/submissions/$versionId'
+    | '/v1/skills/admin/verified/$skillId'
     | '/v2/hosting/servers/$serverId/activity'
     | '/v2/hosting/servers/$serverId/checkout'
     | '/v2/hosting/servers/$serverId/lifecycle'
@@ -2075,6 +2088,7 @@ export interface RootRouteChildren {
   V1SitesUploadsUploadIdActivateRoute: typeof V1SitesUploadsUploadIdActivateRoute
   V1SitesUploadsUploadIdFileRoute: typeof V1SitesUploadsUploadIdFileRoute
   V1SkillsAdminFeaturedSkillIdRoute: typeof V1SkillsAdminFeaturedSkillIdRoute
+  V1SkillsAdminVerifiedSkillIdRoute: typeof V1SkillsAdminVerifiedSkillIdRoute
   V2HostingServersServerIdActivityRoute: typeof V2HostingServersServerIdActivityRoute
   V2HostingServersServerIdCheckoutRoute: typeof V2HostingServersServerIdCheckoutRoute
   V2HostingServersServerIdLifecycleRoute: typeof V2HostingServersServerIdLifecycleRoute
@@ -2990,6 +3004,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof V1SkillsAdminSubmissionsVersionIdRouteImport
       parentRoute: typeof V1SkillsAdminSubmissionsRoute
     }
+    '/v1/skills/admin/verified/$skillId': {
+      id: '/v1/skills/admin/verified/$skillId'
+      path: '/v1/skills/admin/verified/$skillId'
+      fullPath: '/v1/skills/admin/verified/$skillId'
+      preLoaderRoute: typeof V1SkillsAdminVerifiedSkillIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/v2/hosting/servers/$serverId/': {
       id: '/v2/hosting/servers/$serverId/'
       path: '/v2/hosting/servers/$serverId'
@@ -3455,6 +3476,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1SitesUploadsUploadIdActivateRoute: V1SitesUploadsUploadIdActivateRoute,
   V1SitesUploadsUploadIdFileRoute: V1SitesUploadsUploadIdFileRoute,
   V1SkillsAdminFeaturedSkillIdRoute: V1SkillsAdminFeaturedSkillIdRoute,
+  V1SkillsAdminVerifiedSkillIdRoute: V1SkillsAdminVerifiedSkillIdRoute,
   V2HostingServersServerIdActivityRoute: V2HostingServersServerIdActivityRoute,
   V2HostingServersServerIdCheckoutRoute: V2HostingServersServerIdCheckoutRoute,
   V2HostingServersServerIdLifecycleRoute:
