@@ -561,7 +561,9 @@ export function createConversationViewScope(props: ConversationProps) {
     setActiveChatSearchIndex,
   });
   const { closeChatSearch, moveChatSearch, setChatSearchInputElement } = search;
-  // The open side thread has its own search, of the messages that it shows. It has no search on the host.
+  // The open side thread has its own search. It finds text only in the thread rows on the page, because
+  // the host search (`onSearchMessages`) finds messages of the agent's own chat. The thread shows all
+  // the messages that its snapshot has.
   const [threadSearchOpen, setThreadSearchOpen] = createSignal(false);
   const [threadSearchQuery, setThreadSearchQuery] = createSignal("");
   const [threadSearchMatches, setThreadSearchMatches] = createSignal<ChatSearchMatch[]>([]);
@@ -589,8 +591,12 @@ export function createConversationViewScope(props: ConversationProps) {
     setActiveChatSearchIndex: setActiveThreadSearchIndex,
   });
   // Another thread, or the agent's own chat, has other messages, so the search of the thread closes.
+  // A new thread has no task (`null`), and the agent's own chat has no thread (`undefined`).
   createEffect(
-    () => props.threads?.open?.id,
+    () => {
+      const open = props.threads?.open;
+      return open === undefined ? undefined : (open?.id ?? null);
+    },
     () => {
       if (untrack(threadSearchOpen)) threadSearch.closeChatSearch(false);
     },
