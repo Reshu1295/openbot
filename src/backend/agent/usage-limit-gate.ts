@@ -311,12 +311,13 @@ export class UsageLimitGate {
     const usage = yield* this.#hooks
       .readUsage(limit.provider, limit.model, limit.accountId)
       .pipe(Effect.catch(() => Effect.succeed(null)));
+    if (this.#limits.get(key) !== limit) return null;
+    // A reset that a refusal named while the reading ran stays.
+    if (limit.resetsAt !== null && !limit.resetFromUsage) return limit.resetsAt;
     // A provider that does not run, or a reading that does not cover the model, has no window.
     if (!usage?.limits.some((reading) => reading.primary || reading.secondary)) return undefined;
     const resetsAt = spentWindowReset(usage);
-    if (resetsAt === null || this.#limits.get(key) !== limit) return null;
-    // A reset that a refusal named while the reading ran stays.
-    if (limit.resetsAt !== null && !limit.resetFromUsage) return limit.resetsAt;
+    if (resetsAt === null) return null;
     const changed = limit.resetsAt !== resetsAt;
     limit.resetsAt = resetsAt;
     limit.resetFromUsage = true;
