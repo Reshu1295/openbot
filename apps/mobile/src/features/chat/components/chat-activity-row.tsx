@@ -97,7 +97,6 @@ export function ChatActivityRow({
   return (
     <Animated.View entering={activityEntering} exiting={activityExiting}>
       <Pressable
-        disabled={!onPress}
         accessible
         accessibilityLiveRegion="polite"
         accessibilityRole={onPress ? "button" : "text"}
