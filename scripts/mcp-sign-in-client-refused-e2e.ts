@@ -291,6 +291,20 @@ async function main(): Promise<void> {
     check(make, make.tokenRequestsWithSecret.join() === "true", "the token request did not carry the client secret");
     check(make, make.signedIn, "no token is stored after the sign-in");
     report.cases.push(make);
+
+    // The same server, with a discovery state already on file: the registration still names the method.
+    const makeCached = await runCase("secret-post-only-with-stored-discovery", ["client_secret_post"], 1, {
+      storedDiscovery: true,
+      secretAccepted: true,
+    });
+    check(makeCached, makeCached.attempts[0]?.error === null, `the sign-in failed: ${makeCached.attempts[0]?.error}`);
+    check(
+      makeCached,
+      makeCached.registrations.join() === "client_secret_post",
+      `the registration asked for ${makeCached.registrations.join()}`,
+    );
+    check(makeCached, makeCached.signedIn, "no token is stored after the sign-in");
+    report.cases.push(makeCached);
   } catch (error) {
     report.failures.push(error instanceof Error ? error.message : String(error));
   }
