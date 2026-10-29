@@ -1,6 +1,6 @@
 import { HeaderHeightContext, HeaderShownContext } from "expo-router/react-navigation";
 import { type PropsWithChildren, type ReactNode, useContext, useState } from "react";
-import { type LayoutChangeEvent, type ScrollViewProps, View } from "react-native";
+import { type LayoutChangeEvent, type ScrollViewProps, useWindowDimensions, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { withUniwind } from "uniwind";
@@ -46,6 +46,11 @@ export function SheetScrollView({
   const headerHeight = useContext(HeaderHeightContext) ?? 0;
   const headerShown = useContext(HeaderShownContext);
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  // A sheet as wide as the window (a phone in landscape, the iPhone Duo rail) keeps its content clear
+  // of the side insets. A sheet that is a card in the middle (iPad) is clear of them already.
+  const [sheetWidth, setSheetWidth] = useState<number | null>(null);
+  const sideInsets = sheetWidth === null || sheetWidth >= windowWidth - 1;
   // Android: the transparent header lies over the content, so the content starts below it. Expo Router
   // adds the status bar inset to a 56-point Android header, but a sheet header does not reach the status
   // bar (`sheetHeaderInsetOptions`), so the inset comes off again.
@@ -72,7 +77,7 @@ export function SheetScrollView({
     : null;
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }} onLayout={(event) => setSheetWidth(event.nativeEvent.layout.width)}>
       <StyledKeyboardAwareScrollView
         className={className}
         enabled={keyboardAware}
@@ -109,7 +114,9 @@ export function SheetScrollView({
           {header}
         </View>
         {androidClearHeader ? <View style={{ height: androidHeaderClearance }} /> : null}
-        <View className={contentContainerClassName}>{children}</View>
+        <View style={sideInsets ? { paddingLeft: insets.left, paddingRight: insets.right } : undefined}>
+          <View className={contentContainerClassName}>{children}</View>
+        </View>
       </StyledKeyboardAwareScrollView>
       {nativeHeader && headerOverlaysContent ? (
         <SheetScrollEdgeEffect

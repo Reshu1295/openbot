@@ -1053,13 +1053,17 @@ export function ChatView({
                   </ChatGlassIconButton>
                 </View>
               ) : null}
-              <ConnectionStatus
-                server={server}
-                // The history waits for the server: the chat says so under the reconnect status.
-                note={
-                  !ready && !server?.initialConnectionPending && !serverOnline ? t("mobile.chat.history.waiting") : null
-                }
-              />
+              <View style={{ paddingLeft: insets.left, paddingRight: insets.right }}>
+                <ConnectionStatus
+                  server={server}
+                  // The history waits for the server: the chat says so under the reconnect status.
+                  note={
+                    !ready && !server?.initialConnectionPending && !serverOnline
+                      ? t("mobile.chat.history.waiting")
+                      : null
+                  }
+                />
+              </View>
               {showBrowserRequests
                 ? chatBrowserRequests
                     .filter((request) => !asksForSecret(request))
@@ -1090,12 +1094,20 @@ export function ChatView({
                     ))
                 : null}
               {sendError?.agentId === target.id ? (
-                <Typography.Paragraph accessibilityRole="alert" className="bg-background px-4 py-2 text-danger-text">
+                <Typography.Paragraph
+                  accessibilityRole="alert"
+                  className="bg-background py-2 text-danger-text"
+                  style={{ paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }}
+                >
                   {sendError.message}
                 </Typography.Paragraph>
               ) : null}
               {outboxSnapshot.storageFailed && outboxMessages.length ? (
-                <Typography.Paragraph accessibilityRole="alert" className="bg-background px-4 py-2 text-danger-text">
+                <Typography.Paragraph
+                  accessibilityRole="alert"
+                  className="bg-background py-2 text-danger-text"
+                  style={{ paddingLeft: insets.left + 16, paddingRight: insets.right + 16 }}
+                >
                   {t("mobile.chat.outbox.saveFailed")}
                 </Typography.Paragraph>
               ) : null}
@@ -1122,8 +1134,12 @@ export function ChatView({
                 <Typography.Paragraph
                   type="body-xs"
                   align="center"
-                  className="px-6 pt-2 text-text-secondary"
-                  style={{ paddingBottom: Math.max(insets.bottom, 10) + 6 }}
+                  className="pt-2 text-text-secondary"
+                  style={{
+                    paddingLeft: insets.left + 24,
+                    paddingRight: insets.right + 24,
+                    paddingBottom: Math.max(insets.bottom, 10) + 6,
+                  }}
                 >
                   {notice}
                 </Typography.Paragraph>

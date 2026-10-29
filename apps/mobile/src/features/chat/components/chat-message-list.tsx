@@ -50,6 +50,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCSSVariable } from "uniwind";
 import { BloubAvatarThumbnail } from "@/features/agents/components/bloub-avatar";
 import { getBloubAvatarColor } from "@/features/agents/model/bloub-activity";
@@ -77,6 +78,7 @@ import { useConnectionAppearance } from "@/features/workspace/components/use-con
 import type { MobileAgent } from "@/features/workspace/context/mobile-workspace-context";
 import { agentActivityMood, type MobileAgentActivity } from "@/features/workspace/model/agent-activity";
 import type { PendingApproval } from "@/features/workspace/model/pending-approvals";
+import { useColumnWidth } from "@/shared/components/adaptive-split";
 import { haptics } from "@/shared/lib/haptics";
 import { useMotionPreference, useReducedMotion } from "@/shared/lib/motion";
 import { isAndroid } from "@/shared/lib/platform";
@@ -1076,9 +1078,11 @@ export const ChatMessageList = memo(function ChatMessageList({
   );
   const sharedValues = useMemo(() => ({ scrollOffset: motion.scrollOffset }), [motion.scrollOffset]);
   const screen = useWindowDimensions();
+  const columnWidth = useColumnWidth();
+  const insets = useSafeAreaInsets();
   const estimatedListSize = useMemo(
-    () => ({ width: screen.width, height: screen.height }),
-    [screen.width, screen.height],
+    () => ({ width: columnWidth, height: screen.height }),
+    [columnWidth, screen.height],
   );
   const onListReady = motion.onListReady;
   const hasRows = rows.length > 0;
@@ -1140,7 +1144,8 @@ export const ChatMessageList = memo(function ChatMessageList({
   const canReact = Boolean(onReact);
   const canSelectText = Boolean(onSelectText);
   const canSelectQuestion = Boolean(onSelectQuestion);
-  const listWidth = screen.width - LIST_PADDING * 2;
+  // The rows keep clear of the side insets: the rail of iPhone Duo and the edges in landscape.
+  const listWidth = columnWidth - insets.left - insets.right - LIST_PADDING * 2;
   const shared = useMemo<MessageRowShared>(
     () => ({
       agents,
@@ -1363,7 +1368,11 @@ export const ChatMessageList = memo(function ChatMessageList({
               }}
               onStartReachedThreshold={0.5}
               style={{ flex: 1 }}
-              contentContainerStyle={{ paddingHorizontal: LIST_PADDING, paddingTop: header }}
+              contentContainerStyle={{
+                paddingLeft: insets.left + LIST_PADDING,
+                paddingRight: insets.right + LIST_PADDING,
+                paddingTop: header,
+              }}
               contentInsetAdjustmentBehavior="never"
               keyboardDismissMode="interactive"
               keyboardShouldPersistTaps="handled"

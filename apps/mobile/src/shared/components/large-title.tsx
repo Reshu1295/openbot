@@ -16,8 +16,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 import { SheetScrollEdgeEffect } from "@/shared/components/sheet-scroll-edge-effect";
 import { useReducedMotion } from "@/shared/lib/motion";
+import { useBarTop } from "@/shared/lib/native-bar";
 import { isAndroid, isIOS } from "@/shared/lib/platform";
 import { typeScale } from "@/shared/lib/type-scale";
+import { useVerticalBarShown } from "@/shared/lib/vertical-bar";
 
 const TITLE_EASE = cubicBezier(0.23, 1, 0.32, 1);
 /** The small title shows when the text of the big title reaches the bottom of the bar. */
@@ -38,6 +40,15 @@ export interface LargeTitleScroll {
   scrolled: SharedValue<number>;
   titleHeight: SharedValue<number>;
   headerHeight: number;
+  /** Where the top bar starts: the top inset, with a gap from the top edge on iPhone Duo. */
+  barTop: number;
+  /**
+   * Whether the screen pads its content by `headerHeight` itself, with no content inset from iOS:
+   * Android, a screen that draws its own bar, and iOS with the vertical bar of iPhone Duo. There iOS
+   * moves the bar buttons into the vertical bar and makes the top bar shorter than the stack reports,
+   * so the inset from iOS would put the big title under the scroll edge effect.
+   */
+  ownsInset: boolean;
 }
 
 /**
@@ -46,17 +57,22 @@ export interface LargeTitleScroll {
  * title scrolls with the content, and a small title shows in the transparent native bar. Android
  * draws it as a Material 3 medium top app bar that collapses into the small bar.
  */
-export function useLargeTitleScroll(): LargeTitleScroll {
-  const headerHeight = useContext(HeaderHeightContext) ?? 0;
+export function useLargeTitleScroll(customBar?: { headerHeight: number }): LargeTitleScroll {
+  const nativeHeaderHeight = useContext(HeaderHeightContext) ?? 0;
+  const verticalBar = useVerticalBarShown();
+  const barTop = useBarTop();
+  const ownsInset = !isIOS || customBar !== undefined || verticalBar;
+  const headerHeight = customBar?.headerHeight ?? (verticalBar ? barTop + IOS_BAR_HEIGHT : nativeHeaderHeight);
   const scrolled = useSharedValue(0);
   const titleHeight = useSharedValue(0);
-  // iOS insets the content under the transparent header, so the content rests at minus the header
-  // height. Android pads the content by the header height and rests at zero.
-  const rest = isIOS ? -headerHeight : 0;
+  // iOS insets the content under the transparent native header, so the content rests at minus the
+  // header height. Android, and a screen that draws its own bar, pad the content by the header height
+  // and rest at zero.
+  const rest = ownsInset ? 0 : -nativeHeaderHeight;
   const onScroll = useAnimatedScrollHandler((event) => {
     scrolled.set(event.contentOffset.y - rest);
   });
-  return { onScroll, scrolled, titleHeight, headerHeight };
+  return { onScroll, scrolled, titleHeight, headerHeight, barTop, ownsInset };
 }
 
 /** The first item of the scroll content: an optional caption above the big title. */
@@ -222,11 +238,12 @@ export function LargeTitleBar({
           style={[
             {
               position: "absolute",
-              top: insets.top,
+              top: scroll.barTop,
               // iOS centers its bar buttons in the 44 pt under the status bar; the header can be taller.
-              height: isIOS ? IOS_BAR_HEIGHT : Math.max(0, scroll.headerHeight - insets.top),
-              left: insetLeft,
-              right: insetRight,
+              height: isIOS ? IOS_BAR_HEIGHT : Math.max(0, scroll.headerHeight - scroll.barTop),
+              // The side insets (the iPhone Duo rail, the landscape cutout) push the bar buttons in too.
+              left: insets.left + insetLeft,
+              right: insets.right + insetRight,
               justifyContent: "center",
               opacity: collapsed ? 1 : 0,
               transform: [{ translateY: collapsed || reduced ? 0 : 4 }],
@@ -257,15 +274,19 @@ export function LargeTitleScrollView({
   children,
 }: PropsWithChildren<{ title: string; caption?: string; contentContainerClassName?: string }>) {
   const scroll = useLargeTitleScroll();
+  const insets = useSafeAreaInsets();
   return (
     <View className="flex-1 bg-sheet">
       <Animated.ScrollView
         className="flex-1"
+        // The side insets (the iPhone Duo rail, the landscape cutout) go outside the scroll view. With
+        // `always`, iOS would also inset the content by them, and the content would go off the other side.
+        style={{ marginLeft: insets.left, marginRight: insets.right }}
         alwaysBounceVertical={false}
-        contentInsetAdjustmentBehavior="always"
+        contentInsetAdjustmentBehavior={scroll.ownsInset ? "never" : "always"}
         contentContainerClassName="pb-safe-offset-5"
-        // Android has no content inset, so the content starts below the transparent header.
-        contentContainerStyle={isAndroid ? { paddingTop: scroll.headerHeight } : undefined}
+        // Without a content inset from iOS, the content starts below the transparent header.
+        contentContainerStyle={scroll.ownsInset ? { paddingTop: scroll.headerHeight } : undefined}
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
