@@ -12,6 +12,11 @@ import { ArrowUp, Button, Image, Square } from "@openbot/ui";
 import { createScrollFades } from "@openbot/ui/components/createScrollFades";
 import type { AgentMessage, AgentProfile, ComposerMcpServer } from "@openbot/ui/data";
 import { AgentActivityIndicator, nextAgentActivityLabel } from "@openbot/ui/features/conversation/AgentActivity";
+import {
+  type AgentStep,
+  AgentStepsDisclosure,
+  type AgentStepsFacts,
+} from "@openbot/ui/features/conversation/AgentSteps";
 import { type ChatMessageAuthor, ChatMessageRow } from "@openbot/ui/features/conversation/ChatMessageRow";
 import {
   ComposerEditor,
@@ -37,8 +42,8 @@ const HOLD_TEXT = {
 const STICK_DISTANCE = 48;
 
 /**
- * Whether the thread shows this message. A stopped turn can leave an agent message with no text and
- * nothing else in it; the thinking of a turn shows only while the thread runs, in its activity row.
+ * Whether the thread shows this message as a row. A stopped turn can leave an agent message with no
+ * text and nothing else in it. The thinking and the memory changes of a turn show in its steps.
  */
 function shownInThread(message: AgentMessage): boolean {
   if (message.kind === "thinking" || message.kind === "memory-changes") return false;
@@ -107,6 +112,14 @@ export interface AgentThreadViewProps {
   waitsForAnswer?: boolean | undefined;
   /** Another card that the thread shows, such as a question or a browser takeover. The app builds it. */
   attention?: JSX.Element | undefined;
+  /** The steps of the finished turn above an answer, or undefined for a message that has none. */
+  stepsAbove?: ((messageId: string) => AgentStep[] | undefined) | undefined;
+  /** The time that the turn of an answer took, and how many of its steps failed. */
+  factsAbove?: ((messageId: string) => AgentStepsFacts | undefined) | undefined;
+  /** The steps of the running turn, for its activity row. */
+  activeSteps?: readonly AgentStep[] | undefined;
+  /** The "Show agent steps" setting: the steps are open at first. */
+  stepsOpenByDefault?: boolean | undefined;
 }
 
 /**
@@ -197,6 +210,15 @@ export function AgentThreadView(props: AgentThreadViewProps) {
           <For each={props.messages.filter(shownInThread)} keyed={(message) => message.id}>
             {(message) => (
               <div class="virtual-chat-row">
+                <Show when={props.stepsAbove?.(message().id)}>
+                  {(steps) => (
+                    <AgentStepsDisclosure
+                      steps={steps()}
+                      defaultOpen={props.stepsOpenByDefault ?? false}
+                      facts={props.factsAbove?.(message().id)}
+                    />
+                  )}
+                </Show>
                 <ChatMessageRow
                   message={message()}
                   author={author(message())}
@@ -215,7 +237,13 @@ export function AgentThreadView(props: AgentThreadViewProps) {
           <Show when={running()}>
             {(task) => (
               <div class="virtual-chat-row">
-                <AgentActivityIndicator agent={props.agent} label={activityLabel} detail={task().progress} />
+                <AgentActivityIndicator
+                  agent={props.agent}
+                  label={activityLabel}
+                  detail={task().progress}
+                  steps={props.activeSteps}
+                  stepsOpenByDefault={props.stepsOpenByDefault}
+                />
               </div>
             )}
           </Show>
