@@ -325,6 +325,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: bun run test:sign-in-relay-paste
 
+      - name: Run the sign-in relay replay E2E test
+        if: ${{ !cancelled() }}
+        run: bun run test:sign-in-relay-replay
+
       - name: Run the server mute and unmute E2E test
         if: ${{ !cancelled() }}
         run: bun run test:server-mute
@@ -514,6 +518,7 @@ jobs:
             .openbot-build/team-api-legacy-clients-e2e/
             .openbot-build/team-session-revoke-e2e/
             .openbot-build/sign-in-relay-paste-e2e/
+            .openbot-build/sign-in-relay-replay-e2e/
             .openbot-build/server-mute-e2e/
             .openbot-build/desktop-notifications-e2e/
             .openbot-build/routine-pause-resume-e2e/

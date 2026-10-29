@@ -325,9 +325,11 @@ function view(flow: Flow): SignInRelayView {
 
 /**
  * Sends the callback to the loopback address that the page of this host's own sign-in names. The
- * address comes only from that page, so a client cannot choose it. The request follows no redirect,
- * and only its status is kept: the answer is a page for a browser. The query holds a grant, so
- * nothing here logs the address.
+ * address comes only from that page, so a client cannot choose it. The request follows one redirect
+ * only, and only to the same address and port: `codex login` answers its callback with a redirect to
+ * its own success page, and ends only when that page loads, as it does in a browser on this host.
+ * Only the status is kept: the answer is a page for a browser. The query holds a grant, so nothing
+ * here logs the address.
  */
 const replay = Effect.fn("SignInRelayHost.replay")(function* (query: URLSearchParams, pageUrl: string) {
   if (!loopbackCallback(pageUrl)) return false;
@@ -337,8 +339,14 @@ const replay = Effect.fn("SignInRelayHost.replay")(function* (query: URLSearchPa
   address.search = query.toString();
   address.hash = "";
   return yield* Effect.tryPromise(async (signal) => {
-    const response = await fetch(address, { redirect: "manual", signal });
+    let response = await fetch(address, { redirect: "manual", signal });
     await response.body?.cancel();
+    const location = response.status >= 300 && response.status < 400 ? response.headers.get("location") : null;
+    const next = location ? URL.parse(location, address) : null;
+    if (next?.origin === address.origin) {
+      response = await fetch(next, { redirect: "manual", signal });
+      await response.body?.cancel();
+    }
     return response.status < 400;
   }).pipe(
     Effect.timeout(REPLAY_TIMEOUT),
