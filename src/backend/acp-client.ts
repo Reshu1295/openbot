@@ -11,6 +11,7 @@ import {
   type LoadSessionRequest,
   type LoadSessionResponse,
   type PermissionOption,
+  type PromptResponse,
   RequestError,
   type RequestPermissionRequest,
   type RequestPermissionResponse,
@@ -50,6 +51,7 @@ import {
   type McpEndpointSource,
   type McpServerSource,
   type McpToolRuntimeSource,
+  providerMcpServerName,
   usableMcpServers,
 } from "./mcp-provider-shapes";
 import { PendingServerRequests } from "./pending-server-requests";
@@ -428,6 +430,8 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
   /** Whether `#endIfUnresponsive` waits for its probe. */
   #probing = false;
   readonly #bridge = new LocalMcpBridge();
+  /** The MCP server entries whose start ended a turn of this process. See `#leaveOutFailedMcpServer`. */
+  readonly #failedMcpServers = new Set<string>();
   readonly #threads = new IdleThreadPool<AcpThread, ReleasedAcpThread>({
     scope: () => this.#scope,
     releaseAfterMs: ACP_SESSION_IDLE_RELEASE_MS,
@@ -1348,7 +1352,10 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
               ),
             );
             this.options.reportMcpDrops?.(this.provider, handoff.dropped);
-            const mcpServers = [...handoff.servers, ...mcp.servers];
+            const mcpServers = [
+              ...handoff.servers.filter((server) => !this.#failedMcpServers.has(JSON.stringify(server))),
+              ...mcp.servers,
+            ];
             if (resume && requestedThreadId) {
               const response = providerResult(
                 yield* Effect.result(
@@ -1911,9 +1918,10 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     prompt: ContentBlock[],
   ): Effect.fn.Return<void, ProviderClientOperationError> {
     try {
-      const response = providerResult(
-        yield* Effect.result(providerCall(() => this.#requireConnection().prompt({ sessionId: thread.id, prompt }))),
-      );
+      const send = () =>
+        providerCall(() => this.#requireConnection().prompt({ sessionId: thread.id, prompt })).pipe(Effect.result);
+      let response = providerResult(yield* send());
+      while (yield* this.#leaveOutFailedMcpServer(thread, turn, response)) response = providerResult(yield* send());
       if (thread.activeTurn !== turn || turn.completing) return;
       // `promptId` names this result: a delivery that runs again keeps its turn ID.
       if (response.usage)
@@ -1962,6 +1970,72 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     } catch (error) {
       yield* this.#completeTurn(thread, turn, turn.stopped ? "interrupted" : "failed", turn.stopped ? null : error);
     }
+  });
+
+  /**
+   * Antigravity ends the whole turn when one MCP server does not start, such as a server that asks
+   * for a sign-in that OpenBot does not hold and answers 401 (#3824). The user then cannot use Gemini
+   * at all until they find and remove the server. Other providers start without that server.
+   *
+   * When the failed server is one that OpenBot gave, this process stops giving it, the user is told
+   * which server was left out, and the session opens again without it. The caller then sends the
+   * prompt again. Only a failure that came before any output is retried: the user saw nothing of it.
+   * A server from the user's own Antigravity configuration is not OpenBot's to leave out, so its
+   * failure stays the turn's error. The entry is the key, so the server is given again when it
+   * changes, such as after a sign-in that routes it through the OAuth proxy.
+   */
+  readonly #leaveOutFailedMcpServer = Effect.fn("AcpAgentClient.leaveOutFailedMcpServer")(function* (
+    this: AcpAgentClient,
+    thread: AcpThread,
+    turn: AcpTurn,
+    response: PromptResponse,
+  ): Effect.fn.Return<boolean, ProviderClientOperationError> {
+    const mcpLoadFailure = this.#flavor.sdkHarness?.mcpLoadFailure;
+    if (
+      !mcpLoadFailure ||
+      thread.activeTurn !== turn ||
+      turn.completing ||
+      turn.stopped ||
+      response.stopReason !== "end_turn" ||
+      turn.sdkFailureAt !== 0 ||
+      turn.thoughtStarted ||
+      turn.toolItems.size > 0 ||
+      // `session/load` would replay the history into this turn.
+      !this.#supportsSessionResume
+    )
+      return false;
+    const failure = mcpLoadFailure(turn.text);
+    const server = failure
+      ? thread.restore.mcpServers.find(
+          (entry) => entry.name === failure.name && !thread.mcp.servers.some((bridge) => bridge === entry),
+        )
+      : undefined;
+    if (!failure || !server) return false;
+    this.#failedMcpServers.add(JSON.stringify(server));
+    const configured = this.options
+      .mcpServers?.()
+      .find((config) => providerMcpServerName(config.name) === failure.name);
+    this.options.reportMcpDrops?.(this.provider, [
+      {
+        name: configured?.name ?? failure.name,
+        reason: "failed_to_start",
+        detail: sourceText("error.backend.mcpServerFailedToStart", { reason: failure.reason }),
+      },
+    ]);
+    const restore = { ...thread.restore, mcpServers: thread.restore.mcpServers.filter((entry) => entry !== server) };
+    const model = thread.currentModelId;
+    const connection = yield* providerSync(() => this.#requireConnection());
+    const restored = yield* this.#restoreSessionEffect(connection, { sessionId: thread.id, ...restore }, "resume");
+    thread.restore = restore;
+    thread.configOptions = restored.configOptions ?? thread.configOptions;
+    thread.currentModelId = currentModelFromSessionSetup(restored) ?? thread.currentModelId;
+    yield* this.#configuration.applyConfig(thread, model, null, this.#models);
+    turn.text = "";
+    turn.sdkFailureAt = null;
+    turn.receivedOutput = false;
+    turn.textMessageId = null;
+    turn.textMessageStart = 0;
+    return true;
   });
 
   #sessionUpdate(notification: SessionNotification): void {

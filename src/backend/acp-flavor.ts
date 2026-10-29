@@ -45,6 +45,8 @@ export interface AcpFlavor {
     turnFailure(text: string): string;
     /** The message of an answer chunk that reports an exhausted quota, or `null`. */
     quota(text: string): string | null;
+    /** The MCP server whose failed start ended the turn, from the failure text, or `null`. */
+    mcpLoadFailure(text: string): { name: string; reason: string } | null;
   };
   /** A stop finishes the turn locally, and the next prompt opens the session again first. */
   cancelLocallyThenResume?: true;
