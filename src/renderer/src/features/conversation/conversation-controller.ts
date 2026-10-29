@@ -79,6 +79,8 @@ interface ConversationResources {
   voiceMeterStop: (() => void) | undefined;
   voiceAgentId: string | undefined;
   voiceServerId: string | undefined;
+  /** The thread sends its draft when the recording's text is in it. */
+  voiceThreadSend: boolean;
   voiceSubmitRequest:
     | {
         agentId: string;
@@ -226,6 +228,8 @@ export function createStableConversationState(
   const [voiceModelProgress, setVoiceModelProgress] = createSignal<number | null>(null);
   const [voiceElapsedSeconds, setVoiceElapsedSeconds] = createSignal(0);
   const [voiceLiveTranscript, setVoiceLiveTranscript] = createSignal<VoiceLiveTranscript | null>(null);
+  /** The side thread draft that the last recording was started for. Undefined for the agent's own chat. */
+  const [voiceThreadKey, setVoiceThreadKey] = createSignal<string | undefined>(undefined);
   const [voiceLevels, setVoiceLevels] = createSignal<number[]>([]);
   /** The conversation whose last recording stopped at the time limit. */
   const [voiceLimitReached, setVoiceLimitReached] = createSignal<ConversationTarget | null>(null);
@@ -250,6 +254,7 @@ export function createStableConversationState(
     voiceMeterStop: undefined,
     voiceAgentId: undefined,
     voiceServerId: undefined,
+    voiceThreadSend: false,
     voiceSubmitRequest: undefined,
     voiceDisposed: false,
     voiceRequestGeneration: 0,
@@ -346,6 +351,8 @@ export function createStableConversationState(
     setVoiceElapsedSeconds,
     voiceLiveTranscript,
     setVoiceLiveTranscript,
+    voiceThreadKey,
+    setVoiceThreadKey,
     voiceLevels,
     setVoiceLevels,
     voiceLimitReached,

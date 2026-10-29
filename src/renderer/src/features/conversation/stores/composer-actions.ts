@@ -348,10 +348,6 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     picker.click();
   }
 
-  function openAttachmentPickerFromKey(event: KeyboardEvent) {
-    if (event.key === "Enter" || event.key === " ") openAttachmentPicker();
-  }
-
   async function editQueuedMessage(delivery: QueueDelivery) {
     const agentId = deps.props.agent?.id;
     const serverId = deps.props.server?.id ?? "local";
@@ -855,7 +851,6 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     pasteFiles,
     releaseCutAttachments,
     openAttachmentPicker,
-    openAttachmentPickerFromKey,
     editQueuedMessage,
     cancelQueuedMessageEdit,
     saveQueuedMessageEdit,

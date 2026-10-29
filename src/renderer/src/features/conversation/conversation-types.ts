@@ -69,6 +69,8 @@ export interface ConversationTarget {
 /** What was said so far in a recording, and the conversation it is dictated into. */
 export interface VoiceLiveTranscript extends ConversationTarget {
   text: string;
+  /** The side thread draft that the recording is dictated into. Undefined for the agent's own chat. */
+  threadKey?: string | undefined;
 }
 
 /** A browser takeover that an agent's turn waits for. */

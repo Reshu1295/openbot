@@ -11,6 +11,7 @@ import {
   relayableSignInLink,
   type UpdateAgentInput,
 } from "@openbot/contracts/ipc";
+import { toast } from "@openbot/ui";
 import type { QuoteRequest } from "@openbot/ui/features/conversation/ComposerEditor";
 import { currentText } from "@openbot/ui/text";
 import { usesTouchLayout } from "@openbot/ui/utils";
@@ -20,6 +21,7 @@ import {
   createEffect,
   createMemo,
   createSignal,
+  flush,
   onCleanup,
   onSettled,
   untrack,
@@ -27,6 +29,7 @@ import {
 } from "solid-js";
 import { actionToast } from "../../action-toast";
 import { createScopeGuard } from "../../scope-lifetime";
+import { appendVoiceTranscript } from "../../voice-recording";
 import { createAttachmentImportSounds } from "./attachment-import-sounds";
 import { useConversationController } from "./conversation-controller-context";
 import { agentConversationKey, composerDraftKey } from "./conversation-keys";
@@ -137,6 +140,8 @@ export function createConversationViewScope(props: ConversationProps) {
     setVoiceElapsedSeconds,
     voiceLiveTranscript,
     setVoiceLiveTranscript,
+    voiceThreadKey,
+    setVoiceThreadKey,
     voiceLevels,
     setVoiceLevels,
     voiceLimitReached,
@@ -564,6 +569,13 @@ export function createConversationViewScope(props: ConversationProps) {
   const handleChatSearchShortcut = (event: KeyboardEvent) => {
     if (!sideThreadOpen()) search.handleChatSearchShortcut(event);
   };
+  const threadComposer = createThreadComposerActions({
+    props,
+    threadDrafts: controller.threadDrafts,
+    setThreadDrafts: controller.setThreadDrafts,
+  });
+  /** Moves the open thread's caret to the end of the dictated text. */
+  const [threadFocusRequest, setThreadFocusRequest] = createSignal(0);
   const voice = createVoiceStore({
     props,
     resources,
@@ -573,6 +585,8 @@ export function createConversationViewScope(props: ConversationProps) {
     voiceElapsedSeconds,
     setVoiceElapsedSeconds,
     setVoiceLiveTranscript,
+    voiceThreadKey,
+    setVoiceThreadKey,
     setVoiceLevels,
     drafts,
     setDrafts,
@@ -592,14 +606,57 @@ export function createConversationViewScope(props: ConversationProps) {
       submit: (...args) => actions.submitMessage(...args),
       restoreTranscript: (...args) => composer.restoreVoiceTranscript(...args),
     },
+    thread: {
+      openDraftKey: () => threadComposer.openDraftKey(),
+      appendTranscript: (key, text) => {
+        threadComposer.setText(key, appendVoiceTranscript(threadComposer.draft(key).text, text));
+        if (threadComposer.openDraftKey() === key) setThreadFocusRequest((current) => current + 1);
+      },
+      send: (key) => {
+        // The transcript was just appended; the send reads the draft, so apply that write first.
+        flush();
+        const threads = props.threads;
+        if (threads && threadComposer.openDraftKey() === key)
+          void threadComposer.send(threads, threadComposer.draft(key).text.trim());
+      },
+      reportError: (message) => actionToast.error(message),
+      // The stop chime already played, so the notice is silent.
+      reportLimit: () => toast.warning(currentText().t("composer.voice.limitReached")),
+    },
   });
-  const { startVoiceRecording, stopVoiceRecording, cancelVoiceRecording } = voice;
+  const { startVoiceRecording, stopVoiceRecording, stopVoiceRecordingAndSend, cancelVoiceRecording } = voice;
+  /** Dictates into the open side thread's draft. */
+  const startThreadVoiceRecording = () => {
+    const key = threadComposer.openDraftKey();
+    if (key !== undefined) void startVoiceRecording(key);
+  };
+  /** The recording, or its preparation, is for the open side thread. */
+  const threadVoiceOwned = () => {
+    const key = threadComposer.openDraftKey();
+    return key !== undefined && voicePhase() !== "idle" && voiceThreadKey() === key;
+  };
+  // A recording ends when the message box that it writes to closes or is covered: its text then stays
+  // in the draft that it was for.
+  createEffect(
+    () => ({ key: threadComposer.openDraftKey(), owner: voiceThreadKey(), recording: voicePhase() === "recording" }),
+    ({ key, owner, recording }) => {
+      if (recording && owner !== key) stopVoiceRecording();
+    },
+  );
   // Live text belongs to the conversation it is dictated into, not to whichever one is open.
   const voiceLiveText = () => {
     const live = voiceLiveTranscript();
-    return live && live.agentId === conversationOwnerId(props) && live.serverId === (props.server?.id ?? "local")
+    return live &&
+      live.threadKey === undefined &&
+      live.agentId === conversationOwnerId(props) &&
+      live.serverId === (props.server?.id ?? "local")
       ? live.text
       : "";
+  };
+  const threadVoiceLiveText = () => {
+    const live = voiceLiveTranscript();
+    const key = threadComposer.openDraftKey();
+    return live && key !== undefined && live.threadKey === key ? live.text : "";
   };
   const voiceLimitNotice = () => {
     const reached = voiceLimitReached();
@@ -615,11 +672,6 @@ export function createConversationViewScope(props: ConversationProps) {
       if (emptied) dismissVoiceLimitNotice();
     },
   );
-  const threadComposer = createThreadComposerActions({
-    props,
-    threadDrafts: controller.threadDrafts,
-    setThreadDrafts: controller.setThreadDrafts,
-  });
   const actions = createComposerActions({
     props,
     attachmentBusy,
@@ -704,7 +756,6 @@ export function createConversationViewScope(props: ConversationProps) {
     pasteFiles,
     releaseCutAttachments,
     openAttachmentPicker,
-    openAttachmentPickerFromKey,
     editQueuedMessage,
     cancelQueuedMessageEdit,
     reorderPresentedQueue,
@@ -1693,6 +1744,9 @@ export function createConversationViewScope(props: ConversationProps) {
   return {
     sideThreadOpen,
     threadComposer,
+    threadFocusRequest,
+    threadVoiceLiveText,
+    threadVoiceOwned,
     replyJump,
     voiceConversationAvailable,
     startVoiceConversation,
@@ -1810,7 +1864,6 @@ export function createConversationViewScope(props: ConversationProps) {
     moveChatSearch,
     newMessageCount,
     openAttachmentPicker,
-    openAttachmentPickerFromKey,
     openBrowserAddress,
     openExternalMessageUrl,
     messageLinkRelay,
@@ -1894,7 +1947,9 @@ export function createConversationViewScope(props: ConversationProps) {
     showComposerActions,
     showScrollToLatest,
     startVoiceRecording,
+    startThreadVoiceRecording,
     stopVoiceRecording,
+    stopVoiceRecordingAndSend,
     cancelVoiceRecording,
     submitComposer,
     submitting,

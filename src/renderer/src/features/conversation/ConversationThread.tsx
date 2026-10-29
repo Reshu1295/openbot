@@ -5,7 +5,7 @@ import { classifyFailure } from "@openbot/telemetry";
 import { Input } from "@openbot/ui";
 import type { AgentMessage } from "@openbot/ui/data";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
-import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
+import { AgentThreadView, type AgentThreadVoice } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { useText } from "@openbot/ui/text";
 import { createEffect, createMemo, createProjection, createSignal, Show } from "solid-js";
 import { actionToast } from "../../action-toast";
@@ -35,6 +35,19 @@ export function ConversationThread() {
     installedSkillsLoadFailed,
     mcpServers,
     threadComposer,
+    threadFocusRequest,
+    threadVoiceLiveText,
+    threadVoiceOwned,
+    startThreadVoiceRecording,
+    stopVoiceRecording,
+    stopVoiceRecordingAndSend,
+    cancelVoiceRecording,
+    voicePhase,
+    voiceLevels,
+    voiceElapsedSeconds,
+    voiceModelProgress,
+    sideQuestionAvailable,
+    openSideQuestion,
   } = useConversationViewScope();
   const { t, errorMessage } = useText();
   const [picker, setPicker] = createSignal<HTMLInputElement>();
@@ -99,6 +112,33 @@ export function ConversationThread() {
     input.value = "";
     input.click();
   };
+  /** As in the agent's own chat: the draft goes to the side question, unless it names files. */
+  const askSideQuestion = () => {
+    if (!sideQuestionAvailable()) return undefined;
+    return () => {
+      const current = draft();
+      const text = current?.attachments.length === 0 ? current.text : "";
+      if (text) threadComposer.setText(threadComposer.openDraftKey(), "");
+      openSideQuestion(text);
+    };
+  };
+  /** Dictation as in the agent's own chat. The web client has no speech model. */
+  const voice = (): AgentThreadVoice | undefined => {
+    if (props.runtime) return undefined;
+    const owned = threadVoiceOwned();
+    return {
+      phase: owned ? voicePhase() : "idle",
+      blocked: !owned && voicePhase() !== "idle",
+      liveText: threadVoiceLiveText(),
+      levels: voiceLevels(),
+      elapsedSeconds: voiceElapsedSeconds(),
+      modelProgress: voiceModelProgress(),
+      onStart: startThreadVoiceRecording,
+      onCancel: cancelVoiceRecording,
+      onFinish: stopVoiceRecording,
+      onSend: stopVoiceRecordingAndSend,
+    };
+  };
   /** The cards that the thread waits for: its browser takeover, and its question as a form. */
   const attention = () => {
     if (!hasAttention()) return undefined;
@@ -147,6 +187,9 @@ export function ConversationThread() {
                 : attachmentAction(attachment, "open")
             }
             onAttachFiles={current().threads.acceptsFiles ? openPicker : undefined}
+            onSideQuestion={askSideQuestion()}
+            voice={voice()}
+            focusRequest={threadFocusRequest()}
             onSend={(text) => threadComposer.send(current().threads, text)}
             onStop={() => current().threads.onStop()}
             onOpenLink={(url) => void openExternalMessageUrl(url)}

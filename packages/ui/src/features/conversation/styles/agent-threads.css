@@ -451,19 +451,6 @@
   white-space: nowrap;
 }
 
-/* A thread composer with no attach button drops the empty first column, as `.side-question-composer` does. */
-.agent-thread-composer.composer[data-compact]:not([data-attach]) {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.agent-thread-composer.composer[data-compact]:not([data-attach]) > .composer-input-label {
-  grid-column: 1;
-}
-
-.agent-thread-composer.composer[data-compact]:not([data-attach]) .composer-primary-actions {
-  grid-column: 2;
-}
-
 /* The hint holds the thread title, which can be long. It stays on the one line of the compact box. */
 .agent-thread-composer .composer-editor-placeholder {
   right: 0;
