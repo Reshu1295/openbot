@@ -557,7 +557,6 @@ function BuyLicenseDialog(props: {
 }): JSX.Element {
   const { t, format } = useText();
   const start = untrack(() => props.order);
-  // 2 to 4 users cost the same as the Team minimum, so the fewest users skip them.
   const minimum = untrack(() => Math.min(SLIDER_MAX, licenseOrderFor(Math.max(1, props.state.used)).users));
   const [people, setPeople] = createSignal(Math.max(minimum, start?.license?.users ?? minimum));
   const [interval, setInterval] = createSignal<BillingInterval>(start?.interval ?? "year");
@@ -621,16 +620,16 @@ function BuyLicenseDialog(props: {
         />
         <SliderField
           label={t("billing.license.users.label")}
-          value={sliderPosition(people())}
-          minValue={sliderPosition(minimum)}
-          maxValue={sliderPosition(SLIDER_MAX)}
+          value={people()}
+          minValue={minimum}
+          maxValue={SLIDER_MAX}
           disabled={props.store.state.pending !== null}
-          formatValue={(position) =>
-            sliderUsers(position) > LICENSE_MAX_USERS
+          formatValue={(value) =>
+            value > LICENSE_MAX_USERS
               ? t("billing.license.change.more", { count: LICENSE_MAX_USERS })
-              : format.number(sliderUsers(position))
+              : format.number(value)
           }
-          onChange={(position) => setPeople(sliderUsers(position))}
+          onChange={setPeople}
         />
         <div class="billing-license-quote">
           <Show
@@ -714,12 +713,8 @@ function Quote(props: { plan: LicensePlan; users: number; currency: BillingCurre
   );
 }
 
-/** The value after the maximum means "more than 25 users". */
+/** The value after the maximum means "more than `LICENSE_MAX_USERS` users". */
 const SLIDER_MAX = LICENSE_MAX_USERS + 1;
-/** The Buy slider has no positions for 2 to 4 users: position 1 is 1 user, and position 2 is the Team minimum. */
-const TEAM_SLIDER_OFFSET = LICENSE_INCLUDED_USERS - 2;
-const sliderUsers = (position: number) => (position === 1 ? 1 : position + TEAM_SLIDER_OFFSET);
-const sliderPosition = (users: number) => (users === 1 ? 1 : users - TEAM_SLIDER_OFFSET);
 
 /**
  * Changes the users of the open license. The minimum is the people who use it now. More users bill

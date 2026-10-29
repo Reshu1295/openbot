@@ -43,9 +43,19 @@ export interface BillingPlan {
 /** The storage, members and speed of each plan. A buyer pays the Stripe Prices; see `billingListPrices`. */
 export const BILLING_PLANS: readonly BillingPlan[] = [
   { id: "starter", storageGb: 12, memberLimit: 1, siteLimit: 3, relativeSpeed: 1 },
-  { id: "standard", storageGb: 50, memberLimit: 10, siteLimit: 10, relativeSpeed: 2 },
-  { id: "pro", storageGb: 100, memberLimit: 25, siteLimit: 50, relativeSpeed: 4 },
+  { id: "standard", storageGb: 50, memberLimit: 5, siteLimit: 10, relativeSpeed: 2 },
+  { id: "pro", storageGb: 100, memberLimit: 10, siteLimit: 50, relativeSpeed: 4 },
 ];
+
+/**
+ * The active member limit of each plan for a server made before the limits of `BILLING_PLANS`. Such a
+ * server keeps the limit that it had when the owner bought it.
+ */
+export const LEGACY_MEMBER_LIMITS: Readonly<Record<BillingPlanId, number>> = {
+  starter: DEFAULT_TEAM_MEMBER_LIMIT,
+  standard: 10,
+  pro: 25,
+};
 
 /**
  * The monthly list price of each plan, in minor units (cents, grosze). Each amount divides by 5, so a

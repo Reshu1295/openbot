@@ -92,7 +92,7 @@ export const messages = {
   "server.add.use.personal": "Kişisel",
   "server.add.use.work": "İş",
   "server.add.license.people": "İşteki kişiler",
-  "server.add.license.bundle": "Paket −{price}",
+  "server.add.license.bundle": "Paket −%{percent}",
   "server.add.license.included": "Dahil: {license}",
   "server.add.license.includedTrial": "Dahil: {license}, {date} tarihine kadar ücretsiz",
   "server.add.billedMonthly": "Aylık faturalandırılır",

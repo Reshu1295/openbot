@@ -91,8 +91,8 @@ export const messages = {
   "server.add.use.work": "工作",
   // The row under the plans that sets the users of the license. It is disabled for personal use.
   "server.add.license.people": "工作人数",
-  // On each plan that the people fit, for work. {price} is the discount for one month, such as "€20".
-  "server.add.license.bundle": "组合 −{price}",
+  // On each plan that the people fit, for work. {percent} is a whole number, such as 20.
+  "server.add.license.bundle": "组合 −{percent}%",
   // The plan summary for work. {license} is the license line, such as "Team license, 5 members".
   "server.add.license.included": "包含{license}",
   "server.add.license.includedTrial": "包含{license}，{date} 前免费",

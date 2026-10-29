@@ -37,19 +37,19 @@ export function OpenBotHostedServers() {
         wants agents to keep working on research, routine admin, or client work while the laptop is closed.
       </p>
       <p>
-        Standard supports up to 10 members, with 50 GB of storage and twice the speed of Starter. Think of a small
+        Standard supports up to 5 members, with 50 GB of storage and twice the speed of Starter. Think of a small
         software consultancy working across several client projects: its team might use agents for code review,
         research, and preparing project notes.
       </p>
       <p>
-        Pro supports up to 25 members, with 100 GB of storage and four times the base speed. It’s aimed at larger teams
+        Pro supports up to 10 members, with 100 GB of storage and four times the base speed. It’s aimed at larger teams
         or heavier workloads, especially those involving more browser-based work.
       </p>
       <p>You can pay monthly or yearly. The yearly option saves 20%.</p>
       <p>
-        Work at a company also needs a commercial license. A Starter license for one user costs €30 a month, and a Team
-        license costs €100 a month for five users and €15 for each extra user. With a hosted server, the license costs
-        €10 (Starter) or €20 (Team) less each month, and you can buy both with one payment.
+        Work at a company also needs a commercial license. A Starter license for one user costs €10 a month, and a Team
+        license costs €25 a month for two users and €15 for each extra user, up to 10 users. With a hosted server, the
+        license costs 20% less, and you can buy both with one payment.
       </p>
       <ArticleImage
         src={pricing}

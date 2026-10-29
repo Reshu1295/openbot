@@ -480,7 +480,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* As wide as "25 members", so the buttons stay in place while the count changes. */
+/* As wide as "10 members", so the buttons stay in place while the count changes. */
 .hosted-license-stepper > span {
   min-width: 11ch;
   text-align: center;

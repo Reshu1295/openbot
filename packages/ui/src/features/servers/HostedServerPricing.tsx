@@ -1,10 +1,9 @@
 import type { BillingCurrency, BillingInterval, BillingPlanId } from "@openbot/contracts/billing";
 import type { HostedServerCatalog } from "@openbot/contracts/hosted-servers";
 import {
-  LICENSE_BUNDLE_DISCOUNT,
+  LICENSE_BUNDLE_DISCOUNT_PERCENT,
   LICENSE_INCLUDED_USERS,
   LICENSE_MAX_USERS,
-  LICENSE_PLAN_PRICES,
   LICENSE_TRIAL_DATE_FORMAT,
   licenseListMonthly,
   licenseOrderFor,
@@ -369,8 +368,6 @@ export function HostedServerPlans(props: HostedServerPlansProps) {
       date: format.date(end, LICENSE_TRIAL_DATE_FORMAT),
     });
   };
-  const bundleDiscount = () =>
-    LICENSE_BUNDLE_DISCOUNT[licenseOrderFor(people()).tier][HOSTED_BILLING_CURRENCY[props.currency]] / 100;
 
   return (
     <ul
@@ -414,7 +411,7 @@ export function HostedServerPlans(props: HostedServerPlansProps) {
                     }
                   >
                     <span class="hosted-plan-bundle">
-                      {t("server.add.license.bundle", { price: price(bundleDiscount()) })}
+                      {t("server.add.license.bundle", { percent: LICENSE_BUNDLE_DISCOUNT_PERCENT })}
                     </span>
                   </Show>
                 </Show>
@@ -494,14 +491,18 @@ export function HostedServerPlans(props: HostedServerPlansProps) {
                 <Show when={props.people !== undefined && !work()}>
                   <li>
                     <ShieldCheck aria-hidden="true" />
-                    {/* A server too small for the Team license sells the Starter license, at the bundle price. */}
+                    {/* A server too small for the Team license sells the Starter license, at the bundle price of the period. */}
                     <Show
                       when={plan.memberLimit < LICENSE_INCLUDED_USERS}
                       fallback={t("settings.hostedServers.plan.license.team")}
                     >
                       {t("settings.hostedServers.plan.license.starter", {
                         price: price(
-                          LICENSE_PLAN_PRICES.starter_bundle_month[HOSTED_BILLING_CURRENCY[props.currency]].base / 100,
+                          licenseOrderMonthly(
+                            { tier: "starter", interval: BILLING_INTERVAL[props.billing], bundle: true },
+                            1,
+                            HOSTED_BILLING_CURRENCY[props.currency],
+                          ) / 100,
                         ),
                       })}
                     </Show>

@@ -172,7 +172,7 @@ export const messages = {
   "billing.order.license.noneDetail": "Uso personale e non commerciale",
   "billing.order.license.starter": "Licenza Starter",
   "billing.order.license.team": "Licenza Team",
-  "billing.order.license.bundleSaving": "−{price} con il tuo server",
+  "billing.order.license.bundleSaving": "−{percent}% con il tuo server",
   "billing.order.license.teamDetail": "{included} inclusi, +{price} per ogni membro in più",
   "billing.order.license.serverMembers": {
     one: "Il tuo server ha {count} membro",

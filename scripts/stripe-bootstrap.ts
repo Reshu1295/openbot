@@ -193,10 +193,12 @@ async function ensurePrice(
 }
 
 /** The amounts of a license plan as one metadata value, so a run can see that the Price is up to date. */
-function licensePriceSignature(prices: Readonly<Record<string, LicensePrice>>): string {
-  return Object.entries(prices)
+/** The amounts and the users of the base tier. A change of either makes a new Price. */
+function licensePriceSignature(prices: Readonly<Record<string, LicensePrice>>, included: number): string {
+  const amounts = Object.entries(prices)
     .map(([currency, price]) => `${currency}:${price.base}+${price.extraUser}`)
     .join(",");
+  return `${amounts};${included}`;
 }
 
 async function ensureLicenseProduct(stripe: StripeAdmin): Promise<void> {
@@ -229,7 +231,8 @@ async function ensureLicensePrice(stripe: StripeAdmin, existing: readonly Price[
     BILLING_CURRENCIES.map((currency) => [currency, licensePlanPrice(plan, currency)] as const),
   );
   const bundle = String(plan.bundle);
-  const signature = licensePriceSignature(prices);
+  const included = licenseIncludedUsers(plan.tier);
+  const signature = licensePriceSignature(prices, included);
   const current = existing.find((price) => price.lookup_key === lookupKey);
   if (
     current &&
@@ -257,7 +260,6 @@ async function ensureLicensePrice(stripe: StripeAdmin, existing: readonly Price[
     [`metadata[${LICENSE_METADATA.bundle}]`]: bundle,
     "metadata[openbot_license_prices]": signature,
   });
-  const included = licenseIncludedUsers(plan.tier);
   if (plan.tier === "team") {
     body.set("billing_scheme", "tiered");
     body.set("tiers_mode", "graduated");

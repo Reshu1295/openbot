@@ -166,7 +166,7 @@ export const messages = {
   "billing.order.license.noneDetail": "Kişisel ve ticari olmayan kullanım",
   "billing.order.license.starter": "Starter lisansı",
   "billing.order.license.team": "Team lisansı",
-  "billing.order.license.bundleSaving": "Sunucuyla birlikte −{price}",
+  "billing.order.license.bundleSaving": "Sunucuyla birlikte −%{percent}",
   "billing.order.license.teamDetail": "{included} dahil, her ek üye için +{price}",
   "billing.order.license.serverMembers": { one: "Sunucunuzda {count} üye var", other: "Sunucunuzda {count} üye var" },
   "billing.order.license.members": "Team lisansı üyeleri",

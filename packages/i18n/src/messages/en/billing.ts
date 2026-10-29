@@ -175,7 +175,8 @@ export const messages = defineMessages("billing", {
   "billing.order.license.noneDetail": "Personal and noncommercial use",
   "billing.order.license.starter": "Starter license",
   "billing.order.license.team": "Team license",
-  "billing.order.license.bundleSaving": "−{price} with your server",
+  // {percent} is a whole number, such as 20.
+  "billing.order.license.bundleSaving": "−{percent}% with your server",
   // {included} is the number of members in the base price. {price} is the monthly price of one more member.
   "billing.order.license.teamDetail": "{included} included, +{price} for each more",
   "billing.order.license.serverMembers": {

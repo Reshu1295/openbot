@@ -91,7 +91,7 @@ export const messages = {
   "server.add.use.personal": "Personale",
   "server.add.use.work": "Lavoro",
   "server.add.license.people": "Persone al lavoro",
-  "server.add.license.bundle": "Pacchetto −{price}",
+  "server.add.license.bundle": "Pacchetto −{percent}%",
   "server.add.license.included": "Include: {license}",
   "server.add.license.includedTrial": "Include: {license}, gratis fino al {date}",
   "server.add.billedMonthly": "Fatturato mensilmente",

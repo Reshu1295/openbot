@@ -7,15 +7,16 @@ import {
 } from "@openbot/contracts/billing";
 import type { HostedServerCatalogPlan } from "@openbot/contracts/hosted-servers";
 import {
-  LICENSE_BUNDLE_DISCOUNT,
+  LICENSE_BUNDLE_DISCOUNT_PERCENT,
   LICENSE_INCLUDED_USERS,
   LICENSE_MAX_USERS,
-  LICENSE_PRICES,
   LICENSE_TRIAL_DATE_FORMAT,
   LICENSE_YEAR_DISCOUNT_PERCENT,
+  type LicensePlan,
   type LicenseTier,
   licenseListMonthly,
   licenseMonthlyPrice,
+  licenseOrderMonthly,
   type PricingOrder,
 } from "@openbot/contracts/license";
 import type { AppTextKey } from "@openbot/i18n";
@@ -352,16 +353,15 @@ export function OrderForm(props: OrderFormProps) {
   const licenseCost = () => licenseMonthlyPrice(licenseFull(), interval());
   /** A license costs less with any server: one in this order, or one that the account pays for. */
   const bundled = () => server() !== undefined || props.ownedServer === true;
-  const bundleOff = (choice: LicenseTier) => (bundled() ? LICENSE_BUNDLE_DISCOUNT[choice][currency()] : 0);
-  const bundleSaving = (choice: LicenseTier) =>
-    bundled()
-      ? t("billing.order.license.bundleSaving", {
-          price: formatMinorMoney(format, LICENSE_BUNDLE_DISCOUNT[choice][currency()], currency()),
-        })
-      : undefined;
+  const licensePlan = (tier: LicenseTier): LicensePlan => ({ tier, interval: interval(), bundle: bundled() });
+  /** The monthly price of a license after the yearly and bundle discounts: the amount that Stripe charges. */
+  const licensePrice = (choice: LicenseTier) =>
+    licenseOrderMonthly(licensePlan(choice), choice === "team" ? members() : 1, currency());
+  const bundleSaving = () =>
+    bundled() ? t("billing.order.license.bundleSaving", { percent: LICENSE_BUNDLE_DISCOUNT_PERCENT }) : undefined;
   const discount = () => {
     const choice = license();
-    return choice === "none" ? 0 : bundleOff(choice);
+    return choice === "none" ? 0 : licenseCost() - licensePrice(choice);
   };
   const total = () => serverCost() + licenseCost() - discount();
   const buying = () => server() !== undefined || licensed();
@@ -378,7 +378,8 @@ export function OrderForm(props: OrderFormProps) {
           included: LICENSE_INCLUDED_USERS,
           price: formatMinorMoney(
             format,
-            licenseMonthlyPrice(LICENSE_PRICES[currency()].extraUser, interval()),
+            licenseOrderMonthly(licensePlan("team"), LICENSE_INCLUDED_USERS + 1, currency()) -
+              licenseOrderMonthly(licensePlan("team"), LICENSE_INCLUDED_USERS, currency()),
             currency(),
           ),
         })
@@ -542,10 +543,10 @@ export function OrderForm(props: OrderFormProps) {
             <ChoiceRow
               value="starter"
               title={t("billing.order.license.starter")}
-              saving={bundleSaving("starter")}
+              saving={bundleSaving()}
               detail={starterDetail()}
               disabled={!starterFits()}
-              price={licenseMonthlyPrice(licenseList("starter"), interval()) - bundleOff("starter")}
+              price={licensePrice("starter")}
               fullPrice={licenseList("starter")}
               currency={currency()}
               unit={unit()}
@@ -553,10 +554,10 @@ export function OrderForm(props: OrderFormProps) {
             <ChoiceRow
               value="team"
               title={t("billing.order.license.team")}
-              saving={bundleSaving("team")}
+              saving={bundleSaving()}
               detail={teamDetail()}
               disabled={!teamFits()}
-              price={licenseMonthlyPrice(licenseList("team"), interval()) - bundleOff("team")}
+              price={licensePrice("team")}
               fullPrice={licenseList("team")}
               currency={currency()}
               unit={unit()}

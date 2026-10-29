@@ -470,7 +470,7 @@ export class HostedServerService {
           .prepare(
             `INSERT INTO hosted_servers(
            server_id, owner_user_id, name, size, plan, billing_interval, currency, desired_state, observed_state,
-           idempotency_key, legacy_starter_members, created_at, updated_at
+           idempotency_key, legacy_member_limits, created_at, updated_at
          ) VALUES (?, ?, ?, ?, ?, ?, ?, 'running', 'awaiting_payment', ?, 0, ?, ?)
          ON CONFLICT(owner_user_id, idempotency_key) DO NOTHING`,
           )

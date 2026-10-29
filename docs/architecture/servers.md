@@ -599,13 +599,13 @@ gives 8 Stripe prices (`LICENSE_PLANS`):
 
 | Plan | Lookup key | Month (EUR) | Year (EUR) | Users |
 | --- | --- | --- | --- | --- |
-| Starter | `openbot_license_starter_{month,year}` | 30 | 324 | 1 |
-| Starter bundle | `openbot_license_starter_bundle_{month,year}` | 20 | 204 | 1 |
-| Team | `openbot_license_{month,year}` | 100 for 5 users, + 15 for each extra user | 1080, + 162 | 5–25 |
-| Team bundle | `openbot_license_bundle_{month,year}` | 80, + 15 | 840, + 162 | 5–25 |
+| Starter | `openbot_license_starter_{month,year}` | 10 | 108 | 1 |
+| Starter bundle | `openbot_license_starter_bundle_{month,year}` | 8 | 86.40 | 1 |
+| Team | `openbot_license_{month,year}` | 25 for 2 users, + 15 for each extra user | 270, + 162 | 2–10 |
+| Team bundle | `openbot_license_bundle_{month,year}` | 20, + 12 | 216, + 129.60 | 2–10 |
 
 A year is 12 months less 10% (`LICENSE_YEAR_DISCOUNT_PERCENT`). The bundle discount
-(`LICENSE_BUNDLE_DISCOUNT`: 10 a month for Starter, 20 for Team) comes off after it. The amounts are
+(`LICENSE_BUNDLE_DISCOUNT_PERCENT`: 20%) comes off after it. The amounts are
 in `LICENSE_PLAN_PRICES` (EUR is the base currency; USD and PLN are `currency_options` with their own
 amounts). Team prices are graduated; the 1-user prices are flat. `stripe-bootstrap.ts` creates each
 price with the metadata `openbot_license_tier`, `openbot_license_interval` and

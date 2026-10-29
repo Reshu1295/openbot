@@ -9,7 +9,7 @@ afterEach(() => {
 });
 
 describe("license tiers migration", () => {
-  it("keeps rows, keeps 3 members for old Starter servers, and accepts old Worker writes", () => {
+  it("keeps rows, keeps the old member limits for old servers, and accepts old Worker writes", () => {
     const database = migratedDatabase("0040_server_member_limits.sql");
     databases.push(database);
     database.exec(`
@@ -40,12 +40,12 @@ describe("license tiers migration", () => {
     expect(after.users).toEqual(before.users);
     expect(after.customers).toEqual(before.customers);
     expect(after.subscriptions).toEqual(before.subscriptions);
-    expect(after.servers).toEqual(before.servers.map((row) => ({ ...row, legacy_starter_members: 1 })));
+    expect(after.servers).toEqual(before.servers.map((row) => ({ ...row, legacy_member_limits: 1 })));
     expect(after.licenses).toEqual(
       before.licenses.map((row) => ({ ...row, tier: null, billing_interval: null, bundle: 0 })),
     );
 
-    // The old Worker's writes name their columns, so they still run. Its new server keeps 3 members.
+    // The old Worker's writes name their columns, so they still run. Its new server keeps the old member limits.
     database.exec(`
       INSERT INTO hosted_servers(
         server_id, owner_user_id, name, size, plan, billing_interval, currency, desired_state, observed_state,
@@ -61,8 +61,8 @@ describe("license tiers migration", () => {
       WHERE excluded.updated_at >= licenses.updated_at;
     `);
     expect(
-      database.prepare("SELECT legacy_starter_members FROM hosted_servers WHERE server_id = 'server-2'").get(),
-    ).toEqual({ legacy_starter_members: 1 });
+      database.prepare("SELECT legacy_member_limits FROM hosted_servers WHERE server_id = 'server-2'").get(),
+    ).toEqual({ legacy_member_limits: 1 });
     expect(
       database
         .prepare(
@@ -75,12 +75,12 @@ describe("license tiers migration", () => {
     database.exec(`
       INSERT INTO hosted_servers(
         server_id, owner_user_id, name, size, plan, billing_interval, currency, desired_state, observed_state,
-        idempotency_key, legacy_starter_members, created_at, updated_at
+        idempotency_key, legacy_member_limits, created_at, updated_at
       ) VALUES ('server-3', 'owner', 'New', 'small', 'starter', 'month', 'eur', 'running', 'awaiting_payment', 'key-3', 0, 3, 3);
       UPDATE licenses SET tier = 'starter', billing_interval = 'year', bundle = 1
       WHERE stripe_subscription_id = 'sub_license';
     `);
-    expect(() => database.exec("UPDATE hosted_servers SET legacy_starter_members = 2")).toThrow();
+    expect(() => database.exec("UPDATE hosted_servers SET legacy_member_limits = 2")).toThrow();
     expect(() => database.exec("UPDATE licenses SET tier = 'gold'")).toThrow();
     expect(() => database.exec("UPDATE licenses SET tier = 'server'")).toThrow();
     expect(() => database.exec("UPDATE licenses SET bundle = 2")).toThrow();

@@ -166,7 +166,7 @@ export const messages = {
   "billing.order.license.noneDetail": "個人利用と非商用利用",
   "billing.order.license.starter": "Starter ライセンス",
   "billing.order.license.team": "Team ライセンス",
-  "billing.order.license.bundleSaving": "サーバーとセットで −{price}",
+  "billing.order.license.bundleSaving": "サーバーとセットで −{percent}%",
   "billing.order.license.teamDetail": "{included} 人を含む、追加 1 人につき +{price}",
   "billing.order.license.serverMembers": { other: "サーバーのメンバーは {count} 人です" },
   "billing.order.license.members": "Team ライセンスのメンバー",

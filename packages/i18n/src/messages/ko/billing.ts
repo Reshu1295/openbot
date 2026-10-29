@@ -160,7 +160,7 @@ export const messages = {
   "billing.order.license.noneDetail": "개인 및 비상업적 용도",
   "billing.order.license.starter": "Starter 라이선스",
   "billing.order.license.team": "Team 라이선스",
-  "billing.order.license.bundleSaving": "서버와 함께 −{price}",
+  "billing.order.license.bundleSaving": "서버와 함께 −{percent}%",
   "billing.order.license.teamDetail": "{included}명 포함, 추가 1명당 +{price}",
   "billing.order.license.serverMembers": { other: "서버 멤버는 {count}명이에요" },
   "billing.order.license.members": "Team 라이선스 멤버",

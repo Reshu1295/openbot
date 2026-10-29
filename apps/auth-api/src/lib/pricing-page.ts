@@ -10,7 +10,7 @@ export const PRICING_ROUTE = "/pricing";
 export const SOLD_OUT_PLANS: ReadonlySet<BillingPlanId> = new Set(["starter"]);
 
 /** The sitemap date of the page. Change it when its text changes. */
-export const PRICING_PAGE_UPDATED_AT = "2026-10-23";
+export const PRICING_PAGE_UPDATED_AT = "2026-10-29";
 
 /** The EU member states, as the ISO 3166-1 alpha-2 codes of the `CF-IPCountry` header. */
 const EU_COUNTRIES: ReadonlySet<string> = new Set([

@@ -16,8 +16,8 @@ import { isBoolean, isDynamicRecord, isNumber, isOneOf, isString } from "./runti
  * People count, not servers or computers: the owner and each account that is an active member of a
  * server that the owner owns. AI agents and chat-app participants do not count.
  *
- * There are two tiers: Starter is 1 user, Team is 5 to 25 users. Each is monthly or yearly. An account
- * that pays for a hosted server (any plan) pays the bundle price, which is a fixed amount less each month.
+ * There are two tiers: Starter is 1 user, Team is 2 to 10 users. Each is monthly or yearly. An account
+ * that pays for a hosted server (any plan) pays the bundle price, which is a percentage less.
  * The `/pricing` page and the app's order form show these prices; Stripe charges the same amounts.
  */
 
@@ -91,14 +91,16 @@ export const ORDER_METADATA = {
   licenseTrialEnd: "openbot_order_license_trial_end",
 } as const;
 
-/** The base price of the Team tier includes this many users. */
-export const LICENSE_INCLUDED_USERS = 5;
+/** The base price of the Team tier includes this many users. It is also the smallest Team license. */
+export const LICENSE_INCLUDED_USERS = 2;
 /** The largest license that the app sells. A larger team contacts sales. */
-export const LICENSE_MAX_USERS = 25;
+export const LICENSE_MAX_USERS = 10;
 /** The license terms allow this many devices for each user. The app does not count them. */
 export const LICENSE_DEVICES_PER_USER = 3;
 /** Yearly billing takes this share off a license. The bundle discount comes off after it. */
 export const LICENSE_YEAR_DISCOUNT_PERCENT = 10;
+/** A license of an account that pays for a hosted server costs this share less, after the yearly discount. */
+export const LICENSE_BUNDLE_DISCOUNT_PERCENT = 20;
 
 /** The base price and the price of each extra user, in minor units. */
 export interface LicensePrice {
@@ -108,27 +110,25 @@ export interface LicensePrice {
 
 /** The monthly price of the Starter license, for its one user, in minor units. */
 export const LICENSE_STARTER_MONTHLY: Readonly<Record<BillingCurrency, number>> = {
-  eur: 3_000,
-  usd: 3_600,
-  pln: 13_200,
+  eur: 1_000,
+  usd: 1_200,
+  pln: 4_400,
 };
 
 /** The monthly price of the Team license: the base for the included users, then each extra user. */
 export const LICENSE_PRICES: Readonly<Record<BillingCurrency, LicensePrice>> = {
-  eur: { base: 10_000, extraUser: 1_500 },
-  usd: { base: 12_000, extraUser: 1_800 },
-  pln: { base: 44_000, extraUser: 6_600 },
+  eur: { base: 2_500, extraUser: 1_500 },
+  usd: { base: 3_000, extraUser: 1_800 },
+  pln: { base: 11_000, extraUser: 6_600 },
 };
 
-/** A license of an account that pays for a hosted server costs this much less each month, in minor units. */
-export const LICENSE_BUNDLE_DISCOUNT: Readonly<Record<LicenseTier, Readonly<Record<BillingCurrency, number>>>> = {
-  starter: { eur: 1_000, usd: 1_200, pln: 4_400 },
-  team: { eur: 2_000, usd: 2_400, pln: 8_800 },
-};
+function percentOff(amount: number, percent: number): number {
+  return Math.round((amount * (100 - percent)) / 100);
+}
 
 /** The price for one month of a license from its monthly list price, before the bundle discount. */
 export function licenseMonthlyPrice(month: number, interval: BillingInterval): number {
-  return interval === "month" ? month : Math.round((month * (100 - LICENSE_YEAR_DISCOUNT_PERCENT)) / 100);
+  return interval === "month" ? month : percentOff(month, LICENSE_YEAR_DISCOUNT_PERCENT);
 }
 
 type LicensePlanKey = `${LicenseTier}_${"" | "bundle_"}${BillingInterval}`;
@@ -143,40 +143,40 @@ function licensePlanKey(plan: LicensePlan): LicensePlanKey {
  */
 export const LICENSE_PLAN_PRICES: Readonly<Record<LicensePlanKey, Readonly<Record<BillingCurrency, LicensePrice>>>> = {
   starter_month: {
-    eur: { base: 3_000, extraUser: 0 },
-    usd: { base: 3_600, extraUser: 0 },
-    pln: { base: 13_200, extraUser: 0 },
+    eur: { base: 1_000, extraUser: 0 },
+    usd: { base: 1_200, extraUser: 0 },
+    pln: { base: 4_400, extraUser: 0 },
   },
   starter_year: {
-    eur: { base: 32_400, extraUser: 0 },
-    usd: { base: 38_880, extraUser: 0 },
-    pln: { base: 142_560, extraUser: 0 },
+    eur: { base: 10_800, extraUser: 0 },
+    usd: { base: 12_960, extraUser: 0 },
+    pln: { base: 47_520, extraUser: 0 },
   },
   starter_bundle_month: {
-    eur: { base: 2_000, extraUser: 0 },
-    usd: { base: 2_400, extraUser: 0 },
-    pln: { base: 8_800, extraUser: 0 },
+    eur: { base: 800, extraUser: 0 },
+    usd: { base: 960, extraUser: 0 },
+    pln: { base: 3_520, extraUser: 0 },
   },
   starter_bundle_year: {
-    eur: { base: 20_400, extraUser: 0 },
-    usd: { base: 24_480, extraUser: 0 },
-    pln: { base: 89_760, extraUser: 0 },
+    eur: { base: 8_640, extraUser: 0 },
+    usd: { base: 10_368, extraUser: 0 },
+    pln: { base: 38_016, extraUser: 0 },
   },
   team_month: LICENSE_PRICES,
   team_year: {
-    eur: { base: 108_000, extraUser: 16_200 },
-    usd: { base: 129_600, extraUser: 19_440 },
-    pln: { base: 475_200, extraUser: 71_280 },
+    eur: { base: 27_000, extraUser: 16_200 },
+    usd: { base: 32_400, extraUser: 19_440 },
+    pln: { base: 118_800, extraUser: 71_280 },
   },
   team_bundle_month: {
-    eur: { base: 8_000, extraUser: 1_500 },
-    usd: { base: 9_600, extraUser: 1_800 },
-    pln: { base: 35_200, extraUser: 6_600 },
+    eur: { base: 2_000, extraUser: 1_200 },
+    usd: { base: 2_400, extraUser: 1_440 },
+    pln: { base: 8_800, extraUser: 5_280 },
   },
   team_bundle_year: {
-    eur: { base: 84_000, extraUser: 16_200 },
-    usd: { base: 100_800, extraUser: 19_440 },
-    pln: { base: 369_600, extraUser: 71_280 },
+    eur: { base: 21_600, extraUser: 12_960 },
+    usd: { base: 25_920, extraUser: 15_552 },
+    pln: { base: 95_040, extraUser: 57_024 },
   },
 };
 
@@ -218,7 +218,7 @@ export function licenseListMonthly(tier: LicenseTier, users: number, currency: B
  */
 export function licenseOrderMonthly(plan: LicensePlan, users: number, currency: BillingCurrency): number {
   const month = licenseMonthlyPrice(licenseListMonthly(plan.tier, users, currency), plan.interval);
-  return month - (plan.bundle ? LICENSE_BUNDLE_DISCOUNT[plan.tier][currency] : 0);
+  return plan.bundle ? percentOff(month, LICENSE_BUNDLE_DISCOUNT_PERCENT) : month;
 }
 
 /** The monthly amount of a Team license with this many users, in minor units. */
@@ -280,10 +280,9 @@ export function licenseOrderFor(people: number): LicenseOrder {
     : { tier: "team", users: Math.max(LICENSE_INCLUDED_USERS, people) };
 }
 
-/** The next user count to offer. 2 to 4 users cost the same as the Team minimum, so 1 steps to it and back. */
+/** The next user count to offer: 1 is Starter, and the Team counts follow it. */
 export function stepLicenseUsers(users: number, delta: 1 | -1): number {
-  if (delta > 0) return users < LICENSE_INCLUDED_USERS ? LICENSE_INCLUDED_USERS : users + 1;
-  return users <= LICENSE_INCLUDED_USERS ? 1 : users - 1;
+  return Math.max(1, users + delta);
 }
 
 export interface License {

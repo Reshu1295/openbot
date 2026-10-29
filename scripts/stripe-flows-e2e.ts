@@ -28,18 +28,19 @@
  * The license tiers have their own scenarios:
  * - `license-prices`: the 8 license lookup keys give active Prices with the tier, the interval, the bundle
  *   flag and the amounts of `LICENSE_PLAN_PRICES` in EUR, USD and PLN. No license key is a server plan key.
- * - `license-starter`: a Starter license is 1 user at €30. It cannot change its users, and no member joins.
+ * - `license-starter`: a Starter license is 1 user at €10. It cannot change its users, and no member joins.
  * - `license-bundle-align`: an account with a server plan buys the Starter license at the bundle price
- *   (€20). When the server plan ends, the license moves to the Starter price, and the next renewal is €30.
+ *   (€8). When the server plan ends, the license moves to the Starter price, and the next renewal is €10.
  * - `order-bundle`: a server create with a license order gives one Checkout page with the server Price and
  *   the Team bundle Price. After the payment the license moves to its own subscription with no second
  *   charge, renews with the server, and a second license order is refused.
  * - `license-team-year`: a yearly Team license of 7 users. The state, the invoice and the sales facts
  *   show the yearly interval.
  * - `license-upgrade`: Starter → Team monthly → Team yearly. A move to a lower plan is refused.
- * - `license-legacy-request`: a checkout request from an app before the tiers buys Team monthly (€100).
- * - `license-member-limits`: a new Starter hosted server takes 1 member (the owner). A server made before
- *   the 1-member limit (`legacy_starter_members = 1`) takes 3.
+ * - `license-legacy-request`: a checkout request from an app before the tiers buys Team monthly (5 users at €70).
+ * - `license-member-limits`: a new Starter hosted server takes 1 member (the owner), and a new Standard
+ *   server takes 5. A server made before these limits (`legacy_member_limits = 1`) takes 3 on Starter and
+ *   10 on Standard.
  *
  * The license promotion (`LICENSE_TRIAL_END`, in `wrangler.jsonc`) has its own scenarios. They run only
  * when the Worker sells the free trial, and `order-bundle` runs only when it does not. To run
@@ -61,10 +62,14 @@ import {
   type BillingCurrency,
   type BillingPlanId,
   type BillingPortalRequest,
+  LEGACY_MEMBER_LIMITS,
+  memberLimitForPlan,
   parseBillingLookupKey,
 } from "@openbot/contracts/billing";
 import {
+  LICENSE_INCLUDED_USERS,
   LICENSE_LOOKUP_KEYS,
+  LICENSE_MAX_USERS,
   LICENSE_METADATA,
   LICENSE_METADATA_KIND,
   LICENSE_PLANS,
@@ -1181,13 +1186,13 @@ async function hostMemberLimit(account: Account, hostId: string) {
   return listed?.hosts.find((host) => host.hostId === hostId)?.memberLimit ?? null;
 }
 
-/** The `legacy_starter_members` value of a hosted server row. */
-function legacyStarterMembers(serverId: string) {
+/** The `legacy_member_limits` value of a hosted server row. */
+function legacyMemberLimits(serverId: string) {
   return (
     d1(
-      `SELECT legacy_starter_members FROM hosted_servers WHERE server_id = ${quote(serverId)}`,
-      z.object({ legacy_starter_members: z.number() }),
-    )[0]?.legacy_starter_members ?? null
+      `SELECT legacy_member_limits FROM hosted_servers WHERE server_id = ${quote(serverId)}`,
+      z.object({ legacy_member_limits: z.number() }),
+    )[0]?.legacy_member_limits ?? null
   );
 }
 
@@ -1955,7 +1960,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const bought = await licenseWhere(account, "license active", (state) => state.license?.status === "active");
     record(
       "license-buy",
-      "7 users in EUR: the license shows Team monthly, 7 users and the list price €110",
+      "7 users in EUR: the license shows Team monthly, 7 users and the list price €100",
       bought.license?.users === 7 &&
         bought.license.currency === "eur" &&
         bought.license.amount === licensePeriodAmount(TEAM_MONTH, 7, "eur") &&
@@ -2029,11 +2034,17 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
       status: second.status,
       code: second.code,
     });
-    const tooMany = await account.request("POST", "v1/me/license/checkout", { users: 26, currency: "eur" });
-    const tooFew = await account.request("POST", "v1/me/license/checkout", { users: 4, currency: "eur" });
+    const tooMany = await account.request("POST", "v1/me/license/checkout", {
+      users: LICENSE_MAX_USERS + 1,
+      currency: "eur",
+    });
+    const tooFew = await account.request("POST", "v1/me/license/checkout", {
+      users: LICENSE_INCLUDED_USERS - 1,
+      currency: "eur",
+    });
     record(
       "license-checkout",
-      "26 or 4 users: 400, because the app sells 5 to 25",
+      `${LICENSE_MAX_USERS + 1} or ${LICENSE_INCLUDED_USERS - 1} Team users: 400, because the app sells ${LICENSE_INCLUDED_USERS} to ${LICENSE_MAX_USERS}`,
       tooMany.status === 400 && tooFew.status === 400,
       { tooMany: tooMany.code, tooFew: tooFew.code },
     );
@@ -2084,25 +2095,26 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
   },
 
   async "license-users"(account) {
-    // 6 members on one server: the license counts 7 people with the owner.
-    account.addServers([{ name: "Office", members: ["a", "b", "c", "d", "e", "f"].map((key) => ({ key })) }]);
-    const sub = await account.buyLicense(9);
-    await licenseWhere(account, "license active", (state) => state.license?.users === 9);
+    // 3 members on one server: the license counts 4 people with the owner. Each count stays at most
+    // LICENSE_MAX_USERS (10).
+    account.addServers([{ name: "Office", members: ["a", "b", "c"].map((key) => ({ key })) }]);
+    const sub = await account.buyLicense(6);
+    await licenseWhere(account, "license active", (state) => state.license?.users === 6);
     const invoicesBefore = (await invoices(sub)).length;
-    const more = await account.request("POST", "v1/me/license/users", { users: 11 });
+    const more = await account.request("POST", "v1/me/license/users", { users: 8 });
     const moreInvoices = await invoices(sub);
     record(
       "license-users",
-      "9 → 11 users: the license shows 11, and Stripe invoices and charges the prorated amount at once",
+      "6 → 8 users: the license shows 8, and Stripe invoices and charges the prorated amount at once",
       more.status === 200 &&
-        licenseStateSchema.parse(more.body).license?.users === 11 &&
+        licenseStateSchema.parse(more.body).license?.users === 8 &&
         moreInvoices.length === invoicesBefore + 1 &&
         moreInvoices[0]?.reason === "subscription_update" &&
         moreInvoices[0].status === "paid" &&
         moreInvoices[0].amount > 0,
       { status: more.status, invoices: moreInvoices },
     );
-    const fewer = await account.request("POST", "v1/me/license/users", { users: 8 });
+    const fewer = await account.request("POST", "v1/me/license/users", { users: 5 });
     const fewerInvoices = await invoices(sub);
     const item = await stripe(
       "GET",
@@ -2111,42 +2123,45 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     );
     record(
       "license-users",
-      "11 → 8 users: no new invoice and no refund; the Stripe quantity is 8 for the next invoice",
-      fewer.status === 200 && fewerInvoices.length === moreInvoices.length && item.items.data[0]?.quantity === 8,
+      "8 → 5 users: no new invoice and no refund; the Stripe quantity is 5 for the next invoice",
+      fewer.status === 200 && fewerInvoices.length === moreInvoices.length && item.items.data[0]?.quantity === 5,
       { status: fewer.status, invoices: fewerInvoices, quantity: item.items.data[0]?.quantity },
     );
-    const inUse = await account.request("POST", "v1/me/license/users", { users: 6 });
-    record("license-users", "6 users while 7 people use it: 409 license_users_in_use", inUse.status === 409, {
+    const inUse = await account.request("POST", "v1/me/license/users", { users: 3 });
+    record("license-users", "3 users while 4 people use it: 409 license_users_in_use", inUse.status === 409, {
       status: inUse.status,
       code: inUse.code,
     });
-    const over = await account.request("POST", "v1/me/license/users", { users: 26 });
-    record("license-users", "26 users: 400", over.status === 400, { status: over.status, code: over.code });
+    const over = await account.request("POST", "v1/me/license/users", { users: LICENSE_MAX_USERS + 1 });
+    record("license-users", `${LICENSE_MAX_USERS + 1} users: 400`, over.status === 400, {
+      status: over.status,
+      code: over.code,
+    });
     await account.useCard("pm_card_chargeCustomerFail");
-    const declined = await account.request("POST", "v1/me/license/users", { users: 12 });
+    const declined = await account.request("POST", "v1/me/license/users", { users: 9 });
     const after = await account.license();
     record(
       "license-users",
-      "an increase with a failing card: 402 license_payment_failed, and the license keeps 8 users",
-      declined.status === 402 && declined.code === "license_payment_failed" && after.license?.users === 8,
+      "an increase with a failing card: 402 license_payment_failed, and the license keeps 5 users",
+      declined.status === 402 && declined.code === "license_payment_failed" && after.license?.users === 5,
       { status: declined.status, code: declined.code, users: after.license?.users },
     );
     await account.useCard("pm_card_visa");
-    const paidBack = await account.request("POST", "v1/me/license/users", { users: 10 });
+    const paidBack = await account.request("POST", "v1/me/license/users", { users: 7 });
     const paidBackInvoices = await invoices(sub);
     record(
       "license-users",
-      "8 → 10 users in the period that paid for 11: no new invoice",
+      "5 → 7 users in the period that paid for 8: no new invoice",
       paidBack.status === 200 && paidBackInvoices.length === moreInvoices.length,
       { status: paidBack.status, invoices: paidBackInvoices },
     );
-    const extra = await account.request("POST", "v1/me/license/users", { users: 12 });
+    const extra = await account.request("POST", "v1/me/license/users", { users: 9 });
     const extraInvoices = await invoices(sub);
     record(
       "license-users",
-      "10 → 12 users: one paid invoice for the 12th user only, less than the 9 → 11 invoice",
+      "7 → 9 users: one paid invoice for the 9th user only, less than the 6 → 8 invoice",
       extra.status === 200 &&
-        licenseStateSchema.parse(extra.body).license?.users === 12 &&
+        licenseStateSchema.parse(extra.body).license?.users === 9 &&
         extraInvoices.length === paidBackInvoices.length + 1 &&
         extraInvoices[0]?.status === "paid" &&
         extraInvoices[0].amount > 0 &&
@@ -2441,7 +2456,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const amount = licensePeriodAmount(STARTER_MONTH, 1, "eur");
     record(
       "license-starter",
-      "Starter in EUR: the license shows the starter tier, monthly, 1 user and €30, and Stripe charged €30",
+      "Starter in EUR: the license shows the starter tier, monthly, 1 user and €10, and Stripe charged €10",
       bought.license?.tier === "starter" &&
         bought.license.interval === "month" &&
         bought.license.users === 1 &&
@@ -2513,7 +2528,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const bundleAmount = licensePeriodAmount(STARTER_BUNDLE_MONTH, 1, "eur");
     record(
       "license-bundle-align",
-      "the license is Starter with the bundle at €20, and Stripe charged €20",
+      "the license is Starter with the bundle at €8, and Stripe charged €8",
       bought.license?.tier === "starter" &&
         bought.license.bundle === true &&
         bought.license.amount === bundleAmount &&
@@ -2539,7 +2554,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const starterAmount = licensePeriodAmount(STARTER_MONTH, 1, "eur");
     record(
       "license-bundle-align",
-      "the server plan ends: alignBundlePrice moves the subscription item to the Starter Price with no new invoice, and the state shows the Starter tier at €30 and no bundle",
+      "the server plan ends: alignBundlePrice moves the subscription item to the Starter Price with no new invoice, and the state shows the Starter tier at €10 and no bundle",
       moved !== null &&
         starter?.license?.tier === "starter" &&
         starter.license.amount === starterAmount &&
@@ -2558,7 +2573,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     );
     record(
       "license-bundle-align",
-      "the test clock passes the period end: the renewal invoice is the Starter price, €30",
+      "the test clock passes the period end: the renewal invoice is the Starter price, €10",
       renewed[0]?.reason === "subscription_cycle" && renewed[0].amount === starterAmount,
       { invoices: renewed },
     );
@@ -2570,8 +2585,9 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
       return;
     }
     const team = (users: number): LicenseOrder => ({ tier: "team", users });
-    const starterPlan = await account.orderServer("Solo server", "starter", team(1));
-    const tooMany = await account.orderServer("Big server", "standard", team(11));
+    const standardMembers = memberLimitForPlan("standard");
+    const starterPlan = await account.orderServer("Solo server", "starter", team(LICENSE_INCLUDED_USERS));
+    const tooMany = await account.orderServer("Big server", "standard", team(standardMembers + 1));
     // The message names the field, so a refused name cannot pass for a refused license.
     const licenseRefused = (response: { status: number; body: unknown }) =>
       response.status === 400 &&
@@ -2579,12 +2595,12 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
         .message === "The license is invalid.";
     record(
       "order-bundle",
-      "a Team license on a Starter server, and 11 Team users on a 10-member Standard server: 400, the license is invalid",
+      `a Team license on a Starter server, and ${standardMembers + 1} Team users on a ${standardMembers}-member Standard server: 400, the license is invalid`,
       licenseRefused(starterPlan) && licenseRefused(tooMany),
       { starter: starterPlan.body, tooMany: tooMany.body },
     );
 
-    const order = team(6);
+    const order = team(4);
     const opened = await account.orderServer("Order server", "standard", order);
     const created = createdSchema.safeParse(opened.body).data;
     const session = created?.checkoutUrl ? await licenseSession(created.checkoutUrl) : null;
@@ -2593,7 +2609,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const licenseLine = lines.find((line) => line.price.lookup_key === licenseLookupKey(TEAM_BUNDLE_MONTH));
     record(
       "order-bundle",
-      "a Standard server with a Team order of 6 users: 201 and one Checkout page with 2 lines, the server Price and the Team bundle Price for 6 users",
+      "a Standard server with a Team order of 4 users: 201 and one Checkout page with 2 lines, the server Price and the Team bundle Price for 4 users",
       opened.status === 201 &&
         lines.length === 2 &&
         serverLine?.quantity === 1 &&
@@ -2638,7 +2654,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const splitInvoices = await invoices(licenseSub);
     record(
       "order-bundle",
-      "the license moves to its own subscription: Team, 6 users, the bundle amount, the server subscription named in its metadata, no charge, and no license item on the server plan",
+      "the license moves to its own subscription: Team, 4 users, the bundle amount, the server subscription named in its metadata, no charge, and no license item on the server plan",
       licensed.license?.tier === "team" &&
         licensed.license.bundle === true &&
         licensed.license.users === order.users &&
@@ -2691,7 +2707,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     );
     record(
       "order-bundle",
-      "the test clock passes the period end: the license renews at the Team bundle amount for 6 users",
+      "the test clock passes the period end: the license renews at the Team bundle amount for 4 users",
       renewed[0]?.reason === "subscription_cycle" && renewed[0].amount === licenseAmount,
       { invoices: renewed },
     );
@@ -2756,7 +2772,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const monthInvoices = await invoices(sub);
     record(
       "license-upgrade",
-      "Starter → Team monthly with 5 users: 200, Team monthly at €100 in the state, the Team monthly Price in Stripe, and one paid invoice now",
+      "Starter → Team monthly with 5 users: 200, Team monthly at €70 in the state, the Team monthly Price in Stripe, and one paid invoice now",
       toMonth.status === 200 &&
         month?.tier === "team" &&
         month.interval === "month" &&
@@ -2833,15 +2849,15 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     );
     const sub = bought.license?.subscriptionId ?? null;
     const paid = sub ? await invoices(sub) : [];
-    const base = licensePeriodAmount(TEAM_MONTH, 5, "eur");
+    const amount = licensePeriodAmount(TEAM_MONTH, 5, "eur");
     record(
       "license-legacy-request",
-      "the license is Team monthly with 5 users at the €100 base, and Stripe charged €100",
+      "the license is Team monthly with 5 users at €70, and Stripe charged €70",
       bought.license?.tier === "team" &&
         bought.license.interval === "month" &&
         bought.license.users === 5 &&
-        bought.license.amount === base &&
-        paid[0]?.amount === base,
+        bought.license.amount === amount &&
+        paid[0]?.amount === amount,
       { license: bought.license, invoices: paid },
     );
   },
@@ -2856,15 +2872,15 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     await planWhere(account, legacySub, "plan", () => true);
     const freshId = fresh.server.serverId;
     const legacyId = legacy.server.serverId;
-    const written = { fresh: legacyStarterMembers(freshId), legacy: legacyStarterMembers(legacyId) };
+    const written = { fresh: legacyMemberLimits(freshId), legacy: legacyMemberLimits(legacyId) };
     record(
       "license-member-limits",
-      "the Worker writes legacy_starter_members = 0 for each new hosted server",
+      "the Worker writes legacy_member_limits = 0 for each new hosted server",
       written.fresh === 0 && written.legacy === 0,
       written,
     );
     // The migration gives 1 to each hosted server row from before it. This row stands for one of them.
-    d1(`UPDATE hosted_servers SET legacy_starter_members = 1 WHERE server_id = ${quote(legacyId)}`, z.unknown());
+    d1(`UPDATE hosted_servers SET legacy_member_limits = 1 WHERE server_id = ${quote(legacyId)}`, z.unknown());
     // Starter is sold out, so both servers pay Standard. These rows stand for Starter plans from before.
     d1(
       `UPDATE billing_subscriptions SET plan = 'starter'
@@ -2887,13 +2903,55 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const legacyLimit = await hostMemberLimit(account, legacyId);
     record(
       "license-member-limits",
-      "a Starter server with legacy_starter_members = 1 allows 3 members: the host list shows 3, 2 members join next to the owner, and the third gets 409 member_limit_reached",
+      "a Starter server with legacy_member_limits = 1 allows 3 members: the host list shows 3, 2 members join next to the owner, and the third gets 409 member_limit_reached",
       legacyLimit === 3 &&
         joins[0]?.status === 200 &&
         joins[1]?.status === 200 &&
         joins[2]?.status === 409 &&
         joins[2].code === "member_limit_reached",
       { memberLimit: legacyLimit, joins: joins.map((join) => ({ status: join.status, code: join.code })) },
+    );
+
+    // Both servers go back to Standard, the plan that they pay in Stripe.
+    d1(
+      `UPDATE billing_subscriptions SET plan = 'standard'
+       WHERE stripe_subscription_id IN (${quote(freshSub)}, ${quote(legacySub)})`,
+      z.unknown(),
+    );
+    // New members join until the server is full, then one more: each join passes but the last.
+    const fill = async (hostId: string, prefix: string, active: number, limit: number) => {
+      const results = [];
+      for (let index = active; index <= limit; index += 1)
+        results.push(await account.joinHost(`${prefix}${index}`, hostId));
+      return results;
+    };
+    const full = (results: { status: number; code: string | null }[]) =>
+      results.slice(0, -1).every((join) => join.status === 200) &&
+      results.at(-1)?.status === 409 &&
+      results.at(-1)?.code === "member_limit_reached";
+    const standard = memberLimitForPlan("standard");
+    const freshJoins = await fill(freshId, "fresh-standard-", 1, standard);
+    const freshStandardLimit = await hostMemberLimit(account, freshId);
+    record(
+      "license-member-limits",
+      `a new Standard server allows ${standard} members: the host list shows ${standard}, ${standard - 1} members join next to the owner, and the next gets 409 member_limit_reached`,
+      freshStandardLimit === standard && full(freshJoins),
+      {
+        memberLimit: freshStandardLimit,
+        joins: freshJoins.map((join) => ({ status: join.status, code: join.code })),
+      },
+    );
+    const legacyStandard = LEGACY_MEMBER_LIMITS.standard;
+    const legacyJoins = await fill(legacyId, "legacy-standard-", LEGACY_MEMBER_LIMITS.starter, legacyStandard);
+    const legacyStandardLimit = await hostMemberLimit(account, legacyId);
+    record(
+      "license-member-limits",
+      `a Standard server with legacy_member_limits = 1 allows ${legacyStandard} members: the host list shows ${legacyStandard}, ${legacyStandard - LEGACY_MEMBER_LIMITS.starter} more members join, and the next gets 409 member_limit_reached`,
+      legacyStandardLimit === legacyStandard && full(legacyJoins),
+      {
+        memberLimit: legacyStandardLimit,
+        joins: legacyJoins.map((join) => ({ status: join.status, code: join.code })),
+      },
     );
   },
 
@@ -2951,7 +3009,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
       print("SKIP [order-trial] the Worker sells no license promotion: set LICENSE_TRIAL_END");
       return;
     }
-    const order: LicenseOrder = { tier: "team", users: 6 };
+    const order: LicenseOrder = { tier: "team", users: 4 };
     const opened = await account.orderServer("Trial order", "standard", order);
     const created = createdSchema.safeParse(opened.body).data;
     const session = created?.checkoutUrl ? await licenseSession(created.checkoutUrl) : null;
@@ -2959,7 +3017,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const metadata = session?.metadata ?? {};
     record(
       "order-trial",
-      "a Standard server with a Team order of 6 users: one Checkout page with the server Price only, and the order with the trial end in its metadata",
+      "a Standard server with a Team order of 4 users: one Checkout page with the server Price only, and the order with the trial end in its metadata",
       opened.status === 201 &&
         lines.length === 1 &&
         lines[0]?.price.lookup_key === "openbot_standard_month" &&
@@ -3001,7 +3059,7 @@ const scenarios: Record<Scenario, (account: Account) => Promise<void>> = {
     const charged = await invoices(licenseSub);
     record(
       "order-trial",
-      "a trialing Team license of 6 users at the bundle amount starts on its own subscription, ends its trial on the trial end, names the server subscription, charges nothing, and the order metadata leaves the server plan",
+      "a trialing Team license of 4 users at the bundle amount starts on its own subscription, ends its trial on the trial end, names the server subscription, charges nothing, and the order metadata leaves the server plan",
       licensed.license?.tier === "team" &&
         licensed.license.bundle === true &&
         licensed.license.users === order.users &&

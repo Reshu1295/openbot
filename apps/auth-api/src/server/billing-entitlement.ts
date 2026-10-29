@@ -6,14 +6,14 @@ import {
   BILLING_PLANS,
   type BillingPlanId,
   type BillingSubscriptionStatus,
+  LEGACY_MEMBER_LIMITS,
   memberLimitForPlan,
 } from "@openbot/contracts/billing";
-import { DEFAULT_TEAM_MEMBER_LIMIT } from "@openbot/contracts/input-limits";
 
 export interface BillingEntitlement {
   plan: BillingPlanId;
   storageGb: number;
-  /** The active members that the plan allows. A Starter server made before the 1-member limit keeps 3. */
+  /** The active members that the plan allows. A server made before the current limits keeps its legacy limit. */
   memberLimit: number;
   status: BillingSubscriptionStatus;
   /** Milliseconds since the epoch. */
@@ -39,7 +39,7 @@ export const getServerEntitlement = Effect.fn("Billing.getServerEntitlement")(fu
     try: () =>
       database
         .prepare(
-          `SELECT s.plan, s.status, s.current_period_end, hs.legacy_starter_members FROM billing_subscriptions s
+          `SELECT s.plan, s.status, s.current_period_end, hs.legacy_member_limits FROM billing_subscriptions s
        LEFT JOIN remote_hosts h ON h.host_id = s.server_id AND h.owner_user_id = s.user_id
        LEFT JOIN hosted_servers hs ON hs.server_id = s.server_id AND hs.owner_user_id = s.user_id
        WHERE s.server_id = ? AND s.status IN ('active', 'trialing', 'past_due')
@@ -51,7 +51,7 @@ export const getServerEntitlement = Effect.fn("Billing.getServerEntitlement")(fu
           plan: string;
           status: BillingSubscriptionStatus;
           current_period_end: number | null;
-          legacy_starter_members: number | null;
+          legacy_member_limits: number | null;
         }>(),
     catch: () => new BillingEntitlementError({}),
   });
@@ -62,7 +62,7 @@ export const getServerEntitlement = Effect.fn("Billing.getServerEntitlement")(fu
     return {
       plan: plan.id,
       storageGb: plan.storageGb,
-      memberLimit: memberLimit(plan.id, row.legacy_starter_members),
+      memberLimit: memberLimit(plan.id, row.legacy_member_limits),
       status: row.status,
       currentPeriodEnd: row.current_period_end,
     };
@@ -99,10 +99,9 @@ function entitled(row: { status: BillingSubscriptionStatus; current_period_end: 
   return row.status !== "past_due" || (row.current_period_end !== null && row.current_period_end > now);
 }
 
-/** A Starter server with no hosted row, or one made before the 1-member limit, keeps the default limit. */
-function memberLimit(plan: BillingPlanId, legacyStarterMembers: number | null): number {
-  if (plan === "starter" && legacyStarterMembers !== 0) return DEFAULT_TEAM_MEMBER_LIMIT;
-  return memberLimitForPlan(plan);
+/** A server with no hosted row, or one made before the current plan limits, keeps its legacy limit. */
+function memberLimit(plan: BillingPlanId, legacyMemberLimits: number | null): number {
+  return legacyMemberLimits === 0 ? memberLimitForPlan(plan) : LEGACY_MEMBER_LIMITS[plan];
 }
 
 /**

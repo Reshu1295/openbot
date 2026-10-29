@@ -289,10 +289,12 @@ a Claude subscription on a server, read [provider terms](provider-terms.md#claud
 
 ## Members
 
-The plan sets the number of active members, owner included: Starter 1, Standard 10 and Pro 25
-(`BILLING_PLANS`). A host with no plan has 3 (`DEFAULT_TEAM_MEMBER_LIMIT`). A Starter server made
-before the 1-member limit keeps 3: migration `0041` sets `hosted_servers.legacy_starter_members` to 1
-for each existing row, and the Worker writes 0 for a new server. `getServerEntitlement` returns the
+The plan sets the number of active members, owner included: Starter 1, Standard 5 and Pro 10
+(`BILLING_PLANS`). A host with no plan has 3 (`DEFAULT_TEAM_MEMBER_LIMIT`). A server made before
+these limits keeps the old limits of `LEGACY_MEMBER_LIMITS`: Starter 3, Standard 10 and Pro 25.
+Migration `0041` sets `hosted_servers.legacy_member_limits` to 1 for each existing row, and the
+Worker writes 0 for a new server. A self-hosted host with a plan has no hosted row, so it also keeps
+the old limits. `getServerEntitlement` returns the
 limit as `memberLimit`. The Worker reads the plan
 with `getServerEntitlement` when a member joins or is reactivated, and refuses a member over the limit
 (`409 member_limit_reached`). A lower limit removes no member who is already active. This also applies to a

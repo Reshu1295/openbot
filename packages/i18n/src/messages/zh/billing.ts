@@ -165,7 +165,7 @@ export const messages = {
   "billing.order.license.noneDetail": "个人和非商业用途",
   "billing.order.license.starter": "入门版许可证",
   "billing.order.license.team": "团队版许可证",
-  "billing.order.license.bundleSaving": "搭配服务器 −{price}",
+  "billing.order.license.bundleSaving": "搭配服务器 −{percent}%",
   // {included} is the number of members in the base price. {price} is the monthly price of one more member.
   "billing.order.license.teamDetail": "含 {included} 人，每多 1 人 +{price}",
   "billing.order.license.serverMembers": { other: "你的服务器有 {count} 名成员" },

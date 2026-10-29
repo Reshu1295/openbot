@@ -174,7 +174,7 @@ export const messages = {
   "billing.order.license.noneDetail": "Личное и некоммерческое использование",
   "billing.order.license.starter": "Лицензия Starter",
   "billing.order.license.team": "Лицензия Team",
-  "billing.order.license.bundleSaving": "−{price} вместе с сервером",
+  "billing.order.license.bundleSaving": "−{percent}% вместе с сервером",
   "billing.order.license.teamDetail": "{included} в цене, +{price} за каждого следующего",
   "billing.order.license.serverMembers": {
     one: "На вашем сервере {count} участник",
