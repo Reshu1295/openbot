@@ -513,7 +513,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       requestTimeoutMs,
       discoveryCwd: options.discoveryCwd,
       processWideModel: options.flavor.processWideModel === true,
-      keepProbeSession: () => options.flavor.sessionProcesses === true && this.#supportsSessionResume,
+      keepProbeSession: () => options.flavor.closeKeepsSession === true && this.#supportsSessionResume,
     });
   }
 
@@ -718,10 +718,13 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
           this.#initialized = null;
           for (const replay of this.#historyReplays.values()) this.#abortHistoryReplay(replay);
           this.#historyReplays.clear();
-          for (const thread of this.#threads.clear()) {
-            thread.mcp.close();
-            if (thread.transport) yield* thread.transport.stop(Effect.void).pipe(Effect.ignore);
-          }
+          const threads = this.#threads.clear();
+          for (const thread of threads) thread.mcp.close();
+          yield* Effect.forEach(
+            threads,
+            (thread) => (thread.transport ? thread.transport.stop(Effect.void).pipe(Effect.ignore) : Effect.void),
+            { concurrency: "unbounded", discard: true },
+          );
           this.#startingThreads.clear();
           this.#serverRequests.rejectAll("ACP session stopped.");
           yield* this.#bridge.close().pipe(toProviderClientOperationError);
@@ -746,8 +749,13 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     value: AgentSessionSettingValue,
   ): Effect.fn.Return<AgentSessionSettingsSnapshot, ProviderClientOperationError> {
     yield* this.#threads.wake(threadId).pipe(toProviderClientOperationError);
-    const thread = yield* providerSync(() => this.#requireThread(threadId));
+    let thread = yield* providerSync(() => this.#requireThread(threadId));
     if (thread.activeTurn) return yield* providerFailure(new Error(sourceText("error.provider.sessionSettingsBusy")));
+    // A session whose own process ended opens again on a new one before the setting is sent there.
+    if (thread.needsResume && thread.transport && !thread.transport.running) {
+      yield* this.#reopenThread(thread);
+      thread = yield* providerSync(() => this.#requireThread(threadId));
+    }
     const snapshot = yield* this.#configuration.set(thread, configId, value);
     this.#publishSessionSettings(thread);
     return snapshot;
@@ -890,12 +898,18 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     decoder: ResponseDecoder<T>,
     timeoutMs?: number,
   ): Effect.fn.Return<T, ProviderClientOperationError> {
-    const ended = this.#transport.ended;
+    const sessionId = getString(params, "threadId");
+    // A session with a process of its own fails with how that process ended.
+    const transport = (sessionId ? this.#threads.get(sessionId)?.transport : null) ?? this.#transport;
+    const ended = transport.ended;
     try {
       return providerResult(yield* Effect.result(this.#requestEffect(method, params, decoder, timeoutMs)));
     } catch (error) {
-      if (error instanceof TimeoutError) yield* Effect.forkIn(this.#endIfUnresponsive(), this.#scope);
-      const sessionId = getString(params, "threadId");
+      if (error instanceof TimeoutError)
+        yield* Effect.forkIn(
+          this.#endIfUnresponsive(sessionId ? this.#threads.get(sessionId) : undefined),
+          this.#scope,
+        );
       if (
         sessionId &&
         (method === "turn/start" || method === "thread/resume") &&
@@ -917,7 +931,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
           new RequestError(error.code, this.#redact(failureText(error).replace(/^RequestError:\s*/u, ""))),
         );
       }
-      return yield* providerFailure(yield* this.#transport.explainEnd(error, ended));
+      return yield* providerFailure(yield* transport.explainEnd(error, ended));
     }
   });
 
@@ -1268,6 +1282,22 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     );
     return transport;
   });
+
+  /** Opens a held session again, with its own settings, in place of the one that needs a resume. */
+  #reopenThread(thread: AcpThread): Effect.Effect<{ thread: { id: string } }, ProviderClientOperationError> {
+    return this.#startThread(
+      {
+        threadId: thread.id,
+        cwd: thread.cwd,
+        developerInstructions: thread.developerInstructions,
+        dynamicTools: thread.dynamicTools,
+        runtimeWorkspaceRoots: thread.workspaceRoots,
+        computerUse: thread.computerUse,
+        model: thread.currentModelId,
+      },
+      true,
+    );
+  }
 
   /** The process that runs this session. */
   #sessionConnection(thread: AcpThread): ClientSideConnection {
@@ -1848,18 +1878,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     // opens the session again, because that replaces the thread that the replay writes to.
     if (thread.backgroundReplay) yield* Deferred.await(thread.backgroundReplay);
     if (thread.needsResume && !thread.activeTurn) {
-      yield* this.#startThread(
-        {
-          threadId,
-          cwd: thread.cwd,
-          developerInstructions: thread.developerInstructions,
-          dynamicTools: thread.dynamicTools,
-          runtimeWorkspaceRoots: thread.workspaceRoots,
-          computerUse: thread.computerUse,
-          model: thread.currentModelId,
-        },
-        true,
-      );
+      yield* this.#reopenThread(thread);
       thread = yield* providerSync(() => this.#requireThread(threadId));
     }
     if (thread.activeTurn) return yield* providerFailure(this.#turnActiveError(thread.activeTurn));

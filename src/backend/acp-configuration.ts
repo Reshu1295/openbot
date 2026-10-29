@@ -7,7 +7,7 @@ import type {
 import { isString } from "@openbot/contracts/runtime-values";
 import { sourceText } from "@openbot/i18n/source";
 import { createOpenBotLogger } from "@openbot/logging";
-import { Effect, Fiber, type Scope } from "effect";
+import { Effect, Fiber, type Scope, Semaphore } from "effect";
 import type { AcpConnection } from "./acp-connection";
 import type { AgentProvider } from "./agent-client";
 import { isRecord } from "./protocol";
@@ -87,7 +87,7 @@ export interface AcpConfigurationOptions {
   /** `AcpFlavor.processWideModel`. */
   processWideModel?: boolean;
   /**
-   * `AcpFlavor.sessionProcesses` with `session/resume`: a closed session keeps its resources until
+   * `AcpFlavor.closeKeepsSession` with `session/resume`: a closed session keeps its resources until
    * the process ends, so each discovery resumes the probe session of the process, not a new one.
    */
   keepProbeSession?: () => boolean;
@@ -104,6 +104,8 @@ export class AcpConfiguration {
   #modelSetTimedOut: ClientSideConnection | null = null;
   /** The probe session that discovery resumes on this connection (`keepProbeSession`). */
   #probe: { connection: ClientSideConnection; sessionId: string } | null = null;
+  /** One kept-probe discovery at a time: two at once would each open a probe, and one is kept. */
+  readonly #probeLock = Semaphore.makeUnsafe(1);
   constructor(private readonly options: AcpConfigurationOptions) {}
   readonly discoverModels = Effect.fn("AcpConfiguration.discoverModels")(function* (
     this: AcpConfiguration,
@@ -115,21 +117,22 @@ export class AcpConfiguration {
     // caller's own timeout: what the sweep may spend is what a slow `session/new` left of the time
     // the caller gave `model/list`. A sweep that timed the caller out would return no catalog at all.
     const deadline = Date.now() + requestTimeoutMs - MODEL_DISCOVERY_RETURN_MS;
+    const sweep = Effect.acquireUseRelease(
+      this.#openProbe(connection),
+      (probe) => this.#modelReasoningEffortsEffect(connection, probe, modelsFromSessionSetup(probe), deadline),
+      (probe) =>
+        this.options.keepProbeSession?.()
+          ? Effect.sync(() => {
+              this.#probe = { connection, sessionId: probe.sessionId };
+            })
+          : Effect.forkIn(
+              providerCall(() => connection.closeSession({ sessionId: probe.sessionId })).pipe(Effect.ignore),
+              this.options.scope(),
+              { startImmediately: true },
+            ).pipe(Effect.asVoid),
+    );
     const discovery = yield* Effect.forkIn(
-      Effect.acquireUseRelease(
-        this.#openProbe(connection),
-        (probe) => this.#modelReasoningEffortsEffect(connection, probe, modelsFromSessionSetup(probe), deadline),
-        (probe) =>
-          this.options.keepProbeSession?.()
-            ? Effect.sync(() => {
-                this.#probe = { connection, sessionId: probe.sessionId };
-              })
-            : Effect.forkIn(
-                providerCall(() => connection.closeSession({ sessionId: probe.sessionId })).pipe(Effect.ignore),
-                this.options.scope(),
-                { startImmediately: true },
-              ).pipe(Effect.asVoid),
-      ),
+      this.options.keepProbeSession?.() ? this.#probeLock.withPermit(sweep) : sweep,
       this.options.scope(),
     );
     return yield* Fiber.join(discovery).pipe(

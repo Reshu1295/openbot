@@ -77,10 +77,8 @@ function geminiRequestFailure(error: unknown, detail: string): string {
 }
 
 /**
- * Antigravity 1.4.4 starts a `localharness_external` of about 100 MB for each session and keeps it
- * after `session/close`, which it does not advertise, until its process ends (#3925). Not on
- * Windows: there each process start unpacks about 310 MB (`antigravityTemp`), which every new or
- * reopened session would wait for.
+ * Not on Windows: there each process start unpacks about 310 MB (`antigravityTemp`), which every
+ * new or reopened session would wait for.
  */
 const SESSION_PROCESSES: Pick<AcpFlavor, "sessionProcesses"> =
   process.platform === "win32" ? {} : { sessionProcesses: true };
@@ -128,5 +126,8 @@ export const ANTIGRAVITY_ACP_FLAVOR: AcpFlavor = {
   promptOpenForBackgroundTasks: true,
   // Antigravity 1.3.0 sends `usage_update` but has no ACP method or command that compacts.
   contextCompaction: "handoff",
+  // Antigravity 1.4.4 starts a `localharness_external` of about 100 MB for each session and keeps it
+  // after `session/close`, which it does not advertise, until its process ends (#3925).
+  closeKeepsSession: true,
   ...SESSION_PROCESSES,
 };
