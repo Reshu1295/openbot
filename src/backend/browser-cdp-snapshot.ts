@@ -190,6 +190,10 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
               element = root?.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? root.host : null;
             }
           }
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const rects = [...node.getClientRects()];
+            return rects.length > 0 ? rects : null;
+          }
           const range = node.ownerDocument.createRange();
           range.selectNodeContents(node);
           const rects = [...range.getClientRects()];
@@ -230,7 +234,7 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
             }
             if (node.nodeType !== 1) continue;
             const tag = node.localName;
-            if (tag === 'canvas' || tag === 'video') hasVisualSurface = true;
+            if ((tag === 'canvas' || tag === 'video') && visibleRects(node) && [...node.getClientRects()].some(rect => rect.width > 0 && rect.height > 0) && getComputedStyle(node).visibility === 'visible' && getComputedStyle(node).opacity !== '0') hasVisualSurface = true;
             if (tag === 'iframe' || tag === 'frame') {
               hasFrame = true;
               try { if (node.contentDocument) roots.push(node.contentDocument); } catch {}
@@ -537,6 +541,11 @@ export const visibleTextObjectMatches = Effect.fn("Browser.visibleTextObjectMatc
         let truncated = false;
         const isCandidate = node => {
           if (node.nodeType !== 1) return false;
+          const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
+          const tag = node.localName;
+          const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
+            tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
+          if (!semantic && !roles.has(explicitRole)) return false;
           let element = node;
           while (element) {
             if (element.hidden || element.inert || String(element.getAttribute('aria-hidden')).toLowerCase() === 'true') return false;
@@ -549,11 +558,6 @@ export const visibleTextObjectMatches = Effect.fn("Browser.visibleTextObjectMatc
               element = root?.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? root.host : null;
             }
           }
-          const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
-          const tag = node.localName;
-          const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
-            tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
-          if (!semantic && !roles.has(explicitRole)) return false;
           return node.getClientRects().length > 0;
         };
         while (roots.length && matches.length < 2) {
@@ -665,25 +669,27 @@ const collectActionableNodesEffect = Effect.fn("Browser.collectActionableNodes")
         .filter(Boolean)
         .slice(0, MAX_SNAPSHOT_CANDIDATES),
     );
+    const textResult = yield* send(
+      "Runtime.callFunctionOn",
+      {
+        objectId: collectionId,
+        functionDeclaration: String.raw`function() { return this.map(node => String(node.innerText ?? node.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 500)); }`,
+        returnByValue: true,
+      },
+      capture.sessionId,
+    );
+    const textValues = recordValue(textResult.result)?.value;
+    if (!Array.isArray(textValues) || textValues.length !== objectIds.length)
+      return yield* browserFailure(new Error("Browser candidate text collection changed."));
     for (let offset = 0; offset < objectIds.length && results.length < limit; offset += batchSize) {
       const batch = objectIds.slice(offset, offset + batchSize);
       const resolved = yield* Effect.all(
-        batch.map((objectId) =>
+        batch.map((objectId, index) =>
           Effect.gen(function* () {
-            const [description, partialAxTree, visibleTextResult] = yield* Effect.all(
+            const [description, partialAxTree] = yield* Effect.all(
               [
                 send("DOM.describeNode", { objectId, depth: 0 }, capture.sessionId),
                 send("Accessibility.getPartialAXTree", { objectId, fetchRelatives: false }, capture.sessionId),
-                send(
-                  "Runtime.callFunctionOn",
-                  {
-                    objectId,
-                    functionDeclaration:
-                      "function() { return String(this.innerText ?? this.textContent ?? '').replace(/\\s+/g, ' ').trim().slice(0, 500); }",
-                    returnByValue: true,
-                  },
-                  capture.sessionId,
-                ),
               ],
               { concurrency: "unbounded" },
             );
@@ -701,7 +707,7 @@ const collectActionableNodesEffect = Effect.fn("Browser.collectActionableNodes")
               node,
               ax,
               role,
-              visibleText: stringValue(recordValue(visibleTextResult.result)?.value),
+              visibleText: stringValue(textValues[offset + index]),
             };
           }),
         ),
@@ -735,6 +741,11 @@ function actionableNodesExpression(limit: number): string {
     let scanned = 0;
     const isCandidate = node => {
       if (node.nodeType !== 1) return false;
+      const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
+      const tag = node.localName;
+      const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
+        tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
+      if (!semantic && !roles.has(explicitRole)) return false;
       let element = node;
       while (element) {
         if (element.hidden || element.inert || String(element.getAttribute('aria-hidden')).toLowerCase() === 'true') return false;
@@ -747,11 +758,6 @@ function actionableNodesExpression(limit: number): string {
           element = root?.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? root.host : null;
         }
       }
-      const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
-      const tag = node.localName;
-      const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
-        tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
-      if (!semantic && !roles.has(explicitRole)) return false;
       return node.getClientRects().length > 0;
     };
     while (roots.length && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && matches.length < ${Math.max(0, limit)}) {

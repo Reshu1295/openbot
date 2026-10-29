@@ -8,7 +8,7 @@ import type {
   BrowserTarget,
 } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isBoolean, isDynamicRecord, isNumber, isString } from "@openbot/contracts/runtime-values";
-import { Deferred, Effect, Exit, Fiber, Scope } from "effect";
+import { Deferred, Effect, Exit, Fiber, Schema, Scope } from "effect";
 import type { NativeImage, WebContents } from "electron";
 import {
   BROWSER_CARD_FIELDS,
@@ -83,6 +83,10 @@ const DOCUMENT_ID_PROPERTY = "__openbot_browser_document_id__";
 const MAX_SNAPSHOT_FRAMES = 12;
 const DOM_QUIET_MS = 250;
 const CHOOSER_WAIT_MS = 5_000;
+
+class BrowserTargetNotReady extends Schema.TaggedError<BrowserTargetNotReady>()("BrowserTargetNotReady", {
+  message: Schema.String,
+}) {}
 
 type ActionDispatch = () => void;
 
@@ -610,6 +614,7 @@ export class BrowserCdpEngine {
    * perfectly healthy.
    */
   #activeLeases = 0;
+  #appliedEnvironmentKey: string | undefined;
   #highlightSessionId: string | undefined;
   readonly #uploadDocumentIds = new Set<string>();
   readonly #targetSessions = new Map<string, { sessionId: string; url: string }>();
@@ -686,12 +691,8 @@ export class BrowserCdpEngine {
         this.#targets = new Map([...parsed.targets].filter(([ref]) => retainedRefs.has(ref)));
         this.#lastSnapshot = snapshot;
         const lowCoverage = parsed.elements.length < 3 && parsed.text.length > 200;
-        const recommendImage = parsed.hasVisualSurface || parsed.hasFrame || lowCoverage;
-        const imageReason = parsed.hasVisualSurface
-          ? "canvas-or-video"
-          : parsed.hasFrame
-            ? "iframe"
-            : "low-semantic-coverage";
+        const recommendImage = parsed.hasVisualSurface || lowCoverage;
+        const imageReason = parsed.hasVisualSurface ? "canvas-or-video" : "low-semantic-coverage";
         // The kept references compare the page with the unscrubbed elements.
         return { snapshot: this.#cardScrub.snapshot(snapshot), recommendImage, imageReason };
       }),
@@ -711,7 +712,7 @@ export class BrowserCdpEngine {
   ): Effect.fn.Return<void, BrowserOperationError> {
     yield* this.#leaseEffect((send) =>
       Effect.gen({ self: this }, function* () {
-        const point = yield* this.#targetPointEffect(send, target, true, true, deadline);
+        const point = yield* this.#readyClickPoint(send, target, deadline);
         const { sessionId, ...coordinates } = point;
         const button = options.button ?? "left";
         const totalClicks = options.clickCount ?? 1;
@@ -1730,6 +1731,7 @@ export class BrowserCdpEngine {
             returnByValue: true,
           });
           const viewport = recordValue(recordValue(result.result)?.value);
+          this.#appliedEnvironmentKey = undefined;
           yield* send("Emulation.setDeviceMetricsOverride", {
             width: numberValue(viewport?.width),
             height: numberValue(viewport?.height),
@@ -1742,7 +1744,10 @@ export class BrowserCdpEngine {
         }).pipe(
           Effect.ensuring(
             Effect.gen({ self: this }, function* () {
-              if (fill) yield* send("Emulation.clearDeviceMetricsOverride");
+              if (fill) {
+                this.#appliedEnvironmentKey = undefined;
+                yield* send("Emulation.clearDeviceMetricsOverride");
+              }
             }).pipe(Effect.orDie),
           ),
         );
@@ -2546,6 +2551,62 @@ export class BrowserCdpEngine {
     };
   });
 
+  readonly #readyClickPoint = Effect.fn("BrowserCdp.readyClickPoint")(function* (
+    this: BrowserCdpEngine,
+    send: SendCommand,
+    target: BrowserTarget,
+    deadline?: number,
+  ) {
+    if (target.kind === "point") return yield* this.#targetPointEffect(send, target, true, true, deadline);
+    const until = Math.min(deadline ?? Date.now() + ACTION_TIMEOUT_MS, Date.now() + 2_000);
+    const generation = this.#navigationGeneration;
+    let previous: { x: number; y: number; sessionId?: string | undefined } | undefined;
+    let unavailable: BrowserOperationError | undefined;
+    let identity: string | undefined;
+    while (true) {
+      if (Date.now() >= until && unavailable) return yield* unavailable;
+      yield* browserSync(() => assertBeforeDeadline(until));
+      if (generation !== this.#navigationGeneration)
+        return yield* browserFailure(
+          new Error("Page changed while waiting for a click target. Take a fresh snapshot."),
+        );
+      const point = yield* Effect.gen({ self: this }, function* () {
+        const resolved = yield* this.#resolveTargetEffect(send, target, until);
+        if (!resolved.backendNodeId) return yield* browserFailure(new Error("Click target is unavailable."));
+        const key = `${resolved.sessionId ?? "main"}:${resolved.backendNodeId}`;
+        if (identity !== undefined && identity !== key)
+          return yield* browserFailure(new Error("Click target changed while waiting. Take a fresh snapshot."));
+        identity = key;
+        const enabled = yield* this.#callOnNode(
+          send,
+          resolved.backendNodeId,
+          "function() { return !this.matches(':disabled') && this.getAttribute('aria-disabled') !== 'true'; }",
+          [],
+          resolved.sessionId,
+        );
+        if (enabled !== true)
+          return yield* browserFailure(new BrowserTargetNotReady({ message: "Target is disabled." }));
+        return yield* this.#elementPointEffect(send, resolved.backendNodeId, true, resolved.sessionId);
+      }).pipe(
+        Effect.catch((failure) => {
+          if (!(failure.cause instanceof BrowserTargetNotReady)) return Effect.fail(failure);
+          unavailable = failure;
+          return Effect.succeed(null);
+        }),
+      );
+      if (
+        point &&
+        previous &&
+        point.sessionId === previous.sessionId &&
+        Math.abs(point.x - previous.x) < 0.5 &&
+        Math.abs(point.y - previous.y) < 0.5
+      )
+        return point;
+      previous = point ?? undefined;
+      yield* waitForPageSignal(this.#contents, Math.min(50, Math.max(1, until - Date.now())));
+    }
+  });
+
   readonly #targetPointEffect = Effect.fn("BrowserCdp.targetPoint")(function* (
     this: BrowserCdpEngine,
     send: SendCommand,
@@ -2572,7 +2633,8 @@ export class BrowserCdpEngine {
     const box = yield* send("DOM.getBoxModel", { backendNodeId }, sessionId);
     const model = recordValue(box.model);
     const quad = Array.isArray(model?.content) ? model.content.filter(isFiniteNumber) : [];
-    if (quad.length < 8) return yield* browserFailure(new Error("Element has no visible clickable bounds."));
+    if (quad.length < 8)
+      return yield* browserFailure(new BrowserTargetNotReady({ message: "Element has no visible clickable bounds." }));
     const metrics = yield* send("Page.getLayoutMetrics", {}, sessionId);
     const viewport = recordValue(metrics.cssLayoutViewport);
     const viewportWidth = numberValue(viewport?.clientWidth);
@@ -2585,7 +2647,7 @@ export class BrowserCdpEngine {
     const top = Math.max(0, Math.min(...ys));
     const bottom = Math.min(viewportHeight - 1, Math.max(...ys));
     if (viewportWidth <= 0 || viewportHeight <= 0 || right < left || bottom < top) {
-      return yield* browserFailure(new Error("Element has no visible clickable bounds."));
+      return yield* browserFailure(new BrowserTargetNotReady({ message: "Element has no visible clickable bounds." }));
     }
     const insetX = Math.min(4, Math.max(0, (right - left) / 4));
     const insetY = Math.min(4, Math.max(0, (bottom - top) / 4));
@@ -2605,6 +2667,12 @@ export class BrowserCdpEngine {
         "DOM.getNodeForLocation",
         { x: Math.round(point.x), y: Math.round(point.y), includeUserAgentShadowDOM: true },
         sessionId,
+      ).pipe(
+        Effect.catch((failure) =>
+          failure.cause instanceof Error && failure.cause.message === "No node found at given location"
+            ? Effect.succeed({ backendNodeId: 0 })
+            : Effect.fail(failure),
+        ),
       );
       const hitId = numberValue(hit.backendNodeId);
       if (hitId && (yield* hitActivatesTarget(send, hitId, backendNodeId, sessionId))) {
@@ -2612,14 +2680,15 @@ export class BrowserCdpEngine {
       }
       blockerId ||= hitId;
     }
-    if (!blockerId) return yield* browserFailure(new Error("Element has no visible clickable point."));
+    if (!blockerId)
+      return yield* browserFailure(new BrowserTargetNotReady({ message: "Element has no visible clickable point." }));
     const blocker = yield* send("DOM.describeNode", { backendNodeId: blockerId, depth: 0 }, sessionId);
     const node = recordValue(blocker.node);
     const name = stringValue(node?.nodeName).toLowerCase() || "element";
     return yield* browserFailure(
-      new Error(
-        `Target is covered by ${name} (backendNodeId ${blockerId}). Dismiss the covering layer or choose a visible point.`,
-      ),
+      new BrowserTargetNotReady({
+        message: `Target is covered by ${name} (backendNodeId ${blockerId}). Dismiss the covering layer or choose a visible point.`,
+      }),
     );
   });
 
@@ -2770,6 +2839,7 @@ export class BrowserCdpEngine {
   }
 
   #clearDebuggerSessions(): void {
+    this.#appliedEnvironmentKey = undefined;
     this.#targetSessions.clear();
     this.#highlightSessionId = undefined;
   }
@@ -2779,6 +2849,9 @@ export class BrowserCdpEngine {
     send: SendCommand,
     environment: BrowserEnvironment,
   ): Effect.fn.Return<void, BrowserOperationError> {
+    const key = JSON.stringify(environment);
+    if (this.#appliedEnvironmentKey === key) return;
+    this.#appliedEnvironmentKey = undefined;
     if (environment.viewport.mode === "fill") {
       yield* send("Emulation.clearDeviceMetricsOverride");
     } else {
@@ -2798,12 +2871,14 @@ export class BrowserCdpEngine {
     }
     if (environment.reducedMotion) features.push({ name: "prefers-reduced-motion", value: "reduce" });
     yield* send("Emulation.setEmulatedMedia", { features });
+    this.#appliedEnvironmentKey = key;
   });
 
   readonly #clearEnvironmentEffect = Effect.fn("BrowserCdp.clearEnvironment")(function* (
     this: BrowserCdpEngine,
     send: SendCommand,
   ): Effect.fn.Return<void, BrowserOperationError> {
+    this.#appliedEnvironmentKey = undefined;
     yield* send("Emulation.clearDeviceMetricsOverride");
     yield* send("Emulation.setEmulatedMedia", { features: [] });
   });

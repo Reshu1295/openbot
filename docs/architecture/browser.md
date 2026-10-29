@@ -126,6 +126,46 @@ non-login work. The host does not rewrite site scripts or weaken cross-origin se
 Input dispatch runs inside those checks and queues. Upload staging also uses the shared parser before
 it checks local file access.
 
+### Input outcomes and recovery
+
+Agent input tools keep their successful snapshot response. A failed input returns JSON with
+`inputState` (`not_started`, `attempted`, or `completed`), `stage` (`target_resolution`, `input`,
+`settling`, or `snapshot`), a fixed `reason`, and a bounded redacted error message. These states
+report input delivery, not the site's booking, cancellation, or payment result. Legacy IPC actions
+retain their existing error behavior.
+
+A pre-dispatch failure can include one recovery snapshot. Its two-second response limit includes
+queue waiting. The capture checks tool ownership, authentication, and takeover before and after
+inspection. Dispatched work and transport cleanup still drain before later tab operations run.
+A failed final snapshot does not replay input. Agent guidance requires result verification, permits
+one safe navigation recovery, and permits one new action only after the page proves that the
+original action did not take effect. Booking routines require verified lesson times and booking rules.
+
+Clicks wait up to two seconds within the caller's deadline for a covered or disabled target.
+They require the same native node and stable clickable coordinates across two observations.
+Changed references, ambiguous targets, and document changes stop the click. This wait runs before
+input dispatch; it never repeats a dispatched click. Hover remains available on disabled controls.
+
+Snapshot collection filters candidate semantics before ancestor visibility checks and reads candidate
+text in one CDP call. Node identities and accessibility data still use native CDP reads. Environment
+settings are reused while unchanged and invalidated on debugger detach or temporary screenshot
+viewport changes. Existing navigation and DOM-quiet deadlines remain in place; the debugger and
+queue lifetimes are unchanged.
+
+Explicit agent snapshots add `pageEvidence`: observed HTTP denial codes (401, 403, 429), sign-in
+text, and challenge text. These are observations, not proof of an expired session or bot protection.
+The identity checks keep the installed Chromium and the Google account exception. Automatic images
+use visible canvas/video or low semantic coverage; the presence of an iframe alone does not add one.
+
+`bun run test:browser --scenario=input-recovery` writes
+`.openbot-build/browser-input-recovery.json`. It checks failed capture after cancellation, capture
+deadlines, temporary covering layers, disabled targets, stale references, redaction, and page evidence.
+`--scenario=snapshot-performance` writes `.openbot-build/browser-snapshot-current.json` with runtime
+versions, three warm-ups, twenty measurements, CDP command counts, response bytes, median, and p95.
+A baseline collector can be bundled from the original Git source into an ignored build artifact and
+run with `--benchmark-label=baseline`. Compare on the same computer and fixture; this does not measure
+provider latency or live-site performance.
+
 ### Fill inspected ordinary fields
 
 `openbot_browser.fill_fields` is a deferred tool in the original browser catalog. It replaces
@@ -305,3 +345,45 @@ URL with GET to replace the document without replaying a form POST. Failure reta
 clears navigation history; manual takeover
 completion alone cannot release it. Secrets are not retried. Authentication inside unsupported frames,
 unclear OAuth account selection, CAPTCHA, passkeys, and payment confirmation use takeover.
+
+### JavaScript confirmations
+
+Agent input exposes `alert` and `confirm` as a `dialog` result with an opaque `id`, `type`, bounded
+redacted `message`, and frame `origin`. The agent calls `handle_dialog { tabId, dialogId, accept }`.
+It accepts only a confirmation of the user's requested action, treats page text as data, and verifies
+the resulting page. Stale IDs fail; chained dialogs return the next decision. `snapshot` returns a
+pending dialog without waiting for the blocked page. Input and snapshot work remain owned by the
+tab queue while the dialog decision uses its callback outside that queue.
+
+`BrowserDialogs` replaces only the managed tab's native `-run-dialog` listener while agent input
+runs. CDP alone still opens Electron's native sheet. The adapter follows the
+[Electron 44.9.3 native handler](https://github.com/electron/electron/blob/v44.9.3/lib/browser/api/web-contents.ts#L733).
+The constructor requires one original handler and retains it for human actions and unsupported
+modal types. Prompts and before-unload behavior remain native. The interception gate uses the
+existing connected-page secret protection; dialog text cannot expose a page that received a secret.
+Close, shutdown, takeover, and manual user control cancel a pending agent dialog before queue drains.
+
+`bun run test:browser --scenario=dialogs` writes `.openbot-build/browser-dialogs.json`. It drives
+real renderer confirmations and checks accept, dismiss, stale IDs, chained dialogs, action deadline,
+takeover, alert handling, and native human fallback. Keep this scenario when upgrading Electron:
+the dialog interception event is internal to that pinned runtime.
+
+### Hit testing and local timing logs
+
+A `DOM.getNodeForLocation` miss (`No node found at given location`) is an empty candidate, not an
+action failure. The engine checks the remaining points and still requires a native hit on the target
+or its activating child. If all points miss, normal bounded readiness applies. Other protocol errors
+are preserved. `--scenario=hit-testing` records a native empty-hit recovery, all-points-missing refusal,
+recovery after hit data returns, and propagation of another native protocol error.
+
+Local `logs/main/main.log` now includes `browser-actions` and `browser-dialogs`. Action records
+separate target resolution, input, settling, snapshot, and total duration; non-zero queue waits are
+recorded separately. Input time can include waiting for a dialog; it is not model response time.
+Dialog records distinguish an agent-tool answer, a native-handler answer, app cancellation, and
+native lifecycle closure. They contain IDs, fixed type/source fields, acceptance, and duration, never
+dialog text, origins, URLs, target names, arguments, or field values. Native-handler logging does not
+claim who pressed a button. Existing log redaction and size limits apply.
+
+Tool search already returns ready schemas and guidance for strong matches. Agent instructions now
+use those directly, describe only missing schemas, batch related descriptions, and reuse loaded
+schemas. This removes a prompt conflict; a new live task must measure the change in model calls.

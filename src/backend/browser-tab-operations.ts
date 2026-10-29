@@ -1,5 +1,6 @@
 import type { BrowserSnapshot, BrowserTarget } from "@openbot/contracts/ipc";
-import { Context, Deferred, Effect, Fiber } from "effect";
+import { createOpenBotLogger } from "@openbot/logging";
+import { Context, Deferred, Effect, Fiber, Schema } from "effect";
 import { type BrowserOperationError, browserFailure, browserSync } from "./browser-effects";
 import {
   BrowserFillFieldsFailure,
@@ -11,10 +12,21 @@ import type { BrowserHostTab, KeepQueueBlocked } from "./browser-host-tab";
 import { describeBrowserTarget } from "./browser-navigation";
 import { TimeoutError, withTimeout } from "./with-timeout";
 
+const logger = createOpenBotLogger("browser-actions");
+
 const ACTION_POST_DISPATCH_TIMEOUT_MS = 10_000;
 const OPERATION_UNWIND_GRACE_MS = 1_000;
 // Let an operation report its own deadline before the transport backstop wins.
 const OPERATION_DEADLINE_BACKSTOP_MS = 250;
+
+/** Input delivery is separate from the result of the site's operation. */
+export class BrowserActionFailure extends Schema.TaggedError<BrowserActionFailure>()("BrowserActionFailure", {
+  tabId: Schema.String,
+  message: Schema.String,
+  inputState: Schema.Literals(["not_started", "attempted", "completed"]),
+  stage: Schema.Literals(["target_resolution", "input", "settling", "snapshot"]),
+  reason: Schema.Literals(["deadline", "target_unavailable", "operation_failed", "snapshot_failed"]),
+}) {}
 
 /**
  * Whether a person controls a tab. Only the agent tool paths provide it, so a person's own actions and
@@ -42,6 +54,7 @@ export const enqueueTabOperation = Effect.fn("BrowserTab.enqueue")(function* <A>
 ) {
   // Read in the caller's fiber: the queued work below runs in the tab scope.
   const heldByUser = yield* BrowserToolHold;
+  const queuedAt = performance.now();
   const previous = tab.queue;
   const drained = Deferred.makeUnsafe<void>();
   const response = Deferred.makeUnsafe<A, BrowserOperationError>();
@@ -55,6 +68,8 @@ export const enqueueTabOperation = Effect.fn("BrowserTab.enqueue")(function* <A>
       const result = yield* Effect.exit(
         Effect.gen(function* () {
           yield* Deferred.await(previous);
+          const queueWaitMs = Math.round(performance.now() - queuedAt);
+          if (queueWaitMs > 0) logger.info("Browser queue ready", { tabId: tab.id, queueWaitMs });
           if (cancelled) return yield* Effect.interrupt;
           // An operation that was queued before the person took the tab must not act on it.
           if (heldByUser(tab.id)) return yield* browserFailure(new BrowserUserControlHeld(tab.id));
@@ -169,6 +184,7 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
     ) => Effect.Effect<void, BrowserOperationError>,
     timeoutMs = 10_000,
     onOperationStarted?: (completion: Fiber.Fiber<void, BrowserOperationError>) => void,
+    reportFailure = false,
   ) =>
     enqueueTabOperation(tab, (_tab, keepQueueBlocked) =>
       Effect.gen(function* () {
@@ -180,6 +196,23 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
         const timeoutMessage = `Browser ${action} timed out.`;
         let actionRecorded = false;
         let dispatched = false;
+        let inputCompleted = false;
+        let stage: BrowserActionFailure["stage"] = "target_resolution";
+        const startedAt = performance.now();
+        let stageStartedAt = startedAt;
+        const timings: Record<BrowserActionFailure["stage"], number> = {
+          target_resolution: 0,
+          input: 0,
+          settling: 0,
+          snapshot: 0,
+        };
+        let outcome = "interrupted";
+        const enterStage = (next: BrowserActionFailure["stage"]) => {
+          const now = performance.now();
+          timings[stage] += now - stageStartedAt;
+          stage = next;
+          stageStartedAt = now;
+        };
         let cancellationConfirmed = false;
         let stalledSettle: Fiber.Fiber<void, BrowserOperationError> | undefined;
         const completion = yield* Effect.forkIn(
@@ -195,7 +228,9 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
               yield* browserSync(() => remainingTime(deadline, timeoutMessage));
               yield* operation(tab, deadline, () => {
                 dispatched = true;
+                enterStage("input");
               });
+              inputCompleted = true;
             }).pipe(
               Effect.ensuring(
                 Effect.suspend(() =>
@@ -232,6 +267,7 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
               }),
             ),
           );
+          enterStage("settling");
           const settleTimeout = Math.max(1, deadline - Date.now());
           const settle = yield* Effect.forkIn(tab.engine.settle(settleTimeout), tab.scope, { startImmediately: true });
           yield* withTimeout(Fiber.join(settle), settleTimeout, timeoutMessage).pipe(
@@ -259,6 +295,7 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
               : {}),
           });
           actionRecorded = true;
+          enterStage("snapshot");
           return (yield* readTabSnapshot(
             tab,
             tab.revision + 1,
@@ -277,6 +314,7 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
           ),
           Effect.catch((error) =>
             Effect.gen(function* () {
+              outcome = "error";
               if (dispatched && (tab.closing || tab.contents.isDestroyed()))
                 return {
                   tabId: tab.id,
@@ -290,7 +328,48 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
                   outcome: "error",
                   detail: String(error.cause),
                 });
+              if (reportFailure) {
+                const cause = error.cause;
+                const message = cause instanceof Error ? cause.message : "";
+                return yield* browserFailure(
+                  new BrowserActionFailure({
+                    tabId: tab.id,
+                    message: cause instanceof Error ? cause.message : "Browser action failed.",
+                    inputState: inputCompleted ? "completed" : dispatched ? "attempted" : "not_started",
+                    stage,
+                    reason:
+                      isTimeoutError(cause) || message.includes("timed out")
+                        ? "deadline"
+                        : stage === "snapshot"
+                          ? "snapshot_failed"
+                          : stage === "target_resolution"
+                            ? "target_unavailable"
+                            : "operation_failed",
+                  }),
+                );
+              }
               return yield* error;
+            }),
+          ),
+          Effect.tap(() =>
+            Effect.sync(() => {
+              outcome = "success";
+            }),
+          ),
+          Effect.ensuring(
+            Effect.sync(() => {
+              timings[stage] += performance.now() - stageStartedAt;
+              logger.info("Browser action finished", {
+                tabId: tab.id,
+                action,
+                outcome,
+                inputState: inputCompleted ? "completed" : dispatched ? "attempted" : "not_started",
+                targetResolutionMs: Math.round(timings.target_resolution),
+                inputMs: Math.round(timings.input),
+                settlingMs: Math.round(timings.settling),
+                snapshotMs: Math.round(timings.snapshot),
+                totalMs: Math.round(performance.now() - startedAt),
+              });
             }),
           ),
         );

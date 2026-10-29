@@ -60,6 +60,7 @@ import {
 import { BrowserControlSessions } from "./browser-control-sessions";
 import { browserViewCursor } from "./browser-cursor";
 import { BrowserDiagnostics } from "./browser-diagnostics";
+import { BrowserDialogs } from "./browser-dialogs";
 import { type BrowserOperationError, browserCall, browserFailure, browserSync } from "./browser-effects";
 import {
   type BrowserHostTab,
@@ -109,6 +110,7 @@ import {
   storedTabSession,
 } from "./browser-state";
 import {
+  BrowserActionFailure,
   BrowserToolHold,
   BrowserUserControlHeld,
   boundEngineOperation,
@@ -137,6 +139,7 @@ import { runCauseEffect } from "./effect-boundary";
 import type { DynamicToolCallParams, DynamicToolResult } from "./protocol";
 import { isRecord } from "./protocol";
 import type { VaultCardSecret } from "./vault-items";
+import { withTimeout } from "./with-timeout";
 
 interface BrowserHostEvents {
   changed: [tabs: BrowserTab[], activeTabId: string | null];
@@ -943,6 +946,7 @@ export class BrowserHost {
     }
     this.#syncAttachedView();
     this.#emitChanged();
+    tab.dialogs.cancel();
     tab.closing = true;
     const destroy = yield* Effect.forkIn(
       Effect.gen({ self: this }, function* () {
@@ -977,6 +981,7 @@ export class BrowserHost {
   ): Effect.fn.Return<void, BrowserOperationError> {
     const tab = this.#tabs.get(tabId);
     if (!tab) return yield* browserFailure(new Error(sourceText("error.backend.browserTabNotFound")));
+    tab.dialogs.cancel();
     tab.engine.invalidateReferences();
     this.#takeoverTabIds.add(tabId);
     this.#syncAttachedView();
@@ -1009,6 +1014,7 @@ export class BrowserHost {
     if (!tab || tab.closing) return yield* browserFailure(new Error(sourceText("error.backend.browserTabNotFound")));
     if (tab.secret) return yield* browserFailure(new Error(sourceText("error.backend.browserUserControlBusy")));
     if (this.#userControlTabIds.has(tabId)) return;
+    tab.dialogs.cancel();
     tab.engine.invalidateReferences();
     this.#userControlTabIds.set(tabId, holder);
     tab.diagnostics.clearDiagnostics();
@@ -1686,10 +1692,30 @@ export class BrowserHost {
         };
         return textResult({ ...this.#toolTabs(params), control });
       }),
+    handle_dialog: ({ args }, params) =>
+      Effect.gen({ self: this }, function* () {
+        yield* browserSync(() => this.#requireToolTab(params, args.tabId));
+        const tab = yield* this.#requireTab(args.tabId);
+        return yield* this.#runDialogOperation(
+          tab,
+          Effect.gen({ self: this }, function* () {
+            yield* browserSync(() => {
+              this.#requireToolTab(params, args.tabId);
+              this.#requireNoSecretDocument(tab, "A browser dialog");
+              tab.dialogs.answer(args.dialogId, args.accept);
+            });
+            const snapshot = yield* this.snapshot(args.tabId);
+            yield* browserSync(() => this.#requireToolTab(params, args.tabId));
+            return textResult(snapshot);
+          }),
+        );
+      }),
     snapshot: ({ args }, params) =>
       Effect.gen({ self: this }, function* () {
         const tabId = args.tabId;
         yield* browserSync(() => this.#requireToolTab(params, tabId));
+        const pending = this.#tabs.get(tabId)?.dialogs.current();
+        if (pending) return textResult({ tabId, dialog: pending });
         const mode = args.image ?? "auto";
         const capture = yield* this.#enqueue(tabId, (tab, keepQueueBlocked) =>
           Effect.gen({ self: this }, function* () {
@@ -2056,6 +2082,39 @@ export class BrowserHost {
     };
   });
 
+  readonly #runDialogOperation = Effect.fn("BrowserHost.runDialogOperation")(function* (
+    this: BrowserHost,
+    tab: BrowserHostTab,
+    operation: Effect.Effect<DynamicToolResult, BrowserOperationError>,
+  ) {
+    tab.dialogs.begin();
+    const completion = yield* Effect.forkIn(
+      operation.pipe(Effect.ensuring(Effect.sync(() => tab.dialogs.end()))),
+      tab.scope,
+      { startImmediately: true },
+    );
+    return yield* Effect.raceFirst(
+      Fiber.join(completion),
+      tab.dialogs.wait().pipe(
+        Effect.map((dialog) =>
+          textResult({
+            tabId: tab.id,
+            inputState: "attempted",
+            dialog,
+            nextTool: "openbot_browser.handle_dialog",
+          }),
+        ),
+      ),
+    ).pipe(
+      Effect.onInterrupt(() =>
+        Effect.sync(() => {
+          tab.dialogs.cancel();
+          completion.interruptUnsafe();
+        }),
+      ),
+    );
+  });
+
   readonly #runInputTool = Effect.fn("BrowserHost.runInputTool")(function* (
     this: BrowserHost,
     call: BrowserInputCall,
@@ -2064,14 +2123,63 @@ export class BrowserHost {
   ): Effect.fn.Return<DynamicToolResult, BrowserOperationError> {
     yield* browserSync(() => this.#requireToolTab(params, call.args.tabId));
     const action = yield* browserSync(() => browserInputAction(call, hooks));
-    return textResult(
-      yield* this.#runAction(
+    const tab = yield* this.#requireTab(call.args.tabId);
+    const pending = tab.dialogs.current();
+    if (pending) return textResult({ tabId: tab.id, inputState: "attempted", dialog: pending });
+    return yield* this.#runDialogOperation(
+      tab,
+      this.#runAction(
         call.args.tabId,
         action.name,
         action.target,
         (tab, deadline, markDispatched) => action.run(tab.engine, deadline, markDispatched),
         browserToolTimeout(call.args.timeoutMs),
         call.tool === "upload_files" ? hooks.onUploadOperationStarted : undefined,
+        true,
+      ).pipe(
+        Effect.map(textResult),
+        Effect.catch((failure) =>
+          Effect.gen({ self: this }, function* () {
+            const outcome = failure.cause;
+            if (!(outcome instanceof BrowserActionFailure)) return yield* failure;
+            const snapshot =
+              outcome.inputState === "not_started"
+                ? yield* withTimeout(
+                    this.#enqueue(call.args.tabId, (tab, keepQueueBlocked) =>
+                      Effect.gen({ self: this }, function* () {
+                        yield* browserSync(() => this.#requireToolTab(params, tab.id));
+                        if (tab.secret) return null;
+                        const capture = yield* readTabSnapshot(tab, tab.revision + 1, keepQueueBlocked, 2_000);
+                        yield* browserSync(() => this.#requireToolTab(params, tab.id));
+                        return tab.secret ? null : capture.snapshot;
+                      }),
+                    ),
+                    2_000,
+                    "Browser recovery snapshot timed out.",
+                  ).pipe(Effect.catch(() => Effect.succeed(null)))
+                : null;
+            return {
+              success: false,
+              contentItems: [
+                {
+                  type: "inputText",
+                  text: JSON.stringify({
+                    tabId: outcome.tabId,
+                    inputState: outcome.inputState,
+                    stage: outcome.stage,
+                    reason: outcome.reason,
+                    message: redactText(outcome.message).slice(0, 500),
+                    recovery:
+                      outcome.inputState === "not_started"
+                        ? "Inspect fresh targets before another attempt."
+                        : "Input may have changed the site. Verify the result before another action; do not replay input.",
+                    ...(snapshot ? { snapshot } : {}),
+                  }),
+                },
+              ],
+            } satisfies DynamicToolResult;
+          }),
+        ),
       ),
     );
   });
@@ -2112,6 +2220,7 @@ export class BrowserHost {
         for (const target of this.#persistentSessions()) target.flushStorageData();
         for (const tab of this.#tabs.values()) {
           tab.closing = true;
+          tab.dialogs.cancel();
           this.#unmountView(tab.view);
           drains.push(
             Effect.gen(function* () {
@@ -2285,6 +2394,24 @@ export class BrowserHost {
       focusOnVisible: false,
       environment,
       engine: new BrowserCdpEngine(view.webContents),
+      dialogs: new BrowserDialogs(view.webContents, () => {
+        const tab = this.#tabs.get(id);
+        if (
+          !tab ||
+          tab.closing ||
+          this.#destroying ||
+          tab.secret ||
+          this.#takeoverTabIds.has(id) ||
+          this.#heldByUser(id)
+        )
+          return false;
+        try {
+          this.#requireNoSecretDocument(tab, "A browser dialog");
+          return true;
+        } catch {
+          return false;
+        }
+      }),
       diagnostics,
       recording: false,
       captureGeneration: 0,
@@ -2748,7 +2875,20 @@ export class BrowserHost {
   });
 
   #snapshotResult(result: SnapshotReadResult, mode: BrowserImageMode, imageUrl: string | null): DynamicToolResult {
-    if (!imageUrl) return textResult(result.snapshot);
+    const pageEvidence = {
+      httpDenials: [
+        ...new Set(
+          result.snapshot.diagnostics.flatMap((entry) =>
+            entry.kind === "network" && (entry.status === 401 || entry.status === 403 || entry.status === 429)
+              ? [entry.status]
+              : [],
+          ),
+        ),
+      ],
+      signInTextPresent: /(?:\bsign in\b|\blog in\b|přihlášení)/iu.test(result.snapshot.text),
+      challengeTextPresent: /\b(captcha|verify you are human|checking your browser)\b/iu.test(result.snapshot.text),
+    };
+    if (!imageUrl) return textResult({ ...result.snapshot, pageEvidence });
     result.snapshot.image = {
       included: true,
       reason: mode === "always" ? "requested" : result.imageReason,
@@ -2758,7 +2898,7 @@ export class BrowserHost {
     return {
       success: true,
       contentItems: [
-        { type: "inputText", text: JSON.stringify(result.snapshot) },
+        { type: "inputText", text: JSON.stringify({ ...result.snapshot, pageEvidence }) },
         { type: "inputImage", imageUrl },
       ],
     };
@@ -2906,9 +3046,10 @@ export class BrowserHost {
     ) => Effect.Effect<void, BrowserOperationError>,
     timeoutMs?: number,
     onOperationStarted?: (completion: Fiber.Fiber<void, BrowserOperationError>) => void,
+    reportFailure = false,
   ): Effect.fn.Return<BrowserSnapshot | { tabId: string; closed: true; openerTabId?: string }, BrowserOperationError> {
     const tab = yield* this.#requireTab(tabId);
-    return yield* runTabAction(tab, action, target, operation, timeoutMs, onOperationStarted);
+    return yield* runTabAction(tab, action, target, operation, timeoutMs, onOperationStarted, reportFailure);
   });
 
   readonly #runEvaluation = Effect.fn("BrowserHost.runEvaluation")(function* (

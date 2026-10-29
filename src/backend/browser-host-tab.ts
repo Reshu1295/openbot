@@ -4,6 +4,7 @@ import type { Deferred, Effect, Scope } from "effect";
 import { BrowserWindow, type Session, type WebContents, type WebContentsView, webContents } from "electron";
 import type { BrowserCdpEngine } from "./browser-cdp";
 import type { BrowserDiagnostics } from "./browser-diagnostics";
+import type { BrowserDialogs } from "./browser-dialogs";
 import type { BrowserOperationError } from "./browser-effects";
 import { type BrowserTabSession, isPersistableBrowserUrl } from "./browser-state";
 
@@ -88,6 +89,7 @@ export interface BrowserHostTab {
   focusedAtPageClose?: boolean | undefined;
   environment: BrowserEnvironment;
   engine: BrowserCdpEngine;
+  dialogs: BrowserDialogs;
   diagnostics: BrowserDiagnostics;
   recording: boolean;
   captureGeneration: number;

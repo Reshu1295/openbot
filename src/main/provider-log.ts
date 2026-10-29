@@ -56,7 +56,7 @@ export function startAgentLog(logsDirectory: string): () => void {
  */
 export function startMainLog(logsDirectory: string): void {
   const directory = join(logsDirectory, "main");
-  teeLogLines(["main", "update"], (line) => {
+  teeLogLines(["main", "update", "browser-actions", "browser-dialogs"], (line) => {
     Effect.runFork(appendRemoteDiagnosticLog(directory, "main", `${line}\n`));
   });
 }
