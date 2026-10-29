@@ -1,4 +1,5 @@
 import type { CentralAuthUser } from "@openbot/contracts/ipc";
+import { AGENT_TASKS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-tasks-v1";
 import {
   ConversationLoadNotice,
   ServerConnectionNotice,
@@ -117,6 +118,20 @@ export function WorkspaceShell(props: { account: () => CentralAuthUser }) {
       },
     );
   }
+  /**
+   * The Tasks page follows a server switch. An older joined server has no task routes and no Tasks button,
+   * so the page closes when the server answers the compatibility check without them.
+   */
+  const tasksSupported = () => activeServerSupportsCapability(AGENT_TASKS_CAPABILITY);
+  createEffect(
+    () => {
+      const server = activeServer();
+      return middlePane() === "tasks" && !tasksSupported() && !!server?.compatibility?.hostAppVersion;
+    },
+    (unsupported) => {
+      if (unsupported) usage.closeUsage();
+    },
+  );
   /** The list stays while a connection screen covers the page: the screen does not span the sidebar. */
   const tasksAgentsHidden = () =>
     middlePane() === "tasks" &&
@@ -278,7 +293,7 @@ export function WorkspaceShell(props: { account: () => CentralAuthUser }) {
             </>
           }
         >
-          <Show when={middlePane() === "tasks" ? usage.state.serverId : null}>
+          <Show when={middlePane() === "tasks" && tasksSupported() ? usage.state.serverId : null}>
             {(serverId) => (
               <TasksPanel
                 serverId={serverId()}

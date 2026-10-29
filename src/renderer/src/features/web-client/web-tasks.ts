@@ -1,4 +1,3 @@
-import type { ConversationSnapshot } from "@openbot/contracts/ipc";
 import { runTeamEffect } from "@openbot/team-client";
 import {
   agentTaskControl,
@@ -11,19 +10,8 @@ import {
 } from "@openbot/team-client/team-api-requests";
 import { Effect } from "effect";
 import { isTaskEvent, type TasksSource } from "../tasks/tasks-port";
+import { withoutPreviewUrls } from "./web-agent-threads";
 import type { WebWorkspace } from "./web-client-context";
-
-/** The host names attachment previews with the desktop `openbot-attachment:` scheme, which a browser cannot load. */
-function withoutPreviewUrls(snapshot: ConversationSnapshot): ConversationSnapshot {
-  return {
-    ...snapshot,
-    messages: snapshot.messages.map((message) =>
-      message.attachments
-        ? { ...message, attachments: message.attachments.map((attachment) => ({ ...attachment, previewUrl: null })) }
-        : message,
-    ),
-  };
-}
 
 /** The tasks on the web: the `agent-tasks-v1` routes and the task events of the connected host. */
 export function webTasksSource(

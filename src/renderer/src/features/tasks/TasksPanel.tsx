@@ -3,6 +3,7 @@ import { currentText } from "@openbot/ui/text";
 import { createSignal, onCleanup } from "solid-js";
 import { actionToast } from "../../action-toast";
 import { appPort } from "../../app-port";
+import { useLayout } from "../../layout";
 import { useNavigation } from "../../navigation";
 import { usePlatform } from "../../platform";
 import { deviceSendShortcut } from "../../send-shortcut-preference";
@@ -38,6 +39,7 @@ export function TasksPanel(props: TasksPanelProps) {
   const tabs = useAgentThreads();
   const { selectAgent } = useNavigation();
   const platform = usePlatform();
+  const layout = useLayout();
 
   function openAttachment(attachment: AttachmentSummary, action: "open" | "reveal" | "download"): void {
     window.openbot.agent.openAttachment({ attachmentId: attachment.id, action }, props.serverId).catch((error) => {
@@ -60,6 +62,8 @@ export function TasksPanel(props: TasksPanelProps) {
       // The tab is written first, so the chat opens on it. Opening the chat closes the page.
       onOpenInChat={(task) => {
         tabs.open(task.agentId, task.id);
+        // The Routines view covers the chat.
+        layout.setSidebarView("agents");
         selectAgent(task.agentId);
       }}
       sendShortcut={deviceSendShortcut(platform.appInfo()?.platform)}

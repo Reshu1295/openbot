@@ -1,3 +1,4 @@
+import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type {
   AgentApproval,
   AgentTask,
@@ -27,8 +28,6 @@ import type { TaskEvent, TasksSource } from "./tasks-port";
 
 /** How long a start waits before it reaches the agent. Undo cancels it in this time. */
 const UNDO_MS = 6_000;
-/** The longest task title that the host keeps. */
-const TITLE_LIMIT = 120;
 /** The agent last chosen on this page for each server, kept apart from the chat agent. */
 const TASK_AGENT_STORAGE_KEY = "openbot:task-agent:v1";
 
@@ -235,8 +234,12 @@ export function TasksView(props: TasksViewProps) {
     );
   }
 
-  /** Adds a task that a start returned, so it shows before the list event arrives. */
+  /**
+   * Adds a task that a start returned, so it shows before the list event arrives. A list read that started
+   * before the task does not have it, so its answer no longer counts.
+   */
   function rememberTask(task: AgentTask): void {
+    listRequests.set(task.agentId, (listRequests.get(task.agentId) ?? 0) + 1);
     setState((draft) => {
       const snapshot = draft.snapshots[task.agentId];
       if (!snapshot) draft.snapshots[task.agentId] = { agentId: task.agentId, tasks: [task], limit: 1 };
@@ -305,7 +308,7 @@ export function TasksView(props: TasksViewProps) {
       agentId: owner,
       threadId: "",
       origin: "user",
-      title: title.slice(0, TITLE_LIMIT),
+      title: title.slice(0, INPUT_LIMITS.agentTaskTitle),
       state: "queued",
       outcome: null,
       hold: null,

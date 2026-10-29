@@ -833,6 +833,13 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
   const scheduleSource = webScheduleSource(workspace, hostRequest);
   const tasksSource = webTasksSource(workspace, hostRequest);
   const tasksSupported = () => workspace.state.capabilities.includes(AGENT_TASKS_CAPABILITY);
+  // The Tasks page follows a host switch. An older host has no task routes and no Tasks button.
+  createEffect(
+    () => tasksOpen() && workspace.state.status === "online" && !tasksSupported(),
+    (unsupported) => {
+      if (unsupported) setHostPage(null);
+    },
+  );
   const marketplaceCalls = createWebMarketplaceCalls(props.accountFetch, hostRequest);
   // The host's connectors, for an owner or admin. The web client has no computer of its own.
   const connectorTarget = createMemo(() => remoteAdminServer(server(), CONNECTORS_CAPABILITY));
@@ -2223,8 +2230,11 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                     source={tasksSource}
                     agents={workspace.profiles()}
                     onOpenLink={(url) => void openWebLink(url)}
+                    // The browser only downloads a file.
                     onAttachmentAction={(attachment) =>
-                      void runtime.agent.openAttachment({ attachmentId: attachment.id, action: "download" })
+                      void runtime.agent
+                        .openAttachment({ attachmentId: attachment.id, action: "download" })
+                        .catch((error) => actionToast.error(text.errorMessage(error, t("attachment.error.download"))))
                     }
                     approvals={workspace.state.approvals}
                     onRespondApproval={async (approval, decision) => {
@@ -2245,6 +2255,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                     // The tab is written first, so the chat opens on it. Opening the chat closes the page.
                     onOpenInChat={(task) => {
                       agentThreads()?.tabs.open(task.agentId, task.id);
+                      // The Routines view covers the chat.
+                      layout.setSidebarView("agents");
                       setMobilePane("conversation");
                       void select(task.agentId);
                     }}
