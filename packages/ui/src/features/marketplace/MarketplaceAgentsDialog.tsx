@@ -274,12 +274,12 @@ export function AgentsDialog(props: { model: MarketplaceModel; skill: DialogSkil
   const { t } = useText();
   const words = useSkillWords(() => props.model);
   const skillId = untrack(() => props.skill.id);
-  const [draft, setDraft] = createStore<{ on: Record<string, boolean> }>({
-    on: Object.fromEntries(untrack(() => agentsWith(props.model, skillId)).map((agent) => [agent.id, true])),
-  });
+  /* Only the user's choices. An agent with no choice follows its read, which can load after the dialog opens. */
+  const [draft, setDraft] = createStore<{ on: Record<string, boolean> }>({ on: {} });
   const agents = () => props.model.agents();
   const installed = (agentId: string) => props.model.installedSkill(agentId, skillId);
   const has = (agentId: string) => installed(agentId) !== undefined;
+  const checked = (agentId: string) => draft.on[agentId] ?? has(agentId);
   /** The agent has its most skills. Without the list of each agent's skills, no agent counts as full. */
   const full = (agentId: string) => {
     const skills = props.model.installedSkills?.(agentId);
@@ -296,7 +296,7 @@ export function AgentsDialog(props: { model: MarketplaceModel; skill: DialogSkil
     return full(agent.id) ? t("marketplace.skills.dialog.full") : undefined;
   };
   const adds = () => agents().filter((agent) => draft.on[agent.id] === true && !has(agent.id));
-  const removes = () => agents().filter((agent) => draft.on[agent.id] !== true && has(agent.id));
+  const removes = () => agents().filter((agent) => draft.on[agent.id] === false && has(agent.id));
   const action = () => {
     const added = adds();
     const removed = removes();
@@ -362,7 +362,7 @@ export function AgentsDialog(props: { model: MarketplaceModel; skill: DialogSkil
               <AgentSearchList
                 agents={agents()}
                 label={t("marketplace.skills.dialog.list", { name: props.skill.name })}
-                checked={(agentId) => draft.on[agentId] === true}
+                checked={checked}
                 set={(chosen, on) =>
                   setDraft((state) => {
                     for (const agent of chosen) state.on[agent.id] = on;

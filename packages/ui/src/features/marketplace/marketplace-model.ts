@@ -168,8 +168,6 @@ export interface MarketplaceModel {
    */
   installedSkills?: ((agentId: string) => readonly InstalledSkill[]) | undefined;
   skillBusy: (skillId: string) => boolean;
-  /** Installs the skill on each agent, or removes it, one agent at a time. */
-  setSkill: (skill: MarketplaceSkillSummary, agentIds: readonly string[], on: boolean) => Promise<void>;
   /**
    * Adds the skill to some agents and removes it from others as one change, with one notice and one
    * Undo. A remove waits until the Undo toast closes, so Undo never reinstalls and never loses a

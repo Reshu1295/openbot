@@ -591,10 +591,11 @@ export class SkillMarketplace {
         const bindings = yield* MarketplaceStorage;
 
         const result = yield* marketplaceCall(() =>
+          // A feature is not a change of the skill, so "Recently updated" keeps its order.
           bindings.DB.prepare(
-            "UPDATE marketplace_skills SET featured = ?, updated_at = ? WHERE id = ? AND approved_version_id IS NOT NULL",
+            "UPDATE marketplace_skills SET featured = ? WHERE id = ? AND approved_version_id IS NOT NULL",
           )
-            .bind(featured ? 1 : 0, Date.now(), skillId)
+            .bind(featured ? 1 : 0, skillId)
             .run(),
         );
         if (result.meta.changes !== 1)

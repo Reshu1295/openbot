@@ -10,7 +10,6 @@ import type {
   MarketplaceAgentSummary,
   MarketplaceSkillDetail,
   MarketplaceSkillQuery,
-  MarketplaceSkillSummary,
   McpServerConfig,
   McpSignInRelayPage,
   McpSignInState,
@@ -132,10 +131,14 @@ interface ChangeRemoval {
   removal: HeldRemoval;
 }
 
-/** The copy has an older version than the newest one. A changed copy also needs a confirmation. */
-function hasSkillUpdate(skill: InstalledSkill): boolean {
+/**
+ * The copy can take the newest version. The caller chose the agents: an `installed` copy can be older
+ * than the listing before the host reads the new version. A changed copy also needs a confirmation.
+ */
+function takesUpdate(skill: InstalledSkill): boolean {
   return (
     skill.state === "update-available" ||
+    skill.state === "installed" ||
     (skill.state === "modified" && skill.availableVersion > skill.installedVersion)
   );
 }
@@ -421,64 +424,6 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     else actionToast.error(message);
   }
 
-  /**
-   * Installs the skill on each agent, or removes it, one agent at a time. A failure does not stop
-   * the loop: each agent gets its try, and one sentence names the agents that did not change.
-   */
-  async function setSkill(skill: MarketplaceSkillSummary, agentIds: readonly string[], on: boolean) {
-    const key = `skill:${skill.id}`;
-    if (agentIds.length === 0 || skillBusy(skill.id)) return;
-    mark(key, true);
-    setError(null);
-    // This action replaces a remove that waits for its toast. The host still has the skill.
-    const host = untrack(() => props.hostServerId);
-    for (const agentId of agentIds) cancelRemoval(host, agentId, skill.id);
-    const failed: string[] = [];
-    let reason = "";
-    let lastCause: unknown;
-    for (const agentId of agentIds) {
-      const action = on ? (installedSkill(agentId, skill.id) ? "update" : "install") : "uninstall";
-      const analytics = desktopAnalytics.scope();
-      try {
-        if (on) await skillCalls().install({ agentId, skillId: skill.id, replaceModified: false });
-        else await skillCalls().uninstall({ agentId, skillId: skill.id });
-        analytics.track("marketplace_action", {
-          entity: "skill",
-          action,
-          listing_slug: skill.id,
-          result: "succeeded",
-        });
-      } catch (cause) {
-        failed.push(agentName(agentId));
-        reason = marketplaceErrorMessage(cause);
-        lastCause = cause;
-        analytics.track("marketplace_action", {
-          entity: "skill",
-          action,
-          listing_slug: skill.id,
-          result: "failed",
-          failure_code: `${action}_failed`,
-        });
-      }
-      await readInstalled(agentId);
-    }
-    mark(key, false);
-    const changed = agentIds.length - failed.length;
-    if (changed > 0)
-      setNotice(
-        t(on ? "marketplace.notice.skillInstalled" : "marketplace.notice.skillRemoved", {
-          name: skill.name,
-          count: changed,
-        }),
-      );
-    if (failed.length === 1 && agentIds.length === 1) setError(reason, lastCause);
-    else if (failed.length > 0)
-      setError(
-        t("marketplace.error.skillPartial", { name: skill.name, agents: format.list(failed), reason }),
-        lastCause,
-      );
-  }
-
   /** The text of one change: what it added and removed, together. */
   function changeText(name: string, added: number, removed: number): string {
     const { t: text } = currentText();
@@ -679,7 +624,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     if (skillBusy(skill.id)) return;
     const targets = [...new Set(agentIds)].flatMap((agentId) => {
       const copy = installedSkill(agentId, skill.id);
-      return copy && hasSkillUpdate(copy) ? [{ agentId, modified: copy.state === "modified" }] : [];
+      return copy && takesUpdate(copy) ? [{ agentId, modified: copy.state === "modified" }] : [];
     });
     if (targets.length === 0) return;
     mark(key, true);
@@ -1349,7 +1294,6 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     installedSkill,
     installedSkills,
     skillBusy,
-    setSkill,
     changeSkill,
     setSkillEnabled,
     updateSkill,

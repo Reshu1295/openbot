@@ -430,8 +430,6 @@ function MarketplaceStory(props: StoryProps) {
     installedSkill: (agentId, skillId) => state.installed[agentId]?.find((skill) => skill.skillId === skillId),
     installedSkills: (agentId) => state.installed[agentId] ?? [],
     skillBusy: () => false,
-    setSkill: async (skill, agentIds, on) =>
-      changeSkill(skill.id, { add: on ? agentIds : [], remove: on ? [] : agentIds }),
     changeSkill: async (skill, change) => changeSkill(skill.id, change),
     setSkillEnabled: async (agentId, skillId, on) =>
       setState((draft) => {

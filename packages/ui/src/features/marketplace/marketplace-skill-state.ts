@@ -1,6 +1,6 @@
 import {
   type InstalledSkill,
-  isUserAssignedSkill,
+  isRemovableSkill,
   type MarketplaceSkillSort,
   type MarketplaceSkillSummary,
 } from "@openbot/contracts/ipc";
@@ -32,8 +32,9 @@ export function matches(query: string, text: string): boolean {
 }
 
 /**
- * The skills that the user's agents have, without the built-in ones, by name. A skill that more
- * than one agent has is one entry. Without `installedSkills`, only the loaded catalog skills.
+ * The skills that the user's agents have and OpenBot manages, by name: no built-in, folder or home
+ * skill, as OpenBot cannot add or remove those. A skill that more than one agent has is one entry.
+ * Without `installedSkills`, only the loaded catalog skills.
  */
 export function userSkills(
   model: MarketplaceModel,
@@ -41,7 +42,7 @@ export function userSkills(
 ): readonly InstalledSkill[] {
   const seen = new Map<string, InstalledSkill>();
   const add = (skill: InstalledSkill | undefined) => {
-    if (skill && isUserAssignedSkill(skill) && !seen.has(skill.skillId)) seen.set(skill.skillId, skill);
+    if (skill && isRemovableSkill(skill) && !seen.has(skill.skillId)) seen.set(skill.skillId, skill);
   };
   for (const agent of model.agents()) {
     const installed = model.installedSkills?.(agent.id);
