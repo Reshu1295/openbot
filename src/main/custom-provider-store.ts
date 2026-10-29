@@ -154,7 +154,7 @@ export class CustomProviderStore {
       name: stored.name,
       baseUrl: stored.baseUrl,
       apiKey: secret?.apiKey ?? null,
-      models: stored.models,
+      models: stored.models.map(copyModel),
       headers: secret?.headers ?? [],
     }));
   }
@@ -332,7 +332,8 @@ export class CustomProviderStore {
   });
 }
 
-function copyModel(model: CustomProviderModel): CustomProviderModel {
+/** The parse keeps an out-of-range `contextWindow` key as undefined. The copy drops that key. */
+function copyModel(model: z.infer<typeof modelSchema>): CustomProviderModel {
   return model.contextWindow === undefined
     ? { id: model.id, name: model.name }
     : { id: model.id, name: model.name, contextWindow: model.contextWindow };
