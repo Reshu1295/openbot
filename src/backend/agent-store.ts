@@ -410,7 +410,13 @@ export class AgentStore {
         record.sessionSettingOverrides = structuredClone(source.sessionSettingOverrides);
       record.access = source.access;
       if (source.additionalFolders) record.additionalFolders = [...source.additionalFolders];
-      if (source.excludedFolders) record.excludedFolders = [...source.excludedFolders];
+      // An exclusion in the source workspace applies to the same folder in the copied workspace.
+      if (source.excludedFolders)
+        record.excludedFolders = source.excludedFolders.map((folder) =>
+          isPathInside(source.workspacePath, folder)
+            ? join(record.workspacePath, relative(source.workspacePath, folder))
+            : folder,
+        );
       record.computerUse = source.computerUse;
       if (source.busyMessageMode) record.busyMessageMode = source.busyMessageMode;
       if (source.taskLimit !== undefined) record.taskLimit = source.taskLimit;
