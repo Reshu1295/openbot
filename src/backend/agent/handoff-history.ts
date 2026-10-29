@@ -14,13 +14,20 @@ const ROUTINE_HANDOFF_CHARACTERS = 8_000;
 const ROUTINE_MESSAGE_CHARACTERS = 2_000;
 type HistoryRow = ReturnType<OpenBotDatabase["readAgentHistory"]>["messages"][number];
 
+/** Moves cuts inside surrogate pairs inward, without increasing the character budget. */
+function historySlice(text: string, start: number, end: number): string {
+  if ((text.codePointAt(start - 1) ?? 0) > 0xffff) start++;
+  if ((text.codePointAt(end - 1) ?? 0) > 0xffff) end--;
+  return text.slice(start, end);
+}
+
 /** Cuts redacted text at both ends, so a large request keeps its final instructions. */
 function historyExcerpt(text: string, limit: number): string {
   if (text.length <= limit) return text;
   const marker = "\n[... omitted; use history_read with this messageId ...]\n";
-  if (limit <= marker.length) return text.slice(0, Math.max(0, limit));
+  if (limit <= marker.length) return historySlice(text, 0, Math.max(0, limit));
   const length = limit - marker.length;
-  return `${text.slice(0, Math.ceil(length / 2))}${marker}${text.slice(-Math.floor(length / 2))}`;
+  return `${historySlice(text, 0, Math.ceil(length / 2))}${marker}${historySlice(text, text.length - Math.floor(length / 2), text.length)}`;
 }
 
 function render(message: ConversationMessage, names: ReadonlyMap<string, string>): string {
