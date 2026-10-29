@@ -26,6 +26,7 @@ import {
 import { ComposerNotice } from "@openbot/ui/features/conversation/ComposerNotice";
 import { ContextUsageMeter, type ContextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
+import type { SendShortcut } from "@openbot/ui/features/conversation/send-shortcut";
 import { type TextValue, useText } from "@openbot/ui/text";
 import type { JSX } from "@solidjs/web";
 import { children, createSignal, For, onSettled, Show } from "solid-js";
@@ -122,6 +123,8 @@ export interface AgentThreadViewProps {
   stepsOpenByDefault?: boolean | undefined;
   /** Receives the message list, where the app searches the thread. */
   scrollRef?: ((element: HTMLElement) => void) | undefined;
+  /** The user's send shortcut. Enter when absent. */
+  sendShortcut?: SendShortcut | undefined;
 }
 
 /**
@@ -317,6 +320,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
               placeholder={placeholder()}
               ariaLabel={placeholder()}
               disabled={sending()}
+              sendShortcut={props.sendShortcut}
               onSubmit={() => void send()}
               onValueChange={props.onDraftChange}
               onPasteFiles={props.onPasteFiles}

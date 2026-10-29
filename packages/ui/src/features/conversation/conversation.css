@@ -31,6 +31,7 @@
 @import "./styles/attachments.css";
 @import "./styles/image-lightbox.css";
 @import "./styles/queue.css";
+@import "./styles/agent-tasks.css";
 @import "./styles/agent-threads.css";
 @import "./styles/side-question.css";
 @import "./styles/voice.css";
