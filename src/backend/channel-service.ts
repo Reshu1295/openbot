@@ -481,7 +481,7 @@ export class ChannelService {
                   ? open
                   : !referenced &&
                       roots.length > 1 &&
-                      roots.every((task) => task.requestMessageId === roots[0]?.requestMessageId) &&
+                      roots.every((task) => roots[0] && sameRequest(task, roots[0])) &&
                       open.every((task) => roots.some((root) => root.id === task.rootTaskId))
                     ? openRoots
                     : [];
@@ -867,10 +867,7 @@ export class ChannelService {
     const owners = tasks
       .filter(
         (item) =>
-          item.id !== task.id &&
-          item.parentTaskId === null &&
-          item.requestMessageId === task.requestMessageId &&
-          item.state !== "cancelled",
+          item.id !== task.id && item.parentTaskId === null && sameRequest(item, task) && item.state !== "cancelled",
       )
       .flatMap((item) => (item.ownerAgentId && item.ownerAgentId !== task.ownerAgentId ? [item.ownerAgentId] : []));
     return [...new Set(owners)].map((agentId) => this.memberName(agentId));
@@ -2859,6 +2856,14 @@ function routingFailureText(error: unknown): string | null {
   const keys = matchingSourceKeys(error.message);
   if (keys.some((key) => key.startsWith("error.agent.profile"))) return sourceText("error.backend.channelLeadFailed");
   return keys.some((key) => key.startsWith("error.backend.")) ? error.message : null;
+}
+
+/**
+ * Whether two tasks answer one request. A "continue" moves only the tasks it continues to the new
+ * message, so siblings compare by the messages they share, not by their current request.
+ */
+function sameRequest(task: ChannelTask, other: ChannelTask): boolean {
+  return task.sourceMessageIds.some((id) => other.sourceMessageIds.includes(id));
 }
 
 function terminal(task: ChannelTask): boolean {
