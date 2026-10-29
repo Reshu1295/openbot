@@ -81,10 +81,14 @@ export interface AcpConfigurationOptions {
   provider: AgentProvider;
   requestTimeoutMs: number;
   discoveryCwd?: (() => string) | undefined;
+  /** `AcpFlavor.processWideModel`. */
+  processWideModel?: boolean;
 }
 
 /** Owns ACP model discovery and setting translation. The client owns sessions and their state. */
 export class AcpConfiguration {
+  /** The model this agent process last took, for an agent whose model belongs to the process. */
+  #processModel: { connection: ClientSideConnection; value: string } | null = null;
   constructor(private readonly options: AcpConfigurationOptions) {}
   readonly discoverModels = Effect.fn("AcpConfiguration.discoverModels")(function* (
     this: AcpConfiguration,
@@ -199,6 +203,8 @@ export class AcpConfiguration {
     const probed: AcpModel[] = [];
     let answered = 0;
     let selected = opening;
+    // The sweep selects models on the process too.
+    this.#processModel = null;
     for (const model of models) {
       const response = yield* this.#requestBeforeEffect(
         () => connection.setSessionConfigOption({ sessionId: probe.sessionId, configId: option.id, value: model.id }),
@@ -294,6 +300,7 @@ export class AcpConfiguration {
         options[0];
       if (!option) {
         if (category === "model" && thread.currentModelId !== value) {
+          this.#processModel = null;
           yield* this.#timed("session/set_model", () =>
             this.options.connection().request("session/set_model", {
               sessionId: thread.id,
@@ -322,15 +329,28 @@ export class AcpConfiguration {
         );
         thread.configOptions = response.configOptions;
       }
+      // The process runs every session on the model it took last, so the set is sent only for a change.
+      // A new process is a new connection, and a failed set leaves the model unknown.
+      const connection = this.options.connection();
+      if (category === "model" && this.options.processWideModel) {
+        if (this.#processModel?.connection === connection && this.#processModel.value === selected) {
+          thread.currentModelId = selected;
+          continue;
+        }
+        this.#processModel = null;
+      }
       const response = yield* this.#timed("session/set_config_option", () =>
-        this.options.connection().setSessionConfigOption({
+        connection.setSessionConfigOption({
           sessionId: thread.id,
           configId: option.id,
           value: selected,
         }),
       );
       thread.configOptions = response.configOptions;
-      if (category === "model") thread.currentModelId = selected;
+      if (category === "model") {
+        thread.currentModelId = selected;
+        if (this.options.processWideModel) this.#processModel = { connection, value: selected };
+      }
     }
   });
 
