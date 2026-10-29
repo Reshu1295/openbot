@@ -2,7 +2,8 @@
 // process, as Cursor 2026.10.22-27dcf5f's does. Each Cursor model set asks Cursor's server for the
 // model list, and a failed request reports "Invalid model value" (#3800). Checks that a turn on the
 // model the process already runs on sends no model set, that each turn still runs on its own model
-// after another thread changed it, and that a set is sent again after a set failed.
+// after another thread changed it, that a set is sent again after a set failed, and that two sets
+// that overlap leave the model unknown, because they can apply in another order than they answer.
 // `bun run test:cursor-model-set`. Writes .openbot-build/cursor-model-set-e2e/report.json.
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -43,8 +44,13 @@ try {
   await mkdir(workspace);
   const log = join(root, "sets.jsonl");
   const failFlag = join(root, "fail-next-set");
+  const reorderFlag = join(root, "reorder-sets");
   const executable = join(root, "cursor", "cursor-agent");
-  await installFakeAgent(executable, "cursor-model-set", { FAKE_LOG: log, FAKE_FAIL_NEXT_SET: failFlag });
+  await installFakeAgent(executable, "cursor-model-set", {
+    FAKE_LOG: log,
+    FAKE_FAIL_NEXT_SET: failFlag,
+    FAKE_REORDER_SETS: reorderFlag,
+  });
   const cli: AgentCliInfo = { executable, version: "2026.10.22-27dcf5f", source: "managed" };
   const client = requireProviderDriver("cursor").createClient(cli, 10_000, NO_PROVIDER_CREDENTIALS);
   clients.push(client);
@@ -109,6 +115,32 @@ try {
   assert.deepEqual(values(retried), [HIGH], "After a failed set, the next turn sends the set again.");
   assert.equal(retried.turn?.reply, `Model: ${HIGH}`, "The turn runs on its model.");
   assert.equal(retried.turn?.status, "completed", "The turn completes.");
+
+  // Thread 1's set applies first and answers last. A record of the last answer would name MEDIUM
+  // while the process runs on HIGH, and thread 1's next turn would run on HIGH.
+  await writeFile(reorderFlag, "");
+  const overlap = await step("overlapping turns on thread 1 and thread 2", async () => {
+    const first1 = runTurn(client, first, { model: MEDIUM, text: "ping" });
+    // Thread 2's set goes out while thread 1's set waits for its answer.
+    await new Promise<void>((resolveWait) => {
+      const poll = setInterval(async () => {
+        if ((await readJsonl<SetEntry>(log)).length > seen) {
+          clearInterval(poll);
+          resolveWait();
+        }
+      }, 10);
+    });
+    const second2 = runTurn(client, second, { model: HIGH, text: "ping" });
+    await Promise.all([first1, second2]);
+    return undefined;
+  });
+  assert.deepEqual(values(overlap), [MEDIUM, HIGH], "Both turns set their model.");
+  await rm(reorderFlag);
+  const afterOverlap = await step("turn on thread 1 after the overlap", () =>
+    runTurn(client, first, { model: MEDIUM, text: "ping" }),
+  );
+  assert.deepEqual(values(afterOverlap), [MEDIUM], "After overlapping sets, the next turn sends its set.");
+  assert.equal(afterOverlap.turn?.reply, `Model: ${MEDIUM}`, "The turn runs on its own model.");
 
   report.passed = true;
 } finally {

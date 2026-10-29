@@ -2,7 +2,9 @@
 // belongs to the process: a model set moves every session to it, and the agent sends no update for
 // the other sessions. Each set is logged to `FAKE_LOG`. While the file named in `FAKE_FAIL_NEXT_SET`
 // exists, the next model set fails as Cursor's does when its model list request fails (#3800), and
-// the file is removed.
+// the file is removed. While the file named in `FAKE_REORDER_SETS` exists, a set applies when it
+// arrives, and the first of two overlapping sets answers last: Cursor answers each set after a server
+// request of its own, so answers can come in another order than the sets applied.
 import { existsSync, rmSync } from "node:fs";
 import { type AcpRequest, logEntry, serveFakeAcpAgent } from "../acp-agent";
 
@@ -13,6 +15,7 @@ const MODELS = [
 
 let current = MODELS[0]?.value ?? "";
 let count = 0;
+let setsInFlight = 0;
 
 const configOptions = () => [
   {
@@ -59,7 +62,17 @@ serveFakeAcpAgent({
     }
     logEntry({ method: request.method, value });
     current = value;
-    peer.reply(request, { configOptions: configOptions() });
+    const reorder = process.env.FAKE_REORDER_SETS;
+    if (!reorder || !existsSync(reorder)) {
+      peer.reply(request, { configOptions: configOptions() });
+      return;
+    }
+    const delayMs = setsInFlight === 0 ? 500 : 100;
+    setsInFlight += 1;
+    setTimeout(() => {
+      setsInFlight -= 1;
+      peer.reply(request, { configOptions: configOptions() });
+    }, delayMs);
   },
   "session/prompt": (request, peer) => {
     peer.say(request.params.sessionId, `Model: ${current}`);
