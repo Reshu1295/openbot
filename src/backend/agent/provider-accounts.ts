@@ -575,12 +575,21 @@ export class ProviderAccounts {
               sourceText("error.provider.accountAlreadyAdded", { provider: providerLabel(provider) }),
             );
           // The reading comes first: a usage request for a connected account uses it and starts no client.
+          // The client is signed in already, so a reading that fails does not fail the check: after a
+          // sign-in, that failure removed the new account.
           const limit =
             agentProviderDescriptor(provider).reportsUsage && !isKeyAccount(account)
-              ? yield* this.#storeUsage(
-                  account,
-                  client,
-                  yield* this.#host.readUsage(client, defaultUsageModel(provider)),
+              ? yield* this.#host.readUsage(client, defaultUsageModel(provider)).pipe(
+                  Effect.flatMap((usage) => this.#storeUsage(account, client, usage)),
+                  Effect.catch((error) =>
+                    Effect.sync(() => {
+                      logger.warn("A provider account usage reading failed.", {
+                        provider,
+                        message: this.#message(provider, error),
+                      });
+                      return null;
+                    }),
+                  ),
                 )
               : null;
           this.#setState(account.id, { state: "connected", email, message: null });
