@@ -139,6 +139,7 @@ export const messages = {
   "conversation.panels.tryAgain": "Versuche es erneut.",
   "conversation.view.label": "Unterhaltung",
   "conversation.view.drop": "Dateien zum Anhängen ablegen",
+  "conversation.view.dropFolder": "Ordner ablegen, damit {agent} Dateien darin ändern kann",
   "conversation.direct.loadingLabel": "Direkte Unterhaltung wird geladen",
   "conversation.direct.olderFailed": "Ältere Nachrichten konnten nicht geladen werden.",
   "conversation.direct.unreadFailed": "Die ungelesene Nachricht konnte nicht geladen werden.",

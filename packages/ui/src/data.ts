@@ -261,6 +261,8 @@ export interface AgentProfile {
   taskLimit?: ClientAgentSummary["taskLimit"];
   /** Absent means ask before a switch at a usage limit. Absent for an agent on a remote host too. */
   backupModels?: ClientAgentSummary["backupModels"];
+  /** The folders the user gave the agent besides its workspace. Absent for none, and on a remote host. */
+  additionalFolders?: ClientAgentSummary["additionalFolders"];
   /** Set while the agent works on a backup model for a usage limit: the model it goes back to. */
   usageLimitReturn?: ClientAgentSummary["usageLimitReturn"];
   /** Set while a turn or task still runs on the previous provider. The next turn uses this runtime. */

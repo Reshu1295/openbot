@@ -49,6 +49,7 @@ import {
   getAgentAdminSettings,
   getHostAgentAccess,
   getHostAgentMemoryLimit,
+  getHostMemoryReview,
   getHostPromptCacheTtl,
   getHostReleaseStatus,
   getHostTimezone,
@@ -57,6 +58,7 @@ import {
   listHostedSites,
   setHostAgentAccess,
   setHostAgentMemoryLimit,
+  setHostMemoryReview,
   setHostPromptCacheTtl,
   setHostTimezone,
   setHostUpdateSettings,
@@ -163,13 +165,9 @@ import { hostSetupProviderProps } from "../onboarding/host-setup-provider-props"
 import { createRoutineTimezonePrompt } from "../schedule/routine-timezone-prompt";
 import type { ScheduleRoutine } from "../schedule/SchedulePanel";
 import { AddServerOverlay, type AddServerResume } from "../servers/AddServerOverlay";
-import {
-  createHostedUpsellOffline,
-  HostedServerUpsell,
-  hostedUpsellRoutineCreated,
-  routineMadeThisSession,
-} from "../servers/hosted-server-upsell-controller";
+import { createHostedUpsellOffline, HostedServerUpsell } from "../servers/hosted-server-upsell-controller";
 import type { HostMemoryLimitCalls } from "../servers/ServerMemoryLimitSetting";
+import type { HostMemoryReviewCalls } from "../servers/ServerMemoryReviewSetting";
 import type { HostAgentAccessCalls } from "../servers/ServerRolesSection";
 import type { ServerHostedSitesOptions, ServerSettingsSection } from "../servers/ServerSettingsModal";
 import type { HostTimezoneCalls } from "../servers/ServerTimezoneSetting";
@@ -996,6 +994,12 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
         setHostAgentMemoryLimit(hostRequest(serverId), limit).pipe(Effect.mapError((error) => error.cause)),
       ),
   };
+  const hostMemoryReviewCalls: HostMemoryReviewCalls = {
+    getMemoryReview: async (serverId) =>
+      runTeamEffect(getHostMemoryReview(hostRequest(serverId)).pipe(Effect.mapError((error) => error.cause))),
+    setMemoryReview: async (interval, serverId) =>
+      runTeamEffect(setHostMemoryReview(hostRequest(serverId), interval).pipe(Effect.mapError((error) => error.cause))),
+  };
   const hostPromptCacheTtlCalls: HostPromptCacheTtlCalls = {
     getPromptCacheTtl: async (serverId) =>
       runTeamEffect(getHostPromptCacheTtl(hostRequest(serverId)).pipe(Effect.mapError((error) => error.cause))),
@@ -1408,27 +1412,6 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       return current.open ? (current.conversation ?? null) : null;
     },
   });
-  // A routine that an agent makes leaves a marker in its turn. The offer of a hosted server waits until that turn ends.
-  // The marker does not tell whether the routine is paused; an agent makes an active routine unless told otherwise.
-  createEffect(
-    () => {
-      const agentId = workspace.conversation()?.page?.agentId;
-      if (!agentId) return [];
-      return view.messages.flatMap((message) => {
-        const marker = message.actionMarker;
-        return message.turnId && marker?.kind === "routine-lifecycle" && marker.action === "created"
-          ? [{ id: marker.routineId, name: marker.routineName, createdAt: marker.timestamp, agentId }]
-          : [];
-      });
-    },
-    (created) => {
-      for (const routine of created) {
-        if (routineMadeThisSession(routine.createdAt)) {
-          hostedUpsellRoutineCreated({ id: routine.id, name: routine.name, agentId: routine.agentId });
-        }
-      }
-    },
-  );
   createEffect(
     () => workspace.state.error,
     (error) => {
@@ -2129,6 +2112,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                       hostUpdate={{ calls: hostUpdateCalls }}
                       hostTimezone={{ calls: hostTimezoneCalls }}
                       hostMemoryLimit={{ calls: hostMemoryLimitCalls }}
+                      memoryReview={{ calls: hostMemoryReviewCalls }}
                       hostPromptCacheTtl={{ calls: hostPromptCacheTtlCalls }}
                       agentAccess={{ calls: hostAgentAccessCalls, listAgents: () => workspace.runtime.listAgents() }}
                       browserProfiles={browserProfileSettings()}
@@ -2264,6 +2248,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                     },
                     approvals: () => workspace.state.approvals,
                     takeovers: () => workspace.state.takeovers,
+                    hiddenAgentIds: () => new Set(workspace.state.userHiddenAgents.map((entry) => entry.agentId)),
                   });
                   return (
                     <Conversation

@@ -101,6 +101,8 @@ export const messages = {
   "error.provider.modelsTooMany": "Es gibt zu viele Modelle.",
   "error.provider.modelIdCharacter": "Eine Modell-ID enthält ein unzulässiges Zeichen.",
   "error.provider.modelIdDuplicate": "Zwei Modelle haben dieselbe ID.",
+  "error.provider.contextWindowInvalid":
+    "Das Kontextfenster eines Modells muss eine ganze Zahl von Tokens zwischen {min} und {max} sein.",
   "error.provider.headersTooMany": "Es gibt zu viele Header.",
   "error.provider.headerNameCharacter": "Ein Headername enthält ein Zeichen, das HTTP nicht erlaubt.",
   "error.provider.headerNameTooLong": "Ein Headername ist zu lang.",

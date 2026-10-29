@@ -145,7 +145,7 @@ export function claudeWorkspaceHooks(cwd: string, roots: readonly string[]): Non
           hookSpecificOutput: {
             hookEventName: "PreToolUse",
             permissionDecision: "ask",
-            permissionDecisionReason: `Workspace only: ${target} is outside the agent's workspace, the shared folder and the temporary folders.`,
+            permissionDecisionReason: `Workspace only: ${target} is outside the agent's workspace, the shared folder, the folders the user gave it and the temporary folders.`,
           },
         };
       },

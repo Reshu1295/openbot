@@ -95,6 +95,9 @@ export function conversationThreads(input: ConversationThreadsInput): Conversati
     onStop: () => {
       if (open) tasks.stopTask(agentId, open.id);
     },
+    onRead: (messageId) => {
+      if (open) tasks.markTaskRead(agentId, open.id, messageId);
+    },
     onRespondApproval: (decision, options) =>
       approval ? input.onRespondApproval(approval, decision, options) : Promise.resolve(false),
     get contextState() {

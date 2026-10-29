@@ -3,6 +3,7 @@ import type { messages as source } from "../en/dialog";
 
 export const messages = {
   "dialog.chooseSiteDirectory": "Kies een map met een statische site",
+  "dialog.chooseAgentFolder": "Kies een map voor {agent}",
   "dialog.chooseSkill": "Kies een vaardigheidsmap of ZIP",
   "dialog.filter.skillPackages": "Vaardigheidspakketten",
   "dialog.filter.images": "Afbeeldingen",

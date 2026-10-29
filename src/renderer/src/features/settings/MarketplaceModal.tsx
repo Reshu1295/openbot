@@ -140,7 +140,7 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
             onOpenUrl={controller.openPluginUrl}
             hostName={props.pluginHostName}
             signInHostName={props.pluginSignInRelay ? props.pluginHostName : undefined}
-            onCancelSignIn={controller.cancelSignInRelay}
+            onCancelSignIn={controller.cancelSignIn}
             signInExtra={
               /* The page opens in this computer's browser; the paste field is the way back when the
                  browser cannot reach this computer's listener. */
@@ -153,7 +153,7 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
                     page={relay.page}
                     onOpen={controller.openSignInRelay}
                     onPaste={controller.pasteSignInRelay}
-                    onCancel={controller.cancelSignInRelay}
+                    onCancel={controller.cancelSignIn}
                   />
                 )}
               </Show>

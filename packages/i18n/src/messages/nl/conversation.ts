@@ -136,6 +136,7 @@ export const messages = {
   "conversation.panels.tryAgain": "Probeer het opnieuw.",
   "conversation.view.label": "Gesprek",
   "conversation.view.drop": "Zet bestanden neer om bij te voegen",
+  "conversation.view.dropFolder": "Zet een map neer zodat {agent} er bestanden in kan wijzigen",
   "conversation.direct.loadingLabel": "Privégesprek laden",
   "conversation.direct.olderFailed": "Oudere berichten konden niet worden geladen.",
   "conversation.direct.unreadFailed": "Het ongelezen bericht kon niet worden geladen.",

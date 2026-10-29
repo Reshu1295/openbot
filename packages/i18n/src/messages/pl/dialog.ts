@@ -3,6 +3,7 @@ import type { messages as source } from "../en/dialog";
 
 export const messages = {
   "dialog.chooseSiteDirectory": "Wybierz katalog statycznej strony",
+  "dialog.chooseAgentFolder": "Wybierz folder dla agenta {agent}",
   "dialog.chooseSkill": "Wybierz folder umiejętności lub plik ZIP",
   "dialog.filter.skillPackages": "Pakiety umiejętności",
   "dialog.filter.images": "Obrazy",

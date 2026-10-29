@@ -66,11 +66,15 @@ export interface ProviderAccountsHost {
   defaultUsesApiKey(provider: AgentProviderId): boolean;
   /** The temporary folder of an ACP sign-in process, as the provider's own sign-in gets it. */
   signInTemp(provider: AgentProviderId): ProviderTempOptions | undefined;
-  /** Starts and checks a client that signs in to the account's folder. The caller stops it. */
+  /**
+   * Starts and checks a client that signs in to the account's folder. The caller stops it.
+   * `afterSignIn`: the check that ends a sign-in, which gets the long start wait.
+   */
   authenticate(
     provider: AgentProviderId,
     cli: AgentCliInfo,
     accountEnvironment: Readonly<Record<string, string>>,
+    afterSignIn?: boolean,
   ): Effect.Effect<{ client: AgentClient; account: NonNullable<AccountReadResult["account"]> }, ProviderAccountFailed>;
   stopClient(client: AgentClient): Effect.Effect<void>;
   /** The running process of an agent on this account, if there is one. */
@@ -259,7 +263,7 @@ export class ProviderAccounts {
         yield* waitForSuccessfulProcess(child, command.timeoutMs);
       }),
     ).pipe(
-      Effect.andThen(this.#check(account)),
+      Effect.andThen(this.#check(account, true)),
       Effect.onError((cause) =>
         Cause.hasInterruptsOnly(cause)
           ? Effect.void
@@ -551,6 +555,7 @@ export class ProviderAccounts {
   readonly #check = Effect.fn("ProviderAccounts.check")(function* (
     this: ProviderAccounts,
     account: StoredProviderAccount,
+    afterSignIn = false,
   ) {
     const provider = account.provider;
     const cli = this.#host.cli(provider);
@@ -561,7 +566,7 @@ export class ProviderAccounts {
     if (this.#states.get(account.id)?.state !== "connecting")
       this.#setState(account.id, { state: "checking", message: null });
     yield* Effect.acquireUseRelease(
-      this.#host.authenticate(provider, cli, this.environment(account)),
+      this.#host.authenticate(provider, cli, this.environment(account), afterSignIn),
       ({ client, account: signedIn }) =>
         Effect.gen({ self: this }, function* () {
           const email = signedIn.email ?? null;
@@ -570,13 +575,26 @@ export class ProviderAccounts {
               sourceText("error.provider.accountAlreadyAdded", { provider: providerLabel(provider) }),
             );
           // The reading comes first: a usage request for a connected account uses it and starts no client.
+          const reading = this.#host
+            .readUsage(client, defaultUsageModel(provider))
+            .pipe(Effect.flatMap((usage) => this.#storeUsage(account, client, usage)));
+          // After a sign-in, the client is signed in already, so a reading that fails does not fail the
+          // check: that failure removed the new account.
           const limit =
             agentProviderDescriptor(provider).reportsUsage && !isKeyAccount(account)
-              ? yield* this.#storeUsage(
-                  account,
-                  client,
-                  yield* this.#host.readUsage(client, defaultUsageModel(provider)),
-                )
+              ? yield* afterSignIn
+                  ? reading.pipe(
+                      Effect.catch((error) =>
+                        Effect.sync(() => {
+                          logger.warn("A provider account usage reading failed after its sign-in.", {
+                            provider,
+                            message: this.#message(provider, error),
+                          });
+                          return null;
+                        }),
+                      ),
+                    )
+                  : reading
               : null;
           this.#setState(account.id, { state: "connected", email, message: null });
           // The rail shows an account only with a reading, and no usage request follows a sign-in.

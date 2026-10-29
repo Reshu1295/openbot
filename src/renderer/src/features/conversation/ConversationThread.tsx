@@ -7,12 +7,16 @@ import type { AgentMessage } from "@openbot/ui/data";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { useText } from "@openbot/ui/text";
-import { createMemo, createProjection, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createProjection, createSignal, Show } from "solid-js";
 import { actionToast } from "../../action-toast";
+import { useShowAgentSteps } from "../../agent-steps-preference";
 import { toAgentMessages } from "../../app-message-projection";
+import { usePlatform } from "../../platform";
 import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
 import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
+import { latestVisibleAgentMessageId } from "./conversation-read-state";
 import { useConversationViewScope } from "./conversation-scope";
+import { createTurnSteps } from "./turn-steps";
 
 /** A thread takes files only from this computer, which reads every supported type. */
 const THREAD_ATTACHMENT_ACCEPT = supportedAttachmentExtensions({ eml: true, media: true, zip: true, mp4: true })
@@ -56,6 +60,27 @@ export function ConversationThread() {
     },
     [],
     { key: "id" },
+  );
+  // The thread gets only the latest progress line of a running turn, so its steps are the thoughts,
+  // and after the turn the tool steps of its stored trace.
+  const turnSteps = createTurnSteps({
+    messages: () => messages,
+    lines: () => undefined,
+    activeTurnId: () => props.threads?.open?.activeTurnId,
+  });
+  const showAgentSteps = useShowAgentSteps();
+  const { appFocused } = usePlatform();
+  // The person reads the open thread while the window has focus. The mark is the member's, so the
+  // phone no longer shows the thread as unread.
+  createEffect(
+    () => ({
+      taskId: props.threads?.open?.id,
+      messageId: appFocused() ? latestVisibleAgentMessageId(messages) : null,
+      read: props.threads?.onRead,
+    }),
+    ({ taskId, messageId, read }) => {
+      if (taskId && messageId && read) read(messageId);
+    },
   );
   const view = () => {
     const agent = props.agent;
@@ -127,6 +152,7 @@ export function ConversationThread() {
             onOpenLink={(url) => void openExternalMessageUrl(url)}
             onPreview={(attachment) => void previewAttachment(attachment)}
             onAttachmentAction={attachmentAction}
+            macWindowControls={props.platform === "darwin"}
             approval={current().threads.approval}
             onRespondApproval={(decision) =>
               current().threads.onRespondApproval(decision, failureToast("prompt.approval.answerFailed"))
@@ -135,6 +161,10 @@ export function ConversationThread() {
             onCompactContext={current().threads.onCompactContext}
             waitsForAnswer={props.prompt !== undefined || props.browserTakeover !== undefined}
             attention={attention()}
+            stepsAbove={turnSteps.stepsAbove}
+            factsAbove={turnSteps.factsAbove}
+            activeSteps={turnSteps.activeSteps()}
+            stepsOpenByDefault={showAgentSteps()}
           />
         </>
       )}
