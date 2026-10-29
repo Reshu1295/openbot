@@ -259,6 +259,25 @@ function HostedUpsell(props: AccountProps) {
       }
     }
   });
+  // Named functions, not conditional props: the controller reads these props in an effect callback,
+  // where the memo of a conditional prop halts the renderer.
+  function canOfferHostedServer(): boolean {
+    return (
+      !platform.landingPreview &&
+      hostedServersAvailable() &&
+      hostedServersLoaded() &&
+      hostedServerIds().size === 0 &&
+      (activeServer()?.kind === "local" || activeServer()?.role === "owner") &&
+      activeServer()?.hosted !== true
+    );
+  }
+  function upsellServerId(): string {
+    return activeServer()?.id ?? "local";
+  }
+  function upsellHost() {
+    const server = activeServer();
+    return server?.kind === "remote" ? { name: server.name ?? "" } : ("this-computer" as const);
+  }
   // The calendar lists every routine of the host. A range in the future reads no run history.
   function localActiveRoutineIds(): Promise<readonly string[] | null> {
     if (untrack(activeServer)?.kind !== "local") return Promise.resolve(null);
@@ -270,17 +289,10 @@ function HostedUpsell(props: AccountProps) {
   return (
     <HostedServerUpsell
       accountId={props.account().id}
-      canOffer={
-        !platform.landingPreview &&
-        hostedServersAvailable() &&
-        hostedServersLoaded() &&
-        hostedServerIds().size === 0 &&
-        (activeServer()?.kind === "local" || activeServer()?.role === "owner") &&
-        activeServer()?.hosted !== true
-      }
-      serverId={activeServer()?.id ?? "local"}
+      canOffer={canOfferHostedServer()}
+      serverId={upsellServerId()}
       activeHostRoutineIds={localActiveRoutineIds}
-      host={activeServer()?.kind === "remote" ? { name: activeServer()?.name ?? "" } : "this-computer"}
+      host={upsellHost()}
       busy={(agentId) => Boolean(activeTurns()[agentId])}
       openPlans={() => setAddServerOpen(true, "upsell")}
       track={(action, entryPoint) =>

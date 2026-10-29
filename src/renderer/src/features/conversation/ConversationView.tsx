@@ -1,7 +1,10 @@
+import { DEFAULT_AGENT_ACCESS } from "@openbot/contracts/ipc";
+import { AgentFolderDropOverlay, createAgentFolders } from "@openbot/ui/features/conversation/AgentFolders";
 import { MessageSelectionActions } from "@openbot/ui/features/conversation/SelectionActions";
 import { useText } from "@openbot/ui/text";
 import { createEffect, Show } from "solid-js";
 import { currentDevicePlatform } from "../../send-shortcut-preference";
+import { agentFolderCalls } from "./agent-folders-port";
 import { ConversationComposer } from "./ConversationComposer";
 import { ConversationHeader } from "./ConversationHeader";
 import { ConversationPanels } from "./ConversationPanels";
@@ -39,6 +42,20 @@ export function ConversationView(props: ConversationProps) {
     sideThreadOpen,
   } = scope;
   const { t } = useText();
+  const folderCalls = agentFolderCalls();
+  /**
+   * A local agent in Workspace only mode can get a folder from a drop on the chat. With wider access a
+   * folder gives it nothing new, and the Team API does not carry an agent's folders.
+   */
+  function folderDropAgent() {
+    const agent = props.agent;
+    if (!agent || props.server?.kind !== "local" || props.runtime) return undefined;
+    return (agent.access ?? DEFAULT_AGENT_ACCESS) === "workspace" ? agent : undefined;
+  }
+  const chatFolders = createAgentFolders(() => {
+    const agent = folderDropAgent();
+    return agent ? { agentId: agent.id, agentName: agent.name, calls: folderCalls } : undefined;
+  });
   createEffect(
     () => props.globalOverlayOpen,
     (open) => {
@@ -92,7 +109,20 @@ export function ConversationView(props: ConversationProps) {
           quoteShortcut={(props.platform ?? currentDevicePlatform()) === "darwin" ? "meta" : "ctrl"}
         />
         <Show when={dropActive()}>
-          <div class="attachment-drop-overlay">{t("conversation.view.drop")}</div>
+          <Show
+            when={folderDropAgent()}
+            fallback={<div class="attachment-drop-overlay">{t("conversation.view.drop")}</div>}
+          >
+            {(agent) => (
+              <AgentFolderDropOverlay
+                agentName={agent().name}
+                onDropFolders={(folders) => {
+                  setDropActive(false);
+                  void chatFolders.drop(folders);
+                }}
+              />
+            )}
+          </Show>
         </Show>
         <ConversationHeader />
         {props.notice}

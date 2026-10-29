@@ -1,7 +1,8 @@
+import { statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { type AgentSummary, workspaceAccessEnforced } from "@openbot/contracts/ipc";
 
-type SandboxedAgent = Pick<AgentSummary, "access" | "provider" | "workspacePath">;
+type SandboxedAgent = Pick<AgentSummary, "access" | "additionalFolders" | "provider" | "workspacePath">;
 
 /**
  * The sandbox mode sent with each thread. A `workspace` agent can write only in its workspace, the
@@ -17,9 +18,19 @@ export function codexSandboxMode(agent: SandboxedAgent): "workspace-write" | "da
   return workspaceAccessEnforced(agent) ? "workspace-write" : "danger-full-access";
 }
 
-/** The folders a Workspace only agent may write, besides the temporary folders. */
-export function workspaceWritableRoots(agent: Pick<AgentSummary, "workspacePath">, sharedRoot: string) {
-  return [agent.workspacePath, sharedRoot];
+/**
+ * The folders a Workspace only agent may write, besides the temporary folders: its workspace, the
+ * shared folder, and the folders the user gave it (`additionalFolders`). An added folder that was
+ * moved or deleted is left out: a provider can refuse to start with a root that does not exist.
+ */
+export function workspaceWritableRoots(
+  agent: Pick<AgentSummary, "additionalFolders" | "workspacePath">,
+  sharedRoot: string,
+) {
+  const folders = (agent.additionalFolders ?? []).filter(
+    (folder) => statSync(folder, { throwIfNoEntry: false })?.isDirectory() === true,
+  );
+  return [agent.workspacePath, sharedRoot, ...folders];
 }
 
 export type CodexSandboxPolicy =

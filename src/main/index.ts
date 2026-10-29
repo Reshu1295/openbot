@@ -51,6 +51,7 @@ import { takeHostingDeveloperKey } from "./hosted-server-service";
 import { accountIpcHandlers } from "./ipc/account-handlers";
 import { acpRegistryIpcHandlers } from "./ipc/acp-registry-handlers";
 import { agentAdminIpcHandlers } from "./ipc/agent-admin-handlers";
+import { agentFolderIpcHandlers } from "./ipc/agent-folder-handlers";
 import { agentIpcHandlers } from "./ipc/agent-handlers";
 import { agentImportIpcHandlers } from "./ipc/agent-import-handlers";
 import { agentTemplateIpcHandlers } from "./ipc/agent-template-handlers";
@@ -654,6 +655,12 @@ function registerIpcHandlers({
     ...voiceIpcHandlers({ voice, speech, service }),
     ...accountIpcHandlers({ centralAuth, host }),
     ...skillIpcHandlers({ skills, getMainWindow: getDialogParent, translate: language.translate }),
+    ...agentFolderIpcHandlers({
+      service,
+      userDataPath: app.getPath("userData"),
+      getMainWindow: getDialogParent,
+      translate: language.translate,
+    }),
     ...hostedSiteIpcHandlers({
       hostedSites,
       remoteServers,

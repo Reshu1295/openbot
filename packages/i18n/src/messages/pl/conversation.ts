@@ -137,6 +137,7 @@ export const messages = {
   "conversation.panels.tryAgain": "Spróbuj ponownie.",
   "conversation.view.label": "Rozmowa",
   "conversation.view.drop": "Upuść pliki, aby je załączyć",
+  "conversation.view.dropFolder": "Upuść folder, aby pozwolić agentowi {agent} zmieniać w nim pliki",
   "conversation.direct.loadingLabel": "Wczytywanie rozmowy prywatnej",
   "conversation.direct.olderFailed": "Nie udało się wczytać starszych wiadomości.",
   "conversation.direct.unreadFailed": "Nie udało się wczytać nieprzeczytanej wiadomości.",

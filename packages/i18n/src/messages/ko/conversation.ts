@@ -135,6 +135,7 @@ export const messages = {
   "conversation.panels.tryAgain": "다시 시도해 주세요.",
   "conversation.view.label": "대화",
   "conversation.view.drop": "파일을 놓아 첨부",
+  "conversation.view.dropFolder": "폴더를 놓으면 {agent}이(가) 그 안의 파일을 변경할 수 있어요",
   "conversation.direct.loadingLabel": "1:1 대화를 불러오는 중",
   "conversation.direct.olderFailed": "이전 메시지를 불러올 수 없어요.",
   "conversation.direct.unreadFailed": "읽지 않은 메시지를 불러올 수 없어요.",

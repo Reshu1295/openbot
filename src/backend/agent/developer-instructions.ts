@@ -278,8 +278,13 @@ export function developerInstructions(
         ? sectionTeammateInstructions(options.sectionTeammates)
         : []),
     `Your working directory, for your own persistent files, is ${agent.workspacePath}. The shared directory, for files that other OpenBot agents need, is ${sharedRoot}. You can change files and run commands in both.`,
+    ...(agent.additionalFolders?.length
+      ? [
+          `The user also gave you these folders to work in: ${agent.additionalFolders.join(", ")}. You can change files and run commands in them. They belong to the user: keep your own files in your working directory.`,
+        ]
+      : []),
     workspaceAccessEnforced(agent)
-      ? `The user limited you to Workspace only. You can read files anywhere, run local commands, and use the network, but a sandbox lets you write only in your working directory, the shared directory, and the temporary directories. Do not try to get around the sandbox. When a task truly needs a write outside these directories, ${
+      ? `The user limited you to Workspace only. You can read files anywhere, run local commands, and use the network, but a sandbox lets you write only in your working directory, the shared directory, ${agent.additionalFolders?.length ? "the folders the user gave you, " : ""}and the temporary directories. Do not try to get around the sandbox. When a task truly needs a write outside these directories, ${
           agent.provider === "claude"
             ? "make that one change with a file edit tool, which asks the user, and say why; commands cannot write there; the user decides"
             : agent.provider === "codex"

@@ -897,14 +897,15 @@ export class ThreadLifecycle {
           approvals,
           [toolRuntimes.binDirectories, toolRuntimes.commandAliases],
           CODEX_MCP_ADAPTER_VERSION,
-          // Only a sandboxed agent, one that allows local scripts, or one that shows its plan adds a
-          // value: Codex keeps the developer instructions of a loaded session, and other sessions keep
+          // Only a sandboxed agent, one with added folders, one that allows local scripts, or one that
+          // shows its plan adds a value: Codex keeps the developer instructions of a loaded session, and other sessions keep
           // the fingerprint they had.
           [
             agent.name,
             agent.title,
             agent.description,
             ...(workspaceAccessEnforced(agent) ? ["workspace"] : []),
+            ...(agent.additionalFolders?.length ? [["folders", ...agent.additionalFolders]] : []),
             ...(agentAutomationAllowed(agent, this.#store.agentDefaults()) ? ["automation"] : []),
             ...(agentQuickAcknowledgementEnabled(agent, this.#store.agentDefaults()) ? ["quick-acknowledgement"] : []),
           ],

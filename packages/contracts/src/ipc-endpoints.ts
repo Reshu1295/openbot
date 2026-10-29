@@ -53,6 +53,7 @@ import type {
 } from "./ipc-agent-admin";
 import type { AgentAnalytics, AgentAnalyticsInput } from "./ipc-agent-analytics";
 import type { AgentIpcRequest, ScopedAgentEvent } from "./ipc-agent-events";
+import type { AgentFolderChange, AgentFolderInput, AgentFolderList, ChooseAgentFolderInput } from "./ipc-agent-folders";
 import type { ClientAgentModelOption } from "./ipc-agent-identity";
 import type {
   AgentImportPreview,
@@ -1490,6 +1491,20 @@ export const IPC_ENDPOINTS = {
   },
   // Not part of `agentAttachments`: the preload sends the paths of dropped and pasted files, and the
   // renderer must never name a path to import. So this group is never bridged to the renderer.
+  // The folders a local agent can change besides its workspace. A joined server has no route for them:
+  // the Team API does not carry them, as it does not carry `access`.
+  agentFolders: {
+    listAgentFolders: request<string, AgentFolderList>()("agent:folders:list"),
+    // Opens the folder picker in main, so the renderer never names the folder it adds.
+    chooseAgentFolder: request<ChooseAgentFolderInput, AgentFolderChange>()("agent:folders:choose"),
+    // Undo of a removal. The renderer read the path from `listAgentFolders`.
+    addAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:add"),
+    removeAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:remove"),
+  },
+  // The preload calls it with the path of a folder dropped on the chat or the Folders row.
+  agentFolderDrops: {
+    addDroppedAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:add-dropped"),
+  },
   attachmentImports: {
     importAttachments: scopedRequest<ImportAttachmentsInput, DraftAttachment[]>()("agent:import-attachments"),
   },
@@ -1813,6 +1828,9 @@ export const IPC_GROUP_PATHS = {
   channelMemories: "agent",
   channelRoutines: "agent",
   agentAttachments: "agent",
+  agentFolders: "agent",
+  // The preload calls it from its own drop handler, with the path of the dropped folder.
+  agentFolderDrops: null,
   // The preload calls it from its own drop, paste, and file input handlers.
   attachmentImports: null,
   browser: "browser",

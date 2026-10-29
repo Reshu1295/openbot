@@ -1,4 +1,5 @@
 import {
+  type AgentFolderInput,
   type AgentIpcRequest,
   type AttachmentImportEvent,
   decodeAddedAgent,
@@ -6,6 +7,8 @@ import {
   decodeAgentAdminSettings,
   decodeAgentBackupModelSettings,
   decodeAgentBrowserProfile,
+  decodeAgentFolderChangeFromMain,
+  decodeAgentFolderListFromMain,
   decodeAgentImportPreview,
   decodeAgentImportResult,
   decodeAgentProfileDraft,
@@ -1137,6 +1140,21 @@ const openbotApi: OpenBotDesktopApi = {
       releaseFilePreview: decodeVoid,
       listWorkspaceDirectory: decodeWorkspaceDirectory,
     }),
+    ...bridgeGroup(IPC_ENDPOINTS.agentFolders, {
+      listAgentFolders: decodeAgentFolderListFromMain,
+      chooseAgentFolder: decodeAgentFolderChangeFromMain,
+      addAgentFolder: decodeAgentFolderChangeFromMain,
+      removeAgentFolder: decodeAgentFolderChangeFromMain,
+    }),
+    // The page gets the folder, not its path, as for a dropped attachment.
+    addDroppedAgentFolder: async (agentId, folder) => {
+      const path = webUtils.getPathForFile(folder);
+      if (!path) throw new Error("The dropped item is not a folder on this computer.");
+      const input: AgentFolderInput = { agentId, path };
+      return decodeAgentFolderChangeFromMain(
+        await ipcRenderer.invoke(IPC_ENDPOINTS.agentFolderDrops.addDroppedAgentFolder.channel, input),
+      );
+    },
     onAttachmentImport: (listener) => {
       attachmentImportListeners.add(listener);
       return () => attachmentImportListeners.delete(listener);
