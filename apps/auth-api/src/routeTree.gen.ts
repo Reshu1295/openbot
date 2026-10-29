@@ -12,12 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AppPreviewRouteImport } from './routes/app-preview'
+import { Route as BrandingRouteImport } from './routes/branding'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as CommercialLicenseRouteImport } from './routes/commercial-license'
+import { Route as CommerciallicenseRouteImport } from './routes/commerciallicense'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DpaRouteImport } from './routes/dpa'
 import { Route as JoinRouteImport } from './routes/join'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as ReportSiteRouteImport } from './routes/report-site'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -184,6 +188,11 @@ const AppPreviewRoute = AppPreviewRouteImport.update({
   path: '/app-preview',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/app-preview.lazy').then((d) => d.Route))
+const BrandingRoute = BrandingRouteImport.update({
+  id: '/branding',
+  path: '/branding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
@@ -194,9 +203,19 @@ const CommercialLicenseRoute = CommercialLicenseRouteImport.update({
   path: '/commercial-license',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CommerciallicenseRoute = CommerciallicenseRouteImport.update({
+  id: '/commerciallicense',
+  path: '/commerciallicense',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DpaRoute = DpaRouteImport.update({
+  id: '/dpa',
+  path: '/dpa',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JoinRoute = JoinRouteImport.update({
@@ -212,6 +231,11 @@ const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
@@ -1024,12 +1048,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
+  '/branding': typeof BrandingRoute
   '/changelog': typeof ChangelogRoute
   '/commercial-license': typeof CommercialLicenseRoute
+  '/commerciallicense': typeof CommerciallicenseRoute
   '/contact': typeof ContactRoute
+  '/dpa': typeof DpaRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/report-site': typeof ReportSiteRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1185,12 +1213,16 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
+  '/branding': typeof BrandingRoute
   '/changelog': typeof ChangelogRoute
   '/commercial-license': typeof CommercialLicenseRoute
+  '/commerciallicense': typeof CommerciallicenseRoute
   '/contact': typeof ContactRoute
+  '/dpa': typeof DpaRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/report-site': typeof ReportSiteRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1347,12 +1379,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRoute
   '/app-preview': typeof AppPreviewRoute
+  '/branding': typeof BrandingRoute
   '/changelog': typeof ChangelogRoute
   '/commercial-license': typeof CommercialLicenseRoute
+  '/commerciallicense': typeof CommerciallicenseRoute
   '/contact': typeof ContactRoute
+  '/dpa': typeof DpaRoute
   '/join': typeof JoinRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/report-site': typeof ReportSiteRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1510,12 +1546,16 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/app-preview'
+    | '/branding'
     | '/changelog'
     | '/commercial-license'
+    | '/commerciallicense'
     | '/contact'
+    | '/dpa'
     | '/join'
     | '/llms.txt'
     | '/pricing'
+    | '/privacy'
     | '/privacy-policy'
     | '/report-site'
     | '/sitemap.xml'
@@ -1671,12 +1711,16 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/app-preview'
+    | '/branding'
     | '/changelog'
     | '/commercial-license'
+    | '/commerciallicense'
     | '/contact'
+    | '/dpa'
     | '/join'
     | '/llms.txt'
     | '/pricing'
+    | '/privacy'
     | '/privacy-policy'
     | '/report-site'
     | '/sitemap.xml'
@@ -1832,12 +1876,16 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/app-preview'
+    | '/branding'
     | '/changelog'
     | '/commercial-license'
+    | '/commerciallicense'
     | '/contact'
+    | '/dpa'
     | '/join'
     | '/llms.txt'
     | '/pricing'
+    | '/privacy'
     | '/privacy-policy'
     | '/report-site'
     | '/sitemap.xml'
@@ -1994,12 +2042,16 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRoute
   AppPreviewRoute: typeof AppPreviewRoute
+  BrandingRoute: typeof BrandingRoute
   ChangelogRoute: typeof ChangelogRoute
   CommercialLicenseRoute: typeof CommercialLicenseRoute
+  CommerciallicenseRoute: typeof CommerciallicenseRoute
   ContactRoute: typeof ContactRoute
+  DpaRoute: typeof DpaRoute
   JoinRoute: typeof JoinRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   ReportSiteRoute: typeof ReportSiteRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -2154,6 +2206,13 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof AppPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/branding': {
+      id: '/branding'
+      path: '/branding'
+      fullPath: '/branding'
+      preLoaderRoute: typeof BrandingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/changelog': {
       id: '/changelog'
       path: '/changelog'
@@ -2168,11 +2227,25 @@ declare module '@tanstack/solid-router' {
       preLoaderRoute: typeof CommercialLicenseRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/commerciallicense': {
+      id: '/commerciallicense'
+      path: '/commerciallicense'
+      fullPath: '/commerciallicense'
+      preLoaderRoute: typeof CommerciallicenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dpa': {
+      id: '/dpa'
+      path: '/dpa'
+      fullPath: '/dpa'
+      preLoaderRoute: typeof DpaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/join': {
@@ -2194,6 +2267,13 @@ declare module '@tanstack/solid-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy-policy': {
@@ -3389,12 +3469,16 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
   AppPreviewRoute: AppPreviewRoute,
+  BrandingRoute: BrandingRoute,
   ChangelogRoute: ChangelogRoute,
   CommercialLicenseRoute: CommercialLicenseRoute,
+  CommerciallicenseRoute: CommerciallicenseRoute,
   ContactRoute: ContactRoute,
+  DpaRoute: DpaRoute,
   JoinRoute: JoinRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   ReportSiteRoute: ReportSiteRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

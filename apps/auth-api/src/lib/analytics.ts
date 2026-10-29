@@ -15,6 +15,7 @@ import { CONTACT_TOPICS } from "./contact";
 import { CONTENT_COLLECTIONS } from "./content";
 import { type CollectionId, type ContentCollection, findArticle } from "./content-collection";
 import { DOWNLOAD_PLATFORM_ORDER, type DownloadPlatform } from "./download-platforms";
+import { DPA_ROUTE } from "./dpa";
 import {
   OPENBOT_ALTERNATE_DOWNLOAD_LINKS,
   OPENBOT_DOWNLOAD_LINKS,
@@ -137,6 +138,7 @@ export type LandingScreenPath =
   | typeof PRIVACY_POLICY_ROUTE
   | typeof TERMS_ROUTE
   | typeof COMMERCIAL_LICENSE_ROUTE
+  | typeof DPA_ROUTE
   | DownloadPagePath
   | CollectionIndexRoute
   | `${CollectionIndexRoute}/${string}`;
@@ -151,6 +153,7 @@ const FIXED_SCREEN_PATHS = [
   PRIVACY_POLICY_ROUTE,
   TERMS_ROUTE,
   COMMERCIAL_LICENSE_ROUTE,
+  DPA_ROUTE,
   ...Object.values(OPENBOT_DOWNLOAD_PAGE_LINKS),
   "/news",
   "/guides",
