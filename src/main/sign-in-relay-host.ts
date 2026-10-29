@@ -30,6 +30,11 @@ const SIGN_IN_RELAY_TTL_MS = 10 * 60_000;
 const FLOW_LIMIT = 16;
 /** How long the listener of a sign-in on this host can take to answer its callback. */
 const REPLAY_TIMEOUT = Duration.seconds(10);
+/**
+ * How long the success page that a callback redirects to can take. The client waits 15 s for
+ * `complete`, and cancels the sign-in after it: the callback and this page stay under that.
+ */
+const SUCCESS_PAGE_TIMEOUT = Duration.seconds(3);
 /** How long after its message an agent's sign-in link can start a flow. A CLI's own page ends sooner. */
 const PRINTED_LINK_AGE_MS = 60 * 60_000;
 /** What `status` and `complete` answer, as `sign-in-relay-v1` sends it. */
@@ -335,7 +340,7 @@ const replay = Effect.fn("SignInRelayHost.replay")(function* (query: URLSearchPa
   const address = new URL(new URL(pageUrl).searchParams.get("redirect_uri") ?? "");
   address.search = query.toString();
   address.hash = "";
-  const answer = yield* load(address);
+  const answer = yield* load(address, REPLAY_TIMEOUT);
   if (!answer?.delivered) return false;
   // `codex login` answers its callback with a redirect to its own success page, and ends only when
   // that page loads, as in a browser on this host. Only that one redirect, to the same address and
@@ -343,19 +348,19 @@ const replay = Effect.fn("SignInRelayHost.replay")(function* (query: URLSearchPa
   if (answer.next?.origin === address.origin) {
     const token = answer.next.searchParams.get("id_token");
     if (token) registerSecretValue(token);
-    yield* load(answer.next);
+    yield* load(answer.next, SUCCESS_PAGE_TIMEOUT);
   }
   return true;
 });
 
 /** Loads `address` with no redirect. Null when it does not answer in time. */
-const load = (address: URL) =>
+const load = (address: URL, timeout: Duration.Duration) =>
   Effect.tryPromise(async (signal) => {
     const response = await fetch(address, { redirect: "manual", signal });
     await response.body?.cancel();
     const location = response.status >= 300 && response.status < 400 ? response.headers.get("location") : null;
     return { delivered: response.status < 400, next: location ? URL.parse(location, address) : null };
   }).pipe(
-    Effect.timeout(REPLAY_TIMEOUT),
+    Effect.timeout(timeout),
     Effect.orElseSucceed(() => null),
   );

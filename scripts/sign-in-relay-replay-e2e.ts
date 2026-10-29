@@ -113,10 +113,11 @@ try {
   assert.equal(codex.loginExited, true, "The sign-in ends after the replay.");
   assert.deepEqual(codex.result, { toolCount: 0, error: null }, "The host's result arrives.");
 
-  // `complete` fails when the replay says that the callback did not arrive.
+  // A success page that fails does not make `complete` fail: `runCase` would throw.
   const missing = await runCase("success page that fails", (port) => `http://127.0.0.1:${port}/missing`);
   report.cases.push(missing);
   assert.deepEqual(missing.loginPaths, ["/auth/callback", "/missing"], "The replay loads the redirect once.");
+  assert.equal(missing.result, null, "The sign-in has no result yet.");
 
   for (const [name, successAt] of [
     ["redirect to a hosted page", () => "https://chatgpt.example/codex/success"],
