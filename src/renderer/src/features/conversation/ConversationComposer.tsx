@@ -60,6 +60,7 @@ import { speechReading } from "../speech/speech-playback";
 import { stopSpokenReply } from "../speech/speech-replies";
 import { copyComposerSelection, readComposerCopy } from "./composer-clipboard";
 import { useConversationViewScope } from "./conversation-scope";
+import { conversationOwnerId } from "./stores/composer-store";
 
 // Module scope: the composer remounts on navigation, and a dismissed notice must stay dismissed.
 const [dismissedCompactions, setDismissedCompactions] = createSignal<Record<string, string>>({});
@@ -152,6 +153,10 @@ export function ConversationComposer() {
     !((props.agent || channel) && (props.agentStatus.phase === "starting" || props.agentStatus.phase === "restarting"));
   // The mention picker grows out of the same edge as the queue, so only one of them holds it.
   const queueVisible = () => queuePanelVisible() && !pickerOpen();
+  // Each chat gets its own queue panel. One shared panel animated the rows and the height of the
+  // previous chat's queue into this one, and the chat jumped while it resized (#3770). The keyed
+  // <Show> builds its child again only when the child function takes the key as a parameter.
+  const queueOwner = () => `${props.server?.id ?? "local"}:${conversationOwnerId(props) ?? ""}`;
   const awaitingVisible = () => awaitingReplies().length > 0 && !pickerOpen();
   const waitItems = createMemo(() => openWaitItems(props.waits ?? [], props.queue));
   const waitsVisible = () => waitItems().length > 0 && Boolean(props.onCancelWait) && !pickerOpen();
@@ -423,25 +428,27 @@ export function ConversationComposer() {
                   />
                 )}
               </Show>
-              <Show when={queueVisible()}>
-                <Loading>
-                  <QueuePanel
-                    deliveries={presentedQueueDeliveries()}
-                    // Only for an agent that is waiting. When the channel work is this agent's own,
-                    // the activity line above already shows it working, and naming it twice reads as
-                    // two different waits.
-                    hold={props.queue?.hold?.agentId === props.agent?.id ? null : props.queue?.hold}
-                    agents={props.agents}
-                    skills={installedSkills()}
-                    editingDeliveryId={editingDeliveryId()}
-                    canSteer={Boolean(props.activeTurnId)}
-                    onSteer={steers() ? props.onSteerQueuedMessage : undefined}
-                    onRunAsTask={props.threads?.onRunQueuedMessage}
-                    onCancel={props.onCancelQueuedMessage}
-                    onEdit={editQueuedMessage}
-                    onReorder={reorderPresentedQueue}
-                  />
-                </Loading>
+              <Show when={queueVisible() ? queueOwner() : undefined} keyed>
+                {(_owner) => (
+                  <Loading>
+                    <QueuePanel
+                      deliveries={presentedQueueDeliveries()}
+                      // Only for an agent that is waiting. When the channel work is this agent's own,
+                      // the activity line above already shows it working, and naming it twice reads as
+                      // two different waits.
+                      hold={props.queue?.hold?.agentId === props.agent?.id ? null : props.queue?.hold}
+                      agents={props.agents}
+                      skills={installedSkills()}
+                      editingDeliveryId={editingDeliveryId()}
+                      canSteer={Boolean(props.activeTurnId)}
+                      onSteer={steers() ? props.onSteerQueuedMessage : undefined}
+                      onRunAsTask={props.threads?.onRunQueuedMessage}
+                      onCancel={props.onCancelQueuedMessage}
+                      onEdit={editQueuedMessage}
+                      onReorder={reorderPresentedQueue}
+                    />
+                  </Loading>
+                )}
               </Show>
             </div>
           </div>
