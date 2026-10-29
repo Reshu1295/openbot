@@ -71,7 +71,7 @@ import { startProviderTerminalLogin } from "../provider-terminal-login";
 import { recordRestartActivity } from "../restart-activity";
 import { shortenDiagnostic } from "./../stderr-diagnostics";
 import { stopProcessTree } from "../windows-process-tree";
-import { normalizeAccountUsage, usageWindowHasReset } from "./account-usage";
+import { normalizeAccountUsage, usageWindowHasReset, usageWindowResetSince } from "./account-usage";
 import { captureBrowser } from "./browser-capture";
 import { startCliCodeLogin } from "./cli-code-login";
 import { CliLoginFailed, CliLoginFlow, toCliLoginFailed } from "./cli-login-flow";
@@ -444,7 +444,7 @@ export class ProviderRuntime implements ProviderPort {
    * every five minutes, so starting a released one to ask again would keep its process running.
    */
   readonly #usageUnreported = new Set<AgentProvider>();
-  /** Paces the usage reads of each provider's own sign-in. A new sign-in or credential gets a new gate. */
+  /** Paces the usage reads of each provider's own sign-in. A new login or credential resets it. */
   readonly #usageGates = new Map<AgentProvider, UsageReadGate>();
   /**
    * The last answer of each custom agent's usage prompt, with the prompt and the time of the read. A
@@ -729,6 +729,7 @@ export class ProviderRuntime implements ProviderPort {
       yield* this.#stopProviderClient(provider);
       this.#cli.delete(provider);
       this.#accounts.delete(provider);
+      this.#usageGate(provider).reset();
       this.#setStatus({
         providers: updateProviderStatus(this.#status.providers, provider, {
           state: "not-started",
@@ -991,9 +992,9 @@ export class ProviderRuntime implements ProviderPort {
             .run({
               read: readOwn(provider),
               kept: () => keptReading(provider),
-              stale: () => {
+              stale: (readAt) => {
                 const kept = this.#lastUsage.get(provider);
-                return kept !== undefined && usageWindowHasReset(kept);
+                return kept !== undefined && usageWindowResetSince(kept, readAt);
               },
             })
             .pipe(
@@ -1227,8 +1228,8 @@ export class ProviderRuntime implements ProviderPort {
   });
 
   /**
-   * Keeps a reading of the provider's own sign-in that another read took, such as after a usage limit,
-   * so the reading that the gate answers with is not older than the one the views were sent.
+   * Keeps a reading of the provider's own sign-in that another read took, such as when Codex starts, so
+   * the reading that the gate answers with is not older than the one the views were sent.
    */
   #keepUsage(provider: AgentProvider, usage: AccountUsage): void {
     const limit = usage.limits[0];
@@ -1991,7 +1992,7 @@ export class ProviderRuntime implements ProviderPort {
     // agent's own process would then keep the old credential until it idles out (#2544).
     this.#countActivation(provider);
     // The new credential's usage is read at the next poll, not after the old one's wait.
-    this.#usageGates.delete(provider);
+    this.#usageGate(provider).reset();
     return yield* this.#reprobeProvider(provider);
   }, Effect.uninterruptible);
 
@@ -2532,7 +2533,9 @@ export class ProviderRuntime implements ProviderPort {
       Effect.tap((usage) =>
         Effect.sync(() => {
           if (usage.limits.length === 0) return;
-          this.#keepUsage(source.provider, usage);
+          // With no model, this is not the dock's reading of a provider whose limits depend on the model, so
+          // the next poll reads that again instead of answering with one older than this event.
+          if (defaultUsageModel(source.provider) !== undefined) this.#usageGate(source.provider).reset();
           this.#emit({ type: "usage-changed", usage });
         }),
       ),
@@ -2685,6 +2688,8 @@ export class ProviderRuntime implements ProviderPort {
         this.#clients.delete(provider);
         this.#cli.delete(provider);
         this.#accounts.delete(provider);
+        // The next sign-in can be another login.
+        this.#usageGate(provider).reset();
         yield* client.stop().pipe(toProviderOperationFailed).pipe(Effect.ignore);
         yield* this.#hooks.onClientStopped(client);
         yield* Effect.forEach(
@@ -2852,11 +2857,12 @@ export class ProviderRuntime implements ProviderPort {
         this.#accounts.set(provider, account);
         // Another login has its own usage budget, so its first reading does not wait for the old one's gate.
         if (
-          previousAccount?.type !== account.type ||
-          previousAccount.email !== account.email ||
-          previousAccount.planType !== account.planType
+          previousAccount &&
+          (previousAccount.type !== account.type ||
+            previousAccount.email !== account.email ||
+            previousAccount.planType !== account.planType)
         )
-          this.#usageGates.delete(provider);
+          this.#usageGate(provider).reset();
         const restorePrevious = Effect.gen({ self: this }, function* () {
           if (previousClient) this.#clients.set(provider, previousClient);
           else this.#clients.delete(provider);
@@ -3823,8 +3829,11 @@ export class ProviderRuntime implements ProviderPort {
       if (this.#clients.get(client.provider) === client) this.#ownResetCredits.set(client.provider, available);
     }
     const usage = normalizeAccountUsage(rateLimits, client.provider === "codex" ? model : undefined);
-    if (this.#clients.get(client.provider) === client && model === defaultUsageModel(client.provider))
+    // The dock's reading, such as when Codex starts: the gate counts it, so the next poll does not read again.
+    if (this.#clients.get(client.provider) === client && model === defaultUsageModel(client.provider)) {
       this.#keepUsage(client.provider, usage);
+      this.#usageGate(client.provider).succeeded();
+    }
     if (emit) this.#emit({ type: "usage-changed", usage: structuredClone(usage) });
     return structuredClone(usage);
   });

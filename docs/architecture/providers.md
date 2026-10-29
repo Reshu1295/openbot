@@ -851,13 +851,22 @@ Code and answers HTTP 429 for an hour or more when a client asks too often. So `
 `ProviderRuntime.usage`, and of each account after the first in `ProviderAccounts.usage`. One read runs
 at a time; a request that comes during it waits and takes its reading. A reading answers for four
 minutes, a little less than the poll, so one view still gets a new reading at each poll. After a failed
-read, the next one waits 5 minutes, then 10, 20 and 40, up to an hour, and the last reading stays on the
-rail. A reading whose window has reset is read again before the four minutes end, but not during the
-wait after a failure. Another read of the provider's own sign-in, such as the one after a usage limit or
-when Codex starts, replaces the kept reading. A credential change, another login, a new key or a removed
-account drops the gate, so the next poll reads at once. The thresholds follow t3code (one refresh in
-five minutes for each host), CodexBar and openusage (`Retry-After`, else 5 minutes, doubling up to an
-hour). `scripts/usage-read-pacing-e2e.ts` checks them with a fake Codex.
+read, the next one waits 5 minutes, then 10, 20 and 40, up to an hour. During the wait the last reading
+stays on the rail until one of its windows resets; an account after the first keeps it also after that.
+A window that resets after the last read starts a read before the four minutes end, but not during the
+wait after a failure; a window that had already reset when the provider sent the reading does not.
+
+A read outside the poll of the provider's own sign-in, with the dock's model, also counts: when Codex
+starts, its reading replaces the kept one and the next poll does not read again. The read after a usage
+limit has no model, so for a provider whose limits depend on the model it resets the gate, and the next
+poll reads. These reads, and the reads of a usage reset, are not paced. A credential change, another
+login, a sign-out, turning the provider off or a new key resets the gate, so the next poll reads at once;
+a read that started before the reset does not set the next read time.
+
+The values follow t3code (one refresh in five minutes for each host, one at a time) and openusage (5
+minutes, doubling up to an hour). CodexBar and openusage first wait for `Retry-After`; the Claude Agent
+SDK and the Codex app-server do not give OpenBot that header, so the gate uses only the doubling.
+`scripts/usage-read-pacing-e2e.ts` checks the gate with a fake Codex.
 
 ### Usage reset credits
 

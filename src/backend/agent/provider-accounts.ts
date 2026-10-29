@@ -25,7 +25,7 @@ import { type ProviderAccountSupport, requireProviderDriver } from "./../provide
 import type { ProviderTempOptions } from "./../provider-temp";
 import { shortenDiagnostic } from "./../stderr-diagnostics";
 import { stopProcessTree } from "../windows-process-tree";
-import { usageWindowHasReset } from "./account-usage";
+import { usageWindowResetSince } from "./account-usage";
 import { captureBrowser } from "./browser-capture";
 import type { ProviderAccountStore, StoredProviderAccount } from "./provider-account-store";
 import { waitForSuccessfulProcess } from "./provider-status";
@@ -105,7 +105,7 @@ export class ProviderAccounts {
   readonly #checks = new Map<string, Fiber.Fiber<void>>();
   /** The last usage reading of each account, with the usage reset credits it counted. */
   readonly #usage = new Map<string, { limit: AccountUsageLimit; resetCredits: number | null | undefined }>();
-  /** Paces the usage reads of each account. A new key or a removed account drops its gate. */
+  /** Paces the usage reads of each account. A new key resets it, and a removed account drops it. */
   readonly #usageGates = new Map<string, UsageReadGate>();
 
   constructor(store: ProviderAccountStore, host: ProviderAccountsHost) {
@@ -396,7 +396,7 @@ export class ProviderAccounts {
       if (!account) return;
       yield* this.#interrupt(account.id);
       this.#usage.delete(account.id);
-      this.#usageGates.delete(account.id);
+      this.#usageGate(account.id).reset();
       yield* this.#startCheck(account);
     });
   }
@@ -465,9 +465,9 @@ export class ProviderAccounts {
         .run({
           read: this.#readUsage(account, model),
           kept,
-          stale: () => {
+          stale: (readAt) => {
             const reading = kept();
-            return reading !== null && usageWindowHasReset(reading);
+            return reading !== null && usageWindowResetSince(reading, readAt);
           },
         })
         .pipe(

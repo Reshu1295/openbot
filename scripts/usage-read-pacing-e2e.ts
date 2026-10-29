@@ -3,7 +3,8 @@
 // while a flag file exists. The service clock moves forward in place of a wait. Cases: polls from many
 // views at once share one read; a poll within four minutes of a read reads nothing; a failed read keeps
 // the last reading and the next read waits 5, 10, 20 and 40 minutes, up to an hour; a read that succeeds
-// ends the wait; a credential change reads at the next poll.
+// ends the wait; a window that had reset before the read does not start a read at each poll; the poll after
+// a credential change shows the new credential's reading.
 // `bun scripts/usage-read-pacing-e2e.ts`. Writes .openbot-build/usage-read-pacing-e2e/report.json.
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -21,6 +22,7 @@ const home = join(root, "home");
 const fakeCodex = join(root, "codex");
 const readLog = join(root, "reads.jsonl");
 const failFlag = join(root, "fail");
+const pastFlag = join(root, "past");
 
 process.env.HOME = home;
 process.env.CODEX_HOME = join(home, ".codex");
@@ -66,7 +68,8 @@ const answer = (message) => {
       if (failed) return write({ id: message.id, error: { code: -32000, message: "HTTP 429 Too Many Requests" } });
       reads += 1;
       return write({ id: message.id, result: {
-        rateLimits: { limitId: "codex", primary: { usedPercent: reads, windowDurationMins: 300, resetsAt }, secondary: null },
+        // A window that has not rolled yet: its reset time is already over when the reading is sent.
+        rateLimits: { limitId: "codex", primary: { usedPercent: reads, windowDurationMins: 300, resetsAt: existsSync(${JSON.stringify(pastFlag)}) ? 1 : resetsAt }, secondary: null },
         rateLimitsByLimitId: null,
       } });
     }
@@ -221,19 +224,35 @@ try {
   assert.equal(next.sent, 1, "After a success, the interval is four minutes again.");
   report.cases.push({ name: "a read that succeeds ends the wait", details: { recovered, next }, passed: true });
 
-  const pid = reads().at(-1)?.pid;
-  const beforeChange = reads().length;
-  await runCauseEffect(agents.changeProviderCredential("codex", () => Effect.void));
-  // The new process reads the usage once when it starts.
-  await waitFor("the read of the new process", () => reads().length > beforeChange);
-  const started = reads().length;
-  const changed = await poll();
-  const afterChange = reads();
-  assert.notEqual(afterChange.at(-1)?.pid, pid, "The new credential has a new process.");
-  assert.equal(afterChange.length - started, 1, "A credential change reads at the next poll.");
+  writeFileSync(pastFlag, "");
+  const past = await pollAfter(4 + 1 / 60);
+  const afterPast = await pollAfter(1);
+  await rm(pastFlag);
+  assert.equal(past.sent, 1);
+  assert.equal(afterPast.sent, 0, "A window that had reset before the read does not ask for a read at each poll.");
+  const rolled = await pollAfter(4 + 1 / 60);
+  assert.equal(rolled.sent, 1);
   report.cases.push({
-    name: "a credential change reads at the next poll",
-    details: { changed, reads: afterChange.length - beforeChange },
+    name: "a window that reset before the read does not start a read at each poll",
+    details: { past, afterPast, rolled },
+    passed: true,
+  });
+
+  const pid = reads().at(-1)?.pid;
+  const oldPercent = (await poll()) ?? 0;
+  await runCauseEffect(agents.changeProviderCredential("codex", () => Effect.void));
+  // The new process reads the usage when it starts. The poll answers with that reading, or reads it.
+  await waitFor("the read of the new process", () => reads().some((read) => read.pid !== pid));
+  const changed = await poll();
+  const newReads = reads().filter((read) => read.pid !== pid).length;
+  assert.ok(newReads >= 1 && newReads <= 2, `The new process reads once or twice: ${newReads}`);
+  assert.ok(
+    changed !== null && changed <= newReads && changed < oldPercent,
+    `The poll after a credential change shows the new credential's reading: ${changed}, before ${oldPercent}`,
+  );
+  report.cases.push({
+    name: "a credential change shows the new credential's reading at the next poll",
+    details: { oldPercent, changed, newReads },
     passed: true,
   });
   report.passed = true;
