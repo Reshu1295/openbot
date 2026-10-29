@@ -87,7 +87,10 @@ function createSkillRows(scope: MarketplaceScope, items: () => readonly Marketpl
   const state = () => scope.nav.state;
   /* Each listing that a list brought, so a row of the user's keeps its icon and its source after a search. */
   const seen = new Map<string, MarketplaceSkillSummary>();
+  /* The listings of the user's skills that no page brought: a page holds only the first skills of the catalog. */
+  const [read, setRead] = createStore<{ listings: Record<string, MarketplaceSkillSummary> }>({ listings: {} });
   const listings = createMemo(() => {
+    for (const listing of Object.values(read.listings)) seen.set(listing.id, listing);
     for (const listing of scope.skills.items()) seen.set(listing.id, listing);
     for (const listing of items()) seen.set(listing.id, listing);
     return new Map(seen);
@@ -102,6 +105,24 @@ function createSkillRows(scope: MarketplaceScope, items: () => readonly Marketpl
   const owned = (skillId: string) => agentsWith(model(), skillId).length > 0;
   /** Each skill of the user's, with no source and no search. */
   const all = createMemo(() => userSkills(model(), scope.skills.items()));
+  /* A skill made on this computer has no catalog source, so it needs no listing. Each skill is read once. */
+  const asked = new Set<string>();
+  createEffect(
+    () => all().filter((skill) => skill.origin !== "local" && !asked.has(skill.skillId) && !listingOf(skill.skillId)),
+    (missing) => {
+      for (const skill of missing) {
+        asked.add(skill.skillId);
+        void model()
+          .skillListing(skill.skillId)
+          .then((listing) => {
+            if (!listing) return;
+            setRead((draft) => {
+              draft.listings[listing.id] = listing;
+            });
+          });
+      }
+    },
+  );
   const mine = createMemo(() =>
     all().filter(
       (skill) => fromSource(skill.skillId) && matches(state().query, `${skill.name} ${skill.description ?? ""}`),

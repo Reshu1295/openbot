@@ -152,6 +152,11 @@ export interface MarketplaceModel {
   listSkills: CatalogList<MarketplaceSkillSummary>;
   skillHomeCache?: MarketplaceHomeCache<MarketplaceSkillSummary> | undefined;
   loadSkill: (id: string) => Promise<MarketplaceSkillDetail | undefined>;
+  /**
+   * The listing of a skill that the user has and no loaded page holds, for its source and its sort.
+   * No view event and no error: without it, the row stays as it is.
+   */
+  skillListing: (id: string) => Promise<MarketplaceSkillSummary | undefined>;
   /** The agents a skill can go to. Empty when this user cannot install skills. */
   agents: () => readonly MarketplaceAgent[];
   /** The agent whose conversation is open. */

@@ -1287,6 +1287,10 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
       return skillHomeCache(calls());
     },
     loadSkill,
+    skillListing: (id) =>
+      calls()
+        .skills.get(id)
+        .catch(() => undefined),
     agents,
     activeAgentId,
     readSkills,

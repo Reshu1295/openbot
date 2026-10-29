@@ -423,6 +423,7 @@ function MarketplaceStory(props: StoryProps) {
 
     listSkills: async (query) => skillPage(skills, query),
     loadSkill: async (id) => STORY_MARKETPLACE_SKILL_DETAILS[id] ?? skillDetail(id),
+    skillListing: async (id) => skills.find((skill) => skill.id === id),
     agents: () => (member ? [] : userAgents),
     activeAgentId: () => userAgents[0]?.id ?? "",
     readSkills: () => undefined,
