@@ -55,12 +55,11 @@ export const routineScheduleZodSchema = z
           .describe("Local date in YYYY-MM-DD format."),
         time: routineTimeSchema,
       })
-      .strict()
-      .describe(
-        "One run at this local date and time, such as a reminder. The routine then pauses and does not repeat.",
-      ),
+      .strict(),
   ])
-  .describe("Routine schedule. Weekdays use 0 for Sunday through 6 for Saturday; clock values use HH:mm local time.");
+  .describe(
+    "Routine schedule. Weekdays use 0 for Sunday through 6 for Saturday; clock values use HH:mm local time. Once runs at the local date and time, then pauses without repeating.",
+  );
 
 /**
  * Each run starts a new provider session that reads only the newest chat messages, so an instruction
