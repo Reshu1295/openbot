@@ -32,8 +32,9 @@ function openSteps(plan: ConversationPlan, earlierSteps: ReadonlySet<string>): C
  * one task), the deliveries of the request, the count, and the plan of the last turn. A turn that
  * ends with open steps in the agent's own plan runs once more with a short note, until the plan is
  * done, the limit is reached, or a turn makes no progress. A step that was open, with the same text
- * and status, in the plan from before the request is left from earlier work and does not count. A restart forgets every chain, and the
- * drain then settles the waiting deliveries. It never imports the mailbox or the service facade.
+ * and status, in the plan from before the request is left from earlier work and does not count. A
+ * restart forgets every chain, and the drain then settles the waiting deliveries. It never imports
+ * the mailbox or the service facade.
  */
 export class PlanContinuation {
   readonly #limit: number;
@@ -66,7 +67,8 @@ export class PlanContinuation {
     const chained =
       previous !== undefined &&
       input.deliveryIds.length > 0 &&
-      input.deliveryIds.every((deliveryId) => previous.deliveryIds.has(deliveryId));
+      // A message steered into a continuation turn joins the request, so the chain keeps its count.
+      input.deliveryIds.some((deliveryId) => previous.deliveryIds.has(deliveryId));
     const plan = input.plan ?? (chained ? previous.plan : null);
     if (!plan) return null;
     const earlierSteps = chained

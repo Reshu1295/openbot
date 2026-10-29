@@ -469,6 +469,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
   readonly #busyMessageMode: () => BusyMessageMode;
   /** The last turn of each agent's chat that the user stopped. One per agent, so it needs no clean-up. */
   readonly #stoppedTurns = new Map<string, string>();
+
   /** The agents that asked for a new chat with `start_new_chat`. A restart forgets the request. */
   readonly #requestedNewChats = new Set<string>();
   /** A turn that ends with open plan steps runs again, at most 3 times for one request. */
@@ -1380,9 +1381,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         conversationTurnEnded: (agentId, sideThreadId, counts, memoryCommitted) =>
           this.#memoryReview.turnEnded(agentId, sideThreadId, counts, memoryCommitted),
         turnStopped: (agentId, taskId, turnId) =>
-          taskId === null
-            ? this.#stoppedTurns.get(agentId) === turnId || this.#requestedNewChats.has(agentId)
-            : this.#tasks.stoppedTurn(taskId) === turnId,
+          this.#stoppedTurn(agentId, taskId) === turnId || (taskId === null && this.#requestedNewChats.has(agentId)),
         hasOpenWait: (agentId, deliveryIds) =>
           this.#waits.list(agentId).waits.some((wait) => deliveryIds.includes(wait.requestMessageId)),
         routineAnswered: (agentId, deliveryId, answer) => {
@@ -4636,6 +4635,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     return receipt;
   }, Effect.uninterruptible).bind(this);
 
+  /** The turn that the user stopped last in a lane: the agent's own chat, or one task. */
+  #stoppedTurn(agentId: string, taskId: string | null): string | null {
+    return taskId === null ? (this.#stoppedTurns.get(agentId) ?? null) : this.#tasks.stoppedTurn(taskId);
+  }
+
   /**
    * Takes a message that arrives while the agent works into the running turn, when the agent's
    * busy-message mode is "steer". The message is from the user or from another agent. A provider
@@ -4650,7 +4654,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     explain: boolean,
   ) {
     // A turn the user stopped is ending, and a message steered into it would end with it.
-    const stoppedTurnId = task ? this.#tasks.stoppedTurn(task.taskId) : this.#stoppedTurns.get(agent.id);
+    const stoppedTurnId = this.#stoppedTurn(agent.id, task?.taskId ?? null);
     const steerTurnId =
       snapshot.activeTurnId &&
       snapshot.activeTurnId !== stoppedTurnId &&

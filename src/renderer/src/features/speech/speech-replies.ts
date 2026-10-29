@@ -175,6 +175,12 @@ export function readDictatedReplies(event: AgentEvent, serverId: string): void {
   }
   const message = dictated.get(key);
   if (!message || message.turnId !== event.turnId) return;
+  if (event.status === "completed" && event.continues) {
+    // The request continues in a new turn; its answer is the one to read.
+    message.turnId = undefined;
+    message.deliveryTurns.clear();
+    return;
+  }
   dictated.delete(key);
   if (event.status === "completed" && !event.quiet) void readReply(agent, event.turnId, message);
   else replyEnded(agent);

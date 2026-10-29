@@ -475,8 +475,8 @@ export class TurnLifecycle {
       )
     )
       return false;
-    const question = answer?.trimEnd();
-    if (question?.endsWith("?") || question?.endsWith("？")) return false;
+    // A question anywhere in the last line, so Markdown or a closing remark after it does not hide it.
+    if (/[?？]/.test(answer?.trimEnd().split("\n").at(-1) ?? "")) return false;
     return (
       !this.#hooks.turnStopped(agentId, taskId, turnId) &&
       !this.#hooks.hasOpenWait(
@@ -1225,6 +1225,7 @@ export class TurnLifecycle {
         status: outcome,
         origin: deliveries[0]?.delivery.sender.kind ?? "unknown",
         ...(quiet ? { quiet: true as const } : {}),
+        ...(continuation ? { continues: true as const } : {}),
       });
       if (!channelTurn && !routineSession) {
         // An automatic continuation is part of the turn that the person started, so it counts once.

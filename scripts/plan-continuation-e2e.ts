@@ -8,7 +8,7 @@
 //   1. A turn with open steps continues once, and the request completes when the plan is done.
 //   2. A request continues at most 3 times.
 //   3. A continuation that does not change the open steps stops the chain.
-//   4. An answer that ends with a question does not continue.
+//   4. An answer whose last line asks a question does not continue.
 //   5. A turn that opens a wait does not continue.
 //   6. Stop during a continuation ends the chain. The next message works.
 //   7. A message that waits in the queue stops the continuation and runs next.
@@ -290,9 +290,6 @@ function settled(deliveryId: string, timeoutMs?: number) {
   );
 }
 
-/** Time for a continuation that should not start to show in the log. */
-const settle = () => new Promise((done) => setTimeout(done, 500));
-
 /** The messages of the agent's own chat or of one side thread, as the database holds them. */
 function chatMessages(agentId: string, sideThreadId?: string) {
   const threadId = sideThreadId ?? current.store.list().find((agent) => agent.id === agentId)?.threadId ?? null;
@@ -337,7 +334,6 @@ try {
       )}`,
     );
     assert.equal(await settled(id), "completed");
-    await settle();
     const turns = turnsSince(mark);
     assert.deepEqual(
       turns.map((turn) => turn.note),
@@ -350,6 +346,14 @@ try {
     assert.ok(note.includes("Automatic continuation 1 of 3."));
     assert.equal(continuationLines(agent.id).length, 1, "One continuation line shows.");
     assert.equal(errorsFor(agent.id, since).length, 0, "No error shows.");
+    const completions = current.events
+      .slice(since)
+      .filter((event) => event.type === "turn-completed" && event.agentId === agent.id);
+    assert.deepEqual(
+      completions.map((event) => event.type === "turn-completed" && event.continues === true),
+      [true, false],
+      "Only the last turn of the request completes it.",
+    );
     const messages = chatMessages(agent.id);
     assert.ok(!messages.some((message) => message.text?.includes(NOTE_MARKER)), "The note does not show as a message.");
     assert.ok(
@@ -380,7 +384,6 @@ try {
     });
     const id = await send(agent.id, `Do five things. ${plan(step(0), step(1), step(2), step(3), step(4))}`);
     assert.equal(await settled(id), "completed");
-    await settle();
     const turns = turnsSince(mark);
     assert.deepEqual(
       turns.map((turn) => turn.note),
@@ -403,14 +406,13 @@ try {
     };
     const id = await send(agent.id, `Fix it. ${plan(stuck, stuck, stuck)}`);
     assert.equal(await settled(id), "completed");
-    await settle();
     assert.equal(turnsSince(mark).length, 2, "One continuation turn runs.");
     assert.ok(turnsSince(mark)[1]?.text.includes("[in progress] Fix"));
     assert.equal(continuationLines(agent.id).length, 1);
     return { turns: turnsSince(mark).length };
   });
 
-  await check("an answer that ends with a question does not continue", async () => {
+  await check("an answer whose last line asks a question does not continue", async () => {
     const agent = await createAgent("Asker");
     const mark = loggedTurns().length;
     const id = await send(
@@ -420,11 +422,10 @@ try {
           ["Pick dates", "completed"],
           ["Book hotel", "pending"],
         ],
-        answer: "Which hotel do you want?",
+        answer: "**Which hotel do you want?** Tell me and I book it.",
       })}`,
     );
     assert.equal(await settled(id), "completed");
-    await settle();
     assert.equal(turnsSince(mark).length, 1, "No continuation turn runs.");
     assert.equal(continuationLines(agent.id).length, 0);
     return { turns: 1 };
@@ -444,7 +445,6 @@ try {
       `Fix the typo. ${plan({ steps: [left, ["Fix the typo", "completed"]], answer: "The typo is fixed." })}`,
     );
     assert.equal(await settled(second), "completed");
-    await settle();
     assert.equal(turnsSince(mark).length, 1, "An old open step alone does not continue.");
     const third = await send(
       agent.id,
@@ -454,7 +454,6 @@ try {
       )}`,
     );
     assert.equal(await settled(third), "completed");
-    await settle();
     const turns = turnsSince(mark).slice(1);
     assert.deepEqual(
       turns.map((turn) => turn.note),
@@ -492,7 +491,6 @@ try {
       })}`,
     );
     assert.equal(await settled(id), "completed");
-    await settle();
     assert.equal(current.service.listWaits(agent.id).waits.length, 1, "The wait is open.");
     assert.equal(turnsSince(mark).length, 1, "No continuation turn runs.");
     assert.equal(continuationLines(agent.id).length, 0);
@@ -527,7 +525,6 @@ try {
     await runCauseEffect(current.service.interrupt(agent.id, continuation.turnId));
     const status = await settled(id);
     assert.equal(status, "interrupted", "The request ends as stopped.");
-    await settle();
     assert.equal(turnsSince(mark).length, 2, "No other continuation turn runs.");
     const next = await send(agent.id, "Thanks.");
     assert.equal(await settled(next), "completed", "The next message completes.");
@@ -554,7 +551,6 @@ try {
     const second = await send(agent.id, "Use the date order.");
     assert.equal(await settled(first), "completed");
     assert.equal(await settled(second), "completed");
-    await settle();
     const turns = turnsSince(mark);
     assert.deepEqual(
       turns.map((turn) => turn.note),
@@ -592,7 +588,6 @@ try {
     await waitFor("the side thread to finish", () =>
       current.service.readTask(agent.id, task.id).messages.some((message) => message.text === "All links work."),
     );
-    await settle();
     assert.deepEqual(
       turnsSince(mark).map((turn) => turn.note),
       [false, true],
@@ -627,7 +622,6 @@ try {
     await waitFor("the routine run to end", () =>
       current.service.listQueue(agent.id).deliveries.every((delivery) => ended(delivery.status)),
     );
-    await settle();
     assert.equal(turnsSince(mark).length, 1, "No continuation turn runs.");
     assert.equal(continuationLines(agent.id).length, 0);
     return { turns: 1 };
@@ -670,7 +664,6 @@ try {
     const since = current.events.length;
     await runCauseEffect(current.service.setAgentHidden({ agentId: agent.id, hidden: false }));
     assert.equal(await settled(id), "completed", "The request completes.");
-    await settle();
     assert.equal(turnsSince(mark).length, 1, "No continuation turn runs after the restart.");
     assert.equal(
       current.service.listQueue(agent.id).deliveries.filter((delivery) => !ended(delivery.status)).length,
