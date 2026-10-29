@@ -18,7 +18,7 @@ import type { AgentProvider } from "../agent-client";
 import { causeHelpers } from "../effect-boundary";
 import type { McpOperationError } from "../mcp-effects";
 import { McpHandoffLog } from "../mcp-handoff-log";
-import { type McpOAuthAuthority, type McpSignInOpener, normalizeResource } from "../mcp-oauth-provider";
+import { type McpOAuthAuthority, type McpSignInOpener, mcpOAuthAccount } from "../mcp-oauth-provider";
 import { McpOAuthProxy, type McpOAuthProxyTarget, mcpOAuthProxyRoute } from "../mcp-oauth-proxy";
 import { inspectMcpServer, type McpSignInPlace, testMcpServer } from "../mcp-probe";
 import {
@@ -267,14 +267,14 @@ export class McpGateway {
      * A row that goes takes its sign-in with it: a refresh token nothing can reach again is a secret
      * kept for no reason. Only when no row is left naming the same account, because two rows on one
      * URL are one account to the server and dropping it would sign the other one out too. Compared
-     * normalized, as the store keys it: `https://mcp.stripe.com` and `https://mcp.stripe.com/` share
-     * one credential, and removing either row must keep the other's.
+     * as the store keys it: `https://mcp.stripe.com` and `https://mcp.stripe.com/` share one
+     * credential, and removing either row must keep the other's; `…#work` and `…#personal` do not.
      */
-    const removedResource = removed?.transport === "http" ? normalizeResource(removed.url) : null;
+    const removedResource = removed?.transport === "http" ? mcpOAuthAccount(removed.url) : null;
     if (
       removed &&
       removedResource &&
-      !list.some((config) => config.transport === "http" && normalizeResource(config.url) === removedResource)
+      !list.some((config) => config.transport === "http" && mcpOAuthAccount(config.url) === removedResource)
     ) {
       if (this.#oauth) yield* this.#oauth.forget(removed.url).pipe(toMcpGatewayFailed);
     }
@@ -379,12 +379,12 @@ export class McpGateway {
    */
   readonly signIn = Effect.fnUntraced(function* (this: McpGateway, input: TestMcpServerInput, open?: McpSignInOpener) {
     const result = yield* this.test(input, { interactive: true, signInPlace: "here", ...(open ? { open } : {}) });
-    const resource = normalizeResource(input.config.url);
+    const resource = mcpOAuthAccount(input.config.url);
     const inUse =
       resource !== null &&
       this.#servers
         .listEnabled()
-        .some((config) => config.transport === "http" && normalizeResource(config.url) === resource);
+        .some((config) => config.transport === "http" && mcpOAuthAccount(config.url) === resource);
     if (result.error === null && inUse) yield* this.#hooks.refreshAllAgentRuntimes();
     return result;
   });
