@@ -35,4 +35,13 @@ export const messages = {
   "mobile.app.route.marketplace": "마켓플레이스",
   "mobile.app.quickAction.routines": "루틴",
   "mobile.app.quickAction.search": "검색",
+  "mobile.app.update.title": "OpenBot {version} 출시",
+  "mobile.app.update.readyTitle": "새 OpenBot이 준비되었습니다",
+  "mobile.app.update.storeBody": "최신 기능과 수정 사항을 받아 보세요.",
+  "mobile.app.update.readyBody": "설치를 위해 OpenBot이 다시 시작됩니다.",
+  "mobile.app.update.install": "업데이트",
+  "mobile.app.update.later": "나중에",
+  "mobile.app.update.failedTitle": "업데이트할 수 없음",
+  "mobile.app.update.restartFailed": "업데이트를 마치려면 OpenBot을 닫았다가 다시 여세요.",
+  "mobile.app.update.storeFailed": "App Store 또는 Google Play에서 OpenBot을 업데이트하세요.",
 } as const satisfies PartialTranslation<typeof source>;

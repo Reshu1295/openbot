@@ -1,6 +1,6 @@
 import { HeaderHeightContext } from "expo-router/react-navigation";
 import { Typography } from "heroui-native";
-import { type PropsWithChildren, useContext, useState } from "react";
+import { type PropsWithChildren, type ReactNode, useContext, useState } from "react";
 import { Pressable, View } from "react-native";
 import Animated, {
   cubicBezier,
@@ -92,12 +92,15 @@ export function LargeTitle({
   scroll,
   title,
   caption,
+  above,
   accessibilityLabel,
   onPress,
 }: {
   scroll: LargeTitleScroll;
   title: string;
   caption?: string;
+  /** Room above the title, such as for a header block. It counts as part of the title's height. */
+  above?: ReactNode;
   /** Names what a press does, for a title that is a button. */
   accessibilityLabel?: string;
   onPress?: () => void;
@@ -144,6 +147,7 @@ export function LargeTitle({
       style={{ paddingBottom: TITLE_BOTTOM_PADDING }}
       onLayout={(event) => titleHeight.set(event.nativeEvent.layout.height)}
     >
+      {above}
       {caption ? (
         <Typography.Paragraph className="text-muted" numberOfLines={1} style={typeScale.caption}>
           {caption}
@@ -173,6 +177,7 @@ export function LargeTitle({
  * The scroll edge effect under the transparent native bar, and the small title that comes into the
  * bar when the big title scrolls under it. The native bar buttons stay native above it. Android has
  * no blur: as the top fade of the design, the surface is solid under the bar and fades out below it.
+ * `children` draw over the edge effect and under the small title.
  */
 export function LargeTitleBar({
   scroll,
@@ -181,7 +186,8 @@ export function LargeTitleBar({
   insetLeft = isAndroid ? ANDROID_BAR_TITLE_INSET : BAR_TITLE_INSET,
   insetRight = isAndroid ? ANDROID_BAR_TITLE_INSET : BAR_TITLE_INSET,
   surface = "canvas",
-}: {
+  children,
+}: PropsWithChildren<{
   scroll: LargeTitleScroll;
   title: string;
   /** Hides the small title, for example while the bar shows the connection state in its place. */
@@ -189,7 +195,7 @@ export function LargeTitleBar({
   insetLeft?: number;
   insetRight?: number;
   surface?: "canvas" | "sheet";
-}) {
+}>) {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const [collapsed, setCollapsed] = useState(false);
@@ -256,6 +262,7 @@ export function LargeTitleBar({
           }}
         />
       )}
+      {children}
       {hidden ? null : (
         <Animated.View
           pointerEvents="none"

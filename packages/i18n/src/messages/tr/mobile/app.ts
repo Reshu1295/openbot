@@ -35,4 +35,13 @@ export const messages = {
   "mobile.app.route.marketplace": "Pazaryeri",
   "mobile.app.quickAction.routines": "Rutinler",
   "mobile.app.quickAction.search": "Ara",
+  "mobile.app.update.title": "OpenBot {version} çıktı",
+  "mobile.app.update.readyTitle": "Yeni bir OpenBot hazır",
+  "mobile.app.update.storeBody": "En yeni özellikleri ve düzeltmeleri alın.",
+  "mobile.app.update.readyBody": "OpenBot yüklemek için yeniden başlar.",
+  "mobile.app.update.install": "Güncelle",
+  "mobile.app.update.later": "Sonra",
+  "mobile.app.update.failedTitle": "Güncellenemedi",
+  "mobile.app.update.restartFailed": "Güncellemeyi bitirmek için OpenBot'u kapatıp yeniden açın.",
+  "mobile.app.update.storeFailed": "App Store veya Google Play'i açıp OpenBot'u oradan güncelleyin.",
 } as const satisfies PartialTranslation<typeof source>;

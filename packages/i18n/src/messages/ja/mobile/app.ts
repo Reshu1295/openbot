@@ -35,4 +35,13 @@ export const messages = {
   "mobile.app.route.marketplace": "マーケットプレイス",
   "mobile.app.quickAction.routines": "ルーティン",
   "mobile.app.quickAction.search": "検索",
+  "mobile.app.update.title": "OpenBot {version} が登場",
+  "mobile.app.update.readyTitle": "新しい OpenBot の準備ができました",
+  "mobile.app.update.storeBody": "最新の機能と修正を入手しましょう。",
+  "mobile.app.update.readyBody": "インストールのため OpenBot が再起動します。",
+  "mobile.app.update.install": "更新",
+  "mobile.app.update.later": "後で",
+  "mobile.app.update.failedTitle": "更新できませんでした",
+  "mobile.app.update.restartFailed": "更新を完了するには、OpenBot を閉じてもう一度開いてください。",
+  "mobile.app.update.storeFailed": "App Store または Google Play を開いて OpenBot を更新してください。",
 } as const satisfies PartialTranslation<typeof source>;

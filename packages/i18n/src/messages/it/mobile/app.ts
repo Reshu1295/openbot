@@ -35,4 +35,13 @@ export const messages = {
   "mobile.app.route.marketplace": "Marketplace",
   "mobile.app.quickAction.routines": "Routine",
   "mobile.app.quickAction.search": "Cerca",
+  "mobile.app.update.title": "OpenBot {version} è qui",
+  "mobile.app.update.readyTitle": "Un nuovo OpenBot è pronto",
+  "mobile.app.update.storeBody": "Ottieni le funzioni e le correzioni più recenti.",
+  "mobile.app.update.readyBody": "OpenBot si riavvia per installarlo.",
+  "mobile.app.update.install": "Aggiorna",
+  "mobile.app.update.later": "Dopo",
+  "mobile.app.update.failedTitle": "Aggiornamento non riuscito",
+  "mobile.app.update.restartFailed": "Chiudi OpenBot e riaprilo per completare l’aggiornamento.",
+  "mobile.app.update.storeFailed": "Apri l’App Store o Google Play e aggiorna OpenBot da lì.",
 } as const satisfies PartialTranslation<typeof source>;

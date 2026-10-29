@@ -35,4 +35,14 @@ export const messages = defineMessages("mobile.app", {
   // The quick actions of the app icon, which the phone shows when the icon is held.
   "mobile.app.quickAction.routines": "Routines",
   "mobile.app.quickAction.search": "Search",
+  // The update header on home. A store update names its version; a downloaded update restarts the app.
+  "mobile.app.update.title": "OpenBot {version} is here",
+  "mobile.app.update.readyTitle": "A new OpenBot is ready",
+  "mobile.app.update.storeBody": "Get the newest features and fixes.",
+  "mobile.app.update.readyBody": "OpenBot restarts to install it.",
+  "mobile.app.update.install": "Update",
+  "mobile.app.update.later": "Later",
+  "mobile.app.update.failedTitle": "Could not update",
+  "mobile.app.update.restartFailed": "Close OpenBot and open it again to finish the update.",
+  "mobile.app.update.storeFailed": "Open the App Store or Google Play and update OpenBot there.",
 });

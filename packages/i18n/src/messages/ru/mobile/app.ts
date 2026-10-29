@@ -35,4 +35,13 @@ export const messages = {
   "mobile.app.route.marketplace": "Каталог",
   "mobile.app.quickAction.routines": "Регулярные задачи",
   "mobile.app.quickAction.search": "Поиск",
+  "mobile.app.update.title": "OpenBot {version} уже здесь",
+  "mobile.app.update.readyTitle": "Новый OpenBot готов",
+  "mobile.app.update.storeBody": "Получите новые функции и исправления.",
+  "mobile.app.update.readyBody": "OpenBot перезапустится, чтобы установить его.",
+  "mobile.app.update.install": "Обновить",
+  "mobile.app.update.later": "Позже",
+  "mobile.app.update.failedTitle": "Не удалось обновить",
+  "mobile.app.update.restartFailed": "Закройте OpenBot и откройте снова, чтобы завершить обновление.",
+  "mobile.app.update.storeFailed": "Откройте App Store или Google Play и обновите OpenBot там.",
 } as const satisfies PartialTranslation<typeof source>;

@@ -36,4 +36,13 @@ export const messages = {
   // The quick actions of the app icon, which the phone shows when the icon is held.
   "mobile.app.quickAction.routines": "自动化任务",
   "mobile.app.quickAction.search": "搜索",
+  "mobile.app.update.title": "OpenBot {version} 来了",
+  "mobile.app.update.readyTitle": "新版 OpenBot 已就绪",
+  "mobile.app.update.storeBody": "获取最新功能和修复。",
+  "mobile.app.update.readyBody": "OpenBot 将重启以完成安装。",
+  "mobile.app.update.install": "更新",
+  "mobile.app.update.later": "稍后",
+  "mobile.app.update.failedTitle": "无法更新",
+  "mobile.app.update.restartFailed": "关闭 OpenBot 并重新打开以完成更新。",
+  "mobile.app.update.storeFailed": "请打开 App Store 或 Google Play 更新 OpenBot。",
 } as const satisfies PartialTranslation<typeof source>;

@@ -1,4 +1,4 @@
-import { isBoolean, isDynamicRecord } from "./runtime-values";
+import { isBoolean, isDynamicRecord, isString } from "./runtime-values";
 
 /** The mobile features that the account server can turn on and off for each platform and app version. */
 export const MOBILE_FEATURES = [
@@ -23,6 +23,9 @@ export type MobileFeatureFlags = Record<MobileFeature, boolean>;
 export type MobileFeatureVersions = { upTo: string; except?: readonly string[] };
 
 export type MobileFeatureConfig = Record<MobileFeature, Record<MobileFeaturePlatform, MobileFeatureVersions>>;
+
+/** The newest app version that each store offers. The app shows an update when it runs an older one. */
+export type MobileLatestVersions = Record<MobileFeaturePlatform, string>;
 
 export const MOBILE_FEATURES_PATH = "/v1/mobile/features";
 
@@ -75,4 +78,23 @@ export function parseMobileFeatureFlags(value: unknown): MobileFeatureFlags | nu
   const flags = mobileFeaturesOff();
   for (const feature of MOBILE_FEATURES) flags[feature] = isBoolean(features[feature]) && features[feature];
   return flags;
+}
+
+/** The newest store version of one platform. An unknown platform or a version the app cannot read has none. */
+export function resolveMobileLatestVersion(latest: MobileLatestVersions, platform: string | null): string | null {
+  if (platform !== "ios" && platform !== "android") return null;
+  return versionParts(latest[platform]) ? latest[platform] : null;
+}
+
+/** The `latestVersion` of a `{ features }` answer. An older account server sends none. */
+export function parseMobileLatestVersion(value: unknown): string | null {
+  if (!isDynamicRecord(value) || !isString(value.latestVersion)) return null;
+  return versionParts(value.latestVersion) ? value.latestVersion : null;
+}
+
+/** True when `candidate` is after `current`. A version that cannot be read is never newer. */
+export function isNewerMobileVersion(candidate: string, current: string): boolean {
+  const next = versionParts(candidate);
+  const now = versionParts(current);
+  return next !== null && now !== null && compareVersions(next, now) > 0;
 }
