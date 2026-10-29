@@ -1291,7 +1291,7 @@ if (!hasSingleInstanceLock) {
       void requestDesktopNotificationPermission(built.notificationPreference, language.translate).catch((error) =>
         logger.warn("Unable to ask for notification permission:", toLogValue(error)),
       );
-      configureApplicationMenu(service, updater, interfaceSize, language.translate);
+      configureApplicationMenu(service, updater, interfaceSize, language.translate, () => windowHolder.current);
       // The way back to a window hidden in the background on Windows and Linux.
       backgroundTray = createBackgroundTray({
         icon: appIconColorImage ?? nativeImage.createFromPath(appIconPath),
@@ -1310,7 +1310,7 @@ if (!hasSingleInstanceLock) {
       // because a native label cannot be changed in place, and every window is told, including the
       // Dynamic Island, which has no Settings of its own to read the new value from.
       language.subscribe((preference) => {
-        configureApplicationMenu(service, updater, interfaceSize, language.translate);
+        configureApplicationMenu(service, updater, interfaceSize, language.translate, () => windowHolder.current);
         tray.relabel();
         for (const window of BrowserWindow.getAllWindows()) {
           sendToRenderer(window, IPC_ENDPOINTS.app.appLanguagePreference, preference);

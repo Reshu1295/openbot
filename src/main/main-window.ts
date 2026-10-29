@@ -789,6 +789,7 @@ export function configureApplicationMenu(
   updater: UpdateService,
   interfaceSize: InterfaceSizeService,
   translate: AppTranslate,
+  getMainWindow: () => BrowserWindow | null,
 ): void {
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
@@ -806,8 +807,14 @@ export function configureApplicationMenu(
           {
             label: translate("menu.checkForUpdates"),
             click: (_item, focusedWindow) => {
-              const candidate = focusedWindow ?? BrowserWindow.getFocusedWindow();
-              if (candidate instanceof BrowserWindow) sendToRenderer(candidate, IPC_ENDPOINTS.app.openUpdateSettings);
+              // On macOS a closed main window only hides and the menu stays, so show it again: the
+              // check and its result are visible only in Settings.
+              const focused = focusedWindow ?? BrowserWindow.getFocusedWindow();
+              const target = focused instanceof BrowserWindow ? focused : getMainWindow();
+              if (target && !target.isDestroyed()) {
+                if (target !== focused) showMainWindow(target);
+                sendToRenderer(target, IPC_ENDPOINTS.app.openUpdateSettings);
+              }
               Effect.runFork(updater.checkForUpdates());
             },
           },
