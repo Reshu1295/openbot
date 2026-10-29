@@ -288,7 +288,7 @@ export class BrowserCdpEngine {
         for (const [index, node] of nodes.entries()) {
           if (node.sessionId)
             return yield* browserFailure(
-              new Error(`${labels[index]} is inside a frame. Use takeover for authentication inside a frame.`),
+              new Error(`${labels[index]} is inside a frame. Secure input does not support frames, so use takeover.`),
             );
           const input = index < inputs.length;
           const valid = yield* this.#callOnNode(

@@ -1265,7 +1265,8 @@ export class BrowserHost {
         Effect.gen({ self: this }, function* () {
           tab.secret = undefined;
           this.#syncAttachedView();
-          const reason = error.cause instanceof Error ? ` ${error.cause.message}` : "";
+          // A reason can end in a selector, so end it with a period before the next sentence.
+          const reason = error.cause instanceof Error ? ` ${error.cause.message.replace(/\.?\s*$/u, ".")}` : "";
           return yield* browserFailure(
             new Error(`Secure authentication is unavailable.${reason} Correct the request, or use browser takeover.`),
           );

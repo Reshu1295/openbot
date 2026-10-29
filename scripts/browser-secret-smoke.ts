@@ -187,7 +187,11 @@ export async function runSecretHandoffScenario(browser: BrowserHost, localOrigin
     }
     // A wrong target names itself and the reason, so the agent can correct the request.
     for (const [targets, submitTarget, expected] of [
-      [[{ kind: "css", selector: "#password" }], { kind: "css", selector: "#missing-submit" }, "submitTarget:"],
+      [
+        [{ kind: "css", selector: "#password" }],
+        { kind: "css", selector: "#missing-submit" },
+        "submitTarget: No element matches CSS selector: #missing-submit. Correct",
+      ],
       [[{ kind: "css", selector: "#submit" }], { kind: "css", selector: "#submit" }, "The field target is not"],
       [[{ kind: "css", selector: "#password" }], undefined, "submission=click needs submitTarget"],
     ] as const) {
