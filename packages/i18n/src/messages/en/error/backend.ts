@@ -77,6 +77,8 @@ export const messages = defineMessages("error.backend", {
   "error.backend.channelDeliveryNotCreated": "Channel delivery was not created.",
   "error.backend.channelAssignmentStopped": "This channel assignment has been stopped or replaced.",
   "error.backend.channelAssigneeUnavailable": "The assigned agent is unavailable.",
+  "error.backend.channelAssigneeRemoved": "The assigned member was removed.",
+  "error.backend.channelAssigneeReassign": "The assigned member is unavailable. Reassign this task.",
   "error.backend.channelAssignmentChanged": "This channel assignment has changed.",
   "error.backend.channelMemberRequired": "Select an available member of this channel.",
   "error.backend.memoryEssentialBudget":

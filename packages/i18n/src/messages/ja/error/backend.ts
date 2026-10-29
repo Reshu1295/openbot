@@ -82,6 +82,9 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "チャンネルへの配信を作成できませんでした。",
   "error.backend.channelAssignmentStopped": "このチャンネルの割り当ては停止されたか、置き換えられました。",
   "error.backend.channelAssigneeUnavailable": "割り当てられたエージェントを使用できません。",
+  "error.backend.channelAssigneeRemoved": "割り当てられたメンバーが削除されました。",
+  "error.backend.channelAssigneeReassign":
+    "割り当てられたメンバーを使用できません。このタスクを再割り当てしてください。",
   "error.backend.channelAssignmentChanged": "このチャンネルの割り当ては変更されました。",
   "error.backend.channelMemberRequired": "このチャンネルの使用可能なメンバーを選択してください。",
   "error.backend.memoryEssentialBudget":

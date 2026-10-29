@@ -78,6 +78,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "Kanal teslimatı oluşturulamadı.",
   "error.backend.channelAssignmentStopped": "Bu kanal ataması durduruldu veya değiştirildi.",
   "error.backend.channelAssigneeUnavailable": "Atanan ajan kullanılamıyor.",
+  "error.backend.channelAssigneeRemoved": "Atanan üye kaldırıldı.",
+  "error.backend.channelAssigneeReassign": "Atanan üye kullanılamıyor. Bu görevi yeniden atayın.",
   "error.backend.channelAssignmentChanged": "Bu kanal ataması değişti.",
   "error.backend.channelMemberRequired": "Bu kanalın kullanılabilir bir üyesini seçin.",
   "error.backend.memoryEssentialBudget":

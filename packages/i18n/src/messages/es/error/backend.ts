@@ -81,6 +81,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "No se creó la entrega del canal.",
   "error.backend.channelAssignmentStopped": "Esta asignación del canal se detuvo o se reemplazó.",
   "error.backend.channelAssigneeUnavailable": "El agente asignado no está disponible.",
+  "error.backend.channelAssigneeRemoved": "Se quitó al miembro asignado.",
+  "error.backend.channelAssigneeReassign": "El miembro asignado no está disponible. Reasigna esta tarea.",
   "error.backend.channelAssignmentChanged": "Esta asignación del canal cambió.",
   "error.backend.channelMemberRequired": "Selecciona un miembro disponible de este canal.",
   "error.backend.memoryEssentialBudget":

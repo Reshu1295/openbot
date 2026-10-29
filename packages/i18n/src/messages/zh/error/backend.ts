@@ -73,6 +73,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "未创建频道投递。",
   "error.backend.channelAssignmentStopped": "该频道派活已被停止或替换。",
   "error.backend.channelAssigneeUnavailable": "被派的助手不可用。",
+  "error.backend.channelAssigneeRemoved": "被派的成员已被移除。",
+  "error.backend.channelAssigneeReassign": "被派的成员不可用。请重新分派此任务。",
   "error.backend.channelAssignmentChanged": "该频道派活已变更。",
   "error.backend.channelMemberRequired": "请选择该频道中一位可用的成员。",
   "error.backend.memoryEssentialBudget": "核心记忆超出了提示词上限。请把其中一条设为按需检索，然后重试。",

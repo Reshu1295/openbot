@@ -81,6 +81,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "De bezorging in het kanaal is niet gemaakt.",
   "error.backend.channelAssignmentStopped": "Deze kanaalopdracht is gestopt of vervangen.",
   "error.backend.channelAssigneeUnavailable": "De toegewezen agent is niet beschikbaar.",
+  "error.backend.channelAssigneeRemoved": "Het toegewezen lid is verwijderd.",
+  "error.backend.channelAssigneeReassign": "Het toegewezen lid is niet beschikbaar. Wijs deze taak opnieuw toe.",
   "error.backend.channelAssignmentChanged": "Deze kanaalopdracht is gewijzigd.",
   "error.backend.channelMemberRequired": "Kies een beschikbaar lid van dit kanaal.",
   "error.backend.memoryEssentialBudget":

@@ -80,6 +80,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "Nie utworzono dostarczenia kanału.",
   "error.backend.channelAssignmentStopped": "Ten przydział kanału został zatrzymany lub zastąpiony.",
   "error.backend.channelAssigneeUnavailable": "Przydzielony agent jest niedostępny.",
+  "error.backend.channelAssigneeRemoved": "Przydzielony członek został usunięty.",
+  "error.backend.channelAssigneeReassign": "Przydzielony członek jest niedostępny. Przydziel to zadanie ponownie.",
   "error.backend.channelAssignmentChanged": "Ten przydział kanału się zmienił.",
   "error.backend.channelMemberRequired": "Wybierz dostępnego członka tego kanału.",
   "error.backend.memoryEssentialBudget":

@@ -78,6 +78,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "Доставка в канал не создана.",
   "error.backend.channelAssignmentStopped": "Это назначение в канале остановлено или заменено.",
   "error.backend.channelAssigneeUnavailable": "Назначенный агент недоступен.",
+  "error.backend.channelAssigneeRemoved": "Назначенный участник удалён.",
+  "error.backend.channelAssigneeReassign": "Назначенный участник недоступен. Переназначьте эту задачу.",
   "error.backend.channelAssignmentChanged": "Это назначение в канале изменилось.",
   "error.backend.channelMemberRequired": "Выберите доступного участника этого канала.",
   "error.backend.memoryEssentialBudget":
