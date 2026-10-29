@@ -98,9 +98,9 @@ export const LICENSE_MAX_USERS = 10;
 /** The license terms allow this many devices for each user. The app does not count them. */
 export const LICENSE_DEVICES_PER_USER = 3;
 /** Yearly billing takes this share off a license. The bundle discount comes off after it. */
-export const LICENSE_YEAR_DISCOUNT_PERCENT = 10;
+export const LICENSE_YEAR_DISCOUNT_PERCENT = 20;
 /** A license of an account that pays for a hosted server costs this share less, after the yearly discount. */
-export const LICENSE_BUNDLE_DISCOUNT_PERCENT = 20;
+export const LICENSE_BUNDLE_DISCOUNT_PERCENT = 10;
 
 /** The base price and the price of each extra user, in minor units. */
 export interface LicensePrice {
@@ -148,14 +148,14 @@ export const LICENSE_PLAN_PRICES: Readonly<Record<LicensePlanKey, Readonly<Recor
     pln: { base: 4_400, extraUser: 0 },
   },
   starter_year: {
-    eur: { base: 10_800, extraUser: 0 },
-    usd: { base: 12_960, extraUser: 0 },
-    pln: { base: 47_520, extraUser: 0 },
+    eur: { base: 9_600, extraUser: 0 },
+    usd: { base: 11_520, extraUser: 0 },
+    pln: { base: 42_240, extraUser: 0 },
   },
   starter_bundle_month: {
-    eur: { base: 800, extraUser: 0 },
-    usd: { base: 960, extraUser: 0 },
-    pln: { base: 3_520, extraUser: 0 },
+    eur: { base: 900, extraUser: 0 },
+    usd: { base: 1_080, extraUser: 0 },
+    pln: { base: 3_960, extraUser: 0 },
   },
   starter_bundle_year: {
     eur: { base: 8_640, extraUser: 0 },
@@ -164,14 +164,14 @@ export const LICENSE_PLAN_PRICES: Readonly<Record<LicensePlanKey, Readonly<Recor
   },
   team_month: LICENSE_PRICES,
   team_year: {
-    eur: { base: 27_000, extraUser: 16_200 },
-    usd: { base: 32_400, extraUser: 19_440 },
-    pln: { base: 118_800, extraUser: 71_280 },
+    eur: { base: 24_000, extraUser: 14_400 },
+    usd: { base: 28_800, extraUser: 17_280 },
+    pln: { base: 105_600, extraUser: 63_360 },
   },
   team_bundle_month: {
-    eur: { base: 2_000, extraUser: 1_200 },
-    usd: { base: 2_400, extraUser: 1_440 },
-    pln: { base: 8_800, extraUser: 5_280 },
+    eur: { base: 2_250, extraUser: 1_350 },
+    usd: { base: 2_700, extraUser: 1_620 },
+    pln: { base: 9_900, extraUser: 5_940 },
   },
   team_bundle_year: {
     eur: { base: 21_600, extraUser: 12_960 },

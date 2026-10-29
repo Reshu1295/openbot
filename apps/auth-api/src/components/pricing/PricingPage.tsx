@@ -65,6 +65,16 @@ function OrderAction(props: { order: Accessor<OrderFormOrder> }) {
   );
 }
 
+/** A team larger than the license allows talks to us about the price. */
+function ContactAction() {
+  const { t } = useText();
+  return (
+    <ButtonLink to="/contact" variant="primary" size="md" icon="contact" class="pricing-cta">
+      {t("billing.license.contact.action")}
+    </ButtonLink>
+  );
+}
+
 export function PricingPage(props: {
   text: PricingPageText;
   offer: PricingOffer;
@@ -90,6 +100,7 @@ export function PricingPage(props: {
     </div>
   );
   const action = (current: Accessor<OrderFormOrder>) => <OrderAction order={current} />;
+  const contact = () => <ContactAction />;
   const remember = (next: OrderFormOrder) => setOrder({ server: next.server, license: next.license?.tier ?? null });
 
   return (
@@ -111,6 +122,7 @@ export function PricingPage(props: {
               initialLicense={FIRST_LICENSE}
               heading={heading}
               action={action}
+              contact={contact}
               onOrderChange={remember}
             />
           </TextProvider>

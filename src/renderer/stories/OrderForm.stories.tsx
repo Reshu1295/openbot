@@ -16,6 +16,7 @@ function OrderFormStory(props: {
   licenseTrialEnd?: number;
 }) {
   const action = (order: Accessor<OrderFormOrder>) => <OrderAction order={order} />;
+  const contact = () => <ContactAction />;
   return (
     <main class="foundation-story">
       <OrderForm
@@ -29,6 +30,7 @@ function OrderFormStory(props: {
         initialServer={props.withServers ? "standard" : null}
         initialLicense="team"
         action={action}
+        contact={contact}
       />
     </main>
   );
@@ -41,6 +43,11 @@ function OrderAction(props: { order: Accessor<OrderFormOrder> }) {
       {props.order().server === null ? t("billing.order.cta.license") : t("billing.order.cta.server")}
     </Button>
   );
+}
+
+function ContactAction() {
+  const { t } = useText();
+  return <Button type="button">{t("billing.license.contact.action")}</Button>;
 }
 
 const meta = {

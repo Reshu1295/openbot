@@ -57,6 +57,11 @@ export interface OrderFormProps {
   heading?: (() => JSX.Element) | undefined;
   /** The buttons beside the total. They read the order when the user acts. */
   action: (order: Accessor<OrderFormOrder>) => JSX.Element;
+  /**
+   * Replaces the action when the Team license passes `LICENSE_MAX_USERS` users. Without it, the members stepper
+   * stops at the maximum.
+   */
+  contact?: (() => JSX.Element) | undefined;
   onOrderChange?: ((order: OrderFormOrder) => void) | undefined;
   class?: string | undefined;
 }
@@ -157,6 +162,7 @@ function Segment<T extends string>(props: {
 
 interface MemberStepperProps {
   value: number;
+  label: string;
   min: number;
   max: number;
   disabled: boolean;
@@ -180,6 +186,8 @@ function ChoiceRow(props: {
   fullPrice?: number | undefined;
   currency: BillingCurrency;
   unit?: string | undefined;
+  /** Shows in place of the price, for an order with a price that we agree with the buyer. */
+  custom?: string | undefined;
   stepper?: MemberStepperProps | undefined;
 }) {
   const { format } = useText();
@@ -200,30 +208,40 @@ function ChoiceRow(props: {
           </Show>
           <span>{props.detail}</span>
         </span>
-        <span class="order-form-choice-price">
-          <span class="order-form-choice-amount">
-            <Show when={props.fullPrice}>
-              {(full) => (
-                <span class="order-form-was" data-shown={full() > props.price ? "" : undefined} aria-hidden="true">
-                  <span>
-                    <s>{formatMinorMoney(format, full(), props.currency)}</s>
+        <Show when={props.custom}>
+          {(custom) => (
+            <span class="order-form-choice-price">
+              <span class="order-form-choice-amount">{custom()}</span>
+            </span>
+          )}
+        </Show>
+        <Show when={!props.custom}>
+          <span class="order-form-choice-price">
+            <span class="order-form-choice-amount">
+              <Show when={props.fullPrice}>
+                {(full) => (
+                  <span class="order-form-was" data-shown={full() > props.price ? "" : undefined} aria-hidden="true">
+                    <span>
+                      <s>{formatMinorMoney(format, full(), props.currency)}</s>
+                    </span>
                   </span>
-                </span>
-              )}
-            </Show>
-            <RollingPrice
-              class="order-form-digits"
-              value={props.price}
-              format={(value) => formatMinorMoney(format, value, props.currency)}
-            />
+                )}
+              </Show>
+              <RollingPrice
+                class="order-form-digits"
+                value={props.price}
+                format={(value) => formatMinorMoney(format, value, props.currency)}
+              />
+            </span>
+            <Show when={props.unit}>{(unit) => <span class="order-form-price-unit">{unit()}</span>}</Show>
           </span>
-          <Show when={props.unit}>{(unit) => <span class="order-form-price-unit">{unit()}</span>}</Show>
-        </span>
+        </Show>
       </RadioGroup.ItemLabel>
       <Show when={props.stepper}>
         {(stepper) => (
           <MemberStepper
             value={stepper().value}
+            label={stepper().label}
             min={stepper().min}
             max={stepper().max}
             disabled={stepper().disabled}
@@ -254,7 +272,7 @@ function MemberStepper(props: MemberStepperProps) {
       >
         −
       </Button>
-      <span aria-live="polite">{t("billing.order.memberCount", { count: props.value })}</span>
+      <span aria-live="polite">{props.label}</span>
       <Button
         class="order-form-step"
         variant="outline"
@@ -346,9 +364,12 @@ export function OrderForm(props: OrderFormProps) {
   /** The monthly list price of a license. In yearly billing the summary takes the discount off as its own line. */
   const licenseList = (choice: LicenseTier) =>
     licenseListMonthly(choice, choice === "team" ? members() : 1, currency());
+  /** The Team license has more users than the app sells, so the buyer contacts us for the price. */
+  const contact = () => props.contact !== undefined && license() === "team" && members() > LICENSE_MAX_USERS;
+  const priced = () => licensed() && !contact();
   const licenseFull = () => {
     const choice = license();
-    return choice === "none" ? 0 : licenseList(choice);
+    return choice === "none" || contact() ? 0 : licenseList(choice);
   };
   const licenseCost = () => licenseMonthlyPrice(licenseFull(), interval());
   /** A license costs less with any server: one in this order, or one that the account pays for. */
@@ -361,7 +382,7 @@ export function OrderForm(props: OrderFormProps) {
     bundled() ? t("billing.order.license.bundleSaving", { percent: LICENSE_BUNDLE_DISCOUNT_PERCENT }) : undefined;
   const discount = () => {
     const choice = license();
-    return choice === "none" ? 0 : licenseCost() - licensePrice(choice);
+    return choice === "none" || contact() ? 0 : licenseCost() - licensePrice(choice);
   };
   const total = () => serverCost() + licenseCost() - discount();
   const buying = () => server() !== undefined || licensed();
@@ -369,11 +390,20 @@ export function OrderForm(props: OrderFormProps) {
   /** A license cannot pay for more members than the server holds, so the Team license does not fit a small server. */
   const teamMax = () => Math.min(LICENSE_MAX_USERS, server()?.memberLimit ?? LICENSE_MAX_USERS);
   const teamFits = () => teamMax() >= minTeam();
+  /** With a contact action, one step after `LICENSE_MAX_USERS` means "more than the maximum". */
+  const teamStepMax = () => (props.contact && teamMax() === LICENSE_MAX_USERS ? LICENSE_MAX_USERS + 1 : teamMax());
+  const memberLabel = () =>
+    members() > LICENSE_MAX_USERS
+      ? t("billing.license.change.more", { count: LICENSE_MAX_USERS })
+      : t("billing.order.memberCount", { count: members() });
+  const teamCustom = () => (contact() ? t("billing.license.change.custom") : undefined);
+  const teamSaving = () => (contact() ? undefined : bundleSaving());
   const yearlyPercent = () => yearlyDiscountPercent(plans(), currency());
   // A conditional in a component prop or in children compiles to a memo on the client but not on the server. That
   // moves the hydration keys of everything after it, so each such conditional is a named function here.
-  const teamDetail = () =>
-    teamFits()
+  const teamDetail = () => {
+    if (contact()) return t("billing.license.change.customDescription", { count: LICENSE_MAX_USERS });
+    return teamFits()
       ? t("billing.order.license.teamDetail", {
           included: LICENSE_INCLUDED_USERS,
           price: formatMinorMoney(
@@ -384,6 +414,7 @@ export function OrderForm(props: OrderFormProps) {
           ),
         })
       : t("billing.order.license.serverMembers", { count: teamMax() });
+  };
   const starterDetail = () =>
     starterFits()
       ? t("billing.order.memberCount", { count: 1 })
@@ -433,7 +464,10 @@ export function OrderForm(props: OrderFormProps) {
       interval: interval(),
       currency: currency(),
       server: server()?.id ?? null,
-      license: choice === "none" ? null : { tier: choice, users: choice === "team" ? members() : 1 },
+      license:
+        choice === "none"
+          ? null
+          : { tier: choice, users: choice === "team" ? Math.min(members(), LICENSE_MAX_USERS) : 1 },
     };
   });
   // A block body: a signal setter as `onOrderChange` returns its value, and an effect must not return one.
@@ -554,17 +588,19 @@ export function OrderForm(props: OrderFormProps) {
             <ChoiceRow
               value="team"
               title={t("billing.order.license.team")}
-              saving={bundleSaving()}
+              saving={teamSaving()}
               detail={teamDetail()}
               disabled={!teamFits()}
               price={licensePrice("team")}
               fullPrice={licenseList("team")}
               currency={currency()}
               unit={unit()}
+              custom={teamCustom()}
               stepper={{
                 value: members(),
+                label: memberLabel(),
                 min: minTeam(),
-                max: teamMax(),
+                max: teamStepMax(),
                 disabled: !teamFits(),
                 onChange: (value) => {
                   setMembers(value);
@@ -594,9 +630,9 @@ export function OrderForm(props: OrderFormProps) {
             />
           </ul>
           <ul class="order-form-summary-lines order-form-summary-license">
-            <SummaryLine open={licensed()} label={licenseLine()} value={licenseFull()} currency={currency()} />
+            <SummaryLine open={priced()} label={licenseLine()} value={licenseFull()} currency={currency()} />
             <SummaryLine
-              open={licensed() && isYearly()}
+              open={priced() && isYearly()}
               label={t("billing.order.summary.yearlyDiscount", { percent: LICENSE_YEAR_DISCOUNT_PERCENT })}
               value={licenseFull() - licenseCost()}
               currency={currency()}
@@ -615,8 +651,16 @@ export function OrderForm(props: OrderFormProps) {
           </ul>
           <div class="order-form-total">
             <span class="order-form-total-label">{t("billing.order.summary.total")}</span>
-            <Price value={total()} currency={currency()} unit={totalUnit()} />
-            <div class="order-form-action">{props.action(order)}</div>
+            <Show when={contact()}>
+              <p class="order-form-price">
+                <span class="order-form-price-amount">{t("billing.license.change.custom")}</span>
+              </p>
+              <div class="order-form-action">{props.contact?.()}</div>
+            </Show>
+            <Show when={!contact()}>
+              <Price value={total()} currency={currency()} unit={totalUnit()} />
+              <div class="order-form-action">{props.action(order)}</div>
+            </Show>
           </div>
         </section>
       </div>
