@@ -595,12 +595,16 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     await relay.paste(current.url, address, serverId);
   }
 
-  /** Ends the relayed sign-in on the host; the waiting connect step then reports it as stopped. */
-  function cancelSignInRelay(): void {
-    const relay = signInRelay();
-    const current = relayed();
+  /**
+   * Ends the sign-in that the connect step waits for, on this computer or on the host that relays it.
+   * The waiting connect step then reports it as stopped.
+   */
+  function cancelSignIn(): void {
+    const url = connecting()?.subject.config.url;
     const serverId = props.pluginServerId;
-    if (relay && current && serverId) void relay.cancel(current.url, serverId).catch(() => undefined);
+    if (!url || !serverId) return;
+    const { mcp } = calls();
+    void mcp.cancelMcpSignIn({ url }, serverId).catch(() => undefined);
   }
 
   /**
@@ -985,7 +989,7 @@ export function createMarketplaceController(props: MarketplaceControllerProps) {
     signInRelayed: relayed,
     openSignInRelay,
     pasteSignInRelay,
-    cancelSignInRelay,
+    cancelSignIn,
     openPluginUrl,
   };
 }
