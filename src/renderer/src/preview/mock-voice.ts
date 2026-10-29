@@ -28,9 +28,6 @@ export interface MockVoiceOptions {
   voiceServer?: VoiceServerSettings | null;
 }
 
-/** The address of the preview's example server, which has both routes. */
-export const MOCK_VOICE_SERVER_ADDRESS = "http://studio.local:8000/v1";
-
 /** A Speaches server: Whisper for dictation and Kokoro for replies. */
 const MOCK_SERVER_MODELS: VoiceServerModels = {
   transcription: ["Systran/faster-whisper-large-v3", "Systran/faster-distil-whisper-small.en"],

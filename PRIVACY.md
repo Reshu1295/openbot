@@ -604,6 +604,10 @@ server can change it.
   `~/Library/Application Support/OpenBot/openbot-github-connector-v1.json`, encrypted by the operating
   system's secret storage. It holds the GitHub access and refresh tokens, the account name, ID and
   avatar address, and the port and secret of the local GitHub MCP server.
+  While the connection is on, `provider-state/github` in the same folder holds the access token and
+  the OpenBot GitHub App's installation tokens in plain text, with mode 0600, for `gh` and `git` in
+  agent tools. OpenBot deletes that folder when you disconnect and when the app closes; after a crash
+  it stays until the next start. The tokens are redacted from logs, exports and diagnostics.
 - The ElevenLabs API key for dictation is kept in
   `~/Library/Application Support/OpenBot/voice-api-key.json`, encrypted by the operating system's
   secret storage. The app window never receives the key back. Remove key in **Settings → Voice**
@@ -612,10 +616,6 @@ server can change it.
   `~/Library/Application Support/OpenBot/voice-server-key.json`, encrypted by the operating system's
   secret storage. The app window never receives the key back. Remove in the Voice server section of
   **Settings → Voice** deletes the file. The key is redacted from logs, exports and diagnostics.
-  While the connection is on, `provider-state/github` in the same folder holds the access token and
-  the OpenBot GitHub App's installation tokens in plain text, with mode 0600, for `gh` and `git` in
-  agent tools. OpenBot deletes that folder when you disconnect and when the app closes; after a crash
-  it stays until the next start. The tokens are redacted from logs, exports and diagnostics.
 - The Bitwarden connection keeps a CLI session key in process memory only. OpenBot does not
   save it to a file. Disconnect, eight hours without vault use, and app exit stop this connection.
   The log redactor can retain values in memory until exit to mask later messages.

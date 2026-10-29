@@ -138,10 +138,18 @@ export class VoiceServerService extends EventEmitter<VoiceServerEvents> {
   /** Saves the server, or removes it with its key. Dictation and replies use it from the next request. */
   readonly set = Effect.fn("VoiceServer.set")(function* (this: VoiceServerService, input: VoiceServerInput | null) {
     const apiKey = input ? this.#keyFor(input) : null;
+    const previousKey = this.#apiKeys.get();
     yield* this.#apiKeys.set(apiKey).pipe(Effect.mapError(({ cause }) => new VoiceOperationError({ cause })));
-    yield* this.#preferences
-      .set({ server: input ? { address: input.address, routes: input.routes } : null })
-      .pipe(Effect.mapError(({ cause }) => new VoiceOperationError({ cause })));
+    // The key belongs to the new address. When that address is not saved, the old key goes back, or
+    // no key stays, so the old origin never receives a key that was given for another server.
+    const restoreKey = this.#apiKeys.set(previousKey).pipe(
+      Effect.catch(() => this.#apiKeys.set(null)),
+      Effect.ignore,
+    );
+    yield* this.#preferences.set({ server: input ? { address: input.address, routes: input.routes } : null }).pipe(
+      Effect.tapError(() => restoreKey),
+      Effect.mapError(({ cause }) => new VoiceOperationError({ cause })),
+    );
     const settings = this.get();
     this.emit("settings", settings);
     return settings;
@@ -416,7 +424,7 @@ function voiceNames(body: unknown): string[] {
  * The samples of a WAV file as 16-bit mono PCM. It takes 16-bit or 32-bit float samples, mixes
  * channels down, and reads a streamed file whose data size is unknown to its end.
  */
-export function decodeWav(wav: Uint8Array): SpeechAudio | null {
+function decodeWav(wav: Uint8Array): SpeechAudio | null {
   const view = new DataView(wav.buffer, wav.byteOffset, wav.byteLength);
   const tag = (offset: number) => String.fromCharCode(...wav.subarray(offset, offset + 4));
   if (wav.byteLength < 12 || tag(0) !== "RIFF" || tag(8) !== "WAVE") return null;
