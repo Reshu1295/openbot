@@ -120,6 +120,8 @@ export interface AgentThreadViewProps {
   activeSteps?: readonly AgentStep[] | undefined;
   /** The "Show agent steps" setting: the steps are open at first. */
   stepsOpenByDefault?: boolean | undefined;
+  /** Receives the message list, where the app searches the thread. */
+  scrollRef?: ((element: HTMLElement) => void) | undefined;
 }
 
 /**
@@ -196,6 +198,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
         ref={(element: HTMLElement) => {
           scroller = element;
           fades.bind(element);
+          props.scrollRef?.(element);
         }}
         class={["conversation-scroll agent-thread-scroll", fades.classes()]}
         aria-label={t("conversation.threads.view.label", { title: title() })}
@@ -230,6 +233,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
                   onAttachmentAction={props.onAttachmentAction}
                   onDownload={(attachment) => props.onAttachmentAction(attachment, "download")}
                   macWindowControls={props.macWindowControls}
+                  data-chat-search-message={message().id}
                 />
               </div>
             )}
