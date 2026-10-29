@@ -19,18 +19,25 @@ export function codexSandboxMode(agent: SandboxedAgent): "workspace-write" | "da
 }
 
 /**
+ * The folders the user gave the agent (`additionalFolders`) that are on the disk now. A moved or
+ * deleted one is left out: a provider can refuse to start with a root that does not exist, and the
+ * instructions must not name a folder that the sandbox leaves out.
+ */
+export function existingAgentFolders(agent: Pick<AgentSummary, "additionalFolders">): string[] {
+  return (agent.additionalFolders ?? []).filter(
+    (folder) => statSync(folder, { throwIfNoEntry: false })?.isDirectory() === true,
+  );
+}
+
+/**
  * The folders a Workspace only agent may write, besides the temporary folders: its workspace, the
- * shared folder, and the folders the user gave it (`additionalFolders`). An added folder that was
- * moved or deleted is left out: a provider can refuse to start with a root that does not exist.
+ * shared folder, and the added folders that exist.
  */
 export function workspaceWritableRoots(
   agent: Pick<AgentSummary, "additionalFolders" | "workspacePath">,
   sharedRoot: string,
 ) {
-  const folders = (agent.additionalFolders ?? []).filter(
-    (folder) => statSync(folder, { throwIfNoEntry: false })?.isDirectory() === true,
-  );
-  return [agent.workspacePath, sharedRoot, ...folders];
+  return [agent.workspacePath, sharedRoot, ...existingAgentFolders(agent)];
 }
 
 export type CodexSandboxPolicy =

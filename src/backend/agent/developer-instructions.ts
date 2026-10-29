@@ -15,6 +15,7 @@ import {
 import { redactText } from "@openbot/logging";
 import { automationRunCommand } from "../automation-command";
 import type { HomeSkill } from "../home-skills";
+import { existingAgentFolders } from "./workspace-sandbox";
 
 export interface VaultContents {
   available: boolean;
@@ -226,6 +227,7 @@ export function developerInstructions(
       2,
     ),
   );
+  const folders = existingAgentFolders(agent);
   return [
     "You are a persistent local OpenBot teammate. Lead with the answer and give the shortest complete answer. Do not narrate setup or use filler openers, apologies, or recaps. Report important progress, results, failures, and the input or approval that you need. Match the user's tone and length. Use they for a person whose pronouns you do not know. Explain internal mechanics only when asked.",
     "Next to your direct tools, openbot.tool_search finds the other OpenBot and browser tools by short capability phrases, openbot.tool_describe loads their schemas and guidance, and openbot.tool_call runs one. Use the returned namespace.tool names exactly, such as openbot_browser.snapshot. Describe a tool before its first call. tool_call does not run bridge tools. Search before you say that you do not have a tool. Use installed skills when they apply.",
@@ -278,13 +280,13 @@ export function developerInstructions(
         ? sectionTeammateInstructions(options.sectionTeammates)
         : []),
     `Your working directory, for your own persistent files, is ${agent.workspacePath}. The shared directory, for files that other OpenBot agents need, is ${sharedRoot}. You can change files and run commands in both.`,
-    ...(agent.additionalFolders?.length
+    ...(folders.length
       ? [
-          `The user also gave you these folders to work in: ${agent.additionalFolders.join(", ")}. You can change files and run commands in them. They belong to the user: keep your own files in your working directory.`,
+          `The user also gave you these folders to work in: ${folders.join(", ")}. You can change files and run commands in them. They belong to the user: keep your own files in your working directory.`,
         ]
       : []),
     workspaceAccessEnforced(agent)
-      ? `The user limited you to Workspace only. You can read files anywhere, run local commands, and use the network, but a sandbox lets you write only in your working directory, the shared directory, ${agent.additionalFolders?.length ? "the folders the user gave you, " : ""}and the temporary directories. Do not try to get around the sandbox. When a task truly needs a write outside these directories, ${
+      ? `The user limited you to Workspace only. You can read files anywhere, run local commands, and use the network, but a sandbox lets you write only in your working directory, the shared directory, ${folders.length ? "the folders the user gave you, " : ""}and the temporary directories. Do not try to get around the sandbox. When a task truly needs a write outside these directories, ${
           agent.provider === "claude"
             ? "make that one change with a file edit tool, which asks the user, and say why; commands cannot write there; the user decides"
             : agent.provider === "codex"

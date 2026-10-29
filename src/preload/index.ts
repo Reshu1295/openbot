@@ -557,6 +557,14 @@ const agentGroup = bridgeGroup(IPC_ENDPOINTS.agent, {
   scopedEvent: decodeScopedAgentEvent,
 });
 
+// Bridged apart from the API object, because a dropped folder with no path reads the list.
+const agentFoldersGroup = bridgeGroup(IPC_ENDPOINTS.agentFolders, {
+  listAgentFolders: decodeAgentFolderListFromMain,
+  chooseAgentFolder: decodeAgentFolderChangeFromMain,
+  addAgentFolder: decodeAgentFolderChangeFromMain,
+  removeAgentFolder: decodeAgentFolderChangeFromMain,
+});
+
 // Bridged apart from the API object, because the server list calls record the selected server and
 // three events are narrowed to one server.
 const serversGroup = bridgeGroup(IPC_ENDPOINTS.servers, {
@@ -1140,16 +1148,18 @@ const openbotApi: OpenBotDesktopApi = {
       releaseFilePreview: decodeVoid,
       listWorkspaceDirectory: decodeWorkspaceDirectory,
     }),
-    ...bridgeGroup(IPC_ENDPOINTS.agentFolders, {
-      listAgentFolders: decodeAgentFolderListFromMain,
-      chooseAgentFolder: decodeAgentFolderChangeFromMain,
-      addAgentFolder: decodeAgentFolderChangeFromMain,
-      removeAgentFolder: decodeAgentFolderChangeFromMain,
-    }),
+    ...agentFoldersGroup,
     // The page gets the folder, not its path, as for a dropped attachment.
     addDroppedAgentFolder: async (agentId, folder) => {
       const path = webUtils.getPathForFile(folder);
-      if (!path) throw new Error("The dropped item is not a folder on this computer.");
+      // An item from another app, with no path here: the page says that it is not a folder on this computer.
+      if (!path)
+        return {
+          outcome: "refused",
+          path: folder.name,
+          refusal: "missing",
+          list: await agentFoldersGroup.listAgentFolders(agentId),
+        };
       const input: AgentFolderInput = { agentId, path };
       return decodeAgentFolderChangeFromMain(
         await ipcRenderer.invoke(IPC_ENDPOINTS.agentFolderDrops.addDroppedAgentFolder.channel, input),

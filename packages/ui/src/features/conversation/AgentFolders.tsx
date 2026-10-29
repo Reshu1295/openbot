@@ -54,14 +54,14 @@ const COVERED_TEXT = {
 
 /**
  * The folders of the dropped items, or null when one of them is a file: the user then attaches the
- * files. The order of `items` is the order of `files`.
+ * files.
  */
 export function droppedFolders(transfer: DataTransfer | null): File[] | null {
   if (!transfer) return null;
   const folders: File[] = [];
-  for (const [index, item] of [...transfer.items].entries()) {
+  for (const item of transfer.items) {
     if (item.kind !== "file") continue;
-    const file = transfer.files[index];
+    const file = item.getAsFile();
     if (!file || item.webkitGetAsEntry()?.isDirectory !== true) return null;
     folders.push(file);
   }
@@ -111,14 +111,15 @@ export function createAgentFolders(source: () => AgentFolderSource | undefined) 
   }
 
   async function run(change: () => Promise<AgentFolderChange>, current: AgentFolderSource): Promise<void> {
+    const before = state.list?.folders.map((item) => item.path) ?? [];
     try {
-      report(await change(), current);
+      report(await change(), current, before);
     } catch (error) {
       failed(error);
     }
   }
 
-  function report(change: AgentFolderChange, current: AgentFolderSource): void {
+  function report(change: AgentFolderChange, current: AgentFolderSource, before: readonly string[]): void {
     const { agentId, agentName: agent, calls } = current;
     setList(agentId, change.list);
     if (change.outcome === "cancelled") return;
@@ -128,14 +129,20 @@ export function createAgentFolders(source: () => AgentFolderSource | undefined) 
       case "replaced":
         toast.success(t("agentSettings.folders.toastAdded", { agent, folder }));
         return;
-      case "added":
+      case "added": {
+        // A folder that holds folders already added took their place: Undo gives them back.
+        const replaced = before.filter((path) => !change.list.folders.some((item) => item.path === path));
+        const undo = async (): Promise<AgentFolderChange> => {
+          const removed = await calls.remove(agentId, change.path);
+          let list = removed.list;
+          for (const path of replaced) list = (await calls.add(agentId, path)).list;
+          return { ...removed, list };
+        };
         toast.success(t("agentSettings.folders.toastAdded", { agent, folder }), {
-          action: {
-            label: t("agentSettings.folders.undo"),
-            onClick: () => void run(() => calls.remove(agentId, change.path), current),
-          },
+          action: { label: t("agentSettings.folders.undo"), onClick: () => void run(undo, current) },
         });
         return;
+      }
       case "removed":
         toast(t("agentSettings.folders.toastRemoved", { agent, folder }), {
           action: {

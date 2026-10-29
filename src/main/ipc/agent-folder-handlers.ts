@@ -57,6 +57,9 @@ export function agentFolderIpcHandlers({
     return result;
   }
 
+  /** A second press on + while the picker is open does not open another one. */
+  let picking = false;
+
   function requireAgent(agentId: string): AgentSummary {
     const agent = service.listAgents().find((candidate) => candidate.id === agentId);
     if (!agent) throw new Error("Unknown agent.");
@@ -83,8 +86,9 @@ export function agentFolderIpcHandlers({
   }
 
   /**
-   * A folder that holds OpenBot's own data, the OpenBot folder, or this agent's workspace or the shared
-   * folder. The first two hold every agent's files; the home folder and a disk root hold them too.
+   * A folder in or around OpenBot's own data or the OpenBot folder, or one that holds this agent's
+   * workspace or the shared folder. The OpenBot folder holds the workspaces of the other agents; the
+   * home folder and a disk root hold it too.
    */
   async function isProtected(path: string, roots: readonly string[]): Promise<boolean> {
     // The shared folder is in the OpenBot folder, beside the agent workspaces.
@@ -92,6 +96,7 @@ export function agentFolderIpcHandlers({
     return (
       parse(path).root === path ||
       folderInside(userData, path) ||
+      folderInside(openbot, path) ||
       [openbot, userData, ...roots].some((root) => folderInside(path, root))
     );
   }
@@ -139,7 +144,13 @@ export function agentFolderIpcHandlers({
           properties: ["openDirectory", "createDirectory"],
           ...(replace === undefined ? {} : { defaultPath: join(replace, "..") }),
         };
-        const result = parent ? await dialog.showOpenDialog(parent, options) : await dialog.showOpenDialog(options);
+        if (picking) return { outcome: "cancelled", list: await list(agent) };
+        picking = true;
+        const result = await (parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options)).finally(
+          () => {
+            picking = false;
+          },
+        );
         const picked = result.canceled ? undefined : result.filePaths[0];
         if (picked === undefined) return { outcome: "cancelled", list: await list(agent) };
         return add(agentId, picked, replace);
