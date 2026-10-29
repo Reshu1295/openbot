@@ -1,7 +1,8 @@
 import { StatusBar } from "expo-status-bar";
 import { Button, Typography } from "heroui-native";
+import ChevronDown from "lucide-react-native/icons/chevron-down";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet, useWindowDimensions, View } from "react-native";
+import { BackHandler, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
 import { showFailureAlert } from "@/features/analytics/failure-reports";
+import { AppUpdateNotes } from "@/features/app-update/components/app-update-notes";
 import { type AppUpdate, dismissAppUpdate, installAppUpdate } from "@/features/app-update/model/app-update";
 import { BloubEyes, EYES_HEIGHT, EYES_WIDTH } from "@/shared/components/bloub-stage/bloub-eyes";
 import { BLOUB_MOVE, BLOUB_RADIUS, bloubGradient, useBloubColors } from "@/shared/components/bloub-stage/bloub-look";
@@ -23,6 +25,7 @@ import type { BloubMood } from "@/shared/components/bloub-stage/bloub-stage-stor
 import type { LargeTitleScroll } from "@/shared/components/large-title";
 import { haptics } from "@/shared/lib/haptics";
 import { useReducedMotion } from "@/shared/lib/motion";
+import { SPLASH_EASE_OUT } from "@/shared/lib/splash-motion";
 import { currentText, useText } from "@/shared/lib/text";
 
 // The eyes sit under the status bar, between the bar buttons, and the text sits under them.
@@ -37,6 +40,9 @@ const DROP_DELAY_MS = 400;
 const LATER_DELAY_MS = 140;
 const HAPPY_MS = 1400;
 const LATER_FILL = "rgba(4, 0, 7, 0.09)";
+// While the notes show, the eyes look down at them.
+const READ_GAZE_Y = 10;
+const GAZE = { duration: 240, easing: SPLASH_EASE_OUT };
 
 export interface AppUpdateHeader {
   /** The update on the block. It stays while the block rolls up. */
@@ -49,6 +55,9 @@ export interface AppUpdateHeader {
    * transition in it, such as the pinned grid's, must not run.
    */
   moving: boolean;
+  /** True while What's new covers the screen. Home hides its search field then. */
+  expanded: boolean;
+  setExpanded: (expanded: boolean) => void;
   measure: (height: number) => void;
 }
 
@@ -62,6 +71,7 @@ export function useAppUpdateHeader(update: AppUpdate | null): AppUpdateHeader {
   const [shown, setShown] = useState<AppUpdate | null>(update);
   const [captionHeight, setCaptionHeight] = useState(0);
   const [moving, setMoving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const drop = useSharedValue(0);
   const latest = useRef(update);
   latest.current = update;
@@ -96,6 +106,7 @@ export function useAppUpdateHeader(update: AppUpdate | null): AppUpdateHeader {
       return;
     }
     if (!shown) return;
+    setExpanded(false);
     const clear = () => {
       setMoving(false);
       setShown(null);
@@ -116,7 +127,7 @@ export function useAppUpdateHeader(update: AppUpdate | null): AppUpdateHeader {
     );
   }, [drop, reduced, rest, shown, showing]);
 
-  return { shown, drop, rest, moving, measure: setCaptionHeight };
+  return { shown, drop, rest, moving, expanded, setExpanded, measure: setCaptionHeight };
 }
 
 /**
@@ -136,7 +147,8 @@ export function AppUpdateSpacer({ header, headerHeight }: { header: AppUpdateHea
 /**
  * The lilac block with the eyes, the text and the two actions. It draws above the scroll edge effect
  * and under the native bar buttons. The list scrolls it away, and a pull past the top stretches it.
- * Touches on the block go to the list below; only the buttons take them.
+ * Touches on the block go to the list below; only the buttons take them. What's new brings the edge
+ * back to its rest, and the release notes slide down from behind it over the list.
  */
 export function AppUpdateBlock({
   header,
@@ -157,7 +169,8 @@ export function AppUpdateBlock({
   const gazeY = useSharedValue(0);
   const [mood, setMood] = useState<BloubMood>("idle");
   const [underStatusBar, setUnderStatusBar] = useState(false);
-  const { shown, drop, rest, measure } = header;
+  const { shown, drop, rest, measure, expanded, setExpanded } = header;
+  const open = useSharedValue(0);
   const { scrolled, headerHeight } = scroll;
   const span = window.height + BLOUB_RADIUS;
   const statusBottom = insets.top;
@@ -174,27 +187,50 @@ export function AppUpdateBlock({
     if (shownId) setMood("idle");
   }, [shownId]);
 
+  useEffect(() => {
+    open.set(reduced ? (expanded ? 1 : 0) : withTiming(expanded ? 1 : 0, BLOUB_MOVE));
+    gazeY.set(withTiming(expanded ? READ_GAZE_Y : 0, GAZE));
+  }, [expanded, gazeY, open, reduced]);
+  // Android Back closes What's new before it leaves home.
+  useEffect(() => {
+    if (!expanded) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      setExpanded(false);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [expanded, setExpanded]);
+
   useAnimatedReaction(
-    () => drop.get() - scrolled.get() > statusBottom,
+    () => {
+      const base = Math.max(0, drop.get() - scrolled.get());
+      return base + open.get() * (rest - base) > statusBottom;
+    },
     (next, previous) => {
       if (next !== previous) scheduleOnRN(setUnderStatusBar, next);
     },
   );
-  const blockStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: Math.max(0, drop.get() - scrolled.get()) - span }],
-  }));
+  // The edge of the header. A scrolled list moves it up; What's new brings it back to its rest.
+  const blockStyle = useAnimatedStyle(() => {
+    const base = Math.max(0, drop.get() - scrolled.get());
+    return { transform: [{ translateY: base + open.get() * (rest - base) - span }] };
+  });
   // The light stays still on the screen while the edge moves over it.
-  const glowStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: span - Math.max(0, drop.get() - scrolled.get()) }],
-  }));
-  // The eyes and the text move with the edge, and fade as they go under the bar.
+  const glowStyle = useAnimatedStyle(() => {
+    const base = Math.max(0, drop.get() - scrolled.get());
+    return { transform: [{ translateY: span - (base + open.get() * (rest - base)) }] };
+  });
+  // The eyes and the text move with the edge, and fade as they go under the bar. What's new brings
+  // them back to their place.
   const contentStyle = useAnimatedStyle(() => {
-    const edge = Math.max(0, drop.get() - scrolled.get());
+    const base = Math.max(0, drop.get() - scrolled.get());
+    const visible = rest > 0 ? interpolate(base, [headerHeight + 24, rest], [0, 1], Extrapolation.CLAMP) : 0;
     return {
-      opacity: rest > 0 ? interpolate(edge, [headerHeight + 24, rest], [0, 1], Extrapolation.CLAMP) : 0,
-      transform: [{ translateY: rest > 0 ? edge - rest : 0 }],
+      opacity: Math.max(visible, open.get()),
+      transform: [{ translateY: rest > 0 ? (base - rest) * (1 - open.get()) : 0 }],
     };
   });
+  const chevronStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${open.get() * 180}deg` }] }));
 
   if (!shown) return null;
   const update = shown;
@@ -215,11 +251,16 @@ export function AppUpdateBlock({
   };
   const later = () => {
     void haptics.impact("soft");
+    setExpanded(false);
     setMood("down");
     void dismissAppUpdate(update).catch(() => undefined);
   };
   const eyesTop = statusBottom + EYES_TOP + (EYES_HEIGHT * EYES_SCALE - EYES_HEIGHT) / 2;
   const captionTop = statusBottom + EYES_TOP + EYES_HEIGHT * EYES_SCALE + CAPTION_GAP;
+  const toggleNotes = () => {
+    void haptics.impact("soft");
+    setExpanded(!expanded);
+  };
 
   return (
     <Animated.View
@@ -230,7 +271,10 @@ export function AppUpdateBlock({
       ]}
     >
       {underStatusBar && !hidden ? <StatusBar style="dark" /> : null}
-      <Animated.View pointerEvents="none" style={[styles.block, { height: span }, blockStyle]}>
+      {/* Under the block, so the notes slide out from behind its edge. */}
+      {ready || rest === 0 ? null : <AppUpdateNotes open={open} expanded={expanded} top={rest - BLOUB_RADIUS} />}
+      {/* Over the list, the block lets touches through. Covering the screen, it keeps them. */}
+      <Animated.View pointerEvents={expanded ? "auto" : "none"} style={[styles.block, { height: span }, blockStyle]}>
         <View style={[styles.clip, { backgroundColor: colors.body }]}>
           <Animated.View
             style={[
@@ -299,6 +343,23 @@ export function AppUpdateBlock({
               </Button.Label>
             </Button>
           </View>
+          {ready ? null : (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded }}
+              hitSlop={8}
+              className="mt-2.5 flex-row items-center gap-1"
+              style={({ pressed }) => ({ opacity: pressed ? 0.35 : 0.55 })}
+              onPress={toggleNotes}
+            >
+              <Typography.Paragraph type="body-sm" className="font-medium" style={{ color: colors.eye }}>
+                {t(expanded ? "mobile.app.update.hideWhatsNew" : "mobile.app.update.whatsNew")}
+              </Typography.Paragraph>
+              <Animated.View style={chevronStyle}>
+                <ChevronDown size={16} color={colors.eye} strokeWidth={2.2} />
+              </Animated.View>
+            </Pressable>
+          )}
         </View>
       </Animated.View>
     </Animated.View>

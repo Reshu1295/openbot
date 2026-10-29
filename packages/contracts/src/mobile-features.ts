@@ -98,3 +98,41 @@ export function isNewerMobileVersion(candidate: string, current: string): boolea
   const now = versionParts(current);
   return next !== null && now !== null && compareVersions(next, now) > 0;
 }
+
+export const MOBILE_CHANGELOG_PATH = "/v1/mobile/changelog";
+
+/** A group of a release, as the changelog writes it: `added`, `changed`, `fixed` and so on. */
+export interface MobileReleaseNoteGroup {
+  /** The lower-case group name, such as `added`. A group the app has no name for shows `heading`. */
+  type: string;
+  heading: string;
+  /** Plain text: the server removes the Markdown of each item. */
+  items: string[];
+}
+
+/** One app version in the store of a platform, with its release notes. */
+export interface MobileReleaseNotes {
+  version: string;
+  /** `YYYY-MM-DD`, the day the store of the platform made the version available. */
+  date: string;
+  groups: MobileReleaseNoteGroup[];
+}
+
+function parseReleaseNoteGroup(value: unknown): MobileReleaseNoteGroup | null {
+  if (!isDynamicRecord(value) || !isString(value.type) || !isString(value.heading) || !Array.isArray(value.items))
+    return null;
+  return { type: value.type, heading: value.heading, items: value.items.filter(isString) };
+}
+
+function parseReleaseNotes(value: unknown): MobileReleaseNotes | null {
+  if (!isDynamicRecord(value) || !isString(value.version) || !versionParts(value.version)) return null;
+  if (!isString(value.date) || !Array.isArray(value.groups)) return null;
+  const groups = value.groups.flatMap((group) => parseReleaseNoteGroup(group) ?? []);
+  return { version: value.version, date: value.date, groups };
+}
+
+/** The releases of a `{ releases }` answer, newest first. A release the app cannot read is left out. */
+export function parseMobileReleaseNotes(value: unknown): MobileReleaseNotes[] | null {
+  if (!isDynamicRecord(value) || !Array.isArray(value.releases)) return null;
+  return value.releases.flatMap((release) => parseReleaseNotes(release) ?? []);
+}

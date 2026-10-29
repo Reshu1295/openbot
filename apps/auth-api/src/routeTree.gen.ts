@@ -74,6 +74,7 @@ import { Route as V1MobileAuthLinkRouteImport } from './routes/v1/mobile-auth/li
 import { Route as V1MobileAuthRedeemRouteImport } from './routes/v1/mobile-auth/redeem'
 import { Route as V1MobileAuthSessionRouteImport } from './routes/v1/mobile-auth/session'
 import { Route as V1MobileAuthTicketRouteImport } from './routes/v1/mobile-auth/ticket'
+import { Route as V1MobileChangelogRouteImport } from './routes/v1/mobile/changelog'
 import { Route as V1MobileFeaturesRouteImport } from './routes/v1/mobile/features'
 import { Route as V1SitesIndexRouteImport } from './routes/v1/sites/index'
 import { Route as V1SitesSiteIdRouteImport } from './routes/v1/sites/$siteId'
@@ -500,6 +501,11 @@ const V1MobileAuthSessionRoute = V1MobileAuthSessionRouteImport.update({
 const V1MobileAuthTicketRoute = V1MobileAuthTicketRouteImport.update({
   id: '/v1/mobile-auth/ticket',
   path: '/v1/mobile-auth/ticket',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const V1MobileChangelogRoute = V1MobileChangelogRouteImport.update({
+  id: '/v1/mobile/changelog',
+  path: '/v1/mobile/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const V1MobileFeaturesRoute = V1MobileFeaturesRouteImport.update({
@@ -1109,6 +1115,7 @@ export interface FileRoutesByFullPath {
   '/v1/mobile-auth/redeem': typeof V1MobileAuthRedeemRoute
   '/v1/mobile-auth/session': typeof V1MobileAuthSessionRoute
   '/v1/mobile-auth/ticket': typeof V1MobileAuthTicketRoute
+  '/v1/mobile/changelog': typeof V1MobileChangelogRoute
   '/v1/mobile/features': typeof V1MobileFeaturesRoute
   '/v1/sites/$siteId': typeof V1SitesSiteIdRoute
   '/v1/sites/reports': typeof V1SitesReportsRoute
@@ -1274,6 +1281,7 @@ export interface FileRoutesByTo {
   '/v1/mobile-auth/redeem': typeof V1MobileAuthRedeemRoute
   '/v1/mobile-auth/session': typeof V1MobileAuthSessionRoute
   '/v1/mobile-auth/ticket': typeof V1MobileAuthTicketRoute
+  '/v1/mobile/changelog': typeof V1MobileChangelogRoute
   '/v1/mobile/features': typeof V1MobileFeaturesRoute
   '/v1/sites/$siteId': typeof V1SitesSiteIdRoute
   '/v1/sites/reports': typeof V1SitesReportsRoute
@@ -1440,6 +1448,7 @@ export interface FileRoutesById {
   '/v1/mobile-auth/redeem': typeof V1MobileAuthRedeemRoute
   '/v1/mobile-auth/session': typeof V1MobileAuthSessionRoute
   '/v1/mobile-auth/ticket': typeof V1MobileAuthTicketRoute
+  '/v1/mobile/changelog': typeof V1MobileChangelogRoute
   '/v1/mobile/features': typeof V1MobileFeaturesRoute
   '/v1/sites/$siteId': typeof V1SitesSiteIdRoute
   '/v1/sites/reports': typeof V1SitesReportsRoute
@@ -1607,6 +1616,7 @@ export interface FileRouteTypes {
     | '/v1/mobile-auth/redeem'
     | '/v1/mobile-auth/session'
     | '/v1/mobile-auth/ticket'
+    | '/v1/mobile/changelog'
     | '/v1/mobile/features'
     | '/v1/sites/$siteId'
     | '/v1/sites/reports'
@@ -1772,6 +1782,7 @@ export interface FileRouteTypes {
     | '/v1/mobile-auth/redeem'
     | '/v1/mobile-auth/session'
     | '/v1/mobile-auth/ticket'
+    | '/v1/mobile/changelog'
     | '/v1/mobile/features'
     | '/v1/sites/$siteId'
     | '/v1/sites/reports'
@@ -1937,6 +1948,7 @@ export interface FileRouteTypes {
     | '/v1/mobile-auth/redeem'
     | '/v1/mobile-auth/session'
     | '/v1/mobile-auth/ticket'
+    | '/v1/mobile/changelog'
     | '/v1/mobile/features'
     | '/v1/sites/$siteId'
     | '/v1/sites/reports'
@@ -2101,6 +2113,7 @@ export interface RootRouteChildren {
   V1MobileAuthRedeemRoute: typeof V1MobileAuthRedeemRoute
   V1MobileAuthSessionRoute: typeof V1MobileAuthSessionRoute
   V1MobileAuthTicketRoute: typeof V1MobileAuthTicketRoute
+  V1MobileChangelogRoute: typeof V1MobileChangelogRoute
   V1MobileFeaturesRoute: typeof V1MobileFeaturesRoute
   V1SitesSiteIdRoute: typeof V1SitesSiteIdRoute
   V1SitesReportsRoute: typeof V1SitesReportsRoute
@@ -2638,6 +2651,13 @@ declare module '@tanstack/solid-router' {
       path: '/v1/mobile-auth/ticket'
       fullPath: '/v1/mobile-auth/ticket'
       preLoaderRoute: typeof V1MobileAuthTicketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/v1/mobile/changelog': {
+      id: '/v1/mobile/changelog'
+      path: '/v1/mobile/changelog'
+      fullPath: '/v1/mobile/changelog'
+      preLoaderRoute: typeof V1MobileChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/v1/mobile/features': {
@@ -3529,6 +3549,7 @@ const rootRouteChildren: RootRouteChildren = {
   V1MobileAuthRedeemRoute: V1MobileAuthRedeemRoute,
   V1MobileAuthSessionRoute: V1MobileAuthSessionRoute,
   V1MobileAuthTicketRoute: V1MobileAuthTicketRoute,
+  V1MobileChangelogRoute: V1MobileChangelogRoute,
   V1MobileFeaturesRoute: V1MobileFeaturesRoute,
   V1SitesSiteIdRoute: V1SitesSiteIdRoute,
   V1SitesReportsRoute: V1SitesReportsRoute,

@@ -870,7 +870,8 @@ export function ConnectedScreen({ variant = "screen" }: { variant?: "screen" | "
       {/* The results lie over the bar's edge, so its blur cannot soften them; they have their own. */}
       {searchShows ? <HomeSearchResults search={search} barHeight={searchBarOffset} /> : null}
 
-      {searchShows ? <HomeSearchBar search={search} blurTarget={searchBlurTarget} /> : null}
+      {/* What's new covers home with the update block, so the field leaves while it shows. */}
+      {searchShows && !updateHeader.expanded ? <HomeSearchBar search={search} blurTarget={searchBlurTarget} /> : null}
 
       {onboardingReady ? (
         // The flow fades out over the home, which comes in under it with its own reveal.

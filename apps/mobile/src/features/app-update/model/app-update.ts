@@ -1,11 +1,17 @@
-import { isNewerMobileVersion } from "@openbot/contracts/mobile-features";
+import {
+  isNewerMobileVersion,
+  MOBILE_CHANGELOG_PATH,
+  type MobileReleaseNotes,
+  parseMobileReleaseNotes,
+} from "@openbot/contracts/mobile-features";
+import { useQuery } from "@tanstack/react-query";
 import * as SecureStore from "expo-secure-store";
 import * as Updates from "expo-updates";
 import { useEffect } from "react";
 import { AppState, Linking } from "react-native";
 import { create } from "zustand";
-
 import { useMobileSession } from "@/features/auth/context/mobile-session-context";
+import { devLatestAppVersion } from "@/shared/lib/dev-feature-overrides";
 import { currentAppVersion, refreshMobileFeatures, useLatestAppVersion } from "@/shared/lib/mobile-features";
 import { isIOS } from "@/shared/lib/platform";
 
@@ -21,6 +27,12 @@ const IOS_STORE_URL = "itms-apps://apps.apple.com/app/id6807024266";
 const IOS_STORE_WEB_URL = "https://apps.apple.com/app/id6807024266";
 const ANDROID_STORE_URL = "market://details?id=run.openbot.mobile";
 const ANDROID_STORE_WEB_URL = "https://play.google.com/store/apps/details?id=run.openbot.mobile";
+
+/** The public changelog, for when the notes cannot load. */
+export const MOBILE_CHANGELOG_URL = "https://openbot.run/changelog?platform=mobile";
+const NOTES_TIMEOUT_MS = 10_000;
+// The notes of a version do not change after the store has it.
+const NOTES_STALE_MS = 10 * 60_000;
 
 const key = "openbot.mobile.appUpdate.dismissed.v1";
 
@@ -97,4 +109,43 @@ export async function installAppUpdate(update: AppUpdate, reloadColor: string): 
   }
   const [url, webUrl] = isIOS ? [IOS_STORE_URL, IOS_STORE_WEB_URL] : [ANDROID_STORE_URL, ANDROID_STORE_WEB_URL];
   await Linking.openURL(url).catch(() => Linking.openURL(webUrl));
+}
+
+async function fetchReleaseNotes(apiUrl: string, after: string | null, signal: AbortSignal) {
+  const url = new URL(MOBILE_CHANGELOG_PATH, apiUrl);
+  url.searchParams.set("platform", isIOS ? "ios" : "android");
+  if (after) url.searchParams.set("after", after);
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  signal.addEventListener("abort", abort);
+  const timeout = setTimeout(abort, NOTES_TIMEOUT_MS);
+  try {
+    const response = await fetch(url.toString(), { signal: controller.signal });
+    if (!response.ok) throw new Error(`The release notes answered ${response.status}.`);
+    const notes = parseMobileReleaseNotes(await response.json());
+    if (!notes) throw new Error("The release notes could not be read.");
+    return notes;
+  } finally {
+    clearTimeout(timeout);
+    signal.removeEventListener("abort", abort);
+  }
+}
+
+/**
+ * The release notes of the store versions after the running one, newest first. They load when the
+ * user opens What's new, from the account server, which reads the mobile changelog.
+ */
+export function useAppUpdateNotes(enabled: boolean) {
+  const { session } = useMobileSession();
+  const apiUrl = session?.apiUrl ?? null;
+  // With the development override there is no newer version, so a development build reads every
+  // released version instead.
+  const after = devLatestAppVersion() ? null : currentAppVersion();
+  return useQuery<MobileReleaseNotes[]>({
+    queryKey: ["app-update-notes", apiUrl, after],
+    enabled: enabled && apiUrl !== null,
+    retry: false,
+    staleTime: NOTES_STALE_MS,
+    queryFn: ({ signal }) => fetchReleaseNotes(apiUrl ?? "", after, signal),
+  });
 }
