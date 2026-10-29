@@ -74,6 +74,8 @@ export function createRemoteAgentAdmin(
       return null;
     return JSON.stringify([current.server.id, current.agentId]);
   };
+  /** Null until the host answers for the current agent. */
+  const currentHostSettings = () => (state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings : null);
   function acceptHost(requestKey: string, settings: AgentHostSettings): void {
     if (hostKey() !== requestKey) return;
     setState((draft) => {
@@ -203,14 +205,11 @@ export function createRemoteAgentAdmin(
   });
 
   return {
-    automation: (): boolean | undefined =>
-      state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings?.allowAutomation : undefined,
+    automation: (): boolean | undefined => currentHostSettings()?.allowAutomation,
     /** Undefined until the host answers. Null: the agent follows the host default. */
-    busyMessageMode: (): BusyMessageMode | null | undefined =>
-      state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings?.busyMessageMode : undefined,
+    busyMessageMode: (): BusyMessageMode | null | undefined => currentHostSettings()?.busyMessageMode,
     /** The host's own default. Only the host changes it. */
-    defaultBusyMessageMode: (): BusyMessageMode | undefined =>
-      state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings?.defaultBusyMessageMode : undefined,
+    defaultBusyMessageMode: (): BusyMessageMode | undefined => currentHostSettings()?.defaultBusyMessageMode,
     async updateHostSettings(input: Omit<UpdateAgentHostSettingsInput, "computerUse">): Promise<void> {
       const server = target()?.server;
       if (server?.kind !== "remote" || !serverCanAdminister(server, AGENT_HOST_SETTINGS_CAPABILITY))

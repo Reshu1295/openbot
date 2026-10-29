@@ -616,9 +616,9 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
         remoteBusyMessageModeLoaded={remoteAgentAdmin.busyMessageMode() !== undefined}
         onUpdateAgentPermissions={permissionsEditable() ? writeAgentPermissions : undefined}
         defaultBusyMessageMode={
-          activeServer()?.kind === "local"
-            ? generalSettings().busyMessageMode
-            : remoteAgentAdmin.defaultBusyMessageMode()
+          activeServer()?.kind === "remote"
+            ? remoteAgentAdmin.defaultBusyMessageMode()
+            : generalSettings().busyMessageMode
         }
         agentDefaults={generalSettings().agentDefaults}
         agentMemoryLimit={generalSettings().agentMemoryLimit}

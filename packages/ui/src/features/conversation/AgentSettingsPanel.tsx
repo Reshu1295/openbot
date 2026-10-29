@@ -870,20 +870,16 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
     return count > 0 ? t("agentSettings.backupModels.valueCount", { mode, count }) : mode;
   };
 
-  const appBusyMessageMode = () => props.defaultBusyMessageMode ?? DEFAULT_BUSY_MESSAGE_MODE;
+  const defaultBusyMessageMode = () => props.defaultBusyMessageMode ?? DEFAULT_BUSY_MESSAGE_MODE;
+  const defaultBusyMessageLabels = () =>
+    props.busyMessageDefaultIsHost ? HOST_DEFAULT_BUSY_MESSAGE_LABEL : APP_DEFAULT_BUSY_MESSAGE_LABEL;
   const busyMessageLabel = (choice: BusyMessageChoice) =>
-    t(
-      choice === "default"
-        ? (props.busyMessageDefaultIsHost ? HOST_DEFAULT_BUSY_MESSAGE_LABEL : APP_DEFAULT_BUSY_MESSAGE_LABEL)[
-            appBusyMessageMode()
-          ]
-        : BUSY_MESSAGE_LABEL[choice],
-    );
+    t(choice === "default" ? defaultBusyMessageLabels()[defaultBusyMessageMode()] : BUSY_MESSAGE_LABEL[choice]);
   const steerUnsupported = () => {
     const provider = knownProvider();
     return (
       provider !== undefined &&
-      (draft.busyMessage === "default" ? appBusyMessageMode() : draft.busyMessage) === "steer" &&
+      (draft.busyMessage === "default" ? defaultBusyMessageMode() : draft.busyMessage) === "steer" &&
       agentProviderDescriptor(provider).steer !== "native"
     );
   };
