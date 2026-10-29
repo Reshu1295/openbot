@@ -224,6 +224,11 @@ export interface AgentSummary {
    */
   additionalFolders?: string[];
   /**
+   * Folders in the workspace, the shared folder or `additionalFolders` that the agent must not change
+   * in Workspace only. Local-only, like `access`. Absent means none. Only `agentFolders` changes them.
+   */
+  excludedFolders?: string[];
+  /**
    * Whether the agent gets the Computer Use tools. Local-only, like `access`. Absent means on; see
    * `agentComputerUseEnabled`.
    */
@@ -336,6 +341,7 @@ function hasAgentSummaryFields(value: DynamicRecord): boolean {
     (value.sessionSettingResets === undefined || isAgentSessionSettingResets(value.sessionSettingResets)) &&
     (value.access === undefined || isAgentAccess(value.access)) &&
     (value.additionalFolders === undefined || isAgentAdditionalFolders(value.additionalFolders)) &&
+    (value.excludedFolders === undefined || isAgentAdditionalFolders(value.excludedFolders)) &&
     (value.computerUse === undefined || isBoolean(value.computerUse)) &&
     (value.allowAutomation === undefined || isBoolean(value.allowAutomation)) &&
     (value.allowNewChat === undefined || isBoolean(value.allowNewChat)) &&

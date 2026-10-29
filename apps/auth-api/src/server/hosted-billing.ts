@@ -8,6 +8,7 @@ import {
   HostedServerService,
   type HostedServerServiceOptions,
 } from "./hosted-server-service";
+import { parseLicenseTrialEnd } from "./license-service";
 import type { RemoteFailure } from "./remote-control-plane";
 import type { WorkerBindings } from "./types";
 
@@ -16,7 +17,11 @@ export type HostedBillingBindings = HostedServerBindings &
   Partial<
     Pick<
       WorkerBindings,
-      "STRIPE_SECRET_KEY" | "STRIPE_WEBHOOK_SECRET" | "OPENPANEL_CLIENT_ID" | "OPENPANEL_CLIENT_SECRET"
+      | "STRIPE_SECRET_KEY"
+      | "STRIPE_WEBHOOK_SECRET"
+      | "LICENSE_TRIAL_END"
+      | "OPENPANEL_CLIENT_ID"
+      | "OPENPANEL_CLIENT_SECRET"
     >
   >;
 
@@ -54,6 +59,7 @@ export function createHostedBilling(
         database: bindings.DB,
         secretKey,
         webhookSecret: bindings.STRIPE_WEBHOOK_SECRET?.trim() || null,
+        licenseTrialEnd: parseLicenseTrialEnd(bindings.LICENSE_TRIAL_END),
         fetch: (input, init) => fetch(input, init),
         analytics,
         ...(sales ? { sales } : {}),

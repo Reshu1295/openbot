@@ -17,6 +17,7 @@ import {
   type ServerConnectionState,
   type ServerSummary,
 } from "@openbot/contracts/ipc";
+import type { PricingOrder } from "@openbot/contracts/license";
 import { AGENT_BACKUP_MODELS_ROUTES } from "@openbot/contracts/team-protocol/agent-backup-models-v1";
 import { AGENT_HOST_SETTINGS_ROUTES } from "@openbot/contracts/team-protocol/agent-host-settings-v1";
 import { AGENT_IMPORT_CAPABILITY } from "@openbot/contracts/team-protocol/agent-import-v1";
@@ -202,7 +203,7 @@ import { createWebAccountUsage } from "./web-account-usage";
 import { createWebAgentImportCalls } from "./web-agent-import";
 import { createWebAgentThreads } from "./web-agent-threads";
 import { openWebLink } from "./web-attachments";
-import { createWebBillingCalls, createWebLicenseCalls } from "./web-billing";
+import { createWebBillingCalls, createWebLicenseCalls, type WebAppStart } from "./web-billing";
 import { webBitwardenConnectorPort } from "./web-bitwarden-connector";
 import { createWebChannelsPort } from "./web-channels-runtime";
 import { createWebChatHistory, type WebChatHistoryEntry } from "./web-chat-history";
@@ -286,6 +287,9 @@ type WebWorkspaceProps = {
   /** A plugin listing that a `/app?plugin=<slug>` link named. The marketplace opens on it. */
   pluginSlug?: string | null;
   onPluginSlugConsumed?: () => void;
+  /** What a pricing page button asked for: the add server dialog or Billing. */
+  start?: WebAppStart | null;
+  onStartConsumed?: () => void;
   /** True on a return from the Stripe Customer Portal. The Billing dialog opens on it. */
   billingReturn?: boolean;
   onBillingReturnConsumed?: () => void;
@@ -746,6 +750,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     const agent = selected && host ? withHostProfileAccount(selected, host) : selected;
     const settings = remoteAgentAdmin.settings();
     const automation = remoteAgentAdmin.automation();
+    const busyMessageMode = remoteAgentAdmin.busyMessageMode();
     const backupModels = remoteAgentAdmin.backupModels();
     const usageLimitReturn = remoteAgentAdmin.usageLimitReturn();
     const taskLimit = remoteAgentAdmin.taskLimit();
@@ -754,6 +759,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
           ...agent,
           ...(settings ? { access: settings.access } : {}),
           ...(automation === undefined ? {} : { allowAutomation: automation }),
+          ...(busyMessageMode ? { busyMessageMode } : {}),
           ...(backupModels ? { backupModels } : {}),
           ...(usageLimitReturn ? { usageLimitReturn } : {}),
           ...(typeof taskLimit === "number" ? { taskLimit } : {}),
@@ -856,6 +862,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     },
   );
   const [billingOpen, setBillingOpen] = createSignal(false);
+  /** `/app?start=license` opens Billing with the license dialog open, and with the order of the pricing page. */
+  const [licenseStart, setLicenseStart] = createSignal<{ order: PricingOrder | null } | null>(null);
   const billingCalls = createWebBillingCalls(props.accountFetch);
   const billing = createBillingStore(() => billingCalls, billingOpen);
   const licenseCalls = createWebLicenseCalls(props.accountFetch);
@@ -916,6 +924,20 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       if (!billingReturn) return;
       setBillingOpen(true);
       props.onBillingReturnConsumed?.();
+    },
+  );
+  // The add server dialog waits for the first list of hosted servers: before it, the account looks
+  // like one that cannot create a server, and the join dialog would open.
+  createEffect(
+    () => (props.start?.kind === "server" && !hostedServers.loaded() ? null : props.start),
+    (start) => {
+      if (!start) return;
+      if (start.kind === "server") hostedServers.openAddServer("pricing_page", start.order);
+      else {
+        setLicenseStart({ order: start.order });
+        setBillingOpen(true);
+      }
+      props.onStartConsumed?.();
     },
   );
   const saveFile = createWebFileSaver();
@@ -1959,10 +1981,12 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 <AddServerOverlay
                   open={hostedServers.addServer() !== null}
                   entryPoint={hostedServers.addServer()?.entryPoint}
+                  order={hostedServers.addServer()?.order}
                   calls={hostedServers.calls}
                   servers={servers()}
                   onRefreshServers={workspace.retryHosts}
                   resume={hostedServers.addServer()?.resume}
+                  license={licenseCalls}
                   onClose={hostedServers.closeAddServer}
                   onOpenServer={(serverId) => {
                     hostedServers.closeAddServer();
@@ -2150,7 +2174,10 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 />
                 <BillingDialog
                   open={billingOpen()}
-                  onOpenChange={setBillingOpen}
+                  onOpenChange={(open) => {
+                    setBillingOpen(open);
+                    if (!open) setLicenseStart(null);
+                  }}
                   store={billing}
                   hostedServers={billingHostedServers}
                   license={
@@ -2158,6 +2185,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                       store={license}
                       onManagePayment={() => void billing.openPortal({ flow: "manage" })}
                       onContactUs={licenseContactUs(() => window.location.assign(HOSTED_SERVER_CONTACT_URL))}
+                      startBuying={licenseStart() !== null}
+                      startOrder={licenseStart()?.order ?? undefined}
                     />
                   }
                 />
@@ -2497,6 +2526,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 agentAutoApproves={remoteAgentAdmin.autoApproves()}
                 remoteBackupModelsLoaded={remoteAgentAdmin.backupModels() !== undefined}
                 remoteTaskLimitLoaded={remoteAgentAdmin.taskLimit() !== undefined}
+                remoteBusyMessageModeLoaded={remoteAgentAdmin.busyMessageMode() !== undefined}
+                defaultBusyMessageMode={remoteAgentAdmin.defaultBusyMessageMode()}
                 onUpdateAgentPermissions={remoteAgentAdmin.settings() ? remoteAgentAdmin.update : undefined}
                 onClearAgentContext={clearSelectedAgentContext()}
                 onRespondToBrowserTakeover={(decision, options) =>

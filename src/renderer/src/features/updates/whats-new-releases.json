@@ -1,5 +1,40 @@
 [
   {
+    "version": "0.54.0",
+    "date": "2026-10-29",
+    "notices": [],
+    "groups": [
+      {
+        "type": "added",
+        "items": [
+          "A Workspace only agent can change files in folders that you add. Open the agent's settings, then Folders, or drop a folder on the chat.",
+          "Set the context window of each model of a custom provider, so OpenCode compacts the conversation at the correct size.",
+          "Ctrl+F (⌘F on macOS) searches the open side thread.",
+          "Buy a commercial license for work from Billing or from Add server: Starter for 1 user, or Team for 2 to 10 users. A new license is free until 1 December 2026."
+        ]
+      },
+      {
+        "type": "changed",
+        "items": [
+          "A new server allows fewer members: Starter 1, Standard 5 and Pro 10. Servers that already exist keep their limits.",
+          "An agent's post to Slack, Discord or Telegram gives the agent the ID of the post, so it can link to it."
+        ]
+      },
+      {
+        "type": "fixed",
+        "items": [
+          "Remote desktop pairing on macOS 27 works again.",
+          "OpenBot keeps working when a page in the browser requests an address that it cannot read.",
+          "Gemini continues when one MCP server does not start. OpenBot tells you which server it left out.",
+          "A new Gemini account stays added when its first usage reading fails.",
+          "The chat stays steady when you switch between agents that have queued messages.",
+          "A side thread shows the agent's steps, as in the agent's own chat.",
+          "An agent that a Codex usage limit moved to a backup model goes back to its model when Codex ends the limit early."
+        ]
+      }
+    ]
+  },
+  {
     "version": "0.53.2",
     "date": "2026-10-28",
     "notices": [

@@ -236,6 +236,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
     const agent = activeAgent();
     const settings = remoteAgentSettings();
     const automation = remoteAgentAdmin.automation();
+    const busyMessageMode = remoteAgentAdmin.busyMessageMode();
     const backupModels = remoteAgentAdmin.backupModels();
     const usageLimitReturn = remoteAgentAdmin.usageLimitReturn();
     const taskLimit = remoteAgentAdmin.taskLimit();
@@ -244,6 +245,7 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
           ...agent,
           ...(settings ? { access: settings.access } : {}),
           ...(activeServer()?.kind === "remote" && automation !== undefined ? { allowAutomation: automation } : {}),
+          ...(activeServer()?.kind === "remote" && busyMessageMode ? { busyMessageMode } : {}),
           ...(activeServer()?.kind === "remote" && backupModels ? { backupModels } : {}),
           ...(activeServer()?.kind === "remote" && usageLimitReturn ? { usageLimitReturn } : {}),
           ...(activeServer()?.kind === "remote" && typeof taskLimit === "number" ? { taskLimit } : {}),
@@ -611,8 +613,13 @@ export function WorkspaceConversation(props: { account: () => CentralAuthUser })
         agentAutoApproves={activeAgentAutoApproves()}
         remoteBackupModelsLoaded={remoteAgentAdmin.backupModels() !== undefined}
         remoteTaskLimitLoaded={remoteAgentAdmin.taskLimit() !== undefined}
+        remoteBusyMessageModeLoaded={remoteAgentAdmin.busyMessageMode() !== undefined}
         onUpdateAgentPermissions={permissionsEditable() ? writeAgentPermissions : undefined}
-        defaultBusyMessageMode={generalSettings().busyMessageMode}
+        defaultBusyMessageMode={
+          activeServer()?.kind === "remote"
+            ? remoteAgentAdmin.defaultBusyMessageMode()
+            : generalSettings().busyMessageMode
+        }
         agentDefaults={generalSettings().agentDefaults}
         agentMemoryLimit={generalSettings().agentMemoryLimit}
         onClearAgentContext={clearActiveAgentContext()}

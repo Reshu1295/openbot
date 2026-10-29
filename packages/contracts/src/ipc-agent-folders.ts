@@ -31,11 +31,16 @@ export interface AgentFolder {
   found: boolean;
 }
 
-/** The folders of one agent, with the two that it can always change. */
+/**
+ * The folders of one agent, with the two that it can always change. `excluded` are folders in them
+ * that the agent must not change. Claude and the providers that OpenBot runs in a sandbox are blocked
+ * there; Codex can only be told, because it cannot deny a folder inside a writable root.
+ */
 export interface AgentFolderList {
   workspace: string;
   shared: string;
   folders: AgentFolder[];
+  excluded: string[];
 }
 
 export type AgentFolderChange =
@@ -45,6 +50,22 @@ export type AgentFolderChange =
   | { outcome: "replaced" | "removed"; path: string; list: AgentFolderList }
   | { outcome: "covered"; path: string; coverage: AgentFolderCoverage; list: AgentFolderList }
   | { outcome: "refused"; path: string; refusal: AgentFolderRefusal; list: AgentFolderList };
+
+/**
+ * Why main refused an excluded folder. `outside` is not in a folder the agent can change; `root` is
+ * one of those folders itself.
+ */
+export const AGENT_EXCLUSION_REFUSALS = ["outside", "root", "missing", "limit"] as const;
+export type AgentExclusionRefusal = (typeof AGENT_EXCLUSION_REFUSALS)[number];
+
+export type AgentExclusionChange =
+  | { outcome: "cancelled"; list: AgentFolderList }
+  /** `replaced`: the excluded folders that the new one holds. They are no longer in the list. */
+  | { outcome: "excluded"; path: string; replaced: string[]; list: AgentFolderList }
+  | { outcome: "included"; path: string; list: AgentFolderList }
+  /** `folder`: the excluded folder that is or holds the new one. */
+  | { outcome: "covered"; path: string; folder: string; list: AgentFolderList }
+  | { outcome: "refused"; path: string; refusal: AgentExclusionRefusal; list: AgentFolderList };
 
 /** Opens the folder picker. With `replace`, the picked folder takes the place of that one (Locate…). */
 export interface ChooseAgentFolderInput {
@@ -94,6 +115,19 @@ export function isAgentAdditionalFolders(value: unknown): value is string[] {
   );
 }
 
+/** The excluded folder that is or holds `path`. */
+export function agentExclusionCoverage(path: string, excluded: readonly string[]): string | null {
+  return excluded.find((folder) => folderInside(folder, path)) ?? null;
+}
+
+function isFolderPaths(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= AGENT_FOLDER_LIMIT &&
+    value.every((path) => isBoundedString(path, INPUT_LIMITS.path))
+  );
+}
+
 function isAgentFolder(value: unknown): value is AgentFolder {
   return isDynamicRecord(value) && isBoundedString(value.path, INPUT_LIMITS.path) && isBoolean(value.found);
 }
@@ -105,7 +139,8 @@ function isAgentFolderList(value: unknown): value is AgentFolderList {
     isBoundedString(value.shared, INPUT_LIMITS.path) &&
     Array.isArray(value.folders) &&
     value.folders.length <= AGENT_FOLDER_LIMIT &&
-    value.folders.every(isAgentFolder)
+    value.folders.every(isAgentFolder) &&
+    isFolderPaths(value.excluded)
   );
 }
 
@@ -121,15 +156,20 @@ function isAgentFolderChange(value: DynamicRecord): value is AgentFolderChange &
   if (!isAgentFolderList(value.list)) return false;
   if (value.outcome === "cancelled") return true;
   if (!isBoundedString(value.path, INPUT_LIMITS.path)) return false;
-  if (value.outcome === "added")
-    return (
-      Array.isArray(value.replaced) &&
-      value.replaced.length <= AGENT_FOLDER_LIMIT &&
-      value.replaced.every((path) => isBoundedString(path, INPUT_LIMITS.path))
-    );
+  if (value.outcome === "added") return isFolderPaths(value.replaced);
   if (value.outcome === "replaced" || value.outcome === "removed") return true;
   if (value.outcome === "covered") return isCoverage(value.coverage);
   return value.outcome === "refused" && isOneOf(AGENT_FOLDER_REFUSALS, value.refusal);
+}
+
+function isAgentExclusionChange(value: DynamicRecord): value is AgentExclusionChange & DynamicRecord {
+  if (!isAgentFolderList(value.list)) return false;
+  if (value.outcome === "cancelled") return true;
+  if (!isBoundedString(value.path, INPUT_LIMITS.path)) return false;
+  if (value.outcome === "excluded") return isFolderPaths(value.replaced);
+  if (value.outcome === "included") return true;
+  if (value.outcome === "covered") return isBoundedString(value.folder, INPUT_LIMITS.path);
+  return value.outcome === "refused" && isOneOf(AGENT_EXCLUSION_REFUSALS, value.refusal);
 }
 
 export function decodeAgentFolderListFromMain(value: unknown): AgentFolderList {
@@ -139,6 +179,11 @@ export function decodeAgentFolderListFromMain(value: unknown): AgentFolderList {
 
 export function decodeAgentFolderChangeFromMain(value: unknown): AgentFolderChange {
   if (!isDynamicRecord(value) || !isAgentFolderChange(value)) throw new Error("Invalid agent folder change.");
+  return value;
+}
+
+export function decodeAgentExclusionChangeFromMain(value: unknown): AgentExclusionChange {
+  if (!isDynamicRecord(value) || !isAgentExclusionChange(value)) throw new Error("Invalid agent folder change.");
   return value;
 }
 

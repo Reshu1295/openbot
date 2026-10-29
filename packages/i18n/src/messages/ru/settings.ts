@@ -467,6 +467,8 @@ export const messages = {
     many: "До {count} участников",
     other: "До {count} участника",
   },
+  "settings.hostedServers.plan.license.starter": "Коммерческая лицензия: {price} / мес.",
+  "settings.hostedServers.plan.license.team": "Для работы нужна лицензия Team",
   "settings.hostedServers.plan.speed.base": "Базовая скорость",
   "settings.hostedServers.plan.speed.faster": "{factor}× быстрее",
   "settings.hostedServers.plan.starter.name": "Starter",

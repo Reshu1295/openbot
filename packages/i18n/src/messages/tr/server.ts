@@ -88,6 +88,17 @@ export const messages = {
   "server.add.billing.monthly": "Aylık",
   "server.add.billing.yearly": "Yıllık",
   "server.add.billing.save": "%{percent} tasarruf",
+  "server.add.use.label": "Kullanım",
+  "server.add.use.personal": "Kişisel",
+  "server.add.use.work": "İş",
+  "server.add.license.people": "İşteki kişiler",
+  "server.add.license.minimum": {
+    one: "Sunucularınızı şu anda {count} kişi kullanıyor, bu yüzden daha azını seçemezsiniz.",
+    other: "Sunucularınızı şu anda {count} kişi kullanıyor, bu yüzden daha azını seçemezsiniz.",
+  },
+  "server.add.license.bundle": "Paket −%{percent}",
+  "server.add.license.included": "Dahil: {license}",
+  "server.add.license.includedTrial": "Dahil: {license}, {date} tarihine kadar ücretsiz",
   "server.add.billedMonthly": "Aylık faturalandırılır",
   "server.add.billedYearly": "Yıllık {price} faturalandırılır",
   // {amount} "€120" gibi biçimlendirilmiş bir tutardır. Yıllık fiyatın ardından gelir.
@@ -399,7 +410,10 @@ export const messages = {
   "server.invite.showQr": "Davet QR kodunu göster",
   "server.invite.permaHint":
     "Süresi asla dolmaz ve birçok kez kullanılabilir. Bu bağlantıya sahip olan herkes katılabilir; devre dışı bırakmak için iptal edin.",
-  "server.invite.full": "Bu sunucu {limit} üye sınırına ulaştı. Yeni bir kişiyi davet etmek için bir üyeyi kaldırın.",
+  "server.invite.full": {
+    one: "Bu sunucu {count} üye sınırına ulaştı. Yeni bir kişiyi davet etmek için bir üyeyi kaldırın.",
+    other: "Bu sunucu {count} üye sınırına ulaştı. Yeni bir kişiyi davet etmek için bir üyeyi kaldırın.",
+  },
   "server.invite.qrLabel": "Davet QR kodu",
   "server.invite.qrDescription": "Bu sunucuya katılmak için bu kodu OpenBot Mobile uygulamasında tarayın.",
   "server.invite.accepted": "Davet kabul edildi",

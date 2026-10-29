@@ -1,15 +1,18 @@
 /**
- * The folders a local agent can change besides its workspace and the shared folder: the Folders row
- * of the settings panel, its page, and the folder half of the chat's drop overlay. With Ask first or
- * Full access the agent can change all files, so the folders apply only in Workspace only.
+ * The folders a local agent can change besides its workspace and the shared folder, and the folders in
+ * them that it must not change: the Folders row of the settings panel, its page, and the folder half
+ * of the chat's drop overlay. With Ask first or Full access the agent can change all files, so the
+ * folders apply only in Workspace only.
  */
 
 import {
   AGENT_FOLDER_LIMIT,
+  type AgentExclusionChange,
   type AgentFolderChange,
   type AgentFolderCoverageReason,
   type AgentFolderList,
   agentFolderName,
+  folderInside,
 } from "@openbot/contracts/ipc";
 import {
   Button,
@@ -17,6 +20,7 @@ import {
   FolderInput,
   FolderPlus,
   IconButton,
+  Lock,
   Plus,
   ShieldCheck,
   TriangleAlert,
@@ -37,6 +41,11 @@ export interface AgentFolderCalls {
   remove: (agentId: string, path: string) => Promise<AgentFolderChange>;
   /** Adds a folder dragged from the computer's file manager. */
   drop: (agentId: string, folder: File) => Promise<AgentFolderChange>;
+  /** Opens the folder picker for a folder the agent must not change. */
+  exclude: (agentId: string) => Promise<AgentExclusionChange>;
+  addExclusion: (agentId: string, path: string) => Promise<AgentExclusionChange>;
+  /** The agent can change the excluded folder again. */
+  include: (agentId: string, path: string) => Promise<AgentExclusionChange>;
 }
 
 interface AgentFolderSource {
@@ -118,6 +127,61 @@ export function createAgentFolders(source: () => AgentFolderSource | undefined) 
     }
   }
 
+  async function runExclusion(change: () => Promise<AgentExclusionChange>, current: AgentFolderSource): Promise<void> {
+    try {
+      reportExclusion(await change(), current);
+    } catch (error) {
+      failed(error);
+    }
+  }
+
+  function reportExclusion(change: AgentExclusionChange, current: AgentFolderSource): void {
+    const { agentId, agentName: agent, calls } = current;
+    setList(agentId, change.list);
+    if (change.outcome === "cancelled") return;
+    const folder = agentFolderName(change.path);
+    switch (change.outcome) {
+      case "excluded": {
+        // A folder that holds folders already excluded took their place: Undo gives them back.
+        const { replaced } = change;
+        const undo = async (): Promise<AgentExclusionChange> => {
+          const included = await calls.include(agentId, change.path);
+          let list = included.list;
+          for (const path of replaced) list = (await calls.addExclusion(agentId, path)).list;
+          return { ...included, list };
+        };
+        toast.success(t("agentSettings.folders.toastExcluded", { agent, folder }), {
+          action: { label: t("agentSettings.folders.undo"), onClick: () => void runExclusion(undo, current) },
+        });
+        return;
+      }
+      case "included":
+        toast(t("agentSettings.folders.toastIncluded", { agent, folder }), {
+          action: {
+            label: t("agentSettings.folders.undo"),
+            onClick: () => void runExclusion(() => calls.addExclusion(agentId, change.path), current),
+          },
+        });
+        return;
+      case "covered":
+        toast(
+          change.folder === change.path
+            ? t("agentSettings.folders.alreadyExcluded", { folder })
+            : t("agentSettings.folders.inExcluded", { folder, parent: agentFolderName(change.folder) }),
+        );
+        flash(change.folder);
+        return;
+      case "refused":
+        if (change.refusal === "limit")
+          toast.error(t("agentSettings.folders.excludeLimit", { count: AGENT_FOLDER_LIMIT }));
+        else if (change.refusal === "outside")
+          toast.error(t("agentSettings.folders.excludeOutside", { agent, folder }));
+        else if (change.refusal === "root") toast.error(t("agentSettings.folders.excludeRoot", { folder }));
+        else toast.error(t("agentSettings.folders.missing", { folder }));
+        return;
+    }
+  }
+
   function report(change: AgentFolderChange, current: AgentFolderSource): void {
     const { agentId, agentName: agent, calls } = current;
     setList(agentId, change.list);
@@ -177,6 +241,11 @@ export function createAgentFolders(source: () => AgentFolderSource | undefined) 
     return current ? run(() => change(current), current) : Promise.resolve();
   }
 
+  function actExclusion(change: (current: AgentFolderSource) => Promise<AgentExclusionChange>): Promise<void> {
+    const current = source();
+    return current ? runExclusion(() => change(current), current) : Promise.resolve();
+  }
+
   return {
     state,
     /**
@@ -201,6 +270,8 @@ export function createAgentFolders(source: () => AgentFolderSource | undefined) 
     },
     choose: (replace?: string) => act(({ agentId, calls }) => calls.choose(agentId, replace)),
     remove: (path: string) => act(({ agentId, calls }) => calls.remove(agentId, path)),
+    exclude: () => actExclusion(({ agentId, calls }) => calls.exclude(agentId)),
+    include: (path: string) => actExclusion(({ agentId, calls }) => calls.include(agentId, path)),
     /** One folder at a time, so each toast names its folder and the list ends with all of them. */
     async drop(folders: readonly File[]): Promise<void> {
       for (const folder of folders) await act(({ agentId, calls }) => calls.drop(agentId, folder));
@@ -219,6 +290,28 @@ export type AgentFolders = ReturnType<typeof createAgentFolders>;
 function folderParent(path: string): string {
   const end = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
   return end > 0 ? path.slice(0, end) : path;
+}
+
+/**
+ * The folder that holds an excluded folder, as the page names it, with the path below it. A folder
+ * the user removed from the list no longer holds it, so the path is shown in full.
+ */
+function exclusionPlace(
+  path: string,
+  list: AgentFolderList,
+  names: { workspace: string; shared: string },
+): string | null {
+  const holders: [string, string][] = [
+    [list.workspace, names.workspace],
+    [list.shared, names.shared],
+    ...list.folders.map((folder): [string, string] => [folder.path, agentFolderName(folder.path)]),
+  ];
+  const holder = holders.find(([root]) => folderInside(root, path));
+  if (!holder) return null;
+  const below = folderParent(path)
+    .slice(holder[0].length)
+    .replace(/^[/\\]+/, "");
+  return below ? `${holder[1]}/${below}` : holder[1];
 }
 
 /** Drag handlers for a place that takes a dropped folder, with the state that shows it. */
@@ -388,6 +481,52 @@ function FolderRow(props: {
   );
 }
 
+/** One folder the agent must not change, and where it is. */
+function ExclusionRow(props: {
+  path: string;
+  place: string | null;
+  fresh?: boolean;
+  flash?: boolean;
+  onFlashEnd?: () => void;
+  onInclude: () => void;
+}) {
+  const { t } = useText();
+  const name = () => agentFolderName(props.path);
+  const where = () => {
+    const place = props.place;
+    return place ? t("agentSettings.folders.excludedIn", { folder: place }) : folderParent(props.path);
+  };
+  return (
+    <div
+      class="agent-folders-row"
+      data-fresh={props.fresh ? "" : undefined}
+      data-flash={props.flash ? "" : undefined}
+      onAnimationEnd={(event) => {
+        if (event.animationName === "agent-folders-row-flash") props.onFlashEnd?.();
+      }}
+    >
+      <span class="settings-link-icon">
+        <Lock aria-hidden="true" />
+      </span>
+      <span class="agent-folders-text">
+        <span class="agent-folders-name">{name()}</span>
+        <span class="agent-folders-path" title={props.path}>
+          {where()}
+        </span>
+      </span>
+      <IconButton
+        label={t("agentSettings.folders.include", { folder: name() })}
+        variant="ghost"
+        size="icon-sm"
+        class="agent-folders-remove"
+        onClick={() => props.onInclude()}
+      >
+        <X />
+      </IconButton>
+    </div>
+  );
+}
+
 /** The Folders page of the settings panel. */
 export function AgentFoldersPage(props: {
   folders: AgentFolders;
@@ -482,6 +621,39 @@ export function AgentFoldersPage(props: {
                 </Button>
               </SettingsLinkGroup>
             </div>
+            <SettingsLinkGroup inset title={t("agentSettings.folders.excluded")}>
+              <For each={list().excluded} keyed={(path) => path}>
+                {(path) => {
+                  const fresh = opened;
+                  return (
+                    <ExclusionRow
+                      path={path()}
+                      place={exclusionPlace(path(), list(), {
+                        workspace: t("agentSettings.folders.workspace"),
+                        shared: t("agentSettings.folders.shared"),
+                      })}
+                      fresh={fresh}
+                      flash={flash() === path()}
+                      onFlashEnd={clearFlash}
+                      onInclude={() => void props.folders.include(path())}
+                    />
+                  );
+                }}
+              </For>
+              <Button
+                variant="ghost"
+                type="button"
+                class="settings-link agent-folders-add"
+                onClick={() => void props.folders.exclude()}
+              >
+                <span class="settings-link-label">
+                  <span class="settings-link-icon">
+                    <Plus aria-hidden="true" />
+                  </span>
+                  {t("agentSettings.folders.exclude")}
+                </span>
+              </Button>
+            </SettingsLinkGroup>
           </>
         )}
       </Show>

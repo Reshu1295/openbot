@@ -127,8 +127,10 @@ export interface AgentSettingsPanelProps {
   quickAcknowledgementEditable?: boolean;
   /** The browser profile of the agent's tabs. Left out when the host cannot change it. */
   browserProfiles?: AgentBrowserProfileOptions | undefined;
-  /** The busy-message setting is local-only too: the Team API does not carry it. */
+  /** The busy-message setting can be changed locally or through the host's administrator route. */
   busyMessageModeEditable?: boolean;
+  /** Whether the busy-message default belongs to a joined server's host, not to this app. */
+  busyMessageDefaultIsHost?: boolean;
   /** Tasks run only on this computer: the Team API has no task route. */
   taskLimitEditable?: boolean;
   /** Backup models are local-only too: the Team API does not carry them. */
@@ -137,7 +139,7 @@ export interface AgentSettingsPanelProps {
   folders?: AgentFolderCalls | undefined;
   /** Whether a usage limit holds this model and account now, for the backup models page. */
   usageLimited?: ((choice: AgentModelChoice) => boolean) | undefined;
-  /** The app default an agent without its own busy-message setting follows. */
+  /** The app or host default an agent without its own busy-message setting follows. */
   defaultBusyMessageMode?: BusyMessageMode | undefined;
   /** The account defaults an agent without its own value follows. Absent for a remote agent. */
   agentDefaults?: AgentDefaults | undefined;
@@ -338,9 +340,18 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
   }
   const agentFolders = createAgentFolders(folderSource);
   // Each activity of the agent gives a new agent object, so the list loads again only when the
-  // agent, its saved folders or the page change. The page opening reads which folders are gone.
+  // agent, its saved or excluded folders or the page change. The page opening reads which folders
+  // are gone.
   const folderLoadKey = createMemo(() =>
-    props.folders ? [props.agent.id, page() === "folders", ...(props.agent.additionalFolders ?? [])].join("\n") : "",
+    props.folders
+      ? [
+          props.agent.id,
+          page() === "folders",
+          ...(props.agent.additionalFolders ?? []),
+          "",
+          ...(props.agent.excludedFolders ?? []),
+        ].join("\n")
+      : "",
   );
   createEffect(
     () => {
@@ -859,14 +870,16 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
     return count > 0 ? t("agentSettings.backupModels.valueCount", { mode, count }) : mode;
   };
 
-  const appBusyMessageMode = () => props.defaultBusyMessageMode ?? DEFAULT_BUSY_MESSAGE_MODE;
+  const defaultBusyMessageMode = () => props.defaultBusyMessageMode ?? DEFAULT_BUSY_MESSAGE_MODE;
+  const defaultBusyMessageLabels = () =>
+    props.busyMessageDefaultIsHost ? HOST_DEFAULT_BUSY_MESSAGE_LABEL : APP_DEFAULT_BUSY_MESSAGE_LABEL;
   const busyMessageLabel = (choice: BusyMessageChoice) =>
-    t(choice === "default" ? APP_DEFAULT_BUSY_MESSAGE_LABEL[appBusyMessageMode()] : BUSY_MESSAGE_LABEL[choice]);
+    t(choice === "default" ? defaultBusyMessageLabels()[defaultBusyMessageMode()] : BUSY_MESSAGE_LABEL[choice]);
   const steerUnsupported = () => {
     const provider = knownProvider();
     return (
       provider !== undefined &&
-      (draft.busyMessage === "default" ? appBusyMessageMode() : draft.busyMessage) === "steer" &&
+      (draft.busyMessage === "default" ? defaultBusyMessageMode() : draft.busyMessage) === "steer" &&
       agentProviderDescriptor(provider).steer !== "native"
     );
   };
@@ -1687,6 +1700,11 @@ const BUSY_MESSAGE_LABEL = {
 const APP_DEFAULT_BUSY_MESSAGE_LABEL = {
   queue: "agentSettings.busyMessage.appDefaultQueue",
   steer: "agentSettings.busyMessage.appDefaultSteer",
+} as const satisfies Record<BusyMessageMode, AppTextKey>;
+
+const HOST_DEFAULT_BUSY_MESSAGE_LABEL = {
+  queue: "agentSettings.busyMessage.hostDefaultQueue",
+  steer: "agentSettings.busyMessage.hostDefaultSteer",
 } as const satisfies Record<BusyMessageMode, AppTextKey>;
 
 const ACCESS_LABEL = {

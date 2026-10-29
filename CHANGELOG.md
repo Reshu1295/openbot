@@ -6,6 +6,100 @@ All notable changes to OpenBot will be documented here. The project follows
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-10-29
+
+### Added
+
+- A Workspace only agent can now change files in folders that you add. Open the agent's settings, then Folders, or drop a folder on the chat. The agent knows which folders it can change.
+- You can set the context window of each model of a custom provider on this computer. OpenCode then compacts the conversation at the correct size, and does not use its 200K-token default.
+- Ctrl+F (⌘F on macOS) now searches the open side thread. Before, the shortcut did nothing in a side thread.
+- The website has a Pricing page. It shows the hosted servers at their Stripe prices, the Starter
+  license (1 member) and the Team license (2 to 10 members), monthly or yearly, in EUR, USD or PLN.
+  Choose a server, a license or both. The summary shows the total. Visitors in the EU see that the
+  prices do not include VAT. A license bought with a server costs 10% less (bundle discount), and yearly
+  billing takes 20% off a license. When the Stripe prices do not load, the page shows the list prices.
+- The header and the footer of the website have a Pricing link.
+- The Pricing page has one button. It opens the web app at the add server dialog, or at Billing
+  when you choose only a license.
+
+### Changed
+
+- An agent's post to Slack, Discord or Telegram now gives the agent the ID of the post, and for
+  Discord a link to it, so the agent can link to the post.
+- A new server has fewer members: Starter 1, Standard 5 and Pro 10. Servers that already exist keep
+  their limits (Starter 3, Standard 10, Pro 25).
+- Sell the commercial license in two plans. Starter is €10 a month for 1 user. Team is €25 a month
+  for 2 users and €15 for each extra user, up to 10. For more than 10 users, contact us. Yearly
+  billing takes 20% off. An account that pays for a hosted server (any plan) then pays 10% less for
+  the license. Each user can use up to 3 devices.
+- On the Pricing page, set more than 10 members for the Team license to see the custom price and a
+  Contact us button.
+- Add server lets an account with no license choose personal or work use. For work, set the people
+  at work, and buy the server and its license at the bundle price with one payment.
+  The license cannot have fewer users than the people who use your servers now, and the order uses
+  the currency of your other plans.
+- Buy a license alone from Billing: set the people with a slider and see the price at once.
+- Change a Starter license to Team, or a monthly Team license to yearly, from Billing. When an
+  invite needs more than 1 user, the members section offers the change to Team.
+- Make a new commercial license free until 1 December 2026. Billing, Add server and the pricing page
+  show "Free until 1 December 2026". Stripe takes the first payment on that day. Cancel before then
+  to pay nothing.
+- The pricing page sends its order to the web app. After sign-in, the app goes straight to Stripe
+  Checkout with the same server, license, users, billing period and currency, so you do not choose
+  again. When the order does not fit the account, such as another currency than your other plans,
+  the app shows the order filled in and you confirm it.
+- Update the Privacy Policy, Terms & Conditions and Commercial License Agreement on openbot.run.
+  Add the Data Processing Addendum at openbot.run/dpa. openbot.run/privacy shows the Privacy Policy too.
+  openbot.run/commerciallicense and openbot.run/branding open the existing pages.
+- The site footer links to the Terms, the Commercial License Agreement and the DPA.
+- When you add a server for work, the dialog now tells you why it does not let you choose fewer people: everyone who uses your servers now needs a seat on the license.
+- Prices in PLN are 4 times the EUR price, so they are round amounts. The Starter license costs 40 zł a month, and the Team license costs 100 zł a month for 2 users and 60 zł for each extra user. A new hosted server costs 80 zł (Starter), 200 zł (Standard) or 400 zł (Pro) a month, not 90, 220 or 440 zł.
+
+### Fixed
+
+- OpenBot starts on a Mac where `/Library/Application Support` or `/Library/Application Support/OpenBot`
+  has a non-root owner or group write permission, and no host manager is installed. Before, OpenBot
+  stopped at each start with an empty error. A start error from the host manager check now shows its
+  cause.
+- Remote desktop pairing on macOS 27 works again. Before, the host stopped at each pairing attempt and every setup check showed as not checked.
+- When an agent cannot open a secure password or code card for a sign-in, it now gets the reason,
+  such as which field or button target is wrong, and can correct the request. Before, it got only
+  "Secure authentication is unavailable".
+- Routine agents now check saved Vault logins before they report a sign-in requirement. They can use saved passwords and authenticator codes through secure browser input.
+- Quit OpenBot without the error "OpenBot database is not initialized." when an agent reports its
+  context use during the quit.
+- Keep a self-hosted or hosted server responsive after an error in the main process, and let it
+  finish a quit. Before, an error box that nobody could close on the server display stopped the
+  process, and the service manager did not start it again. On desktop, an error during a quit also
+  shows no error box.
+- OpenBot keeps working when a page in the browser requests an address that it cannot read, such as a host that starts with an escaped space. Before, OpenBot stopped and did not answer until a restart.
+- Show the reason of a group chat task that stopped because its member was removed or is not
+  available in your language. Before, the reason was always in English.
+- Show only Reassign on a stopped group chat task whose member left the group chat. Before,
+  Continue stopped the task again.
+- Provider settings in agent settings show in one card, as the other groups do. Before, each switch showed under its name and each choice was a full-width field outside a card.
+- Keep a new provider account, such as another Gemini account, when its sign-in works but its first
+  usage reading fails. Before, OpenBot removed the account after the Google sign-in, so it looked as
+  if OpenBot did not add the account. A Reconnect with the same failure now shows the account as
+  connected, not as an error.
+- Keep the chat steady when you switch between agents that have queued messages. Before, the queue
+  animated the other agent's messages out and this agent's messages in, and the chat jumped while
+  the queue changed height. When the agent that you open has no queued messages, the queue of the
+  other agent now closes at once.
+- Let Gemini continue when one MCP server that OpenBot gives it does not start, such as a server that asks for a sign-in. Before, each Gemini turn failed with "The MCP server '<name>' failed to initialize". Now OpenBot leaves the server out, tells you which server it left out, and sends the message again.
+- Cancel and × now stop a browser sign-in in the Apps connect dialog. Before, both stayed off while the dialog waited for the browser, for up to 5 minutes.
+- Show the agent's steps in a side thread, as in the agent's own chat: the thinking while the agent
+  works, and the steps row above each answer. Before, a side thread showed only the answer.
+- On macOS, **OpenBot → Check for Updates…** opens Settings on the Updates tab, where the check and its
+  result show. Before, nothing changed on screen when OpenBot was up to date or the check failed.
+- Check the remote desktop permissions when you open Server settings → Remote desktop on a Mac.
+  Hide the Grant button of a permission that is already allowed. Before, all rows showed
+  "Not checked" and Grant until you selected Check again.
+- Cursor turns fail less often with "Invalid model value". Cursor asks its server for the model
+  list each time the model is set, and reports a failed request as an invalid model. OpenBot now
+  sets the Cursor model only when it changes, not before every turn (#3800).
+- An agent that a ChatGPT (Codex) usage limit moved to a backup model now goes back to its model within 15 minutes when Codex ends the limit early, for example after you spend a reset credit in the Codex app. Before, OpenBot kept the agent on the backup model until the old reset time, also when you selected the model again.
+
 ## [0.53.2] - 2026-10-28
 
 ### Added

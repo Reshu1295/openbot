@@ -2,7 +2,7 @@
   "name": "openbot",
   "productName": "OpenBot",
   "desktopName": "openbot.desktop",
-  "version": "0.53.2",
+  "version": "0.54.0",
   "description": "A local-first multi-agent desktop workspace for Codex, Claude, and Grok.",
   "author": {
     "name": "Norbert Bodziony",
@@ -201,6 +201,7 @@
     "test:acp-directories": "bun scripts/acp-additional-directories-e2e.ts",
     "test:acp-flavors": "bun scripts/acp-flavor-e2e.ts",
     "test:sign-in-relay-paste": "bun scripts/sign-in-relay-paste-e2e.ts",
+    "test:sign-in-relay-replay": "bun scripts/sign-in-relay-replay-e2e.ts",
     "test:acp-mcp-names": "bun scripts/acp-mcp-server-names-e2e.ts",
     "test:acp-mcp-shared-token": "bun scripts/acp-mcp-shared-token-e2e.ts",
     "test:acp-turn-stall": "bun scripts/acp-turn-stall-e2e.ts",
