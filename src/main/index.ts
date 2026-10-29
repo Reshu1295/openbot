@@ -1061,7 +1061,7 @@ if (!hasSingleInstanceLock) {
       // Set the Dock icon before `dock.show()` below. A development build runs the stock Electron.app,
       // so until this call its Dock tile shows the Electron logo.
       if (process.platform === "darwin") app.dock?.setIcon(appIconPath);
-      if (!(await Effect.runPromise(hostAllowsTenantLaunch()))) {
+      if (!(await runCauseEffect(hostAllowsTenantLaunch()))) {
         app.quit();
         return;
       }
