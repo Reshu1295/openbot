@@ -6,6 +6,7 @@ import {
   WORKFLOW_NODE_KINDS,
   WORKFLOW_PORT_TYPES,
 } from "@openbot/contracts/ipc";
+import { sourceText } from "@openbot/i18n/source";
 import { RoutineInputError } from "@openbot/team-client/routine-schedule";
 import { Effect } from "effect";
 import { z } from "zod";
@@ -13,6 +14,7 @@ import { openBotToolFailure, openBotToolResult } from "../agent/routine-tools";
 import { ToolOperationFailed } from "../agent/tool-operation";
 import { routineScheduleZodSchema } from "../routine-tool-schema";
 import { WorkflowStoreError } from "./workflow-store";
+import { unsupportedNode } from "./workflow-walk";
 import type { WorkflowsHandle } from "./workflows";
 
 const identifier = z.string().min(1).max(INPUT_LIMITS.identifier);
@@ -23,7 +25,7 @@ const graph = z
       .array(
         z.strictObject({
           id: identifier,
-          kind: z.enum(WORKFLOW_NODE_KINDS),
+          kind: z.enum(WORKFLOW_NODE_KINDS.filter((kind) => kind !== "image" && kind !== "asset")),
           at: point,
           fields: z.object({}).catchall(z.union([z.string(), z.number(), z.boolean()])),
           schedule: routineScheduleZodSchema.optional(),
@@ -92,6 +94,7 @@ export const handleWorkflowTool = Effect.fn("WorkflowTools.handle")(function* (
   args: unknown,
   workflows: WorkflowTools | null,
   agentIds: ReadonlySet<string>,
+  redact: (text: string) => string,
 ) {
   if (!NAMES.has(tool)) return null;
   if (!workflows) return openBotToolFailure("Workflows are unavailable on this host.");
@@ -108,6 +111,8 @@ export const handleWorkflowTool = Effect.fn("WorkflowTools.handle")(function* (
     }
     const parsed = createSchema.safeParse(args);
     if (!parsed.success) return openBotToolFailure(parsed.error.message);
+    if (parsed.data.graph.nodes.some(unsupportedNode))
+      return openBotToolFailure(sourceText("error.workflow.nodeUnsupported"));
     const unknownAgent = graphAgentIds(parsed.data.graph).find((id) => !agentIds.has(id));
     if (unknownAgent) return openBotToolFailure(`Unknown agent: ${unknownAgent}. Use list_agents for a current id.`);
     return openBotToolResult(yield* workflows.create(parsed.data));
@@ -118,5 +123,9 @@ export const handleWorkflowTool = Effect.fn("WorkflowTools.handle")(function* (
         ? Effect.succeed(openBotToolFailure(failure.cause.message))
         : Effect.fail(new ToolOperationFailed({ cause: failure.cause })),
     ),
+    Effect.map((result) => ({
+      ...result,
+      contentItems: result.contentItems.map((item) => ({ ...item, text: redact(item.text) })),
+    })),
   );
 });

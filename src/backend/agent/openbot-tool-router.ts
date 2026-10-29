@@ -985,6 +985,7 @@ export class OpenBotToolRouter {
       params.arguments,
       this.#workflowTools?.() ?? null,
       new Set(this.#hooks.listAgents().map((agent) => agent.id)),
+      this.#hooks.redactMcp,
     );
     if (workflowResult) return workflowResult;
 

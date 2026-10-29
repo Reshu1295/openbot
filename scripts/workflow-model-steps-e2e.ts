@@ -20,6 +20,7 @@ import {
   WORKFLOWS_USAGE_ID,
   type WorkflowGraph,
 } from "@openbot/contracts/ipc";
+import { redactText, registerSecretValue } from "@openbot/logging";
 import { Effect } from "effect";
 import { ProfileClients } from "../src/backend/agent/profile-clients";
 import { discoverTools, resolveDeferredTool } from "../src/backend/agent/tool-catalog";
@@ -29,7 +30,7 @@ import type { AgentClient } from "../src/backend/agent-client";
 import type { AgentCliInfo } from "../src/backend/cli";
 import { runCauseEffect } from "../src/backend/effect-boundary";
 import { OpenBotDatabase } from "../src/backend/openbot-database";
-import type { DynamicToolCallParams } from "../src/backend/protocol";
+import { type DynamicToolCallParams, getArray, getRecord } from "../src/backend/protocol";
 import { NO_PROVIDER_CREDENTIALS, requireProviderDriver } from "../src/backend/provider-drivers";
 import { WorkflowRunStore } from "../src/backend/workflows/workflow-run-store";
 import { WorkflowStore } from "../src/backend/workflows/workflow-store";
@@ -193,11 +194,19 @@ try {
       (text) => text.includes("A routine is") && text.includes("schedule triggers become active"),
     ) === true,
   );
+  let kindSchema = getRecord(described.tools[0], "inputSchema");
+  for (const key of ["properties", "graph", "properties", "nodes", "items", "properties", "kind"])
+    kindSchema = getRecord(kindSchema, key);
+  const kinds = getArray(kindSchema, "enum");
+  check(
+    "workflow discovery offers supported node kinds",
+    kinds.includes("agent") && kinds.includes("condition") && !kinds.includes("image") && !kinds.includes("asset"),
+  );
   const call = async (name: string, args: unknown) => {
     const resolved = resolveDeferredTool(params("tool_call", { name: `openbot.${name}`, arguments: args }));
     assert.ok(resolved);
     const response = await runCauseEffect(
-      handleWorkflowTool(resolved.tool, resolved.arguments, workflows, new Set(["research", "writer"])),
+      handleWorkflowTool(resolved.tool, resolved.arguments, workflows, new Set(["research", "writer"]), redactText),
     );
     assert.ok(response);
     return { success: response.success, value: JSON.parse(response.contentItems[0]?.text ?? "null") };
@@ -253,7 +262,34 @@ try {
     !missing.success && typeof missing.value.error === "string",
   );
 
+  const unsupportedGraphs: { title: string; graph: WorkflowGraph }[] = [
+    {
+      title: "Image step",
+      graph: { nodes: [{ id: "step", kind: "image", at: { x: 0, y: 0 }, fields: {} }], edges: [], strokes: [] },
+    },
+    {
+      title: "Asset step",
+      graph: { nodes: [{ id: "step", kind: "asset", at: { x: 0, y: 0 }, fields: {} }], edges: [], strokes: [] },
+    },
+    {
+      title: "Message trigger",
+      graph: {
+        nodes: [{ id: "step", kind: "trigger", at: { x: 0, y: 0 }, fields: { trigger: "message" } }],
+        edges: [],
+        strokes: [],
+      },
+    },
+    {
+      title: "File output",
+      graph: {
+        nodes: [{ id: "step", kind: "output", at: { x: 0, y: 0 }, fields: { target: "file" } }],
+        edges: [],
+        strokes: [],
+      },
+    },
+  ];
   const refusedInputs = [
+    ...unsupportedGraphs,
     { title: "   ", graph },
     { title: "Unknown agent", graph: { ...graph, nodes: [{ ...graph.nodes[1], fields: { agentId: "missing" } }] } },
     { title: "Dangling edge", graph: { ...graph, edges: [{ id: "bad", from: "start", to: "missing", type: "text" }] } },
@@ -312,11 +348,61 @@ try {
       isWorkflowDetail(scheduled.value) &&
       scheduled.value.triggers.some((trigger) => trigger.type === "schedule" && trigger.nextDueAt !== null),
   );
+  const opaqueSecret = "fixture-opaque-credential-3580";
+  const secrets = ["sk-ant-fixture3580abcdefgh1234567890", opaqueSecret];
+  registerSecretValue(opaqueSecret);
+  const secretText = secrets.join(" ");
+  const secretGraph: WorkflowGraph = {
+    nodes: [{ id: "prompt", kind: "prompt", at: { x: 0, y: 0 }, fields: { text: secretText } }],
+    edges: [],
+    strokes: [],
+  };
+  const original = await runCauseEffect(workflows.create({ title: secretText, graph: secretGraph }));
+  const safeRead = await call("read_workflow", { workflowId: original.summary.id });
+  check(
+    "reading a saved workflow redacts its title and graph",
+    safeRead.success && secrets.every((secret) => !JSON.stringify(safeRead.value).includes(secret)),
+  );
+  const safeCreate = await call("create_workflow", { title: secretText, graph: secretGraph });
+  check(
+    "creation redacts the workflow returned to the provider",
+    safeCreate.success && secrets.every((secret) => !JSON.stringify(safeCreate.value).includes(secret)),
+  );
+  const safeList = await call("list_workflows", {});
+  check(
+    "listing workflows redacts saved titles",
+    safeList.success && secrets.every((secret) => !JSON.stringify(safeList.value).includes(secret)),
+  );
+  check(
+    "tool redaction keeps the saved workflow unchanged",
+    store.detail(original.summary.id)?.summary.title === secretText &&
+      JSON.stringify(store.detail(original.summary.id)?.graph) === JSON.stringify(secretGraph) &&
+      store.detail(safeCreate.value.summary.id)?.summary.title === secretText &&
+      JSON.stringify(store.detail(safeCreate.value.summary.id)?.graph) === JSON.stringify(secretGraph),
+  );
+  const unsafeAgent = await call("create_workflow", {
+    title: "Unknown agent with a secret",
+    graph: {
+      nodes: [{ id: "agent", kind: "agent", at: { x: 0, y: 0 }, fields: { agentId: secretText } }],
+      edges: [],
+      strokes: [],
+    },
+  });
+  check(
+    "workflow failures redact unknown agent values",
+    !unsafeAgent.success && secrets.every((secret) => !JSON.stringify(unsafeAgent.value).includes(secret)),
+  );
+  const unsafeArgument = await call("read_workflow", { workflowId, [secretText]: true });
+  check(
+    "workflow validation failures redact rejected keys",
+    !unsafeArgument.success && secrets.every((secret) => !JSON.stringify(unsafeArgument.value).includes(secret)),
+  );
+
   const unavailable = await runCauseEffect(
-    handleWorkflowTool("create_workflow", { title: "No host", graph }, null, new Set()),
+    handleWorkflowTool("create_workflow", { title: "No host", graph }, null, new Set(), redactText),
   );
   check("an unavailable service gives a readable tool failure", unavailable?.success === false);
-  const unrelated = await runCauseEffect(handleWorkflowTool("create_routine", {}, workflows, new Set()));
+  const unrelated = await runCauseEffect(handleWorkflowTool("create_routine", {}, workflows, new Set(), redactText));
   check("routine tools stay with their own handler", unrelated === null);
   await runCauseEffect(workflows.close());
   workflows = null;
