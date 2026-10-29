@@ -13,7 +13,6 @@ import Animated, {
   withDelay,
   withTiming,
 } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { scheduleOnRN } from "react-native-worklets";
 
 import { showFailureAlert } from "@/features/analytics/failure-reports";
@@ -25,6 +24,7 @@ import type { BloubMood } from "@/shared/components/bloub-stage/bloub-stage-stor
 import type { LargeTitleScroll } from "@/shared/components/large-title";
 import { haptics } from "@/shared/lib/haptics";
 import { useReducedMotion } from "@/shared/lib/motion";
+import { useBarTop } from "@/shared/lib/native-bar";
 import { SPLASH_EASE_OUT } from "@/shared/lib/splash-motion";
 import { currentText, useText } from "@/shared/lib/text";
 
@@ -66,7 +66,8 @@ export interface AppUpdateHeader {
  * which drops to a short header when an update comes and rolls up again when it goes.
  */
 export function useAppUpdateHeader(update: AppUpdate | null): AppUpdateHeader {
-  const insets = useSafeAreaInsets();
+  // The top of the bar, below the status bar or the gap that the iPhone Duo vertical bar keeps.
+  const barTop = useBarTop();
   const reduced = useReducedMotion();
   const [shown, setShown] = useState<AppUpdate | null>(update);
   const [captionHeight, setCaptionHeight] = useState(0);
@@ -77,9 +78,7 @@ export function useAppUpdateHeader(update: AppUpdate | null): AppUpdateHeader {
   latest.current = update;
   const updateId = update?.id ?? null;
   const rest =
-    captionHeight > 0
-      ? insets.top + EYES_TOP + EYES_HEIGHT * EYES_SCALE + CAPTION_GAP + captionHeight + BOTTOM_PADDING
-      : 0;
+    captionHeight > 0 ? barTop + EYES_TOP + EYES_HEIGHT * EYES_SCALE + CAPTION_GAP + captionHeight + BOTTOM_PADDING : 0;
 
   useEffect(() => {
     if (updateId) setShown(latest.current);
@@ -161,8 +160,10 @@ export function AppUpdateBlock({
   hidden: boolean;
 }) {
   const { t } = useText();
+  // Home is the whole screen on a phone and a pane beside the chat on a wide window, so the block
+  // takes the size of its own place, not of the window.
   const window = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const [size, setSize] = useState({ width: window.width, height: window.height });
   const reduced = useReducedMotion();
   const colors = useBloubColors();
   const gazeX = useSharedValue(0);
@@ -171,9 +172,8 @@ export function AppUpdateBlock({
   const [underStatusBar, setUnderStatusBar] = useState(false);
   const { shown, drop, rest, measure, expanded, setExpanded } = header;
   const open = useSharedValue(0);
-  const { scrolled, headerHeight } = scroll;
-  const span = window.height + BLOUB_RADIUS;
-  const statusBottom = insets.top;
+  const { scrolled, headerHeight, barTop } = scroll;
+  const span = size.height + BLOUB_RADIUS;
   const leaving = shown !== null && mood === "down";
 
   useEffect(() => {
@@ -204,7 +204,7 @@ export function AppUpdateBlock({
   useAnimatedReaction(
     () => {
       const base = Math.max(0, drop.get() - scrolled.get());
-      return base + open.get() * (rest - base) > statusBottom;
+      return base + open.get() * (rest - base) > barTop;
     },
     (next, previous) => {
       if (next !== previous) scheduleOnRN(setUnderStatusBar, next);
@@ -255,8 +255,8 @@ export function AppUpdateBlock({
     setMood("down");
     void dismissAppUpdate(update).catch(() => undefined);
   };
-  const eyesTop = statusBottom + EYES_TOP + (EYES_HEIGHT * EYES_SCALE - EYES_HEIGHT) / 2;
-  const captionTop = statusBottom + EYES_TOP + EYES_HEIGHT * EYES_SCALE + CAPTION_GAP;
+  const eyesTop = barTop + EYES_TOP + (EYES_HEIGHT * EYES_SCALE - EYES_HEIGHT) / 2;
+  const captionTop = barTop + EYES_TOP + EYES_HEIGHT * EYES_SCALE + CAPTION_GAP;
   const toggleNotes = () => {
     void haptics.impact("soft");
     setExpanded(!expanded);
@@ -269,17 +269,31 @@ export function AppUpdateBlock({
         StyleSheet.absoluteFill,
         { opacity: hidden ? 0 : 1, transitionProperty: "opacity", transitionDuration: reduced ? 0 : 200 },
       ]}
+      onLayout={({ nativeEvent: { layout } }) =>
+        setSize((current) =>
+          current.width === layout.width && current.height === layout.height
+            ? current
+            : { width: layout.width, height: layout.height },
+        )
+      }
     >
       {underStatusBar && !hidden ? <StatusBar style="dark" /> : null}
       {/* Under the block, so the notes slide out from behind its edge. */}
-      {ready || rest === 0 ? null : <AppUpdateNotes open={open} expanded={expanded} top={rest - BLOUB_RADIUS} />}
+      {ready || rest === 0 ? null : (
+        <AppUpdateNotes
+          open={open}
+          expanded={expanded}
+          top={rest - BLOUB_RADIUS}
+          height={size.height - rest + BLOUB_RADIUS}
+        />
+      )}
       {/* Over the list, the block lets touches through. Covering the screen, it keeps them. */}
       <Animated.View pointerEvents={expanded ? "auto" : "none"} style={[styles.block, { height: span }, blockStyle]}>
         <View style={[styles.clip, { backgroundColor: colors.body }]}>
           <Animated.View
             style={[
               styles.glow,
-              { height: window.height, experimental_backgroundImage: bloubGradient(colors.light, colors.body) },
+              { height: size.height, experimental_backgroundImage: bloubGradient(colors.light, colors.body) },
               glowStyle,
             ]}
           />
@@ -294,7 +308,7 @@ export function AppUpdateBlock({
             styles.eyes,
             {
               top: eyesTop,
-              left: (window.width - EYES_WIDTH) / 2,
+              left: (size.width - EYES_WIDTH) / 2,
               transform: [{ scale: EYES_SCALE }],
             },
           ]}

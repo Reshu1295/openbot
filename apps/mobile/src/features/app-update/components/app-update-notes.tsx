@@ -2,7 +2,7 @@ import type { MobileReleaseNoteGroup, MobileReleaseNotes } from "@openbot/contra
 import { Button, Spinner, Typography } from "heroui-native";
 import { useThemeColor } from "heroui-native/hooks";
 import { type PropsWithChildren, type ReactNode, useState } from "react";
-import { Linking, Pressable, useWindowDimensions, View } from "react-native";
+import { Linking, Pressable, View } from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -212,15 +212,17 @@ export function AppUpdateNotes({
   open,
   expanded,
   top,
+  height,
 }: {
   /** 0 is closed behind the block, 1 open over the list. */
   open: SharedValue<number>;
   expanded: boolean;
   top: number;
+  /** From `top` to the bottom of home. */
+  height: number;
 }) {
   const { t, format } = useText();
   const insets = useSafeAreaInsets();
-  const window = useWindowDimensions();
   const reduced = useReducedMotion();
   const scrollY = useSharedValue(0);
   const viewport = useSharedValue(0);
@@ -230,7 +232,6 @@ export function AppUpdateNotes({
   });
   const [foreground, muted] = useThemeColor(["foreground", "muted"]);
   const notes = useAppUpdateNotes(expanded);
-  const height = window.height - top;
   const style = useAnimatedStyle(() => ({
     // Closed, the panel hides: a scrolled list moves the block's edge above the panel's place.
     opacity: open.get() > 0 ? 1 : 0,
