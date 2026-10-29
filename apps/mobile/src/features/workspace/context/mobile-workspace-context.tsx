@@ -1019,10 +1019,13 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
   // it starts only while it is selected, and a start takes longer than this wait.
   const startupFallback = useRef(true);
   const [startupWaitOver, setStartupWaitOver] = useState(false);
+  // The wait starts when the list of servers arrives, because the connections start then.
+  const startServerListed = servers.some((server) => server.id === activeServerId);
   useEffect(() => {
+    if (!startServerListed) return;
     const timer = setTimeout(() => setStartupWaitOver(true), STARTUP_SERVER_WAIT_MS);
     return () => clearTimeout(timer);
-  }, []);
+  }, [startServerListed]);
   useEffect(() => {
     if (!startupFallback.current) return;
     const active = servers.find((server) => server.id === activeServerId);
