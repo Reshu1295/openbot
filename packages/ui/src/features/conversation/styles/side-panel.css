@@ -65,13 +65,15 @@
   color: var(--openbot-text-secondary);
 }
 
+/* Tints of the header colour: the opaque control colours of the light theme are the header colour, so
+   the selected tab showed no fill there. */
 .side-panel-tab:hover {
-  background: var(--openbot-bg-control-hover);
+  background: var(--openbot-hover);
   color: var(--openbot-text-primary);
 }
 
 .side-panel-tab[data-selected] {
-  background: var(--openbot-bg-control-active);
+  background: var(--openbot-hover-strong);
   color: var(--openbot-text-primary);
 }
 

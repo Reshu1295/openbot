@@ -159,8 +159,8 @@
 }
 
 .agent-threads-tab-close svg {
-  width: 14px;
-  height: 14px;
+  width: var(--openbot-icon-sm);
+  height: var(--openbot-icon-sm);
 }
 
 /* As tall as a tab and with its corners, so a hover fill on "+" matches the tab fill. */
@@ -404,8 +404,8 @@
 }
 
 .agent-threads-state-icon svg {
-  width: 12px;
-  height: 12px;
+  width: var(--openbot-icon-xs);
+  height: var(--openbot-icon-xs);
 }
 
 .agent-threads-tab-mark[data-kind="waiting"] .agent-threads-state-icon {

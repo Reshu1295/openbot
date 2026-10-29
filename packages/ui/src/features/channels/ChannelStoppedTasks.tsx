@@ -1,5 +1,5 @@
 import type { ChannelMember, ChannelTask } from "@openbot/contracts/ipc";
-import { Button, buttonVariants, DropdownMenu } from "@openbot/ui";
+import { Button, buttonVariants, CircleAlert, DropdownMenu } from "@openbot/ui";
 import { For, Show } from "solid-js";
 import { useText } from "../../text";
 
@@ -19,14 +19,17 @@ export function ChannelStoppedTasks(props: {
               class="channel-paused-task"
               aria-label={t("channel.stoppedTask.label", { name: props.name(task.ownerAgentId) })}
             >
-              <p class="channel-paused-task-reason">{task.error ? sourceText(task.error) : null}</p>
+              <p class="channel-paused-task-reason">
+                <CircleAlert class="channel-paused-task-icon" aria-hidden="true" />
+                <span>{task.error ? sourceText(task.error) : null}</span>
+              </p>
               <div class="channel-paused-task-actions">
-                <Button size="xs" onClick={() => void props.onResume(task.id, null)}>
+                <Button variant="secondary" size="xs" onClick={() => void props.onResume(task.id, null)}>
                   {t("common.continue")}
                 </Button>
                 <DropdownMenu.Root placement="top-start">
                   <DropdownMenu.Trigger
-                    class={buttonVariants({ variant: "ghost", size: "xs" })}
+                    class={buttonVariants({ variant: "secondary", size: "xs" })}
                     aria-label={t("channel.stoppedTask.reassignLabel", { name: props.name(task.ownerAgentId) })}
                   >
                     {t("channel.stoppedTask.reassign")}
