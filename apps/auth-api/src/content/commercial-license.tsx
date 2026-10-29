@@ -78,8 +78,8 @@ export function CommercialLicense() {
         2.1 Grant. Subject to payment of the Fees and compliance with this license, the Licensor grants the Licensee a
         non-exclusive, non-transferable, non-sublicensable (except as permitted by clause 5.1), worldwide license during
         the Term to use the Software for Commercial Use, for the number of Seats purchased. The license covers
-        installing, running, displaying, and storing the Software, and and modifying it for the Licensee's own
-        Commercial Use in accordance with clause 6.2.
+        installing, running, displaying, and storing the Software, and modifying it for the Licensee's own Commercial
+        Use in accordance with clause 6.2.
       </p>
       <p>
         2.2 Seat assignment. Each Seat is filled by one individual, added by email address to one or more Servers
