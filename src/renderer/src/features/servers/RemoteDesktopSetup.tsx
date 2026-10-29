@@ -243,6 +243,7 @@ export function RemoteDesktopSetup(props: { server: ServerSummary; platform: "da
   }
 
   onSettled(() => {
+    if (!local() || props.platform === "darwin") void check();
     const focus = () => {
       if (returnFromSettings) {
         returnFromSettings = false;
@@ -324,7 +325,14 @@ export function RemoteDesktopSetup(props: { server: ServerSummary; platform: "da
                         ? t("remoteDesktop.setup.state.available")
                         : t(LABELS[status()])}
                     </Badge>
-                    <Show when={local() && (key === "screenRecording" || key === "accessibility")}>
+                    <Show
+                      when={
+                        local() &&
+                        (key === "screenRecording" || key === "accessibility") &&
+                        status() !== "allowed" &&
+                        status() !== "checking"
+                      }
+                    >
                       <Button
                         size="sm"
                         variant="default"
