@@ -387,7 +387,7 @@ function AgentTaskChat({ target, taskId }: { target: AgentChatTarget; taskId: st
         actions: threadActions.menu(task),
         onPressAction: (id: string) => threadActions.run(task, id),
       }
-    : undefined;
+    : null;
 
   // Under the activity, as the desktop task panel: why the task waits, its queued messages and its failure.
   const taskNotes = isDraft ? (

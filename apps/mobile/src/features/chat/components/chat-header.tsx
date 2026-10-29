@@ -53,9 +53,10 @@ interface ChatHeaderProps {
   kicker?: string;
   /**
    * A menu in place of the browser button, such as the actions of a task. Its actions go to the
-   * native bar menu when iOS shows the vertical bar.
+   * native bar menu when iOS shows the vertical bar. Null keeps the place empty, as for a task that
+   * has not loaded.
    */
-  actionsMenu?: { label: string; actions: MenuAction[]; onPressAction: (id: string) => void };
+  actionsMenu?: { label: string; actions: MenuAction[]; onPressAction: (id: string) => void } | null;
   /** The agent's threads. The agent's name then opens this menu, and the menu has the agent's info. */
   threadMenu?: ChatThreadMenu;
 }
@@ -233,58 +234,59 @@ export function ChatHeader({
     </GlassView>
   );
 
-  const trailingButtons = actionsMenu ? (
-    <MenuView
-      colorScheme={theme === "dark" ? "dark" : "light"}
-      actions={actionsMenu.actions}
-      onPressAction={({ nativeEvent }) => actionsMenu.onPressAction(nativeEvent.event)}
-    >
-      <GlassView
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel={actionsMenu.label}
-        glassEffectStyle={liquidGlassAvailable ? "regular" : "none"}
-        isInteractive
-        style={{
-          width: 48,
-          height: 48,
-          borderRadius: 24,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: liquidGlassAvailable ? "transparent" : fallbackBackground,
-        }}
+  const trailingButtons =
+    actionsMenu === null ? null : actionsMenu ? (
+      <MenuView
+        colorScheme={theme === "dark" ? "dark" : "light"}
+        actions={actionsMenu.actions}
+        onPressAction={({ nativeEvent }) => actionsMenu.onPressAction(nativeEvent.event)}
       >
-        <Ellipsis color={iconColor} size={24} strokeWidth={2} />
-      </GlassView>
-    </MenuView>
-  ) : (
-    <View className="flex-row items-center gap-2">
-      {target.kind === "channel" && needsAction ? (
-        <ChatGlassIconButton
-          accessibilityLabel={t("mobile.chat.header.actionsNeeded")}
-          fallbackBackground={fallbackBackground}
-          liquidGlassAvailable={liquidGlassAvailable}
-          onPress={openChannelActions}
+        <GlassView
+          accessible
+          accessibilityRole="button"
+          accessibilityLabel={actionsMenu.label}
+          glassEffectStyle={liquidGlassAvailable ? "regular" : "none"}
+          isInteractive
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: liquidGlassAvailable ? "transparent" : fallbackBackground,
+          }}
         >
-          <TriangleAlert color={String(warning)} size={24} strokeWidth={2.5} />
-        </ChatGlassIconButton>
-      ) : null}
-      {/* Not in a BlurReveal: glass stops rendering under an ancestor with zero opacity, so the
+          <Ellipsis color={iconColor} size={24} strokeWidth={2} />
+        </GlassView>
+      </MenuView>
+    ) : (
+      <View className="flex-row items-center gap-2">
+        {target.kind === "channel" && needsAction ? (
+          <ChatGlassIconButton
+            accessibilityLabel={t("mobile.chat.header.actionsNeeded")}
+            fallbackBackground={fallbackBackground}
+            liquidGlassAvailable={liquidGlassAvailable}
+            onPress={openChannelActions}
+          >
+            <TriangleAlert color={String(warning)} size={24} strokeWidth={2.5} />
+          </ChatGlassIconButton>
+        ) : null}
+        {/* Not in a BlurReveal: glass stops rendering under an ancestor with zero opacity, so the
           button hides itself, and its glass turns off with the native animation. The agent's
           browser on the host, live. The button shows when the agent has no tab yet too: the
           browser screen opens a new one. A host that cannot stream a tab, or an app version
           the account server has the browser off for, shows no button. */}
-      <ChatGlassIconButton
-        accessibilityLabel={t("mobile.browser.open")}
-        fallbackBackground={fallbackBackground}
-        hidden={!browserShown}
-        liquidGlassAvailable={liquidGlassAvailable}
-        onPress={openBrowser}
-      >
-        <Globe color={iconColor} size={24} strokeWidth={2} />
-      </ChatGlassIconButton>
-    </View>
-  );
+        <ChatGlassIconButton
+          accessibilityLabel={t("mobile.browser.open")}
+          fallbackBackground={fallbackBackground}
+          hidden={!browserShown}
+          liquidGlassAvailable={liquidGlassAvailable}
+          onPress={openBrowser}
+        >
+          <Globe color={iconColor} size={24} strokeWidth={2} />
+        </ChatGlassIconButton>
+      </View>
+    );
 
   if (verticalBar) {
     // iOS moves native bar buttons into the vertical bar of iPhone Duo, beside the status bar, as on
