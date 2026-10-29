@@ -65,7 +65,11 @@ export function ConversationView(props: ConversationProps) {
   return (
     <ConversationViewScopeContext value={scope}>
       <main
-        ref={setConversationPanelElement}
+        ref={(element) => {
+          setConversationPanelElement(element);
+          // In the capture phase, because a folder dropped on the settings panel stops the drop there.
+          element.addEventListener("drop", () => setDropActive(false), { capture: true });
+        }}
         aria-label={t("conversation.view.label")}
         onKeyDown={handleChatSearchShortcut}
         class={[
@@ -96,7 +100,6 @@ export function ConversationView(props: ConversationProps) {
         }}
         onDrop={(event) => {
           event.preventDefault();
-          setDropActive(false);
           // The desktop preload imports a dropped file; a client with its own runtime imports it here.
           if (props.runtime?.importFiles) void props.runtime.importFiles([...(event.dataTransfer?.files ?? [])]);
         }}
@@ -116,10 +119,7 @@ export function ConversationView(props: ConversationProps) {
             {(agent) => (
               <AgentFolderDropOverlay
                 agentName={agent().name}
-                onDropFolders={(folders) => {
-                  setDropActive(false);
-                  void chatFolders.drop(folders);
-                }}
+                onDropFolders={(folders) => void chatFolders.drop(folders)}
               />
             )}
           </Show>
