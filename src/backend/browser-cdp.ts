@@ -2485,12 +2485,13 @@ export class BrowserCdpEngine {
     if (candidates.length > 1) {
       const sample = candidates
         .slice(0, 5)
-        .map(
-          (candidate) =>
-            `${candidate.targetId ?? "main"}:${candidate.backendNodeId} ${candidate.role} “${candidate.name.slice(0, 80)}”`,
-        )
+        .map((candidate) => `${candidate.role} “${candidate.name.slice(0, 80)}”`)
         .join("; ");
-      return yield* browserFailure(new Error(`Target is ambiguous (at least 2 matches). Candidates: ${sample}`));
+      return yield* browserFailure(
+        new Error(
+          `Target is ambiguous (at least 2 matches). Choose a ref from a fresh snapshot. Candidates: ${sample}`,
+        ),
+      );
     }
     return {
       backendNodeId: found.backendNodeId,
@@ -2663,9 +2664,14 @@ export class BrowserCdpEngine {
     ]);
     let blockerId = 0;
     for (const point of points) {
+      // DOM hit tests use document coordinates; input keeps viewport coordinates.
       const hit = yield* send(
         "DOM.getNodeForLocation",
-        { x: Math.round(point.x), y: Math.round(point.y), includeUserAgentShadowDOM: true },
+        {
+          x: Math.round(point.x + numberValue(viewport?.pageX)),
+          y: Math.round(point.y + numberValue(viewport?.pageY)),
+          includeUserAgentShadowDOM: true,
+        },
         sessionId,
       ).pipe(
         Effect.catch((failure) =>

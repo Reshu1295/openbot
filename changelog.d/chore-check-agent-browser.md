@@ -6,6 +6,10 @@
   the result before another attempt, which helps prevent duplicate bookings or cancellations.
 - Wait briefly for temporary obstructions and disabled controls before a click. Check other validated
   points when Chromium reports an empty hit instead of stopping at the first point.
+- Check clicks at the correct document position after scrolling. Before, a visible link could be
+  reported as covered or unavailable because validation checked another part of the page.
+- Put visible controls first in browser snapshots. On long pages, scrolling now exposes references
+  to the visible links instead of keeping only early navigation controls.
 
 ### Changed
 

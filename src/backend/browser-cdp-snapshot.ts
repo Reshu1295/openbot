@@ -737,7 +737,8 @@ function actionableNodesExpression(limit: number): string {
     const roles = new Set(${JSON.stringify([...ACTIONABLE_ROLES])});
     const roots = [document];
     const seenRoots = new Set();
-    const matches = [];
+    const inView = [];
+    const outside = [];
     let scanned = 0;
     const isCandidate = node => {
       if (node.nodeType !== 1) return false;
@@ -760,22 +761,26 @@ function actionableNodesExpression(limit: number): string {
       }
       return node.getClientRects().length > 0;
     };
-    while (roots.length && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && matches.length < ${Math.max(0, limit)}) {
+    while (roots.length && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && inView.length < ${Math.max(0, limit)}) {
       const root = roots.shift();
       if (!root || seenRoots.has(root)) continue;
       seenRoots.add(root);
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
       let node;
-      while ((node = walker.nextNode()) && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && matches.length < ${Math.max(0, limit)}) {
+      while ((node = walker.nextNode()) && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && inView.length < ${Math.max(0, limit)}) {
         scanned++;
         if (node.shadowRoot) roots.push(node.shadowRoot);
         if (node.localName === 'iframe' || node.localName === 'frame') {
           try { if (node.contentDocument) roots.push(node.contentDocument); } catch {}
         }
-        if (isCandidate(node)) matches.push(node);
+        if (!isCandidate(node)) continue;
+        const view = node.ownerDocument.defaultView;
+        const visible = [...node.getClientRects()].some(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < (view?.innerHeight ?? 0) && rect.left < (view?.innerWidth ?? 0));
+        if (visible) inView.push(node);
+        else if (outside.length < ${Math.max(0, limit)}) outside.push(node);
       }
     }
-    return matches;
+    return [...inView, ...outside].slice(0, ${Math.max(0, limit)});
   })()`;
 }
 

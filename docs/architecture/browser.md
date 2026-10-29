@@ -152,6 +152,14 @@ settings are reused while unchanged and invalidated on debugger detach or tempor
 viewport changes. Existing navigation and DOM-quiet deadlines remain in place; the debugger and
 queue lifetimes are unchanged.
 
+Within each captured document, controls in its viewport come before controls outside it, as page
+text already does. Scrolling a long
+page can therefore expose fresh refs for the visible content instead of returning the same early
+navigation controls. The scan still stops at 10,000 nodes, retains at most 400 candidates, and returns
+at most 200 controls within the existing serialized size limit. Visibility filters and frame traversal
+remain in place. Semantic ambiguity still refuses input; its error asks for a fresh snapshot ref and
+does not present native node IDs as actionable references.
+
 Explicit agent snapshots add `pageEvidence`: observed HTTP denial codes (401, 403, 429), sign-in
 text, and challenge text. These are observations, not proof of an expired session or bot protection.
 The identity checks keep the installed Chromium and the Google account exception. Automatic images
@@ -375,6 +383,12 @@ action failure. The engine checks the remaining points and still requires a nati
 or its activating child. If all points miss, normal bounded readiness applies. Other protocol errors
 are preserved. `--scenario=hit-testing` records a native empty-hit recovery, all-points-missing refusal,
 recovery after hit data returns, and propagation of another native protocol error.
+
+Native DOM hit tests use document coordinates. The engine adds the layout viewport's scroll offset
+to each validated point for `DOM.getNodeForLocation`, while dispatched input keeps viewport
+coordinates. Without this conversion, a scrolled link could be checked against an unrelated element
+or an empty location. The native hit-testing scenario checks vertical and horizontal scrolling,
+viewport controls beyond 450 earlier controls, ambiguous-target refusal, and stale-ref refusal.
 
 Local `logs/main/main.log` now includes `browser-actions` and `browser-dialogs`. Action records
 separate target resolution, input, settling, snapshot, and total duration; non-zero queue waits are

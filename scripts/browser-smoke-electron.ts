@@ -2200,6 +2200,100 @@ async function runHitTesting(browser: BrowserHost, tabId: string, contents: WebC
       assert(!line.includes("Hit fixture") && !line.includes("http"));
     }
     checks.push("stage logs record numeric durations and exclude page targets and URLs");
+
+    mode = "normal";
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<nav>' + Array.from({length: 450}, (_, i) => '<button style="display:block;height:32px">Earlier ' + i + '</button>').join('') + '</nav><main id="choices"><a href="#destination">Repeated destination</a><br><a href="#destination">Repeated destination</a><button hidden>Hidden choice</button><div inert><button>Inert choice</button></div></main>'; globalThis.chosen = 0; document.querySelectorAll('#choices a').forEach((link, i) => link.onclick = event => { event.preventDefault(); if (event.isTrusted) globalThis.chosen = i + 1; }); document.querySelector('#choices').scrollIntoView(); true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const scrolled = await runCauseEffect(browser.snapshot(tabId));
+    assert.equal(scrolled.elements.filter((element) => element.name === "Repeated destination").length, 2);
+    assert(scrolled.elements.length <= 200 && scrolled.truncated);
+    assert(!scrolled.elements.some((element) => element.name === "Hidden choice" || element.name === "Inert choice"));
+    checks.push("scrolled snapshot exposes viewport links after 450 earlier controls within existing bounds");
+
+    const ambiguous = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "link", name: "Repeated destination", exact: true },
+    });
+    const ambiguity = toolTextPayload(ambiguous);
+    assert(!ambiguous.success && ambiguity?.inputState === "not_started");
+    assert(String(ambiguity.message).includes("Candidates:") && !/main:\d+/.test(String(ambiguity.message)));
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 0);
+    const recovery = ambiguity.snapshot;
+    assert(isDynamicRecord(recovery) && Array.isArray(recovery.elements) && typeof recovery.revision === "number");
+    const choices = recovery.elements
+      .filter(isDynamicRecord)
+      .filter((element) => element.name === "Repeated destination");
+    const selected = choices[1];
+    assert(selected && typeof selected.ref === "string");
+    const selectedClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: selected.ref, revision: recovery.revision },
+    });
+    assert(selectedClick.success, toolError(selectedClick));
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 2);
+    checks.push("ambiguous targets refuse input and recovery refs select exactly one visible link");
+
+    await contents.executeJavaScript(
+      "document.querySelector('#choices').style.marginLeft = '1800px'; document.querySelector('#choices').scrollIntoView(); true",
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const horizontal = await runCauseEffect(browser.snapshot(tabId));
+    const horizontalTarget = horizontal.elements.find((element) => element.name === "Repeated destination");
+    assert(horizontalTarget);
+    assert(await contents.executeJavaScript("scrollX > 0 && scrollY > 0"));
+    const horizontalClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: horizontalTarget.ref, revision: horizontal.revision },
+    });
+    assert(horizontalClick.success, toolError(horizontalClick));
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 1);
+    checks.push("native hit validation and trusted input agree after horizontal and vertical scrolling");
+
+    for (const crossOrigin of [false, true]) {
+      const frameUrl = new URL("/frame", contents.getURL());
+      if (crossOrigin) frameUrl.hostname = "localhost";
+      const name = crossOrigin ? "Scrolled cross-origin frame" : "Scrolled same-origin frame";
+      frameUrl.searchParams.set("action_label", name);
+      await contents.executeJavaScript(
+        `(async () => { document.querySelector('#scroll-frame')?.remove(); const frame = document.createElement('iframe'); frame.id = 'scroll-frame'; frame.style.cssText = 'display:block;width:400px;height:180px;border:0'; const loaded = new Promise(resolve => frame.onload = resolve); frame.src = ${JSON.stringify(frameUrl.toString())}; document.querySelector('#choices').append(frame); await loaded; frame.scrollIntoView(); return true; })()`,
+        true,
+      );
+      const frame = contents.mainFrame.framesInSubtree.find((candidate) => candidate.url === frameUrl.toString());
+      assert(frame);
+      await frame.executeJavaScript(
+        "document.body.style.cssText = 'width:1000px;height:2000px'; const button = document.querySelector('button'); button.style.cssText = 'margin-top:1200px;margin-left:500px'; globalThis.clicks = 0; button.onclick = event => { if (event.isTrusted) globalThis.clicks++; }; scrollTo(400, 1100); true",
+      );
+      await waitForPresentedFrame(contents);
+      const framed = await runCauseEffect(browser.snapshot(tabId));
+      if (!crossOrigin) assert(framed.elements.some((element) => element.name === name));
+      assert(await frame.executeJavaScript("scrollX > 0 && scrollY > 0"));
+      const frameClick = await callBrowserTool(browser, "click", {
+        tabId,
+        target: { kind: "role", role: "button", name, exact: true },
+      });
+      assert(frameClick.success, toolError(frameClick));
+      assert.equal(await frame.executeJavaScript("globalThis.clicks"), 1);
+      checks.push(`${name} retains native hit validation and exactly one trusted click`);
+    }
+
+    await contents.executeJavaScript("scrollTo(0, 0); true", true);
+    await waitForPresentedFrame(contents);
+    const top = await runCauseEffect(browser.snapshot(tabId));
+    assert(top.elements.some((element) => element.name === "Earlier 0"));
+    assert(
+      !(
+        await callBrowserTool(browser, "click", {
+          tabId,
+          target: { kind: "ref", ref: selected.ref, revision: recovery.revision },
+        })
+      ).success,
+    );
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 1);
+    checks.push("scrolling updates available controls and an earlier snapshot cannot dispatch another click");
     await mkdir(".openbot-build", { recursive: true });
     await writeFile(
       ".openbot-build/browser-hit-testing.json",

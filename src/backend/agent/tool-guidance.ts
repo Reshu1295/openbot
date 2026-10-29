@@ -17,8 +17,8 @@ export function toolGuidance(
 ): string {
   if (namespace === OPENBOT_BROWSER_NAMESPACE) {
     return [
-      "Call qualified openbot_browser names through openbot.tool_call. Reuse search schemas; describe only results without inputSchema.",
-      "Snapshot before acting. Prefer revision-bound refs or unique role/name, then text, CSS, coordinates. Reuse fresh action snapshots or closed results. Tabs persist across restarts (limit 25). close_tab when done unless the user wants to keep or view it.",
+      "tool_call takes openbot_browser names, never openbot.tool_call. Batch queries; reuse schemas. Describe if inputSchema is absent.",
+      "For new URLs use open; navigate needs a returned tabId. Never invent IDs/refs. Snapshot first; prefer refs or unique role/name, then text/CSS/points. Reuse action snapshots/closed results. Tabs persist (limit 25); close_tab unless asked to keep/view.",
       "Use handle_dialog for dialogs; accept only the requested action, dismiss others. Failures give inputState, stage, reason. not_started: use fresh recovery refs. attempted/completed: verify site result before acting; never replay uncertain input.",
       "Recover: list_tabs, inspect, check sign-in, saved logins/takeover. Allow one navigation recovery without discarding work or interrupting authentication, then one new action only if the page proves the first had no effect. Otherwise use takeover or report the blocker. pageEvidence/diagnostics show HTTP denial, sign-in/challenge text and load/snapshot errors. Timeout does not prove a block. Verify lesson times and booking windows before scheduling; never assume 48 h.",
       "fill_fields replaces 1–16 inspected ordinary main-frame text input/textarea refs from one fresh revision: literal text, total ≤16 KiB, deadline 30 s. No submit, clicks, Enter, frames, JavaScript, password, code, or card fields. Use fill_card for cards; secure input/takeover for authentication, payment confirmation, or unclear decisions. Partial results list confirmed zero-based indices and an uncertain index. No retry/undo: inspect. inputCompleted=true with snapshot_failed means all input went in; never fill again.",
