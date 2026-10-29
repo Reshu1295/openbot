@@ -152,7 +152,7 @@ const CODEX_MCP_TOOL_CALL_APPROVAL_KIND = "mcp_tool_call";
 
 /** The card answer "Allow once", which `mcpElicitationResult` turns into one accepted consent. */
 export const MCP_TOOL_CONSENT_ALLOW_ONCE: Record<string, string[]> = {
-  [MCP_ELICITATION_DECISION_ID]: [MCP_ELICITATION_ALLOW_ONCE],
+  [MCP_ELICITATION_DECISION_QUESTION_ID]: [MCP_ELICITATION_ALLOW_ONCE],
 };
 
 /**
