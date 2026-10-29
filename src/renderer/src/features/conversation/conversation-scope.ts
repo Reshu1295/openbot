@@ -612,12 +612,14 @@ export function createConversationViewScope(props: ConversationProps) {
         threadComposer.setText(key, appendVoiceTranscript(threadComposer.draft(key).text, text));
         if (threadComposer.openDraftKey() === key) setThreadFocusRequest((current) => current + 1);
       },
-      send: (key) => {
+      send: async (key) => {
         // The transcript was just appended; the send reads the draft, so apply that write first.
         flush();
         const threads = props.threads;
-        if (threads && threadComposer.openDraftKey() === key)
-          void threadComposer.send(threads, threadComposer.draft(key).text.trim());
+        if (!threads || threadComposer.openDraftKey() !== key) return;
+        await threadComposer.send(threads, threadComposer.draft(key).text.trim());
+        // The locked editor did not take the earlier focus request.
+        if (threadComposer.openDraftKey() === key) setThreadFocusRequest((current) => current + 1);
       },
       reportError: (message) => actionToast.error(message),
       // The stop chime already played, so the notice is silent.
@@ -698,6 +700,7 @@ export function createConversationViewScope(props: ConversationProps) {
     submitting,
     setSubmitting,
     voicePhase,
+    voiceThreadKey,
     setComposerError: setScopedComposerError,
     setComposerFocusRequest,
     setShowComposerActions,

@@ -192,6 +192,8 @@ export function AgentThreadView(props: AgentThreadViewProps) {
       : t("conversation.threads.view.newPlaceholder", { name: props.agent.name });
   const voicePhase = () => props.voice?.phase ?? "idle";
   const recording = () => voicePhase() === "recording";
+  /** As in the agent's own chat, nothing sends while the microphone opens or the speech becomes text. */
+  const voiceBusy = () => voicePhase() !== "idle" && !recording();
   const send = async () => {
     // As in the agent's own chat, a send while recording sends what was said.
     if (recording()) {
@@ -199,7 +201,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
       return;
     }
     const text = props.draft.trim();
-    if (!text || sending()) return;
+    if (!text || sending() || voiceBusy()) return;
     setSending(true);
     try {
       await props.onSend(text);
@@ -234,7 +236,7 @@ export function AgentThreadView(props: AgentThreadViewProps) {
       stop={active() && draftEmpty() && !recording()}
       onStop={() => props.onStop()}
       label={sendLabel()}
-      disabled={sending() || voicePhase() === "transcribing" || (!recording() && draftEmpty())}
+      disabled={sending() || voiceBusy() || (!recording() && draftEmpty())}
       busy={sending()}
     />
   );

@@ -7,7 +7,7 @@ import type { AgentMessage } from "@openbot/ui/data";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView, type AgentThreadVoice } from "@openbot/ui/features/conversation/threads/AgentThreadView";
 import { useText } from "@openbot/ui/text";
-import { createEffect, createMemo, createProjection, createSignal, Show } from "solid-js";
+import { createEffect, createMemo, createProjection, createSignal, Show, untrack } from "solid-js";
 import { actionToast } from "../../action-toast";
 import { useShowAgentSteps } from "../../agent-steps-preference";
 import { toAgentMessages } from "../../app-message-projection";
@@ -122,6 +122,13 @@ export function ConversationThread() {
       openSideQuestion(text);
     };
   };
+  // The editor is new each time a thread opens. A focus request from before is not for it: it would take
+  // the focus from where the user clicked.
+  const shownAt = untrack(threadFocusRequest);
+  const focusRequest = () => {
+    const request = threadFocusRequest();
+    return request > shownAt ? request : undefined;
+  };
   /** Dictation as in the agent's own chat. The web client has no speech model. */
   const voice = (): AgentThreadVoice | undefined => {
     if (props.runtime) return undefined;
@@ -189,7 +196,7 @@ export function ConversationThread() {
             onAttachFiles={current().threads.acceptsFiles ? openPicker : undefined}
             onSideQuestion={askSideQuestion()}
             voice={voice()}
-            focusRequest={threadFocusRequest()}
+            focusRequest={focusRequest()}
             onSend={(text) => threadComposer.send(current().threads, text)}
             onStop={() => current().threads.onStop()}
             onOpenLink={(url) => void openExternalMessageUrl(url)}

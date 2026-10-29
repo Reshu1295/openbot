@@ -67,6 +67,8 @@ export interface ComposerActionsDeps {
   submitting: () => boolean;
   setSubmitting: (submitting: boolean) => void;
   voicePhase: () => string;
+  /** The side thread that the recording is for. Undefined for the agent's own chat. */
+  voiceThreadKey: () => string | undefined;
   /** `cause` is the failure behind `error`. The banner shows its code. */
   setComposerError: (error: string | null, targetOverride?: ConversationTarget, cause?: unknown) => void;
   setComposerFocusRequest: (update: (current: number) => number) => void;
@@ -788,7 +790,8 @@ export function createComposerActions(deps: ComposerActionsDeps) {
   function submitComposer(): void {
     if (deps.attachmentBusy()) return;
     const phase = deps.voicePhase();
-    if (phase === "recording") {
+    // A recording for a side thread sends to that thread, not to this message box.
+    if (phase === "recording" && deps.voiceThreadKey() === undefined) {
       const agentId = deps.voice.agentId;
       const serverId = deps.voice.serverId;
       if (!agentId || !serverId) return;

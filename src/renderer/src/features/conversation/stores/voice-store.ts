@@ -119,8 +119,8 @@ export interface VoiceThreadHooks {
   /** The draft key of the open side thread. Undefined while the agent's own chat is open. */
   openDraftKey: () => string | undefined;
   appendTranscript: (key: string, text: string) => void;
-  /** Sends the thread's draft, when that thread is still open. */
-  send: (key: string) => void;
+  /** Sends the thread's draft, when that thread is still open. The message box stays locked until it ends. */
+  send: (key: string) => Promise<void>;
   reportError: (message: string) => void;
   /** The recording stopped at the time limit. */
   reportLimit: () => void;
@@ -148,9 +148,8 @@ export function createVoiceStore(deps: VoiceStoreDeps) {
     // The agent's own chat is covered by the thread, so a thread recording reports its errors there.
     const fail = (message: string) =>
       threadKey === undefined ? deps.setConversationError(target, message) : deps.thread?.reportError(message);
-    // A thread recording also ends when its thread closes before the microphone opens.
-    const stillOpen = () =>
-      deps.viewIsMounted() && (threadKey === undefined || deps.thread?.openDraftKey() === threadKey);
+    // A recording also ends when its message box closes or is covered before the microphone opens.
+    const stillOpen = () => deps.viewIsMounted() && deps.thread?.openDraftKey() === threadKey;
     if (threadKey === undefined) {
       deps.setVoiceLimitReached?.(target, false);
       deps.clearConversationError(target);
@@ -506,7 +505,8 @@ export function createVoiceStore(deps: VoiceStoreDeps) {
       if (threadKey !== undefined) {
         deps.thread?.appendTranscript(threadKey, result.text);
         if (atLimit) deps.thread?.reportLimit();
-        if (sendThread) deps.thread?.send(threadKey);
+        // As in the agent's own chat, the phase stays "transcribing" until the send ends, so a second Send waits.
+        if (sendThread) await deps.thread?.send(threadKey);
         return;
       }
       const recordingTarget = { agentId: targetAgentId, serverId: targetServerId };
