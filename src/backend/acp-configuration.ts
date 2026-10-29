@@ -92,7 +92,7 @@ export class AcpConfiguration {
   /** Model sets sent and not answered. Sets that overlap can apply in an order their answers do not show. */
   #modelSetsInFlight = 0;
   #modelSetsOverlapped = false;
-  /** A set that timed out can still apply later, so on this connection each set is sent. */
+  /** A set that timed out or was interrupted can still apply later, so on this connection each set is sent. */
   #modelSetTimedOut: ClientSideConnection | null = null;
   constructor(private readonly options: AcpConfigurationOptions) {}
   readonly discoverModels = Effect.fn("AcpConfiguration.discoverModels")(function* (
@@ -371,6 +371,11 @@ export class AcpConfiguration {
             Effect.tapError((error) =>
               Effect.sync(() => {
                 if (error.cause instanceof TimeoutError) this.#modelSetTimedOut = connection;
+              }),
+            ),
+            Effect.onInterrupt(() =>
+              Effect.sync(() => {
+                this.#modelSetTimedOut = connection;
               }),
             ),
             Effect.ensuring(
