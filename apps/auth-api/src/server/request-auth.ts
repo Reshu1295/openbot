@@ -314,6 +314,7 @@ function requestHostedBilling(developerKey: string | null = null) {
     removeHost: (ownerUserId, hostId) => remote.deleteHost(ownerUserId, hostId),
     developerKey,
     planChanged: (hostId) => remote.planChanged(hostId),
+    licenseChanged: (userId) => remote.licenseChanged(userId),
     schedule,
   });
 }

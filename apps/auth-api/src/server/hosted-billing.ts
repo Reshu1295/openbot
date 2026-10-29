@@ -34,6 +34,8 @@ export function createHostedBilling(
   options: Pick<HostedServerServiceOptions, "removeHost" | "developerKey"> & {
     /** Tells the members of a host that its plan, and so its member limit, can be different. */
     planChanged: (hostId: string) => Effect.Effect<void, RemoteFailure>;
+    /** Tells the members of an account's servers that its license, and so their member limit, can be different. */
+    licenseChanged: (userId: string) => Effect.Effect<void, RemoteFailure>;
     /** Keeps the Worker alive until an analytics send or a server start command ends (`waitUntil`). */
     schedule: (work: Effect.Effect<void>) => void;
   },
@@ -66,6 +68,7 @@ export function createHostedBilling(
         onFirstPlanStarted: (start) => options.schedule(sendWelcomeEmail(bindings, analytics, start)),
         onSubscriptionSynced: (sync) =>
           hosting.onSubscriptionSynced(sync).pipe(Effect.andThen(() => options.planChanged(sync.serverId))),
+        onLicenseChanged: options.licenseChanged,
       })
     : null;
   const hosting = new HostedServerService(bindings, {

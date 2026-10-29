@@ -38,7 +38,7 @@ import {
   type PlanChangeDirection,
   type PlanEndReason,
 } from "./account-analytics";
-import { accountHasServerPlan } from "./billing-entitlement";
+import { accountHasServerPlan, licenseEntitled } from "./billing-entitlement";
 import {
   BillingError,
   BillingOperationError,
@@ -48,6 +48,7 @@ import {
   stripeRequest,
 } from "./billing-errors";
 import type { BillingSales } from "./billing-sales";
+import type { RemoteFailure } from "./remote-control-plane";
 import {
   isBillingCurrency,
   isLicensePrice,
@@ -85,10 +86,12 @@ export interface LicenseSync {
 interface StoredLicense {
   users: number;
   status: string;
+  current_period_end: number | null;
   cancel_at_period_end: number;
   tier: string | null;
   billing_interval: string | null;
   bundle: number;
+  updated_at: number;
 }
 
 interface LicenseRow {
@@ -126,6 +129,12 @@ export interface LicenseServiceOptions {
   analytics?: AccountAnalytics;
   /** The sales ledger. Without it, a started Checkout goes to `analytics`. */
   sales?: BillingSales | null;
+  /**
+   * Runs after a sync stores a license with other users, another status or another period end, or that
+   * stopped giving its users since its last write. The member limit of the owner's servers follows the
+   * license. A failure is logged and does not fail the sync.
+   */
+  onLicenseChanged?: (userId: string) => Effect.Effect<void, RemoteFailure>;
 }
 
 class LicenseDependencies extends Context.Service<
@@ -146,6 +155,7 @@ export class LicenseService {
   readonly #sales: BillingSales | null;
   readonly #trialEnd: number | null;
   readonly #now: () => number;
+  readonly #onLicenseChanged: LicenseServiceOptions["onLicenseChanged"] | null;
 
   constructor(options: LicenseServiceOptions) {
     this.#secretKey = options.secretKey;
@@ -154,6 +164,7 @@ export class LicenseService {
     this.#ensureCustomer = options.ensureCustomer;
     this.#analytics = options.analytics ?? NO_ACCOUNT_ANALYTICS;
     this.#sales = options.sales ?? null;
+    this.#onLicenseChanged = options.onLicenseChanged ?? null;
     this.#layer = Layer.succeed(LicenseDependencies, {
       database: options.database,
       stripe: options.stripe,
@@ -762,12 +773,13 @@ export class LicenseService {
         return null;
       }
       const cancelAtPeriodEnd = subscription.cancel_at_period_end || typeof subscription.cancel_at === "number";
+      const periodEnd = subscriptionPeriodEnd(subscription);
       // One transaction reads the state before the write, so each stored change is reported once.
       const [before, written] = yield* billingCall(() =>
         dependencies.database.batch<StoredLicense>([
           dependencies.database
             .prepare(
-              "SELECT users, status, cancel_at_period_end, tier, billing_interval, bundle FROM licenses WHERE stripe_subscription_id = ?",
+              "SELECT users, status, current_period_end, cancel_at_period_end, tier, billing_interval, bundle, updated_at FROM licenses WHERE stripe_subscription_id = ?",
             )
             .bind(subscription.id),
           dependencies.database
@@ -795,7 +807,7 @@ export class LicenseService {
               users,
               currency,
               subscription.status,
-              subscriptionPeriodEnd(subscription),
+              periodEnd,
               cancelAtPeriodEnd ? 1 : 0,
               plan.tier,
               plan.interval,
@@ -855,6 +867,28 @@ export class LicenseService {
           ...(reactivated === undefined ? {} : { reactivated }),
           ...(change.endReason ? { endReason: change.endReason } : {}),
         });
+      }
+      // A `past_due` license stops giving its users at its period end with no change to its row. The lapse
+      // sweep reads it after that time, so the change from the previous write's time to this one counts.
+      if (
+        this.#onLicenseChanged &&
+        written?.meta.changes === 1 &&
+        (!previous ||
+          previous.users !== users ||
+          previous.status !== subscription.status ||
+          previous.current_period_end !== periodEnd ||
+          licenseEntitled(previous, previous.updated_at) !==
+            licenseEntitled({ status: subscription.status, current_period_end: periodEnd }, readAt))
+      ) {
+        // The license is stored, and a retry of this event finds no change. A failed notice does not fail
+        // the sync: each client reads the new limit with its next server list.
+        yield* this.#onLicenseChanged(ownerId).pipe(
+          Effect.catch(() =>
+            Effect.sync(() => {
+              console.warn("billing: license change notice failed", { subscriptionId: subscription.id });
+            }),
+          ),
+        );
       }
       return {
         kind: "license",
