@@ -1,7 +1,8 @@
 // Runs the real `SignInRelayHost` replay against a fake loopback sign-in that acts as `codex login`
 // does (#3864): its callback saves the sign-in and redirects to its own `/success` page, and the
 // process ends only when that page loads. The replay must load it, so a second Codex account on a
-// joined server finishes. A redirect to a different address must not be followed.
+// joined server finishes. A success page that fails does not undo the callback, and a redirect to a
+// different address must not be followed.
 // `bun run test:sign-in-relay-replay`. Writes .openbot-build/sign-in-relay-replay-e2e/report.json.
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -111,6 +112,11 @@ try {
   assert.deepEqual(codex.loginPaths, ["/auth/callback", "/success"], "The replay loads the success page.");
   assert.equal(codex.loginExited, true, "The sign-in ends after the replay.");
   assert.deepEqual(codex.result, { toolCount: 0, error: null }, "The host's result arrives.");
+
+  // `complete` fails when the replay says that the callback did not arrive.
+  const missing = await runCase("success page that fails", (port) => `http://127.0.0.1:${port}/missing`);
+  report.cases.push(missing);
+  assert.deepEqual(missing.loginPaths, ["/auth/callback", "/missing"], "The replay loads the redirect once.");
 
   for (const [name, successAt] of [
     ["redirect to a hosted page", () => "https://chatgpt.example/codex/success"],
