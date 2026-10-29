@@ -25,6 +25,12 @@ export const messages = {
     "Przechwyć obszar ekranu w punkcie {x}, {y} o rozmiarze {width} × {height} punktów i wyślij obraz do modelu agenta.",
   "status.agent.screenCaptureProgress": "Prośba o przechwycenie ekranu…",
   "status.agent.screenCaptureReviewing": "Sprawdzanie przechwyconego ekranu…",
+  "status.agent.browserOpening": "Otwieranie strony internetowej…",
+  "status.agent.browserReading": "Czytanie strony internetowej…",
+  "status.agent.browserClicking": "Klikanie na stronie internetowej…",
+  "status.agent.browserTyping": "Wpisywanie na stronie internetowej…",
+  "status.agent.browserActing": "Korzystanie ze strony internetowej…",
+  "status.agent.browserReviewing": "Sprawdzanie strony internetowej…",
   "status.agent.memoriesSearching": "Przeszukiwanie wspomnień…",
   "status.agent.memoriesSearched": {
     one: "Przeszukano wspomnienia, znalezione: {count}",
@@ -36,4 +42,6 @@ export const messages = {
   "status.agent.skillUsing": "Używanie umiejętności {name}…",
   "status.agent.skillReading": "Czytanie umiejętności…",
   "status.agent.memoryChanges": "Wspomnienia: zapisane {saved}, zaktualizowane {updated}, zapomniane {forgotten}.",
+  "status.agent.memoryChangesWithConflicts":
+    "Wspomnienia: zapisane {saved}, zaktualizowane {updated}, zapomniane {forgotten}, niezmienione {notChanged}, bo inny wątek zmienił je wcześniej.",
 } as const satisfies PartialTranslation<typeof source>;

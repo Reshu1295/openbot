@@ -13,7 +13,7 @@ and the Slack Orchestrator, an agent that OpenBot adds, asks the right agent and
 computer (**Server settings**), because Slack sends the workspace's events to OpenBot's Signal
 service, which passes them to this computer.
 
-1. Open **Server settings → Connectors → Slack**.
+1. Open **Marketplace → Apps → Slack**.
 2. Select **Connect Slack**, then **Connect in Slack**. Slack opens in the browser. Select the
    workspace in the top-right corner, and select **Allow**. The dialog continues by itself.
 3. Pick the model of the Slack Orchestrator, and select **Add agent**. OpenBot adds the agent, with its
@@ -69,7 +69,7 @@ needs an OpenBot account and a name for this computer (**Server settings**): Sig
 Discord connection, passes the server's mentions to this computer, and makes OpenBot's Discord posts
 for it.
 
-1. Open **Server settings → Connectors → Discord**.
+1. Open **Marketplace → Apps → Discord**.
 2. Select **Connect Discord**, then **Connect in Discord**. Discord opens in the browser. Select the
    Discord server, and select **Authorize**. You must have the **Manage Server** permission there. The
    dialog continues by itself.
@@ -125,7 +125,7 @@ OpenBot account and a name for this computer (**Server settings**), because Tele
 updates to OpenBot's Signal service, which passes them to this computer. Signal holds the bot token;
 this computer never has it.
 
-1. Open **Server settings → Connectors → Telegram**.
+1. Open **Marketplace → Apps → Telegram**.
 2. Select **Add to a group** or **Open a direct chat**. Telegram opens with a one-use link (it is
    valid for 15 minutes). Pick the group, or select **Start**. The chat appears in OpenBot by itself.
 3. Pick the model of the Telegram Orchestrator, and select **Add agent**. One orchestrator answers
@@ -241,7 +241,7 @@ routine prompt, for example "post the summary to #bot-inflow on Discord".
   thread: a Slack thread ts, a Discord message ID, a Telegram message ID, or `t<topic ID>` for a
   Telegram forum topic. The text is redacted before it leaves this computer. A Discord post pings
   nobody; a Telegram `@username` notifies that person. A Telegram connection posts only in its own
-  chat.
+  chat. The result has `messageId`, the ID of the first post, and for Discord a `url` to it.
 - A long text goes in more than one post. When a later part fails, the earlier parts stay posted.
 - A routine posts only when its run calls the tool. The scheduler does not post the run's answer.
 - A reply to the post reaches an agent only as usual: it must mention OpenBot, and it goes to the
@@ -310,5 +310,5 @@ core changes:
 | Discord | The Gateway in Signal (`@discordjs/ws`), which passes mentions to the host; calls go through Signal | The id of the first message of a reply chain | Implemented. No privileged intent. |
 | Telegram | The webhook of the one OpenBot bot through Signal, which holds the token | `message_thread_id`, the topic in a forum, `dm` in a direct chat | Implemented. No history API: the host keeps what the bot sees, in memory. |
 
-Then add the platform to `MESSAGING_PLATFORMS`, a page in Server settings → Connectors, and its i18n
+Then add the platform to `MESSAGING_PLATFORMS`, a page in Marketplace → Apps, and its i18n
 keys. The database needs no migration: `platform` has no `CHECK`.

@@ -62,7 +62,7 @@ export class AgentRoster {
    * Claimed by `thread_id` rather than matched on `agent_id`, because both halves of the split have to
    * be caught: an agent rebuilt under its own id points at no thread while its old row still names it,
    * and a thread whose `agent_id` keeps a pre-rename spelling names an agent that no longer answers to
-   * it. Ordered so that a repair over the result is deterministic. A task thread is claimed by its task,
+   * it. Ordered so that a repair over the result is deterministic. A side thread is claimed by its row,
    * so a repair never makes it an agent's own chat.
    */
   unclaimedThreads(): { threadId: string; agentId: string }[] {
@@ -73,7 +73,7 @@ export class AgentRoster {
            WHERE thread_id NOT IN (SELECT thread_id FROM projection_agents WHERE thread_id IS NOT NULL)
              AND thread_id NOT IN (SELECT thread_id FROM projection_channel_contexts)
              AND thread_id NOT IN (SELECT thread_id FROM projection_messaging_threads)
-             AND thread_id NOT IN (SELECT thread_id FROM projection_agent_tasks)
+             AND thread_id NOT IN (SELECT thread_id FROM projection_agent_threads)
            ORDER BY thread_id`,
         )
         .all(),

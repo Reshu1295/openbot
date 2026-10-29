@@ -2,6 +2,7 @@ import type { LocalBrowserSecretResponse, QueueDelivery, QueueHold } from "@open
 import { ArrowUp, Button } from "@openbot/ui";
 import type { ComposerAgent, ComposerMcpServer, ComposerSkill } from "@openbot/ui/data";
 import { AgentAvatar } from "@openbot/ui/features/agents/AgentAvatar";
+import type { BrowserSecretVault } from "@openbot/ui/features/conversation/BrowserSecretCard";
 import { ComposerEditor } from "@openbot/ui/features/conversation/ComposerEditor";
 import { StopIcon } from "@openbot/ui/features/conversation/ConversationIcons";
 import { QueuePanel } from "@openbot/ui/features/conversation/QueuePanel";
@@ -54,7 +55,8 @@ export interface BrowserDockProps {
   onValueChange: (value: string) => void;
   onSend: (text: string) => void;
   onStop: () => void;
-  onSteer: (deliveryId: string) => void;
+  /** Absent where the agent's provider cannot steer a running turn. */
+  onSteer?: ((deliveryId: string) => void) | undefined;
   onRunAsTask?: ((deliveryId: string) => void) | undefined;
   onCancel: (deliveryId: string) => void;
   onEdit: (delivery: QueueDelivery) => void;
@@ -62,8 +64,8 @@ export interface BrowserDockProps {
   onReorder: (deliveryIds: string[]) => void;
   /** Gives the page to the user, or back. Absent when the host cannot. */
   onHandoff?: (() => void) | undefined;
-  /** Offer "Save to Vault" on a password card: only on the local server. */
-  vaultSave?: boolean | undefined;
+  /** Offer "Save to Vault" on a password card. */
+  vault?: BrowserSecretVault | undefined;
   onRespondSecret: (input: LocalBrowserSecretResponse) => Promise<void>;
   /** Resolves true when the host has the answers. An empty record cancels the questions. */
   onAnswerPrompt: (requestId: string | number, answers: Record<string, string[]>) => Promise<boolean>;
@@ -232,7 +234,7 @@ export function BrowserDock(props: BrowserDockProps) {
       };
       box.style.visibility = "hidden";
     }
-    props.onSteer(id);
+    props.onSteer?.(id);
   };
 
   onSettled(() => () => {
@@ -283,7 +285,7 @@ export function BrowserDock(props: BrowserDockProps) {
               handoffPending={props.handoffPending}
               sendShortcut={props.sendShortcut}
               onHandoff={props.onHandoff}
-              vaultSave={props.vaultSave}
+              vault={props.vault}
               onRespondSecret={props.onRespondSecret}
               onAnswerPrompt={props.onAnswerPrompt}
               onRespondApproval={props.onRespondApproval}
@@ -315,7 +317,7 @@ export function BrowserDock(props: BrowserDockProps) {
                 skills={props.skills}
                 editingDeliveryId={props.editingDeliveryId}
                 canSteer={props.canSteer}
-                onSteer={steer}
+                onSteer={props.onSteer ? steer : undefined}
                 onRunAsTask={props.onRunAsTask}
                 onCancel={props.onCancel}
                 onEdit={props.onEdit}

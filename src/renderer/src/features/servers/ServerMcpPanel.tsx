@@ -112,6 +112,10 @@ export interface ServerMcpPanelProps {
   signInRequest?: string | null | undefined;
   /** Called once the panel started the requested sign-in, so it does not start again. */
   onSignInRequestHandled?: (() => void) | undefined;
+  /** Opens the form for a new server as soon as the panel shows: the user pressed Add custom in the Marketplace. */
+  addRequest?: boolean | undefined;
+  /** Called once the panel opened the requested form, so it does not open again. */
+  onAddRequestHandled?: (() => void) | undefined;
 }
 
 export interface McpPanelSignIn {
@@ -437,6 +441,16 @@ export function ServerMcpPanel(props: ServerMcpPanelProps) {
   }
 
   createEffect(
+    () => Boolean(props.addRequest),
+    (requested) => {
+      if (!requested) return;
+      // A user who cannot add a server ends the request, so the form does not open later unasked.
+      props.onAddRequestHandled?.();
+      if (props.canManage) openForm(null);
+    },
+  );
+
+  createEffect(
     () => {
       const id = props.signInRequest;
       return id ? props.servers.find((candidate) => candidate.id === id) : undefined;
@@ -455,7 +469,8 @@ export function ServerMcpPanel(props: ServerMcpPanelProps) {
       if (previous === undefined || rowId === previous) return;
       const target = previous === null ? formTestButton : menuButtons[previous];
       requestAnimationFrame(() => {
-        if (target?.isConnected && !document.querySelector(".mcp-sign-in-page-dialog, .mcp-sign-in-relay-dialog"))
+        // A connect dialog that is still open, such as the relayed sign-in, keeps the focus.
+        if (target?.isConnected && !document.querySelector(".integration-wizard-dialog"))
           target.focus({ preventScroll: true });
       });
     },

@@ -68,6 +68,12 @@ const KEY_TEXT = {
     description: "provider.deepseekKey.description",
     label: "provider.deepseekKey.label",
   },
+  openrouter: {
+    name: "OpenRouter",
+    title: "provider.openrouterKey.title",
+    description: "provider.openrouterKey.description",
+    label: "provider.openrouterKey.label",
+  },
 } as const satisfies Record<string, { name: string; title: AppTextKey; description: AppTextKey; label: AppTextKey }>;
 
 /** A provider whose API key this dialog saves. */

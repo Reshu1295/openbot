@@ -43,9 +43,9 @@ export const messages = {
   "sitePage.connect.failure.tabClosed":
     "发起 {name} 连接的 OpenBot 标签页没有响应。请在浏览器中打开 OpenBot，再次连接 {name}。",
   "sitePage.connect.failure.failed": "{name} 未完成连接。请重试。",
-  // {serverSettings}, {connectors} and {connect} are the names of these screens and that button in the app.
+  // {marketplace}, {apps} and {connect} are the names of these screens and that button in the app.
   "sitePage.connect.restartHint":
-    "在 OpenBot 中打开“{serverSettings}”，再打开“{connectors}”，然后打开“{name}”并选择“{connect}”。",
+    "在 OpenBot 中打开“{marketplace}”，再打开“{apps}”，然后打开“{name}”并选择“{connect}”。",
   "sitePage.connect.notOpened": "请启动 OpenBot，然后重试。如果这台电脑上没有 OpenBot，请下载并在应用中连接 {name}。",
   "sitePage.openApp.title": "没有打开？",
   "sitePage.openApp.dismiss": "暂不",

@@ -27,6 +27,12 @@ export const messages = defineMessages("status.agent", {
   "status.agent.vaultCardFillFrames": "The card fields are in frames from {origins}.",
   "status.agent.screenCaptureProgress": "Asking to capture the screen…",
   "status.agent.screenCaptureReviewing": "Reviewing the screen capture…",
+  "status.agent.browserOpening": "Opening a web page…",
+  "status.agent.browserReading": "Reading the web page…",
+  "status.agent.browserClicking": "Clicking on the web page…",
+  "status.agent.browserTyping": "Typing on the web page…",
+  "status.agent.browserActing": "Using the web page…",
+  "status.agent.browserReviewing": "Reviewing the web page…",
   "status.agent.memoriesSearching": "Searching its memories…",
   "status.agent.memoriesSearched": {
     one: "Searched its memories: {count} found",
@@ -36,6 +42,8 @@ export const messages = defineMessages("status.agent", {
   "status.agent.skillUsing": "Using the skill {name}…",
   "status.agent.skillReading": "Reading a skill…",
   "status.agent.memoryChanges": "Memory: {saved} saved, {updated} updated, {forgotten} forgotten.",
+  "status.agent.memoryChangesWithConflicts":
+    "Memory: {saved} saved, {updated} updated, {forgotten} forgotten, {notChanged} not changed because another thread changed it first.",
   "status.agent.mcpServerAdd":
     "Add the MCP server {name}: {target}. Every agent on this server gets its tools. OpenBot connects to it to test it.",
   "status.agent.mcpServerChange":

@@ -9,10 +9,13 @@ import type {
 import {
   type AccountUsage,
   AGENT_DEFAULT_KEYS,
+  AGENT_FOLDER_LIMIT,
   type AgentAccessChange,
   type AgentBrowserProfile,
   type AgentDefaults,
   type AgentEvent,
+  type AgentFolderChange,
+  type AgentFolderList,
   type AgentMemory,
   type AgentMemoryLimitPreference,
   type AgentMemorySelection,
@@ -39,6 +42,7 @@ import {
   agentAutomationAllowed,
   agentBrowserProfile,
   agentComputerUseEnabled,
+  agentFolderCoverage,
   agentTaskLimit,
   type BrowserProfileSummary,
   type BusyMessageModePreference,
@@ -66,6 +70,8 @@ import {
   DEFAULT_BUSY_MESSAGE_MODE,
   DEFAULT_DYNAMIC_ISLAND_PREFERENCE,
   DEFAULT_EXTERNAL_LINK_PREFERENCE,
+  DEFAULT_MACHINE_ALERT_SETTINGS,
+  DEFAULT_MEMORY_REVIEW_INTERVAL,
   DEFAULT_PROMPT_CACHE_TTL,
   DEFAULT_PROVIDER_ACCOUNT_ID,
   DEFAULT_PROVIDER_DETECTION_SETTINGS,
@@ -77,18 +83,24 @@ import {
   type DirectTypingRealtimeEvent,
   type DynamicIslandPreference,
   type DynamicIslandPresentation,
+  decodeMachineAlertSettings,
   defaultProviderModel,
   type ExternalLinkBrowsers,
   type ExternalLinkPreference,
   type FilePreview,
+  folderInside,
   type HostedSiteSummary,
   type HostStatus,
   hostAgentMemoryLimit,
+  hostMemoryReview,
   isAgentMemoryLimit,
   isAgentSummary,
+  isMemoryReviewInterval,
   isPromptCacheTtl,
   isReleasedRoutineSchedule,
+  type MachineAlertSettings,
   type MacPermissionId,
+  type MemoryReviewPreference,
   nextBrowserProfileHue,
   normalizeMcpConfig,
   type OpenAttachmentInput,
@@ -401,6 +413,9 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
   let busyMessageMode: BusyMessageModePreference = { mode: DEFAULT_BUSY_MESSAGE_MODE };
   let agentDefaults: AgentDefaults = { ...DEFAULT_AGENT_DEFAULTS };
   let agentMemoryLimit: AgentMemoryLimitPreference = { limit: DEFAULT_AGENT_MEMORY_LIMIT };
+  let memoryReview: MemoryReviewPreference = { interval: DEFAULT_MEMORY_REVIEW_INTERVAL };
+  // The disk level is below the preview disk use (82%), so Storage shows a passed level.
+  let machineAlerts: MachineAlertSettings = { ...DEFAULT_MACHINE_ALERT_SETTINGS, diskPercent: 80 };
   let promptCacheTtl: PromptCacheTtlSetting = { ...DEFAULT_PROMPT_CACHE_TTL };
   let agentAccess: AgentAccessChange = { revision: 0, everyone: {}, roles: [] };
   const agentMemoryLimitListeners = new Set<(preference: AgentMemoryLimitPreference) => void>();
@@ -583,6 +598,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         name: "House Router",
         baseUrl: "https://models.example.com/v1",
         hasApiKey: true,
+        headerNames: ["X-Team"],
         models: [{ id: "glm-5-air", name: "GLM-5 Air" }],
       },
     ],
@@ -668,6 +684,48 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
   const routines = new Map<string, Routine[]>(Object.entries(clone(options.routines ?? {})));
   const routineRuns = new Map<string, RoutineRun[]>(Object.entries(clone(options.routineRuns ?? {})));
 
+  function requireMockAgent(agentId: string): ClientAgentSummary {
+    const agent = agents.find((candidate) => candidate.id === agentId);
+    if (!agent) throw new Error("Agent not found");
+    return agent;
+  }
+
+  /** The preview has no disk: a folder whose path ends in "(missing)" is not found. */
+  function mockAgentFolders(agentId: string): AgentFolderList {
+    const agent = requireMockAgent(agentId);
+    return {
+      workspace: agent.workspacePath,
+      shared: "/mock/OpenBot/Shared",
+      folders: (agent.additionalFolders ?? []).map((path) => ({ path, found: !path.endsWith("(missing)") })),
+    };
+  }
+
+  function setMockAgentFolders(agent: ClientAgentSummary, folders: string[]): void {
+    const updated: ClientAgentSummary = { ...agent, additionalFolders: folders };
+    if (folders.length === 0) delete updated.additionalFolders;
+    agents = agents.map((candidate) => (candidate.id === agent.id ? updated : candidate));
+    emitAgentEvent({ type: "agents-changed", agents });
+  }
+
+  function addMockAgentFolder(agentId: string, path: string, replace?: string): AgentFolderChange {
+    const agent = requireMockAgent(agentId);
+    const current = agent.additionalFolders ?? [];
+    const others = current.filter((folder) => folder !== replace);
+    const list = mockAgentFolders(agentId);
+    const coverage = agentFolderCoverage(path, { workspace: list.workspace, shared: list.shared, folders: others });
+    if (coverage) return { outcome: "covered", path, coverage, list };
+    const kept = others.filter((folder) => !folderInside(path, folder));
+    if (kept.length >= AGENT_FOLDER_LIMIT) return { outcome: "refused", path, refusal: "limit", list };
+    const replacing = replace !== undefined && current.includes(replace);
+    setMockAgentFolders(
+      agent,
+      replacing ? current.map((folder) => (folder === replace ? path : folder)) : [...kept, path],
+    );
+    if (replacing) return { outcome: "replaced", path, list: mockAgentFolders(agentId) };
+    const replaced = others.filter((folder) => !kept.includes(folder));
+    return { outcome: "added", path, replaced, list: mockAgentFolders(agentId) };
+  }
+
   function emitAgentEvent(event: AgentEvent): void {
     emit(agentListeners, event);
   }
@@ -708,7 +766,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
 
   function findTask(agentId: string, taskId: string): AgentTask {
     const task = tasks.get(agentId)?.find((candidate) => candidate.id === taskId);
-    if (!task) throw new Error(sourceText("error.backend.taskNotFound"));
+    if (!task) throw new Error(sourceText("error.backend.threadNotFound"));
     return task;
   }
 
@@ -734,7 +792,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         .find((line) => line.trim())
         ?.trim()
         .slice(0, 120) ?? "";
-    if (!title) throw new Error(sourceText("error.backend.taskTitleRequired"));
+    if (!title) throw new Error(sourceText("error.backend.threadTitleRequired"));
     const task: AgentTask = {
       id: `mock-task-${messageCounter++}`,
       agentId,
@@ -758,7 +816,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
 
   /** Runs one mock turn in a task: the user message, a progress line, then a short answer. */
   function runTaskTurn(task: AgentTask, text: string): QueuedMessageReceipt {
-    if (task.closedAt) throw new Error(sourceText("error.backend.taskClosed"));
+    if (task.closedAt) throw new Error(sourceText("error.backend.threadArchived"));
     const deliveryId = `mock-delivery-${messageCounter++}`;
     const turnId = `mock-turn-${messageCounter++}`;
     const conversation = taskConversation(task);
@@ -953,6 +1011,8 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       setupState = { completed: true, preferredProvider, preferredModel };
       return clone(setupState);
     },
+    // Only a joined admin changes the setup from outside the window, and the preview has none.
+    onSetupState: () => () => undefined,
     getAnalyticsPreference: async () => clone(analyticsPreference),
     setAnalyticsPreference: async ({ enabled }) => {
       analyticsPreference = { enabled };
@@ -1047,6 +1107,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       return () => interfaceSizeListeners.delete(listener);
     },
     onOpenSettings: () => () => undefined,
+    onOpenUpdateSettings: () => () => undefined,
     // The preview is one page, so a chat cannot open in a window of its own.
     openChatWindow: async () => undefined,
     getChatWindows: async () => [],
@@ -1079,6 +1140,10 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       performHaptic: async () => undefined,
       onAction: () => () => undefined,
       setInteractive: async () => undefined,
+    },
+    // The preview has no Apple apps to ask, so every app answers as allowed.
+    macAutomation: {
+      request: async (targets) => targets.map((target) => ({ target, status: "granted" })),
     },
     computerUse: {
       getState: async () => computerUseState(),
@@ -1298,7 +1363,8 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
             name: input.name,
             baseUrl: input.baseUrl,
             hasApiKey: input.apiKey !== null,
-            models: input.models.map((model) => ({ id: model.id, name: model.name })),
+            headerNames: input.headers.map((header) => header.name),
+            models: input.models.map((model) => ({ ...model })),
           },
         ];
         emitAgentEvent({ type: "status", status: clone(agentStatus) });
@@ -1309,12 +1375,22 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         emitAgentEvent({ type: "status", status: clone(agentStatus) });
         return { providers: clone(customProviders), restart: "restarted" };
       },
-      /** The same keep rule as the real store: a key that is not sent stays, but not for a new origin. */
+      /**
+       * The same keep rule as the real store: a key that is not sent, or a header value that is null,
+       * stays, but not for a new origin.
+       */
       update: async (input) => {
         const stored = customProviders.find((provider) => provider.id === input.id);
         if (!stored) throw new Error("This endpoint is not saved.");
+        const savedNames = stored.headerNames ?? [];
+        const headerNames = input.headers?.map((header) => header.name) ?? savedNames;
+        const missing = input.headers?.find((header) => header.value === null && !savedNames.includes(header.name));
+        if (missing) throw new Error(sourceText("error.provider.headerValueMissing", { name: missing.name }));
         const keepsKey = input.apiKey === undefined && stored.hasApiKey;
-        if (keepsKey && !sameCustomProviderOrigin(stored.baseUrl, input.baseUrl)) {
+        const keepsHeader = input.headers
+          ? input.headers.some((header) => header.value === null)
+          : savedNames.length > 0;
+        if ((keepsKey || keepsHeader) && !sameCustomProviderOrigin(stored.baseUrl, input.baseUrl)) {
           throw new Error("Enter the API key again for the new address.");
         }
         customProviders = customProviders.map((provider) =>
@@ -1324,7 +1400,8 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
                 name: input.name,
                 baseUrl: input.baseUrl,
                 hasApiKey: input.apiKey !== undefined || keepsKey,
-                models: input.models.map((model) => ({ id: model.id, name: model.name })),
+                headerNames,
+                models: input.models.map((model) => ({ ...model })),
               }
             : provider,
         );
@@ -1756,6 +1833,19 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       updateAgentBackupModels: async (input) => {
         await api.agent.updateAgent(input);
         return api.agent.getAgentBackupModels(input.agentId);
+      },
+      listAgentFolders: async (agentId) => mockAgentFolders(agentId),
+      chooseAgentFolder: async ({ agentId, replace }) =>
+        addMockAgentFolder(agentId, replace ? `${replace} (found)` : "/mock/Projects/Leads", replace),
+      addAgentFolder: async ({ agentId, path }) => addMockAgentFolder(agentId, path),
+      addDroppedAgentFolder: async (agentId, folder) => addMockAgentFolder(agentId, `/mock/Dropped/${folder.name}`),
+      removeAgentFolder: async ({ agentId, path }) => {
+        const agent = requireMockAgent(agentId);
+        setMockAgentFolders(
+          agent,
+          (agent.additionalFolders ?? []).filter((folder) => folder !== path),
+        );
+        return { outcome: "removed", path, list: mockAgentFolders(agentId) };
       },
       getAgentTaskLimit: async (agentId) => {
         const agent = agents.find((candidate) => candidate.id === agentId);
@@ -2544,6 +2634,30 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         Object.assign(task, { state: "idle", closedAt: null, updatedAt: new Date().toISOString() });
         emitTasks(input.agentId);
       },
+      renameTask: async (input) => {
+        const task = findTask(input.agentId, input.taskId);
+        Object.assign(task, { title: input.title, updatedAt: new Date().toISOString() });
+        emitTasks(input.agentId);
+      },
+      deleteTask: async (input) => {
+        const task = findTask(input.agentId, input.taskId);
+        if (task.activeTurnId) throw new Error(sourceText("error.backend.threadStillRunning"));
+        tasks.set(
+          input.agentId,
+          (tasks.get(input.agentId) ?? []).filter((candidate) => candidate.id !== input.taskId),
+        );
+        taskConversations.delete(input.taskId);
+        emitTasks(input.agentId);
+      },
+      markTaskRead: async (input) => {
+        findTask(input.agentId, input.taskId);
+        return {
+          taskId: input.taskId,
+          unreadCount: 0,
+          firstUnreadMessageId: null,
+          throughMessageId: input.throughMessageId,
+        };
+      },
       acknowledgeFailedTurn: async () => undefined,
       cancelQueuedMessage: async (input) => {
         const queue = queues.get(input.agentId) ?? emptyQueue(input.agentId);
@@ -2642,6 +2756,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         });
       },
       compactContext: async () => undefined,
+      compactTaskContext: async () => undefined,
       respondToPrompt: async (input: RespondToPromptInput) => {
         emit(promptResponseListeners, input);
       },
@@ -2759,6 +2874,18 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
         agentMemoryLimit = { limit };
         for (const listener of agentMemoryLimitListeners) listener(clone(agentMemoryLimit));
         return hostAgentMemoryLimit(agentMemoryLimit);
+      },
+      getMemoryReview: async () => hostMemoryReview(memoryReview),
+      setMemoryReview: async (interval) => {
+        if (!isMemoryReviewInterval(interval)) throw new Error("Memory review interval is required.");
+        memoryReview = { interval };
+        return hostMemoryReview(memoryReview);
+      },
+      // Preview has one host, so every server shares one set of machine alerts.
+      getMachineAlerts: async () => clone(machineAlerts),
+      setMachineAlerts: async (settings) => {
+        machineAlerts = decodeMachineAlertSettings(settings);
+        return clone(machineAlerts);
       },
       // Preview has one host, so every server shares one cache time.
       getPromptCacheTtl: async () => clone(promptCacheTtl),

@@ -1,5 +1,7 @@
 export { default as AlarmClock } from "lucide-solid/icons/alarm-clock";
 export { default as AppWindow } from "lucide-solid/icons/app-window";
+export { default as Archive } from "lucide-solid/icons/archive";
+export { default as ArchiveRestore } from "lucide-solid/icons/archive-restore";
 export { default as ArrowDown } from "lucide-solid/icons/arrow-down";
 export { default as ArrowLeft } from "lucide-solid/icons/arrow-left";
 export { default as ArrowLeftRight } from "lucide-solid/icons/arrow-left-right";
@@ -72,6 +74,7 @@ export { default as History } from "lucide-solid/icons/history";
 export { default as Image } from "lucide-solid/icons/image";
 export { default as Info } from "lucide-solid/icons/info";
 export { default as KeyRound } from "lucide-solid/icons/key-round";
+export { default as KeySquare } from "lucide-solid/icons/key-square";
 export { default as LifeBuoy } from "lucide-solid/icons/life-buoy";
 export { default as Link } from "lucide-solid/icons/link";
 export { default as Link2 } from "lucide-solid/icons/link-2";

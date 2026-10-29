@@ -215,8 +215,6 @@ export const messages = {
   "server.settings.transferTitle": "移行",
   "server.settings.transferDescription":
     "このサーバーのエージェントとサーバー設定を、ファイルに書き出したりファイルから読み込んだりします。",
-  "server.settings.connectorsTitle": "コネクター",
-  "server.settings.connectorsDescription": "このサーバーのすべてのエージェントが使えるアカウントを接続します。",
   "server.settings.routinesTitle": "ルーティン",
   "server.settings.routinesDescription": "このコンピューターのルーティンのスケジュールをカレンダーアプリに表示します。",
   "server.routineFeed.title": "カレンダーフィード",
@@ -289,6 +287,12 @@ export const messages = {
   "server.settings.memoryLimit": "エージェントごとのメモリー数",
   "server.settings.memoryLimitDescription": "このサーバーの各エージェントが保持できるメモリーの数です。",
   "server.settings.memoryLimitLoadFailed": "このサーバーのメモリー上限を読み込めませんでした。",
+  "server.settings.memoryReview": "メモリーの見直し",
+  "server.settings.memoryReviewDescription":
+    "このサーバーのエージェントが、チャットから長く使う事実をバックグラウンドで保存する頻度です。",
+  "server.settings.memoryReviewOff": "オフ",
+  "server.settings.memoryReviewTurns": { other: "{count} ターンごと" },
+  "server.settings.memoryReviewLoadFailed": "メモリーの見直しの設定を読み込めませんでした。",
   "server.settings.remoteOnline": "ホストはオンラインです。公開設定はオーナーが管理しています。",
   "server.settings.remoteOffline": "ホストはオフラインです。公開設定はオーナーが管理しています。",
   "server.settings.reachable": "オンラインでアクセスできます。招待されたユーザーのみがサインインできます。",

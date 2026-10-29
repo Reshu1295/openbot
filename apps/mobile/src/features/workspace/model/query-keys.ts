@@ -107,8 +107,10 @@ export const queryKeys = {
   serverUpdate: (scope: QueryScope, serverId: string) => ["server-update", ...scope, serverId],
   serverStorage: (scope: QueryScope, serverId: string) => ["server-storage", ...scope, serverId],
   serverSites: (scope: QueryScope, serverId: string) => ["server-sites", ...scope, serverId],
+  serverVault: (scope: QueryScope, serverId: string) => ["server-vault", ...scope, serverId],
   providerStatus: (scope: QueryScope, serverId: string) => ["provider-status", ...scope, serverId],
   providerRuntimes: (scope: QueryScope, serverId: string) => ["provider-runtimes", ...scope, serverId],
+  providerDefault: (scope: QueryScope, serverId: string) => ["provider-default", ...scope, serverId],
   providerKey: (scope: QueryScope, serverId: string, provider: string) => [
     "provider-key",
     ...scope,
@@ -151,11 +153,27 @@ export const queryKeys = {
     "agent",
     agentId,
   ],
+  /** The person's read mark of each open thread of one agent, from `agent-thread-reads-v1`. */
+  agentThreadReads: (scope: QueryScope, serverId: string, agentId: string) => [
+    ...queryKeys.serverTasks(scope, serverId),
+    "reads",
+    agentId,
+  ],
   agentTaskConversation: (scope: QueryScope, serverId: string, taskId: string) => [
     ...queryKeys.serverTasks(scope, serverId),
     "task",
     taskId,
   ],
+  /** The workflows of a server. `workflows-changed` invalidates the list and the one workflow under it. */
+  serverWorkflows: (scope: QueryScope, serverId: string) => ["server-workflows", ...scope, serverId],
+  workflowList: (scope: QueryScope, serverId: string) => [...queryKeys.serverWorkflows(scope, serverId), "list"],
+  /** A workflow, its newest runs, all its runs page by page, and a run that is older than the first page. */
+  workflow: (
+    scope: QueryScope,
+    serverId: string,
+    workflowId: string,
+    ...part: [] | ["detail"] | ["runs"] | ["history"] | ["run", runId: string]
+  ) => [...queryKeys.serverWorkflows(scope, serverId), "workflow", workflowId, ...part],
   /** The query is the last part: a search that continues the typed query keeps its results on screen. */
   messageSearch: (scope: QueryScope, serverId: string, query: string) => ["message-search", ...scope, serverId, query],
   fileSearch: (scope: QueryScope, serverId: string, query: string) => ["file-search", ...scope, serverId, query],

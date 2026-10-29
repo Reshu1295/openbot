@@ -105,9 +105,16 @@ SolidJS, provider, Cloudflare, and application code; and the account server to d
   (`AttentionRegistry.answerGrantedRequests`). The registry also accepts, once, Codex's consent to run
   an MCP tool (`_meta.codex_approval_kind` `mcp_tool_call`, a tool set to ask every time included), and
   saves nothing: "Always allow" stays the user's choice, which Codex keeps per server and tool. A
-  Workspace only agent and a Computer Use tool keep their card. OpenBot keeps Codex's `approvalPolicy`
+  Workspace only agent keeps its card; a Computer Use tool does not. OpenBot keeps Codex's `approvalPolicy`
   at `on-request`, because `never` denies MCP tool calls and rejects elicitations. Other questions, MCP
   forms and sign-in requests, and browser takeovers remain interactive.
+- A Workspace only agent can change files in its workspace, the shared folder, and the folders that the
+  user added (`AgentSummary.additionalFolders`, in `agent_json`, real paths, at most 32). One function,
+  `workspaceWritableRoots`, gives these roots to every provider sandbox, and the agent's developer
+  instructions name them. Only the local `agentFolders` IPC endpoints change the list; an agent cannot
+  add a folder to itself. Main refuses a disk root, the home folder, and a folder that holds OpenBot data.
+  A folder that is not on the disk stays in the list but is not a root. The list is local, like
+  `access`: the Team API does not carry it.
 - `browser-tabs.json` is the embedded browser's own durable state, outside `openbot.db` and outside the
   migration runner. It is versioned in the file (`v1` predates the per-tab `BrowserEnvironment`, `v2`
   carries it) and always rewritten as the current version, so a downgrade reads a file it does not know.
@@ -160,8 +167,8 @@ surface and responsive rules override earlier component rules.
 tabs, and a page for each listing. It reads a typed `MarketplaceModel` and holds no data of its
 own. The renderer's `marketplace-controller.ts` builds the model on the injected `MarketplaceCalls`,
 and `MarketplaceModal` adds the connect and uninstall dialogs. `ConnectorsProvider` creates the
-connector controllers once; a connector's app page and Server settings › Connectors show the same
-`ConnectorDetailPanel` from them.
+connector controllers once; a connector's app page shows `ConnectorDetailPanel` from them. Server
+settings has no connector section.
 
 `AgentSettingsPanel` owns the form draft, ordered save queue, avatar editor, and model controls.
 Its renderer adapter owns persisted width and native memories, routines, skills, and tables,

@@ -84,6 +84,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "A entrega do canal não foi criada.",
   "error.backend.channelAssignmentStopped": "Esta tarefa atribuída pelo canal foi interrompida ou substituída.",
   "error.backend.channelAssigneeUnavailable": "O agente responsável está indisponível.",
+  "error.backend.channelAssigneeRemoved": "O membro responsável foi removido.",
+  "error.backend.channelAssigneeReassign": "O membro responsável está indisponível. Reatribua esta tarefa.",
   "error.backend.channelAssignmentChanged": "Esta tarefa atribuída pelo canal mudou.",
   "error.backend.channelMemberRequired": "Selecione um membro disponível deste canal.",
   "error.backend.memoryEssentialBudget":
@@ -198,8 +200,11 @@ export const messages = {
   "error.backend.routineFlowHandoffFailed": "A rotina não conseguiu passar o trabalho para este agente.",
   "error.backend.mcpServerLimit": "O OpenBot mantém até {limit} servidores MCP.",
   "error.backend.mcpServerNameTaken": "Já existe um servidor MCP chamado {name}.",
+  "error.backend.mcpServerInvalid": "O OpenBot não pode salvar esta configuração de servidor MCP.",
   "error.backend.mcpServerNoAnswer": "O servidor não respondeu em {seconds} segundos.",
   "error.backend.mcpSignInNotAccepted": "O servidor não aceitou esse login.",
+  "error.backend.mcpSignInClientRefused":
+    "O servidor de login não aceitou o OpenBot ao concluir o login. Entre de novo: o OpenBot se registra outra vez no servidor.",
   "error.backend.mcpCommandNotFound": "Comando não encontrado: {command}",
   "error.backend.mcpRegistrationRefused":
     "O servidor de login ainda não aceita o OpenBot como aplicativo. Sua conta não é a causa. Use outra forma de conexão, como um servidor MCP local.",
@@ -220,6 +225,7 @@ export const messages = {
     "O OpenBot não conseguiu ler as informações de login deste servidor. Verifique o endereço do servidor e tente novamente.",
   "error.backend.mcpServerExited":
     "O servidor parou antes de responder. Execute o comando em um terminal para ver o erro.",
+  "error.backend.mcpServerFailedToStart": "O servidor não iniciou: {reason}",
   "error.backend.mcpOAuthProxyUnavailable":
     "O OpenBot não conseguiu iniciar a conexão local de login para este servidor. Reinicie o OpenBot e tente novamente.",
   "error.backend.mcpOAuthSignInNeeded":
@@ -326,6 +332,15 @@ export const messages = {
   "error.backend.taskNotFound": "Esta tarefa não está disponível.",
   "error.backend.taskClosed": "Esta tarefa está fechada. Abra-a de novo para enviar uma mensagem.",
   "error.backend.taskStillRunning": "Esta tarefa ainda está em execução. Aguarde até ela parar e depois feche-a.",
+  "error.backend.threadNotFound": "Este tópico não está disponível.",
+  "error.backend.threadStillRunning": "Este tópico ainda está em execução. Interrompa-o e tente de novo.",
+  "error.backend.threadArchived": "Este tópico está arquivado. Restaure-o para enviar uma mensagem.",
+  "error.backend.threadTitleRequired": "Dê um título curto ao tópico.",
+  "error.backend.threadOpenLimitReached":
+    "Este agente tem {count} tópicos abertos. Arquive um tópico e depois inicie ou restaure outro.",
+  "error.backend.threadRemoteUnsupported": "Os tópicos só estão disponíveis para agentes neste computador.",
+  "error.backend.threadMoveRefused":
+    "Só uma mensagem que você enviou apenas para este agente pode ser executada em um novo tópico.",
   "error.backend.taskTitleRequired": "Dê um título curto à tarefa.",
   "error.backend.taskToolInvalid":
     "Dê à tarefa um título de no máximo 120 caracteres e uma instrução que diga o que fazer.",

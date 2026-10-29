@@ -18,6 +18,8 @@ import { createSimpleContext } from "../../simple-context";
  * - `pendingAgentSelection` carries "select this agent once you are on that
  *   server" across the remount, for an agent opened from the marketplace.
  * - `pendingChannelSelection` does the same for a channel opened from a notification.
+ * - `pendingThreadSelection` does the same for the conversation thread of a notification, so that a
+ *   side thread's notification opens that thread's tab.
  * - `pendingIslandAction` does the same for a Dynamic Island action, which
  *   arrives for *any* server and so may have to switch before it can act. The
  *   whole action is republished rather than a fragment of it, so the scope that
@@ -41,6 +43,10 @@ const ServerSwitch = createSimpleContext({
     const [browserVisibilitySuspended, setBrowserVisibilitySuspended] = createSignal(false);
     const [pendingAgentSelection, setPendingAgentSelection] = createSignal<string | null>(null);
     const [pendingChannelSelection, setPendingChannelSelection] = createSignal<string | null>(null);
+    const [pendingThreadSelection, setPendingThreadSelection] = createSignal<{
+      agentId: string;
+      threadId: string;
+    } | null>(null);
     const [pendingIslandAction, setPendingIslandAction] = createSignal<ServerScopedIslandAction | null>(null);
     const [previousServerId, setPreviousServerId] = createSignal<string | null>(null);
     return {
@@ -50,6 +56,8 @@ const ServerSwitch = createSimpleContext({
       setPendingAgentSelection,
       pendingChannelSelection,
       setPendingChannelSelection,
+      pendingThreadSelection,
+      setPendingThreadSelection,
       pendingIslandAction,
       setPendingIslandAction,
       previousServerId,

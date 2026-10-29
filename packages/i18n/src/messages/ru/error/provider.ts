@@ -7,6 +7,7 @@ export const messages = {
   "error.provider.computerUseConfig":
     "OpenBot не смог зарегистрировать управление компьютером в конфигурации Codex. Убедитесь, что ваш config.toml для Codex корректен и доступен для записи, затем перезапустите OpenBot. Чтобы продолжить без него, отключите управление компьютером в настройках агента.",
   "error.provider.codexUnresponsive": "Codex перестал отвечать, поэтому OpenBot завершил его процесс.",
+  "error.provider.acpUnresponsive": "{provider} не ответил вовремя, поэтому OpenBot завершил его процесс.",
   "error.provider.endpointsReadOnly":
     "Сохранённые эндпоинты записаны более новой версией OpenBot, либо файл не читается. Чтобы изменить их, обновите OpenBot.",
   "error.provider.endpointNoSecureStorage":
@@ -57,6 +58,9 @@ export const messages = {
     "OpenBot не смог связаться с источниками релизов провайдеров. Проверьте соединение и повторите попытку.",
   "error.provider.runtimesUnsupported": "Среды выполнения провайдеров недоступны на этой платформе.",
   "error.provider.closing": "OpenBot закрывается.",
+  "error.provider.removeWhileOn": "Выключите провайдера, прежде чем удалять его загрузку.",
+  "error.provider.removeWhileDownloading": "Дождитесь окончания загрузки, затем удалите её.",
+  "error.provider.removeIncomplete": "Программа использует файлы этого CLI. Закройте её и повторите попытку.",
   "error.provider.cliOverride": "Удалите явно заданный путь к CLI, прежде чем обновлять в OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "Обновление среды выполнения не завершено.",
   "error.provider.downloadHttp": "Загрузка среды выполнения не удалась: HTTP {status}.",
@@ -94,11 +98,13 @@ export const messages = {
   "error.provider.modelsTooMany": "Слишком много моделей.",
   "error.provider.modelIdCharacter": "В ID модели есть недопустимый символ.",
   "error.provider.modelIdDuplicate": "У двух моделей одинаковый ID.",
+  "error.provider.contextWindowInvalid": "Контекстное окно модели должно быть целым числом токенов от {min} до {max}.",
   "error.provider.headersTooMany": "Слишком много заголовков.",
   "error.provider.headerNameCharacter": "В имени заголовка есть символ, недопустимый в HTTP.",
   "error.provider.headerNameTooLong": "Имя заголовка слишком длинное.",
   "error.provider.headerNameDuplicate": "У двух заголовков одинаковое имя.",
   "error.provider.headerValueInvalid": "Значение заголовка отсутствует или слишком длинное.",
+  "error.provider.headerValueMissing": "Введите значение заголовка {name}.",
   "error.provider.apiKeyTooLong": "API-ключ слишком длинный.",
   "error.provider.localOnly": "Провайдеров можно изменить только на компьютере, где работают агенты.",
   "error.provider.keyRequired": "Нужен ключ провайдера.",
@@ -259,6 +265,8 @@ export const messages = {
   "error.provider.acpSignInStopped": "Вход прервался, не завершившись.",
   "error.provider.geminiBrowserUnavailable":
     "Gemini не удалось открыть страницу входа. Установите браузер и xdg-utils, затем подключитесь из сеанса рабочего стола на этом хосте. Сервер без рабочего стола не может завершить этот вход.",
+  "error.provider.geminiBrowserOpenFailed":
+    "Gemini не удалось открыть страницу входа в браузере. Проверьте браузер по умолчанию и подключитесь снова.",
   "error.provider.acpSignInFailed": "Вход не завершён.",
   "error.provider.acpSignInFailedReason": "Вход не завершён: {reason}",
   "error.provider.acpSignInMethodMissing":
@@ -374,6 +382,7 @@ export const messages = {
   "error.provider.museSignIn": "Чтобы продолжить, войдите в Muse на компьютере-хосте.",
   "error.provider.inceptionSignIn": "Чтобы продолжить, добавьте ключ API Inception.",
   "error.provider.deepseekSignIn": "Добавьте ключ API DeepSeek, чтобы продолжить.",
+  "error.provider.openrouterSignIn": "Добавьте ключ API OpenRouter, чтобы продолжить.",
   "error.provider.terminalLoginFailed":
     "Не удалось открыть терминал для входа. Откройте CLI провайдера на этом хосте, войдите там, затем обновите список провайдеров.",
   "error.provider.nativeArchiveInvalid": "Загруженный файл провайдера не содержит корректной установки.",

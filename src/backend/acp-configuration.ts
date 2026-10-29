@@ -81,10 +81,19 @@ export interface AcpConfigurationOptions {
   provider: AgentProvider;
   requestTimeoutMs: number;
   discoveryCwd?: (() => string) | undefined;
+  /** `AcpFlavor.processWideModel`. */
+  processWideModel?: boolean;
 }
 
 /** Owns ACP model discovery and setting translation. The client owns sessions and their state. */
 export class AcpConfiguration {
+  /** The model this agent process last took, for an agent whose model belongs to the process. */
+  #processModel: { connection: ClientSideConnection; value: string } | null = null;
+  /** Model sets sent and not answered. Sets that overlap can apply in an order their answers do not show. */
+  #modelSetsInFlight = 0;
+  #modelSetsOverlapped = false;
+  /** A set that timed out or was interrupted can still apply later, so on this connection each set is sent. */
+  #modelSetTimedOut: ClientSideConnection | null = null;
   constructor(private readonly options: AcpConfigurationOptions) {}
   readonly discoverModels = Effect.fn("AcpConfiguration.discoverModels")(function* (
     this: AcpConfiguration,
@@ -199,6 +208,8 @@ export class AcpConfiguration {
     const probed: AcpModel[] = [];
     let answered = 0;
     let selected = opening;
+    // The sweep selects models on the process too, also while a turn sets its own.
+    this.#processModel = null;
     for (const model of models) {
       const response = yield* this.#requestBeforeEffect(
         () => connection.setSessionConfigOption({ sessionId: probe.sessionId, configId: option.id, value: model.id }),
@@ -231,6 +242,7 @@ export class AcpConfiguration {
         "session/set_config_option",
       );
     }
+    this.#processModel = null;
     logger.info("An agent reported the reasoning efforts of its models.", {
       provider: this.options.provider,
       models: models.length,
@@ -257,7 +269,7 @@ export class AcpConfiguration {
         const currentModel = models.find((candidate) => candidate.id === thread.currentModelId);
         if (currentModel && currentModel.usesModelReasoningEffort !== null) {
           if (currentModel.usesModelReasoningEffort && currentModel.supportedReasoningEfforts.includes(value)) {
-            yield* providerCall(() =>
+            yield* this.#timed("session/set_model", () =>
               this.options.connection().request("session/set_model", {
                 sessionId: thread.id,
                 modelId: thread.currentModelId,
@@ -273,7 +285,7 @@ export class AcpConfiguration {
       // `provider` goes back to the one whose models the session listed.
       if (category === "model" && !unlisted && thread.unlistedOverrides) {
         for (const [configId, original] of thread.unlistedOverrides) {
-          const response = yield* providerCall(() =>
+          const response = yield* this.#timed("session/set_config_option", () =>
             this.options.connection().setSessionConfigOption({ sessionId: thread.id, configId, value: original }),
           );
           thread.configOptions = response.configOptions;
@@ -294,7 +306,8 @@ export class AcpConfiguration {
         options[0];
       if (!option) {
         if (category === "model" && thread.currentModelId !== value) {
-          yield* providerCall(() =>
+          this.#processModel = null;
+          yield* this.#timed("session/set_model", () =>
             this.options.connection().request("session/set_model", {
               sessionId: thread.id,
               modelId: value,
@@ -317,18 +330,62 @@ export class AcpConfiguration {
         if (required?.type !== "select" || required.currentValue === configValue) continue;
         thread.unlistedOverrides ??= new Map();
         if (!thread.unlistedOverrides.has(configId)) thread.unlistedOverrides.set(configId, required.currentValue);
-        const response = yield* providerCall(() =>
+        const response = yield* this.#timed("session/set_config_option", () =>
           this.options.connection().setSessionConfigOption({ sessionId: thread.id, configId, value: configValue }),
         );
         thread.configOptions = response.configOptions;
       }
-      const response = yield* providerCall(() =>
-        this.options.connection().setSessionConfigOption({
+      // The process runs every session on the model it took last, so the set is sent only for a change.
+      // A new process is a new connection. A failed set, or one that another set overlapped, leaves
+      // the model unknown.
+      const connection = yield* providerSync(() => this.options.connection());
+      const processWide = category === "model" && this.options.processWideModel === true;
+      if (processWide) {
+        if (this.#processModel?.connection === connection && this.#processModel.value === selected) {
+          thread.currentModelId = selected;
+          thread.configOptions = thread.configOptions.map((entry) =>
+            entry === option ? { ...option, currentValue: selected } : entry,
+          );
+          continue;
+        }
+        this.#processModel = null;
+        if (this.#modelSetsInFlight > 0) this.#modelSetsOverlapped = true;
+        this.#modelSetsInFlight += 1;
+      }
+      const request = this.#timed("session/set_config_option", () =>
+        connection.setSessionConfigOption({
           sessionId: thread.id,
           configId: option.id,
           value: selected,
         }),
       );
+      const response = processWide
+        ? yield* request.pipe(
+            Effect.tap(() =>
+              Effect.sync(() => {
+                if (!this.#modelSetsOverlapped && this.#modelSetTimedOut !== connection) {
+                  this.#processModel = { connection, value: selected };
+                }
+              }),
+            ),
+            Effect.tapError((error) =>
+              Effect.sync(() => {
+                if (error.cause instanceof TimeoutError) this.#modelSetTimedOut = connection;
+              }),
+            ),
+            Effect.onInterrupt(() =>
+              Effect.sync(() => {
+                this.#modelSetTimedOut = connection;
+              }),
+            ),
+            Effect.ensuring(
+              Effect.sync(() => {
+                this.#modelSetsInFlight -= 1;
+                if (this.#modelSetsInFlight === 0) this.#modelSetsOverlapped = false;
+              }),
+            ),
+          )
+        : yield* request;
       thread.configOptions = response.configOptions;
       if (category === "model") thread.currentModelId = selected;
     }
@@ -349,22 +406,28 @@ export class AcpConfiguration {
     ) {
       return yield* providerFailure(new Error(sourceText("error.provider.sessionSettingInvalid")));
     }
-    const response = yield* providerCall(() =>
+    const response = yield* this.#timed("session/set_config_option", () =>
       typeof value === "boolean"
         ? this.options.connection().setSessionConfigOption({ sessionId: thread.id, configId, value, type: "boolean" })
         : this.options.connection().setSessionConfigOption({ sessionId: thread.id, configId, value }),
-    ).pipe(
-      Effect.timeoutOrElse({
-        duration: this.options.requestTimeoutMs,
-        orElse: () =>
-          Effect.fail(
-            providerFailure(new TimeoutError(`${this.options.label()} request timed out: session/set_config_option`)),
-          ),
-      }),
     );
     thread.configOptions = response.configOptions;
     return sessionSettingsSnapshot(thread.configOptions);
   });
+
+  /**
+   * A configuration request, which fails at the request timeout. A turn sends these before its
+   * prompt, so without the limit a process that stopped answering held the turn with no end (#3520).
+   */
+  #timed<T>(method: string, request: () => Promise<T>): Effect.Effect<T, ProviderClientOperationError> {
+    return providerCall(request).pipe(
+      Effect.timeoutOrElse({
+        duration: this.options.requestTimeoutMs,
+        orElse: () =>
+          Effect.fail(providerFailure(new TimeoutError(`${this.options.label()} request timed out: ${method}`))),
+      }),
+    );
+  }
 }
 
 /** Permission and secret controls stay outside the generic settings path. */

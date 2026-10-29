@@ -99,7 +99,7 @@ export function useChatQueue(
       query.data?.deliveries.some((item) => item.id === edit.delivery.id && item.status !== "queued"),
   );
   // A teammate's answer waits in the queue until the agent reads it, but it is not the user's
-  // message: it has no edit, steer or reorder actions. The waiting block shows it instead.
+  // message: it has no edit or reorder actions, only steer. The waiting block shows it instead.
   const queued = useMemo(
     () => orderedQueue((query.data?.deliveries ?? []).filter((item) => !isQueuedAgentReply(item))),
     [query.data],

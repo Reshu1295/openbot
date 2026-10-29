@@ -7,7 +7,6 @@ import { ChannelActivityIndicator } from "@openbot/ui/features/channels/ChannelA
 import { AgentActivityIndicator } from "@openbot/ui/features/conversation/AgentActivity";
 import { AgentChatEmptyState } from "@openbot/ui/features/conversation/AgentChatEmptyState";
 import { AgentStepsDisclosure, type AgentStepsTrace } from "@openbot/ui/features/conversation/AgentSteps";
-import { AgentTaskChips } from "@openbot/ui/features/conversation/AgentTasks";
 import { AttachmentCards } from "@openbot/ui/features/conversation/AttachmentCards";
 import { UsageLimitAskCard } from "@openbot/ui/features/conversation/BackupModels";
 import { ChatActionMarker } from "@openbot/ui/features/conversation/ChatActionMarker";
@@ -17,7 +16,6 @@ import { ChatScrollRail, createChatScrollRail } from "@openbot/ui/features/conve
 import { ChatSearch } from "@openbot/ui/features/conversation/ChatSearch";
 import { ChatVisual } from "@openbot/ui/features/conversation/ChatVisual";
 import { ContextCompactionMarker, type ContextCompactionView } from "@openbot/ui/features/conversation/ContextUsage";
-import { BrowserTakeoverCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { dayMarkerLabel } from "@openbot/ui/features/conversation/chat-day-markers";
 import { ReplyReturnButton, ScrollToLatestButton } from "@openbot/ui/features/conversation/MessageNavigation";
 import { MessageActions, MessageMenu } from "@openbot/ui/features/conversation/MessageRendering";
@@ -31,7 +29,7 @@ import { useText } from "@openbot/ui/text";
 import { createMemo, createSignal, For, Loading, lazy, onCleanup, Show, untrack } from "solid-js";
 import { useShowAgentSteps } from "../../agent-steps-preference";
 import { planItems, planTitle } from "../../app-message-projection";
-import { currentDevicePlatform, deviceSendShortcut } from "../../send-shortcut-preference";
+import { currentDevicePlatform } from "../../send-shortcut-preference";
 import { remoteRoutineRecovery } from "../servers/server-capabilities";
 import { speechModelReady } from "../speech/speech-model";
 import { recordingGone, speechReading, spokenReply } from "../speech/speech-playback";
@@ -44,15 +42,17 @@ import {
   toggleSpokenReply,
 } from "../speech/speech-replies";
 import { groupedMessageIds } from "./agent-message-timeline";
+import { ConversationBrowserTakeover } from "./ConversationBrowserTakeover";
+import { ConversationQuestionPrompt } from "./ConversationQuestionPrompt";
 import { continuesSenderRun } from "./chat-grouping";
 import { isChatVisualAppShortcut } from "./chat-visual-shortcuts";
 import { chatVisualPageUrl } from "./chat-visual-url";
 import { conversationRuntime } from "./conversation-runtime";
 import { useConversationViewScope } from "./conversation-scope";
-import type { ConversationProps } from "./conversation-types";
 import { agentSkillsMode } from "./installed-skills-source";
 import { MarketplaceSuggestionChatCard, marketplaceSuggestionKnown } from "./MarketplaceSuggestionChatCard";
 import { McpSignInChatCard } from "./McpSignInChatCard";
+import { createMessageImageFiles } from "./message-image-files";
 import { RoutineChatCard } from "./RoutineChatCard";
 import { createChatWebhookRoutines, RoutineWebhookChatCard } from "./RoutineWebhookChatCard";
 import { desktopChatEventRoutinesApi } from "./routine-webhooks-api";
@@ -112,9 +112,6 @@ export function ConversationTimeline() {
     activeChatSearchIndex,
     agentActivitySpaceReserved,
     attachmentAction,
-    browserTakeoverPreview,
-    browserTakeoverResolution,
-    browserTakeoverTab,
     channel,
     chatSearchMatches,
     chatSearchOpen,
@@ -125,6 +122,7 @@ export function ConversationTimeline() {
     composerHasContent,
     copiedMessageId,
     dismissPendingSend,
+    downloadMessageImageFile,
     editingDeliveryId,
     editPendingSend,
     copyMessage,
@@ -146,8 +144,6 @@ export function ConversationTimeline() {
     moveChatSearch,
     openExternalMessageUrl,
     openReactionMessageId,
-    openBrowserTakeoverTab,
-    localSignIn,
     openRoutineSettings,
     openSkillSettings,
     openSharedFile,
@@ -166,7 +162,6 @@ export function ConversationTimeline() {
     providerSilentMinutes,
     agentProviderName,
     replyJump,
-    respondToBrowserTakeover,
     replyToMessage,
     addPageText,
     setPageContext,
@@ -187,9 +182,9 @@ export function ConversationTimeline() {
     followReaderScroll,
     setUnreadMessagesDividerElement,
     setVirtualRootElement,
-    openTaskPanel,
     shownSubagentId,
     toggleSubagentPanel,
+    sideThreadOpen,
   } = useConversationViewScope();
   const { t, format, sourceText } = useText();
   // A named function, not a ternary in the prop: the compiler wraps a ternary prop in a memo, and
@@ -260,7 +255,6 @@ export function ConversationTimeline() {
         toggleSpokenReply({ serverId: props.server?.id ?? "local", agentId, messageId: message.id }, message.body),
     };
   };
-  const openTasks = () => props.tasks?.snapshot?.tasks.filter((task) => task.state !== "closed") ?? [];
   const compaction = (): ContextCompactionView | null => {
     const state = props.contextState;
     if (state?.agentId !== props.agent?.id || state?.threadId !== props.agent?.threadId || !state?.compaction)
@@ -278,6 +272,8 @@ export function ConversationTimeline() {
   );
 
   const runtime = conversationRuntime(props);
+  // The browser client reads a host file whole, with no size limit, so a named image stays a chip there.
+  const loadImageFile = props.runtime ? undefined : createMessageImageFiles(runtime.agent);
   /** The agent that asks in a card: in a channel, the working agent whose card shows. */
   const interactionAgentName = () => (channel ? channel.interactionAgentName() : props.agent?.name);
   /**
@@ -364,6 +360,7 @@ export function ConversationTimeline() {
             onPreview={(attachment) => void previewAttachment(attachment)}
             onAttachmentAction={attachmentAction}
             onOpenQuote={openQuote}
+            macWindowControls={props.platform === "darwin"}
           />
         )}
       </Show>
@@ -505,23 +502,6 @@ export function ConversationTimeline() {
     },
   });
   const channelWorkingSteps = createMemo(() => (channel ? turnSteps.workingSteps(channel.workingTurns()) : []));
-  let cachedPrompt: { key: string; prompt: NonNullable<ConversationProps["prompt"]> } | null = null;
-  const keyedPrompt = createMemo(() => {
-    const prompt = props.prompt;
-    if (!prompt) {
-      cachedPrompt = null;
-      return null;
-    }
-    const key = JSON.stringify([prompt.turnId, String(prompt.requestId)]);
-    if (cachedPrompt?.key === key) return cachedPrompt;
-    cachedPrompt = { key, prompt };
-    return cachedPrompt;
-  });
-  /**
-   * The block of the waiting prompt draws it as a card. Until the block's message arrives, or when the
-   * agent asked without one, the prompt's questions draw it.
-   */
-  const pendingPromptBlock = createMemo(() => (keyedPrompt() ? props.promptUiBlock : undefined));
   /**
    * A direct chat with no message yet, and no turn, queued send or question. A queued send leaves the
    * timeline for the queue tray, and the activity line shows only after a delay, so both are read here.
@@ -534,7 +514,7 @@ export function ConversationTimeline() {
     !props.activeTurnId &&
     presentedQueueDeliveries().length === 0 &&
     !renderedAgentActivity() &&
-    !keyedPrompt()
+    !props.prompt
       ? props.agent
       : undefined,
   );
@@ -547,11 +527,11 @@ export function ConversationTimeline() {
   return (
     <>
       <span class="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {keyedPrompt()
-          ? t("prompt.inputRequiredAnnouncement", { question: keyedPrompt()?.prompt.questions[0]?.question ?? "" })
+        {props.prompt
+          ? t("prompt.inputRequiredAnnouncement", { question: props.prompt.questions[0]?.question ?? "" })
           : ""}
       </span>
-      <Show when={chatSearchOpen()}>
+      <Show when={chatSearchOpen() && !sideThreadOpen()}>
         <ChatSearch
           query={chatSearchQuery()}
           current={activeChatSearchIndex()}
@@ -564,7 +544,7 @@ export function ConversationTimeline() {
         />
       </Show>
 
-      <Show when={props.unreadCount > 0 && !unreadDividerVisible()}>
+      <Show when={props.unreadCount > 0 && !unreadDividerVisible() && !sideThreadOpen()}>
         <UnreadMessagesBanner
           count={props.unreadCount}
           busy={markingRead()}
@@ -574,7 +554,8 @@ export function ConversationTimeline() {
       </Show>
 
       <div
-        class={["conversation-scroll", scrollFades.classes()]}
+        class={["conversation-scroll", scrollFades.classes(), { "conversation-covered": sideThreadOpen() }]}
+        inert={sideThreadOpen()}
         ref={(element) => {
           setScrollElement(element);
           rail.ref(element);
@@ -1113,6 +1094,7 @@ export function ConversationTimeline() {
                             onMessage={addPageText}
                             onContext={(text) => setPageContext(message() ?? initialMessage, text)}
                             isAppShortcut={isChatVisualAppShortcut}
+                            macWindowControls={props.platform === "darwin"}
                           />
                         </article>
                       </ChatRowBoundary>
@@ -1232,6 +1214,19 @@ export function ConversationTimeline() {
                             onOpenQuote={openQuote}
                             onDownload={(attachment) => attachmentAction(attachment, "download")}
                             mediaSource={runtime.attachmentMedia}
+                            macWindowControls={props.platform === "darwin"}
+                            loadImageFile={
+                              loadImageFile &&
+                              ((file) =>
+                                loadImageFile(file, {
+                                  serverId: props.server?.id ?? "local",
+                                  messageId: message()?.id ?? initialMessage.id,
+                                  agentId: workspaceAgentId(),
+                                }))
+                            }
+                            onDownloadImageFile={
+                              loadImageFile && ((file) => downloadMessageImageFile(file, workspaceAgentId()))
+                            }
                             actions={
                               <>
                                 <Show when={pending()}>
@@ -1389,53 +1384,9 @@ export function ConversationTimeline() {
                 </Show>
               </Show>
             </div>
-            <Show when={props.tasks}>
-              {(tasks) => (
-                <AgentTaskChips
-                  tasks={openTasks()}
-                  onOpen={openTaskPanel}
-                  onClose={(taskId) => tasks().onClose(taskId)}
-                  waitsForApproval={(task) => tasks().approval(task) !== undefined}
-                />
-              )}
-            </Show>
-            <Show when={keyedPrompt()} keyed>
-              {(entry) => {
-                const presentResolution = () =>
-                  props.onPromptResolutionPresented?.(
-                    entry.prompt.agentId,
-                    entry.prompt.turnId,
-                    entry.prompt.requestId,
-                  );
-                return (
-                  <Loading>
-                    <Show
-                      when={pendingPromptBlock()}
-                      fallback={
-                        <QuestionPromptBubble
-                          questions={entry.prompt.questions}
-                          elementRef={setRequiredInteractionElement}
-                          sendShortcut={deviceSendShortcut(props.platform)}
-                          onSubmit={props.onAnswerPrompt}
-                          onResolutionPresented={presentResolution}
-                        />
-                      }
-                    >
-                      {(block) => (
-                        <UiBlockPrompt
-                          block={block()}
-                          agents={props.agents}
-                          onSelectAgent={props.onSelectAgent}
-                          onOpenLink={(url) => void openExternalMessageUrl(url)}
-                          elementRef={setRequiredInteractionElement}
-                          onAnswer={props.onAnswerPrompt}
-                          onAnswered={presentResolution}
-                        />
-                      )}
-                    </Show>
-                  </Loading>
-                );
-              }}
+            {/* Under an open side thread, the thread draws the card of its own question. */}
+            <Show when={!sideThreadOpen()}>
+              <ConversationQuestionPrompt elementRef={setRequiredInteractionElement} />
             </Show>
             <Show keyed when={props.approval}>
               {(approval) => (
@@ -1461,40 +1412,9 @@ export function ConversationTimeline() {
                 />
               )}
             </Show>
-            <Show when={props.browserTakeover}>
-              <Loading>
-                <BrowserTakeoverCard
-                  request={props.browserTakeover}
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={browserTakeoverTab()}
-                  preview={browserTakeoverPreview().preview}
-                  previewStatus={browserTakeoverPreview().status}
-                  onOpen={openBrowserTakeoverTab}
-                  onComplete={() => respondToBrowserTakeover("complete")}
-                  onCancel={() => respondToBrowserTakeover("cancel")}
-                  onSignInLocally={localSignIn.canStartForTakeover() ? localSignIn.startForTakeover : undefined}
-                  signInBlocked={localSignIn.blockedTakeover()}
-                  browserSecret={{
-                    loadPreview: runtime.browser.capturePreview,
-                    vaultSave: props.server?.kind === "local",
-                    onRespond: runtime.agent.respondToBrowserSecret,
-                  }}
-                />
-              </Loading>
-            </Show>
-            <Show when={!props.browserTakeover && browserTakeoverResolution()}>
-              {(resolution) => (
-                <BrowserTakeoverCard
-                  agentName={interactionAgentName() ?? t("chat.message.agentFallback")}
-                  tab={resolution().tab}
-                  preview={resolution().preview}
-                  previewStatus={resolution().previewStatus}
-                  decision={resolution().decision}
-                  signInBlocked={resolution().signInBlocked}
-                  onComplete={async () => false}
-                  onCancel={async () => false}
-                />
-              )}
+            {/* Under an open side thread, the thread draws the card of its own request. */}
+            <Show when={!sideThreadOpen()}>
+              <ConversationBrowserTakeover />
             </Show>
           </div>
         </Show>

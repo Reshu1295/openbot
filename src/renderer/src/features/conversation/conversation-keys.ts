@@ -19,6 +19,11 @@ export function composerDraftKey(target: { agentId: string; serverId: string }):
   return target.serverId === "local" ? target.agentId : `${target.serverId}:${target.agentId}`;
 }
 
+/** Identifies the composer draft of one side thread of an agent, or of its new thread tab. */
+export function threadDraftKey(target: { agentId: string; serverId: string }, threadId: string): string {
+  return `${composerDraftKey(target)}\0${threadId}`;
+}
+
 /** Drops every cached body belonging to one agent. */
 export function deleteAgentMessageBodies(messages: Map<string, string>, agentId: string): void {
   const prefix = `${agentId}\0`;

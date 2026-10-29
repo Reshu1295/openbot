@@ -131,6 +131,8 @@ export function createStableConversationState(
   });
   /** Keyed by channel id. A channel id is a UUID, so it does not need its server in the key. */
   const [channelDrafts, setChannelDrafts] = createSignal<Record<string, ComposerDraft>>(storedDrafts?.channels ?? {});
+  /** The message box of each side thread, keyed by `threadDraftKey`. */
+  const [threadDrafts, setThreadDrafts] = createSignal<Record<string, ComposerDraft>>(storedDrafts?.threads ?? {});
   const [editingAgentId, setEditingAgentId] = createSignal<string | null>(restoredEdit?.agentId ?? null);
   const [editingServerId, setEditingServerId] = createSignal<string | null>(restoredEdit?.serverId ?? null);
   const [editingEditId, setEditingEditId] = createSignal<string | null>(restoredEdit?.editId ?? null);
@@ -209,6 +211,7 @@ export function createStableConversationState(
     writeComposerDraftsOnChange({
       drafts,
       channelDrafts,
+      threadDrafts,
       editingAgentId,
       editingServerId,
       editingDraftBackup,
@@ -307,6 +310,8 @@ export function createStableConversationState(
     setDrafts,
     channelDrafts,
     setChannelDrafts,
+    threadDrafts,
+    setThreadDrafts,
     editingAgentId,
     setEditingAgentId,
     editingServerId,
@@ -384,7 +389,7 @@ export function createServerConversationState() {
   const [markingRead, setMarkingRead] = createSignal(false);
   const [dropActive, setDropActive] = createSignal(false);
   const [rightPanels, setRightPanels] = createSignal<Record<string, RightPanelMode>>({});
-  const [sidePanels, setSidePanels] = createStore<SidePanelsState>({ side: {}, tasks: {}, subagents: {} });
+  const [sidePanels, setSidePanels] = createStore<SidePanelsState>({ side: {}, subagents: {} });
   const [settingsProvider, setSettingsProvider] = createSignal<AgentProviderId>("codex");
   const [settingsModel, setSettingsModel] = createSignal<AgentModelId>("gpt-6-luna");
   const [settingsReasoning, setSettingsReasoning] = createSignal<AgentReasoningEffort>("medium");

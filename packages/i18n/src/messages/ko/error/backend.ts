@@ -77,6 +77,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "채널 전달이 만들어지지 않았어요.",
   "error.backend.channelAssignmentStopped": "이 채널 배정은 중지되었거나 다른 배정으로 바뀌었어요.",
   "error.backend.channelAssigneeUnavailable": "배정된 에이전트를 사용할 수 없어요.",
+  "error.backend.channelAssigneeRemoved": "배정된 멤버가 제거되었어요.",
+  "error.backend.channelAssigneeReassign": "배정된 멤버를 사용할 수 없어요. 이 작업을 다시 배정하세요.",
   "error.backend.channelAssignmentChanged": "이 채널 배정이 변경되었어요.",
   "error.backend.channelMemberRequired": "이 채널에서 사용 가능한 멤버를 선택하세요.",
   "error.backend.memoryEssentialBudget":
@@ -183,8 +185,11 @@ export const messages = {
   "error.backend.routineFlowHandoffFailed": "루틴이 이 에이전트에게 작업을 넘기지 못했어요.",
   "error.backend.mcpServerLimit": "OpenBot은 MCP 서버를 최대 {limit}개까지 유지해요.",
   "error.backend.mcpServerNameTaken": "{name}(이)라는 MCP 서버가 이미 있어요.",
+  "error.backend.mcpServerInvalid": "OpenBot이 이 MCP 서버 설정을 저장할 수 없어요.",
   "error.backend.mcpServerNoAnswer": "서버가 {seconds}초 안에 응답하지 않았어요.",
   "error.backend.mcpSignInNotAccepted": "서버가 해당 로그인을 수락하지 않았어요.",
+  "error.backend.mcpSignInClientRefused":
+    "로그인을 완료할 때 로그인 서버가 OpenBot을 받아들이지 않았어요. 다시 로그인하세요. OpenBot이 서버에 다시 등록해요.",
   "error.backend.mcpCommandNotFound": "명령을 찾을 수 없어요: {command}",
   "error.backend.mcpRegistrationRefused":
     "로그인 서버가 아직 OpenBot을 앱으로 허용하지 않아요. 계정 문제가 아니에요. 로컬 MCP 서버처럼 다른 방법으로 연결하세요.",
@@ -203,6 +208,7 @@ export const messages = {
   "error.backend.mcpSignInMetadataUnreadable":
     "OpenBot이 이 서버의 로그인 정보를 읽을 수 없었어요. 서버 주소를 확인한 후 다시 시도해 주세요.",
   "error.backend.mcpServerExited": "서버가 응답하기 전에 중지되었어요. 터미널에서 명령을 실행해 오류를 확인하세요.",
+  "error.backend.mcpServerFailedToStart": "서버가 시작되지 않았어요: {reason}",
   "error.backend.mcpOAuthProxyUnavailable":
     "OpenBot이 이 서버용 로컬 로그인 연결을 시작할 수 없었어요. OpenBot을 다시 시작한 후 시도해 주세요.",
   "error.backend.mcpOAuthSignInNeeded":
@@ -305,6 +311,14 @@ export const messages = {
   "error.backend.taskNotFound": "이 작업을 사용할 수 없어요.",
   "error.backend.taskClosed": "이 작업은 닫혀 있어요. 메시지를 보내려면 다시 여세요.",
   "error.backend.taskStillRunning": "이 작업이 아직 실행 중이에요. 중지될 때까지 기다린 후 닫으세요.",
+  "error.backend.threadNotFound": "이 스레드를 사용할 수 없어요.",
+  "error.backend.threadStillRunning": "이 스레드가 아직 실행 중이에요. 중지한 다음 다시 시도하세요.",
+  "error.backend.threadArchived": "이 스레드는 보관되어 있어요. 메시지를 보내려면 복원하세요.",
+  "error.backend.threadTitleRequired": "스레드에 짧은 제목을 지정하세요.",
+  "error.backend.threadOpenLimitReached":
+    "이 에이전트에는 열린 스레드가 {count}개 있어요. 스레드 하나를 보관한 후 다른 스레드를 시작하거나 복원하세요.",
+  "error.backend.threadRemoteUnsupported": "스레드는 이 컴퓨터의 에이전트에서만 사용할 수 있어요.",
+  "error.backend.threadMoveRefused": "이 에이전트에게만 보낸 메시지만 새 스레드에서 실행할 수 있어요.",
   "error.backend.taskTitleRequired": "작업에 짧은 제목을 지정하세요.",
   "error.backend.taskToolInvalid": "작업에 120자 이하의 제목과 할 일을 설명하는 지시문을 지정하세요.",
   "error.backend.taskOwnChatOnly":

@@ -52,6 +52,14 @@ const CARD = {
   securityCode: "123",
 };
 
+const API_KEY = {
+  kind: "apiKey" as const,
+  id: null,
+  name: "OPENAI_API_KEY",
+  notes: "",
+  key: "vault-api-key-secret-1",
+};
+
 describe("Vault secret redaction", () => {
   it("redacts a saved password and card number, in each form a page or log can show", async () => {
     const vault = service();
@@ -66,8 +74,21 @@ describe("Vault secret redaction", () => {
     expect(redacted).not.toContain("4000-0566-5566-5556");
   });
 
+  it("redacts a saved API key and keeps it out of the summary", async () => {
+    const vault = service();
+    await Effect.runPromise(vault.load());
+    const state = await Effect.runPromise(vault.save(API_KEY));
+    expect(JSON.stringify(state)).not.toContain("vault-api-key-secret-1");
+    expect(redactText("OPENAI_API_KEY=vault-api-key-secret-1")).not.toContain("vault-api-key-secret-1");
+    const reader = service();
+    await Effect.runPromise(reader.load());
+    const id = reader.state().items.find((item) => item.kind === "apiKey")?.id ?? "";
+    expect(reader.reveal({ id, field: "key" })).toBe("vault-api-key-secret-1");
+  });
+
   it("redacts the secrets of a file that a new process loads", async () => {
-    // Written without the service, so only the load can register these values.
+    // Written without the service, so only the load can register these values. It has no `apiKeys`,
+    // as a build before API keys wrote it.
     const record = {
       logins: [{ id: "l1", website: "example.com", username: "ada", password: "vault-login-secret-2", notes: "" }],
       cards: [{ ...CARD, id: "c1", number: "5555555555554444", billingContactId: null }],
@@ -84,6 +105,12 @@ describe("Vault secret redaction", () => {
     const redacted = redactText("vault-login-secret-2 5555 5555 5555 4444");
     expect(redacted).not.toContain("vault-login-secret-2");
     expect(redacted).not.toContain("5555 5555 5555 4444");
+    // The first API key keeps every item of the older file.
+    await Effect.runPromise(reader.save(API_KEY));
+    const upgraded = service();
+    await Effect.runPromise(upgraded.load());
+    expect(upgraded.state().items.map((item) => item.kind)).toEqual(["login", "card", "apiKey"]);
+    expect(upgraded.reveal({ id: "l1", field: "password" })).toBe("vault-login-secret-2");
   });
 
   it("keeps the summary free of secrets and leaves an unreadable file in place", async () => {

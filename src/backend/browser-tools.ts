@@ -1,6 +1,7 @@
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import { BROWSER_TAKEOVER_REASONS, VAULT_TEXT_LIMIT, type VaultContactFields } from "@openbot/contracts/ipc";
 import { z } from "zod";
+import { advertisedJsonSchema } from "./agent/advertised-json-schema";
 import {
   BROWSER_FILL_FIELDS_MAX_FIELDS,
   BROWSER_FILL_FIELDS_MAX_TEXT_BYTES,
@@ -344,7 +345,7 @@ const BROWSER_TOOL_DEFINITIONS = [
   browserTool({
     name: "upload_files",
     description:
-      "Set local files readable by OpenBot on a file input after validating paths, then return a fresh snapshot.",
+      "Set local files on a file input or the file chooser a clicked target opens, then return a fresh snapshot.",
     shape: {
       ...targetAction,
       paths: z.array(z.string().min(1).max(INPUT_LIMITS.path)).min(1).max(INPUT_LIMITS.attachments),
@@ -436,7 +437,7 @@ export const BROWSER_DYNAMIC_TOOLS = [
       type: "function" as const,
       name: definition.name,
       description: definition.description,
-      inputSchema: z.toJSONSchema(definition.schema, { target: "draft-7", unrepresentable: "any" }),
+      inputSchema: advertisedJsonSchema(definition.schema),
     })),
   },
 ];

@@ -17,6 +17,7 @@ import { AGENT_INSTALL_CAPABILITY } from "@openbot/contracts/team-protocol/agent
 import { AGENT_MEMORY_LIMIT_CAPABILITY } from "@openbot/contracts/team-protocol/agent-memory-limit-v1";
 import { AGENT_PUBLISH_CAPABILITY } from "@openbot/contracts/team-protocol/agent-publish-v1";
 import { AGENT_UPDATE_CAPABILITY } from "@openbot/contracts/team-protocol/agent-update-v1";
+import { BITWARDEN_CONNECTOR_CAPABILITY } from "@openbot/contracts/team-protocol/bitwarden-connector-v1";
 import { CONNECTORS_CAPABILITY } from "@openbot/contracts/team-protocol/connectors-v1";
 import { TEAM_AGENT_CREATE_MODEL_CAPABILITY } from "@openbot/contracts/team-protocol/current";
 import { EVENTS_CAPABILITY } from "@openbot/contracts/team-protocol/events-v1";
@@ -41,6 +42,9 @@ import { SKILLS_ADMIN_CAPABILITY } from "@openbot/contracts/team-protocol/skills
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
 import { TEAM_PROTOCOL_V3 } from "@openbot/contracts/team-protocol/v3";
 import { decodeTeamProtocolSupportV7Base } from "@openbot/contracts/team-protocol/v7-base";
+import { VAULT_IMPORT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-import-v1";
+import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
 import { sourceText } from "@openbot/i18n/source";
 import {
   createRemoteAccountRefresh,
@@ -85,6 +89,7 @@ import { MobileChannelStore } from "@/features/channels/model/channel-store";
 import { useLiveActivity } from "@/features/live-activity/use-live-activity";
 import { usePushNotifications } from "@/features/push-notifications/use-push-notifications";
 import { QuickActionsSync } from "@/features/quick-actions/quick-actions-sync";
+import { ShareExtensionSync } from "@/features/share/share-extension-sync";
 import { fetch } from "@/features/support/model/logged-fetch";
 import { supportLog } from "@/features/support/model/support-log";
 import type { RemoteTeamTransportRef } from "@/features/workspace/components/remote-team-transport";
@@ -107,6 +112,7 @@ import {
 } from "@/features/workspace/context/server-recovery-countdown";
 import { useConversationReads } from "@/features/workspace/context/use-conversation-reads";
 import { useServerOrder } from "@/features/workspace/context/use-server-order";
+import { createWorkflowActions } from "@/features/workspace/context/workflow-actions";
 import { WorkspaceContexts } from "@/features/workspace/context/workspace-store";
 import { reduceAgentActivity } from "@/features/workspace/model/agent-activity";
 import {
@@ -374,6 +380,12 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
   const pinnedAgentIds = (activeServerId ? preferences[activeServerId]?.pinned : null) ?? NO_IDS;
   const hiddenChannelIds = (activeServerId ? preferences[activeServerId]?.hiddenChannels : null) ?? NO_IDS;
   const pinnedChannelIds = (activeServerId ? preferences[activeServerId]?.pinnedChannels : null) ?? NO_IDS;
+  const pinnedWorkflowIds = useMemo(() => {
+    const pins: Record<string, readonly string[]> = {};
+    for (const [serverId, saved] of Object.entries(preferences))
+      if (saved.pinnedWorkflows?.length) pins[serverId] = saved.pinnedWorkflows;
+    return pins;
+  }, [preferences]);
 
   /**
    * Drops the local state of servers that this account no longer has: their waiting requests, cached
@@ -1203,6 +1215,10 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       }),
     [request, teamApi, queryClient, queryScope],
   );
+  const workflows = useMemo(
+    () => createWorkflowActions({ request, capabilities: serverCapabilities.current }),
+    [request],
+  );
   const browser = useMemo(
     () =>
       createBrowserActions({
@@ -1221,6 +1237,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
     const currentPinnedAgentIds = () =>
       (activeServerIdRef.current ? preferencesRef.current[activeServerIdRef.current]?.pinned : null) ?? NO_IDS;
     const workspace: MobileWorkspaceActions = {
+      ...workflows,
       openBrowserView: browser.openBrowserView,
       controlBrowserTab: browser.controlBrowserTab,
       mutateSidebarLayout: async (serverId, action) => {
@@ -1535,6 +1552,26 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
         if (!saved || (result === "pinned" && !saved.pinnedChannels?.includes(channelId))) return "error";
         return result;
       },
+      toggleWorkflowPin: (workflowId, serverId) => {
+        let result: "pinned" | "unpinned" = "pinned";
+        const saved = updatePreferences(serverId, (current) => {
+          const pinned = current.pinnedWorkflows ?? [];
+          result = pinned.includes(workflowId) ? "unpinned" : "pinned";
+          return {
+            ...current,
+            pinnedWorkflows: result === "unpinned" ? pinned.filter((id) => id !== workflowId) : [...pinned, workflowId],
+          };
+        });
+        return saved ? result : "error";
+      },
+      reconcileWorkflowPins: (serverId, workflowIds) => {
+        const pinned = preferencesRef.current[serverId]?.pinnedWorkflows;
+        if (!pinned?.some((id) => !workflowIds.includes(id))) return;
+        updatePreferences(serverId, (current) => ({
+          ...current,
+          pinnedWorkflows: (current.pinnedWorkflows ?? []).filter((id) => workflowIds.includes(id)),
+        }));
+      },
       toggleAgentPin: (agentId) => {
         const pinned = currentPinnedAgentIds();
         const serverId = currentActiveServer().id;
@@ -1562,6 +1599,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
     }));
   }, [
     browser,
+    workflows,
     hostRequests,
     request,
     teamApi,
@@ -1630,6 +1668,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       hiddenAgents,
       pinnedAgentIds,
       pinnedChannelIds,
+      pinnedWorkflowIds,
       hiddenChannelIds,
       hidesAgentsOnServer: (serverId) =>
         hostOwnsHide(serverCapabilities.current.get(serverId), servers.find((server) => server.id === serverId)?.role),
@@ -1651,6 +1690,10 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       },
       canManageConnectors: (serverId) => administers(serverId, CONNECTORS_CAPABILITY),
       canManageOnePasswordConnector: (serverId) => administers(serverId, ONEPASSWORD_CONNECTOR_CAPABILITY),
+      canManageBitwardenConnector: (serverId) => administers(serverId, BITWARDEN_CONNECTOR_CAPABILITY),
+      canManageVault: (serverId) => administers(serverId, VAULT_CAPABILITY),
+      canImportVault: (serverId) => administers(serverId, VAULT_IMPORT_CAPABILITY),
+      canManageVaultApiKeys: (serverId) => administers(serverId, VAULT_V2_CAPABILITY),
       // The same rule as the Updates section of the desktop Server Settings.
       serverUpdateAccess: (serverId) => {
         if (administers(serverId, HOST_UPDATE_CAPABILITY)) return "admin";
@@ -1701,6 +1744,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
     hiddenAgents,
     pinnedAgentIds,
     pinnedChannelIds,
+    pinnedWorkflowIds,
     hiddenChannelIds,
     hostHiddenIds,
     supportsPushNotifications,
@@ -1720,6 +1764,14 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
             activeServerId={activeServerId}
             agents={agents}
             preferences={visiblePreferences}
+          />
+          <ShareExtensionSync
+            apiUrl={session.apiUrl}
+            userId={session.user.id}
+            sessionToken={session.sessionToken}
+            servers={orderedServers}
+            serversReady={serverDirectoryState === "ready"}
+            agents={agents}
           />
           {servers.map((server) => (
             <ServerConnection

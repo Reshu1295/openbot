@@ -303,6 +303,11 @@ is one folder per plugin in [`marketplace/plugin-catalog/`](../../marketplace/pl
      registration, PKCE and refresh. The tokens stay in encrypted storage. No bridge program.
    - `key`: one or two fields that go into a `header` (http) or an `env` value (stdio).
    - `local`: steps that the user does on the computer that runs the server.
+
+   A `stdio` app that drives Apple apps through AppleScript lists them in `macAutomation`
+   (`calendar`, `contacts`, `mail`, `notes`, `reminders`, `messages`, `safari`). On a Mac that runs
+   the server, the listing page can then ask macOS for each app at install
+   ([`mac-automation.ts`](../../src/main/mac-automation.ts)). The mobile copy leaves the field out.
 3. Never put a secret in the catalog. The user types it in the connect dialog.
 4. Build and check the generated files:
    ```sh
@@ -364,8 +369,8 @@ page opens in this computer's browser through the relay.
 ## Add a connector
 
 A connector links OpenBot to an outside account for all agents. Each one has a main-process
-service, an IPC contract, a renderer controller and a panel. Settings › Connectors, Marketplace ›
-Apps, the chat suggestion card and the browser client read one list, so a connector shows the same
+service, an IPC contract, a renderer controller and a panel. Marketplace › Apps, the chat
+suggestion card and the browser client read one list, so a connector shows the same
 state on each of them.
 
 | Connector | Service | Sign-in | Contract |
@@ -443,7 +448,7 @@ The optional capability `onepassword-connector-v1`
 ([`onepassword-connector-v1.ts`](../../packages/contracts/src/team-protocol/onepassword-connector-v1.ts),
 host route [`route-onepassword-connector.ts`](../../src/main/team-api/route-onepassword-connector.ts))
 carries 1Password. A server often has no screen for the 1Password app, so an owner or admin pastes a
-service account token in Settings › Connectors. The token goes to the host once, in `connect`. The
+service account token in Marketplace › Apps › 1Password. The token goes to the host once, in `connect`. The
 host checks it with 1Password and keeps it in its own encrypted store. No answer carries it. Status
 and disconnect act on that host only. A host older than this capability hides 1Password.
 
@@ -454,7 +459,7 @@ The optional capability `bitwarden-connector-v1`
 host route [`route-bitwarden-connector.ts`](../../src/main/team-api/route-bitwarden-connector.ts))
 carries Bitwarden and self-hosted Vaultwarden. A session key unlocks only the CLI data of the
 computer that made it, so the host signs in with its own `bw`. An owner or admin enters the server
-address, the personal API key and the master password in Settings › Connectors. They go to the host
+address, the personal API key and the master password in Marketplace › Apps › Bitwarden. They go to the host
 once, in `connect`; no answer carries them. `connect` answers `connecting` at once, because the
 first sign-in can download `bw` and sync the vault for longer than the 15-second request limit. The
 client reads `status` every 2 seconds until the state changes. The host stores the record only after
@@ -462,6 +467,12 @@ it unlocks the vault and finds the folder `Shared with OpenBot`, and unlocks aga
 restart. The host must reach the server address over HTTPS; the instance firewall of
 [several instances on one host](../docker.md#several-instances-on-one-host) blocks private
 addresses. A host older than this capability hides Bitwarden.
+
+The phone uses the same routes in Server settings › Connectors › Bitwarden
+(`apps/mobile/src/features/servers/components/bitwarden-connector-page.tsx`). It reads `status`
+every 3 seconds while the page shows, as for the other connectors, and keeps no copy of the API key
+or the master password. For a host older than this capability, the phone shows Bitwarden as
+"Desktop app only", with no action.
 
 ## Add a Team API capability
 

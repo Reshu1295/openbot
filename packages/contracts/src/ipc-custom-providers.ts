@@ -7,7 +7,7 @@
 import { AGENT_PROVIDERS } from "./agent-providers";
 import { INPUT_LIMITS } from "./input-limits";
 import { isBoundedString } from "./ipc-bounded-values";
-import { isDynamicRecord, isOneOf, isString } from "./runtime-values";
+import { isDynamicRecord, isNumber, isOneOf, isString } from "./runtime-values";
 
 /**
  * A custom provider is served by the OpenCode CLI, so its bounds are OpenCode's config shape rather
@@ -20,6 +20,12 @@ export const CUSTOM_PROVIDER_LIMITS = {
   baseUrl: 2_048,
   models: 64,
   headers: 32,
+  /**
+   * The context window of one model, in tokens. OpenCode's own prompt and tools take about 12K
+   * tokens, so a smaller window compacts on every turn.
+   */
+  contextWindowMin: 1_024,
+  contextWindowMax: 100_000_000,
 } as const;
 
 /** A `provider` key in OpenCode's config, so lowercase and free of separators. */
@@ -31,11 +37,32 @@ export const CUSTOM_PROVIDER_HEADER_NAME_PATTERN = /^[A-Za-z0-9!#$%&'*+.^_`|~-]+
 export interface CustomProviderModel {
   id: string;
   name: string;
+  /**
+   * The context window in tokens. Absent: OpenCode assumes its own default, 200K tokens in OpenCode
+   * 2.1.4. This computer only: a Team API list and save keep their released model fields.
+   */
+  contextWindow?: number;
+}
+
+/** A context window that OpenCode can use for a model. */
+export function isCustomProviderContextWindow(value: unknown): value is number {
+  return (
+    isNumber(value) &&
+    Number.isSafeInteger(value) &&
+    value >= CUSTOM_PROVIDER_LIMITS.contextWindowMin &&
+    value <= CUSTOM_PROVIDER_LIMITS.contextWindowMax
+  );
 }
 
 export interface CustomProviderHeader {
   name: string;
   value: string;
+}
+
+/** A header of an edit. `value: null` keeps the value that main holds for this name. */
+export interface CustomProviderHeaderInput {
+  name: string;
+  value: string | null;
 }
 
 /**
@@ -57,8 +84,10 @@ export interface SaveCustomProviderInput {
 /**
  * Renderer to main, on this computer only: the Team API has no edit route. The id names a saved
  * endpoint and does not change. A field that is absent keeps its stored value, so the form can send
- * a blank key and no headers without discarding the credentials that the user does not type again.
- * There is no way to clear a stored key here: remove the endpoint and add it again for that.
+ * a blank key without discarding the key that the user does not type again. `headers` replaces the
+ * saved list: a header with a `null` value keeps its saved value, and a saved header that is not in
+ * the list is removed. There is no way to clear a stored key here: remove the endpoint and add it
+ * again for that.
  */
 export interface UpdateCustomProviderInput {
   id: string;
@@ -66,7 +95,7 @@ export interface UpdateCustomProviderInput {
   baseUrl: string;
   models: CustomProviderModel[];
   apiKey?: string;
-  headers?: CustomProviderHeader[];
+  headers?: CustomProviderHeaderInput[];
 }
 
 export interface DeleteCustomProviderInput {
@@ -79,6 +108,11 @@ export interface CustomProviderSummary {
   name: string;
   baseUrl: string;
   hasApiKey: boolean;
+  /**
+   * The names of the saved headers, so Edit can show them. The values never come back. Absent in a
+   * Team API list, which keeps its released fields.
+   */
+  headerNames?: string[];
   /**
    * The models the user listed for this endpoint, which is how the renderer names one before the
    * CLI has listed it: onboarding must record a custom model for a custom choice, and the endpoint
@@ -136,9 +170,18 @@ export function isCustomProviderSummary(value: unknown): value is CustomProvider
     isBoundedString(value.name, INPUT_LIMITS.agentName) &&
     isBoundedString(value.baseUrl, CUSTOM_PROVIDER_LIMITS.baseUrl) &&
     typeof value.hasApiKey === "boolean" &&
+    (value.headerNames === undefined || isHeaderNames(value.headerNames)) &&
     Array.isArray(value.models) &&
     value.models.length <= CUSTOM_PROVIDER_LIMITS.models &&
     value.models.every(isCustomProviderModel)
+  );
+}
+
+function isHeaderNames(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= CUSTOM_PROVIDER_LIMITS.headers &&
+    value.every((name) => isCustomProviderHeaderName(name) && name.length <= INPUT_LIMITS.identifier)
   );
 }
 
@@ -146,7 +189,8 @@ function isCustomProviderModel(value: unknown): value is CustomProviderModel {
   return (
     isDynamicRecord(value) &&
     isBoundedString(value.id, INPUT_LIMITS.identifier) &&
-    isBoundedString(value.name, INPUT_LIMITS.modelName)
+    isBoundedString(value.name, INPUT_LIMITS.modelName) &&
+    (value.contextWindow === undefined || isCustomProviderContextWindow(value.contextWindow))
   );
 }
 

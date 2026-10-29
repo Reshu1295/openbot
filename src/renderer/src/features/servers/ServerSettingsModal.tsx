@@ -29,7 +29,6 @@ import {
   HardDrive,
   KeyRound,
   Monitor,
-  Plug,
   RefreshCw,
   Settings,
   ShieldCheck,
@@ -54,8 +53,6 @@ import { useText } from "@openbot/ui/text";
 import { createEffect, createSignal, onCleanup, Show, untrack } from "solid-js";
 import { actionToast } from "../../action-toast";
 import { type ServerBrowserProfilesOptions, ServerBrowserProfilesPanel } from "../browser/ServerBrowserProfilesPanel";
-import { ConnectorsPanel, type ConnectorsPanelDetail } from "../connectors/ConnectorsPanel";
-import type { ConnectorRegistry } from "../connectors/connector-registry";
 import { type ServerStorageOptions, ServerStoragePanel } from "../files/ServerStoragePanel";
 import { type HostProviderSettings, HostProviderSettingsPanel } from "../settings/ProviderSettingsSection";
 import type { HostPromptCacheTtlOptions, ProviderPromptCacheSource } from "../settings/provider-prompt-cache";
@@ -67,6 +64,7 @@ import { type ServerImportDetail, type ServerImportOptions, ServerImportPanel } 
 import { type McpPanelDetail, type McpPanelSignIn, ServerMcpPanel } from "./ServerMcpPanel";
 import { createServerMembersSection } from "./ServerMembersSection";
 import type { ServerMemoryLimitOptions } from "./ServerMemoryLimitSetting";
+import type { ServerMemoryReviewOptions } from "./ServerMemoryReviewSetting";
 import { createServerRolesSection, type ServerAgentAccessOptions } from "./ServerRolesSection";
 import { type ServerRoutineFeedOptions, ServerRoutineFeedPanel } from "./ServerRoutineFeedPanel";
 import type { ServerTimezoneOptions } from "./ServerTimezoneSetting";
@@ -146,6 +144,9 @@ export interface ServerSettingsModalProps {
   /** An MCP row to sign in to when the list holds it: the user pressed Sign in on an agent's card. */
   mcpSignInRequest?: string | null | undefined;
   onMcpSignInRequestHandled?: (() => void) | undefined;
+  /** Opens the MCP form for a new server once the section shows. */
+  mcpAddRequest?: boolean | undefined;
+  onMcpAddRequestHandled?: (() => void) | undefined;
   /**
    * Fired when the MCP section becomes visible. The list is read then, not when the dialog opens,
    * because most visits to this dialog never reach that section.
@@ -182,11 +183,6 @@ export interface ServerSettingsModalProps {
    */
   instanceTransfer?: ServerTransferOptions | undefined;
   /**
-   * The connectors of this server. The Connectors section appears only when the server can run one
-   * of them for this account.
-   */
-  connectors?: ConnectorRegistry | undefined;
-  /**
    * The Updates section appears only when a caller supplies this: a remote host with
    * `host-update-v1` that this member administers.
    */
@@ -201,6 +197,11 @@ export interface ServerSettingsModalProps {
    * the local server or a remote host with `agent-memory-limit-v1` that this member administers.
    */
   hostMemoryLimit?: ServerMemoryLimitOptions | undefined;
+  /**
+   * General shows how often the agents review their memories only when a caller supplies this, and
+   * only for the local server or a remote host with `memory-review-v1` that this member administers.
+   */
+  memoryReview?: ServerMemoryReviewOptions | undefined;
   /**
    * The Claude provider page shows how long Claude keeps the prompt cache only when a caller supplies
    * this, and only for the local server or a remote host with `prompt-cache-ttl-v1` that this member
@@ -222,7 +223,7 @@ export interface ServerSettingsModalProps {
    * a host that serves `browser-profiles-v1` to an owner or admin.
    */
   browserProfiles?: ServerBrowserProfilesOptions | undefined;
-  /** The Vault section appears only for this computer: a joined server keeps its Vault on its host. */
+  /** The Vault section: this computer, or a joined server that serves `vault-v1` to an owner or admin. */
   vault?: ServerVaultOptions | undefined;
   /** The section to show when the dialog opens. Updates shows General when the server has no Updates section. */
   initialSection?: ServerSettingsSection | null;
@@ -252,8 +253,7 @@ export type ServerSettingsSection =
   | "import"
   | "transfer"
   | "routines"
-  | "browser-profiles"
-  | "connectors";
+  | "browser-profiles";
 type Section = ServerSettingsSection;
 
 const sections = {
@@ -271,7 +271,6 @@ const sections = {
   transfer: { title: "server.settings.transferTitle", description: "server.settings.transferDescription" },
   routines: { title: "server.settings.routinesTitle", description: "server.settings.routinesDescription" },
   "browser-profiles": { title: "browser.profiles.title", description: "browser.profiles.subtitle" },
-  connectors: { title: "server.settings.connectorsTitle", description: "server.settings.connectorsDescription" },
 } as const satisfies Record<Section, { title: AppTextKey; description: AppTextKey }>;
 
 export function ServerSettingsModal(props: ServerSettingsModalProps) {
@@ -279,15 +278,12 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
   const [section, setSection] = createSignal<Section>("general");
   /** Set while the MCP panel shows a form, so the header reads `MCP › Connect to a custom MCP`. */
   const [mcpDetail, setMcpDetail] = createSignal<McpPanelDetail | null>(null);
-  /** Set while an integration page is open, so the header reads `Connectors › GitHub`. */
-  const [connectorDetail, setConnectorDetail] = createSignal<ConnectorsPanelDetail | null>(null);
   /** Set while a provider page is open, so the header reads `Providers › Codex`. */
   const [providerDetail, setProviderDetail] = createSignal<ProviderSettingsDetail | null>(null);
   /** Set while an import source is open, so the header reads `Import › Hermes Agent`. */
   const [importDetail, setImportDetail] = createSignal<ServerImportDetail | null>(null);
   const crumbDetail = () => {
     if (section() === "mcp") return mcpDetail();
-    if (section() === "connectors") return connectorDetail();
     if (section() === "import") return importDetail();
     if (section() === "roles") return roles.crumb();
     return section() === "providers" ? providerDetail() : null;
@@ -435,7 +431,7 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
     },
   );
 
-  /** Only this computer has a Vault section. */
+  /** A server with no Vault for this account has no Vault section. */
   createEffect(
     () => section() === "vault" && !props.vault,
     (gone) => {
@@ -490,8 +486,7 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
         value === "import" ||
         value === "transfer" ||
         value === "routines" ||
-        value === "browser-profiles" ||
-        value === "connectors"
+        value === "browser-profiles"
       )
         setSection(value);
     },
@@ -717,12 +712,6 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
                 <span>{t(sections["browser-profiles"].title)}</span>
               </Tabs.Trigger>
             </Show>
-            <Show when={(props.connectors?.available().length ?? 0) > 0}>
-              <Tabs.Trigger class="settings-modal-nav-item" value="connectors">
-                <Plug aria-hidden="true" />
-                <span>{t(sections.connectors.title)}</span>
-              </Tabs.Trigger>
-            </Show>
           </Tabs.List>
         }
       >
@@ -770,6 +759,8 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
                 signIn={props.mcpSignIn}
                 signInRequest={props.mcpSignInRequest}
                 onSignInRequestHandled={props.onMcpSignInRequestHandled}
+                addRequest={props.mcpAddRequest}
+                onAddRequestHandled={props.onMcpAddRequestHandled}
               />
             </Tabs.Content>
           )}
@@ -778,7 +769,7 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
         <Show when={props.storage}>
           {(storage) => (
             <Tabs.Content value="storage" class="settings-modal-tab-panel server-settings-panel" data-tab="storage">
-              <ServerStoragePanel serverId={props.server.id} {...storage()} />
+              <ServerStoragePanel serverId={props.server.id} members={props.members} {...storage()} />
             </Tabs.Content>
           )}
         </Show>
@@ -889,21 +880,6 @@ export function ServerSettingsModal(props: ServerSettingsModalProps) {
               data-tab="browser-profiles"
             >
               <ServerBrowserProfilesPanel {...browserProfiles()} menuMount={modalElement()} />
-            </Tabs.Content>
-          )}
-        </Show>
-        <Show when={props.connectors?.available().length ? props.connectors : undefined}>
-          {(connectors) => (
-            <Tabs.Content
-              value="connectors"
-              class="settings-modal-tab-panel server-settings-panel"
-              data-tab="connectors"
-            >
-              <ConnectorsPanel
-                connectors={connectors()}
-                hostName={local() ? undefined : props.server.name}
-                onDetailChange={setConnectorDetail}
-              />
             </Tabs.Content>
           )}
         </Show>

@@ -50,7 +50,7 @@ export function createConnectorSet(transports: ConnectorTransports, options: Mes
  * One connector on one server. `unsupported`: the server could run it, but this build or its host
  * cannot, such as GitHub with no GitHub App. `loading`: that is not known before the first read.
  */
-export type ConnectorEntry =
+type ConnectorEntry =
   | { id: ConnectorId; access: "available"; controller: ConnectorController }
   | { id: ConnectorId; access: "local-only" | "hidden" | "unsupported" | "loading" };
 

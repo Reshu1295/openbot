@@ -71,6 +71,10 @@ and an error code. It has
 no email, name, Stripe ID or server ID. The desktop analytics setting does not stop these events,
 because the account service sends them and not your computer.
 
+For each email that the account service sends from its mailbox (a sign-in code, an invitation, a contact
+message or a welcome email), it sends OpenPanel one event with the kind of email and the result of the send. This
+event has no account ID, email address, name or message content.
+
 The account service also records a return from Checkout without payment and later payment
 recovery. Verified paid invoices produce a revenue event in USD, with the original amount,
 currency, and dated exchange rate. Refunds and disputes produce an event with the same USD amount,
@@ -461,17 +465,52 @@ the system share sheet and removes it when that sheet closes. The app you select
 Cloudflare account storage does not receive these files.
 When you share text, a link, an image or a file from another app to OpenBot, the phone keeps a copy
 of each file in its app cache until the chat that you choose has read it, or until you close the
-share sheet. Nothing is sent until you send the message. To find out whether a shared link points to
+share sheet. Nothing is sent until you send the message. On iPhone, the OpenBot share extension can
+send the message itself, without the app. It uses the same encrypted connection to the host and the
+same account service as the app. For this, the app gives the extension its session in a keychain
+item that only the app and the extension can read, and writes the names of your servers and agents,
+the agents' pictures and the servers' public keys to storage that only the app and its extensions share. These stay on
+the phone, and sign-out removes them. The app tells iOS which agents you send messages to, so the
+iOS share sheet can offer those agents first. iOS keeps this on the phone, and sign-out removes it. To find out whether a shared link points to
 an image, the phone requests the link from its website and reads only the response headers. When the
 link is an image, the phone downloads it and attaches it in place of the link. It stops a download
 after 10 MB, and a larger image stays a link.
 
-Mobile dictation uses the phone's speech recognition only after you press the microphone. It asks
-for on-device recognition. On iOS, this applies when the phone supports it for your language. On
+Mobile dictation and voice conversations listen only after you press the microphone. They use the
+recognizer chosen under **Speech recognition** in **Settings → Voice**:
+
+- Phone recognizer, the default. It is described below.
+- Parakeet v3. When you press Download, the phone downloads the pinned Parakeet TDT 0.6B v3 model
+  from `huggingface.co`, the same files as desktop, checks the SHA-256 of each file, and keeps it in
+  the app's storage outside the device backup until you remove it. The request carries no user data.
+  The audio and the recognized text stay on the phone.
+- ElevenLabs Scribe, only with your own ElevenLabs API key. For each dictation, the phone asks
+  `api.elevenlabs.io` for a single-use token with the key, then streams the microphone audio to
+  ElevenLabs with that token, and receives the text. ElevenLabs handles the audio and the text under
+  its own policy and your ElevenLabs plan. Nothing else is sent.
+
+The phone recognizer asks for on-device recognition. On iOS, this applies when the phone supports it for your language. On
 Android, it applies when the language model is installed. Otherwise, or when on-device recognition
 fails before it recognizes any speech, the phone's recognition service, Apple or Google, receives the
 audio. The recognized text goes into the message field and is sent
 only when you send the message. OpenBot does not store or send the audio.
+
+In a mobile voice conversation, the same recognizer hears what you say, and the recognized text is
+sent to the agent as a message. The phone then reads the agent's reply aloud with the voice chosen in
+**Settings → Voice**:
+
+- Supertonic 3, the default. When you press Download, the phone downloads the pinned Supertonic 3
+  model from `huggingface.co`, checks the SHA-256 of each file, and keeps it in the app's storage
+  outside the device backup until you remove it. The request carries no user data. The reply text
+  and its audio stay on the phone.
+- ElevenLabs, only after you save your own ElevenLabs API key. The phone tests the key by listing
+  your ElevenLabs voices and reading one character with the first voice, and then sends the text of each reply that it reads to `api.elevenlabs.io`
+  with the key, and receives the audio. Nothing else is sent: no conversation history, file or agent
+  instruction. ElevenLabs handles the text and the audio under its own policy and your ElevenLabs
+  plan. The key is kept in the phone's keychain (iOS) or encrypted storage (Android), never in a log
+  or an analytics event. Remove key in **Settings → Voice** deletes it.
+
+The chosen voice settings are kept on the phone. OpenBot does not store the reply audio.
 
 ## Email delivery and infrastructure providers
 
@@ -527,7 +566,15 @@ Saved agent memories, their inclusion settings, and their full-text search index
 SQLite database. Essential memories enter the agent's provider instructions within a fixed size
 limit. Other saved memories reach the provider only when the agent retrieves them with a memory
 tool. Search runs locally and does not use an external search or embedding service. Memory content
-is not included in analytics; provider output uses the application's secret redaction.
+is not included in analytics; provider output uses the application's secret redaction. After every
+20 turns of an agent's chat or side thread, after 15 minutes with no new turn, when the user clears
+the chat, and when the user closes a side thread, OpenBot sends the agent's profile, its essential
+memories, the saved memories that relate most to the conversation, and the new part of the
+conversation, with secrets redacted, to the agent's own provider, on the agent's model or on the
+provider's lower-priced default model, which proposes memory changes. Nothing else receives them.
+Server settings > General > Memory review sets the number of turns (10, 20 or 40) for the agents of
+the server, or turns these reviews off; off, no review sends anything. An owner or admin of a joined
+server can change it.
 
 - `~/OpenBot/Agents` contains one workspace per agent. A profile written by a release before the
   bot-to-agent rename holds them under `~/OpenBot/Bots`; the application moves them on first launch.
@@ -553,7 +600,7 @@ is not included in analytics; provider output uses the application's secret reda
   choosing Sign out on it, deletes its record. These values are redacted from logs, exports and diagnostics.
   The port and secret of the local MCP sign-in server are kept in
   `~/Library/Application Support/OpenBot/openbot-mcp-oauth-proxy-v1.json`, encrypted in the same way.
-- The GitHub connection (Server settings > Connectors) is kept in
+- The GitHub connection (Marketplace › Apps › GitHub) is kept in
   `~/Library/Application Support/OpenBot/openbot-github-connector-v1.json`, encrypted by the operating
   system's secret storage. It holds the GitHub access and refresh tokens, the account name, ID and
   avatar address, and the port and secret of the local GitHub MCP server.
@@ -573,8 +620,8 @@ is not included in analytics; provider output uses the application's secret reda
   codes go through the main process to the browser page. This folder is an OpenBot access rule;
   the CLI session key can decrypt the wider vault. Use a separate Bitwarden account if you need
   the password manager itself to enforce that separation.
-  An owner or admin of a joined server can connect that server's Bitwarden or Vaultwarden in Server
-  settings › Connectors with the server address, the personal API key and the master password. They
+  An owner or admin of a joined server can connect that server's Bitwarden or Vaultwarden in
+  Marketplace › Apps › Bitwarden with the server address, the personal API key and the master password. They
   go once, over the encrypted connection, to the server, which keeps them in
   `openbot-bitwarden-connector-v1.json` in its application data folder, encrypted by its operating
   system's secret storage, so it can unlock again after a restart. Its CLI keeps its own encrypted
@@ -589,27 +636,43 @@ is not included in analytics; provider output uses the application's secret reda
   or a one-time code is read from 1Password when the browser fills it, goes only to that page, and
   is never sent to an agent, a provider, a log or a team member. The token and each filled value
   are redacted from logs, exports and diagnostics. An owner or admin of a joined server can paste a
-  service account token for that server in Server settings › Connectors. The token goes once, over the
+  service account token for that server in Marketplace › Apps › 1Password. The token goes once, over the
   encrypted connection, to the server, which keeps it in the same file on its own disk. The
   computer that sent it does not keep it, and no answer from the server carries it.
 - The Vault (Server settings › Vault) is kept in
   `~/Library/Application Support/OpenBot/openbot-vault-v1.json`, encrypted by the operating system's
-  secret storage. It holds the logins, payment cards (number, expiry, security code, name) and
-  contact info that the user saves. On a computer with no secret storage, such as Linux with no
-  keyring, the Vault saves nothing. The file never leaves this computer, and joined servers and team
-  members cannot read it. An agent gets the login sites and usernames, the card names with their last
+  secret storage. It holds the logins, payment cards (number, expiry, security code, name), contact
+  info and API keys (variable name, key, notes) that the user saves. On a computer with no secret storage, such as Linux with no
+  keyring, the Vault saves nothing. The file never leaves this computer. An owner or admin of a joined
+  server can open that server's Vault in Server settings, from the desktop app or the web app: the
+  list goes over the encrypted connection with no password, card number, security code or API key, and one of
+  those goes to them only when they show or copy it. The iPhone app shows the same list and never
+  asks for a password, a card number, a security code or an API key: a new one that the owner or admin types on
+  the phone goes once to the server, and the phone does not keep it. Other team members cannot read it. An agent gets the login sites and usernames, the card names with their last
   four digits and expiry, and the contact info; it never gets a password, a card number, a security
   code or login notes. An agent can add and change contact info, change the username of a login (not
   its site) and the name, expiry and billing address of a card, and delete items, with no approval: the
-  chat shows each change, and an item that an agent adds keeps the agent's name. A password that the
-  user types into the secure sign-in card goes to the Vault only while Save to Vault is checked. The
+  chat shows each change, and an item that an agent adds keeps the agent's name. Agents cannot see,
+  add, change or delete a Vault API key as an item. When an agent lists its API keys, OpenBot writes
+  each Vault key, readable only by the user, to
+  `~/Library/Application Support/OpenBot/agent-api-keys/.vault/<NAME>`, outside every workspace, and
+  gives the agent the path; every agent on the server can read these files in its commands. A changed
+  key is written again, and a deleted key or a Vault that cannot be read removes its file, also at
+  start. API keys are redacted from logs, exports and diagnostics. A password that the
+  user types into the secure sign-in card goes to the Vault only while Save to Vault is checked. On a
+  joined server, only an owner or admin can check it, the box starts unchecked, and the password goes
+  to that server's Vault, not to the Vault of the computer where it was typed. The
   first card fill on a site waits for the server owner's approval; team members and messaging
   services cannot give it. The card then keeps that site and the origins of its card frames, and
   later fills there need no approval; the user can remove a site in the card. The
   browser types those values into the page, where the page's own scripts can read them, as they read
   what a person types. Until that page navigates, the agent cannot take a screenshot, evaluate
   script or record in that tab, and its snapshots hide the card fields. Passwords and card numbers
-  are redacted from logs, exports and diagnostics. A CSV import is read on this computer only.
+  are redacted from logs, exports and diagnostics, also in the desktop app of an admin who showed
+  or copied one. A CSV import is read on this computer, from its own file dialog or from the text of
+  a CSV export that an owner or admin picks in the iPhone app (`vault-import-v1`). That text goes once
+  over the encrypted connection; the answer carries only the counts, and the phone deletes its copy
+  of the file after it reads it.
 - `~/Library/Application Support/OpenBot/logs/trace.ndjson` is a local trace of IPC calls,
   provider turns, main-process failures, and the steps of each connection to a joined server. Each
   line holds a time, the IPC channel name, the turn origin, the failure origin (`uncaughtException`
@@ -620,7 +683,8 @@ is not included in analytics; provider output uses the application's secret reda
   helper process with its reason word, and the reason that OpenBot quit (such as
   `main_window_closed` or `quit`).
 - `~/Library/Application Support/OpenBot/logs/main/main.log` holds the redacted lines of the main
-  process: startup failures, uncaught errors, and the reason that OpenBot quit. It is kept to two
+  process: startup failures, uncaught errors, the reason that OpenBot quit, and why an update check,
+  download or install failed. It is kept to two
   files of 1 MB each and is never sent.
 - OpenBot keeps crash dumps of its own processes in the `Crashpad` folder of its user data
   (`%APPDATA%\OpenBot\Crashpad` on Windows). A dump holds part of the memory of the process that
@@ -1166,6 +1230,19 @@ session files in its own folder, as for Pi agents. OpenBot does not copy or uplo
 DeepSeek's terms apply:
 <https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html>.
 DeepSeek agents stay on this computer: OpenBot does not show them to team members.
+
+### OpenRouter
+
+OpenRouter agents run in the Pi CLI that OpenBot downloads for Pi. On this computer, Connect on the
+OpenRouter row saves an OpenRouter API key. OpenBot encrypts it in its existing provider credential
+store, gives it to the local Pi process in its environment, and redacts it from logs. Pi does not
+write the key to a file. Prompts, attachments, and tool results go to that process, and Pi sends
+them with this key to `openrouter.ai`, also when Pi has its own OpenRouter key. OpenRouter sends the
+request to the company that serves the selected model, and that company's terms also apply. When
+OpenBot reads the OpenRouter model list, Pi reads its built-in list and does not contact OpenRouter.
+Pi keeps its session files in its own folder, as for Pi agents. OpenBot does not copy or upload these
+files. OpenRouter's terms apply: <https://openrouter.ai/terms>. OpenRouter agents stay on this
+computer: OpenBot does not show them to team members.
 
 ### Local model servers
 

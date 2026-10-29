@@ -246,8 +246,6 @@ export const messages = defineMessages("server", {
   "server.settings.importDescription": "Move your agents from Grok Bot or Hermes Agent to this server.",
   "server.settings.transferTitle": "Transfer",
   "server.settings.transferDescription": "Move this server's agents and server settings to or from a file.",
-  "server.settings.connectorsTitle": "Connectors",
-  "server.settings.connectorsDescription": "Connect accounts that every agent on this server can use.",
   "server.settings.routinesTitle": "Routines",
   "server.settings.routinesDescription": "Show the routine schedule of this computer in a calendar app.",
   "server.routineFeed.title": "Calendar feed",
@@ -319,6 +317,12 @@ export const messages = defineMessages("server", {
   "server.settings.memoryLimit": "Memories per agent",
   "server.settings.memoryLimitDescription": "How many memories each agent on this server can keep.",
   "server.settings.memoryLimitLoadFailed": "Could not load the memory limit of this server.",
+  "server.settings.memoryReview": "Memory review",
+  "server.settings.memoryReviewDescription":
+    "How often agents on this server save lasting facts from their chats in the background.",
+  "server.settings.memoryReviewOff": "Off",
+  "server.settings.memoryReviewTurns": { one: "Every {count} turn", other: "Every {count} turns" },
+  "server.settings.memoryReviewLoadFailed": "Could not load the memory review setting.",
   "server.settings.rolesTitle": "Roles",
   "server.settings.rolesDescription":
     "Choose the agents that members can use. A member gets the highest access of Everyone and of their roles. Owners and admins can use all agents.",

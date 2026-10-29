@@ -250,8 +250,9 @@ export class OpenBotDatabase {
     agentId?: string,
     cursor?: string,
     requestedLimit = 100,
+    includeSideThreads = false,
   ): ConversationSearchPage {
-    return this.#conversations.searchConversationMessages(query, agentId, cursor, requestedLimit);
+    return this.#conversations.searchConversationMessages(query, agentId, cursor, requestedLimit, includeSideThreads);
   }
 
   searchConversationFiles(query: string, cursor?: string, requestedLimit = 50): ConversationFileSearchPage {

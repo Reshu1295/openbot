@@ -36,6 +36,8 @@ const config: KnipConfig = {
     "tasklist",
     // Tunnels Slack to the local Signal and account API in `bun run dev:slack`.
     "cloudflared",
+    // Copies a profile database read-only for the agent threads upgrade E2E script.
+    "sqlite3",
     // Speaks the English samples of the macOS dictation smoke test.
     "say",
     // Finds the child processes of the dev app in the channel E2E scripts.
@@ -44,6 +46,10 @@ const config: KnipConfig = {
     "screencapture",
     // Lists the browsers that macOS knows for the external link setting.
     "osascript",
+    // Makes the FIFO whose opens never finish in the exit watchdog E2E script.
+    "mkfifo",
+    // Reads the memory that programs can still use on macOS, for the machine part of Storage.
+    "vm_stat",
   ],
   workspaces: {
     ".": {
@@ -95,11 +101,15 @@ const config: KnipConfig = {
         "src/shims/*.ts",
         // metro.config.js loads this stylesheet by path (`cssEntryFile`).
         "global.css",
+        // scripts/mobile-share-sender.ts builds the share extension page from this file by path.
+        "src/features/share/extension/share-sender.ts",
       ],
       project: ["src/**/*.{ts,tsx}", "plugins/**/*.{js,ts}"],
       ignoreDependencies: [
         // `expo` installs it; Expo config plugins import it by this name.
         "@expo/config-plugins",
+        // `expo` installs it too; plugins/with-share-target.js edits the extension's plist files with it.
+        "@expo/plist",
         // A native module that `expo-router` imports. The direct entry keeps its native version
         // pinned to the Expo SDK and visible to autolinking.
         "expo-symbols",

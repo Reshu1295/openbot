@@ -3,13 +3,6 @@
 
 import { WORKFLOWS_CAPABILITY, WORKFLOWS_ROUTES } from "@openbot/contracts/team-protocol/workflows-v1";
 import { sourceText } from "@openbot/i18n/source";
-import type { Effect } from "effect";
-import { runCauseEffect } from "../../backend/effect-boundary";
-import type { WorkflowsHandle } from "../../backend/workflows/workflows";
-import type { HostEventsService } from "../host-events-service";
-import { acceptEmpty, type ResponseDecoder } from "../remote-host-decoding";
-import type { RemoteRequestInit } from "../remote-server-client";
-import type { RemoteWorkflowError } from "../remote-service-effects";
 import {
   decodeRemoteWorkflowDetail,
   decodeRemoteWorkflowList,
@@ -21,7 +14,14 @@ import {
   decodeRemoteWorkflowSummary,
   decodeRemoteWorkflowVersionGraph,
   decodeRemoteWorkflowVersions,
-} from "../remote-workflow-decoding";
+} from "@openbot/team-client/workflow-decoding";
+import type { Effect } from "effect";
+import { runCauseEffect } from "../../backend/effect-boundary";
+import type { WorkflowsHandle } from "../../backend/workflows/workflows";
+import type { HostEventsService } from "../host-events-service";
+import { acceptEmpty, type ResponseDecoder } from "../remote-host-decoding";
+import type { RemoteRequestInit } from "../remote-server-client";
+import type { RemoteWorkflowError } from "../remote-service-effects";
 import type { IpcGroupHandlers } from "./define-ipc-group";
 import { scopedHandler, scopedQueryHandler } from "./scoped-handler";
 import {

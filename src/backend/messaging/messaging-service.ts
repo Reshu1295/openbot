@@ -332,12 +332,12 @@ export class MessagingService {
     for (const live of this.#live.values()) live.transport?.reconnect();
   }
 
-  /** The Slack workspaces of this computer, for Server settings > Connectors. A disconnected one is left out. */
+  /** The Slack workspaces of this computer, for Marketplace > Apps > Slack. A disconnected one is left out. */
   slackOverview(): MessagingOverview {
     return this.#overview("slack");
   }
 
-  /** The Discord guilds of this computer, for Server settings > Connectors. A disconnected one is left out. */
+  /** The Discord guilds of this computer, for Marketplace > Apps > Discord. A disconnected one is left out. */
   discordOverview(): MessagingOverview {
     return this.#overview("discord");
   }
@@ -1445,9 +1445,15 @@ export class MessagingService {
         error: "A Telegram connection posts only in its own chat. Use the connection of that chat.",
         failure: "refused" as const,
       };
+    // A Discord workspace id is the guild id, which a link to the post needs.
+    const guildId = live.record.platform === "discord" ? live.identity.workspaceId : null;
     // The place is outside this computer, so a secret in the text must not reach it.
     return yield* live.adapter.postAnswer(target, redactText(markdown), null).pipe(
-      Effect.as({ posted: true as const }),
+      Effect.map((messageId) => ({
+        posted: true as const,
+        messageId,
+        ...(guildId ? { url: `https://discord.com/channels/${guildId}/${target.platformChannelId}/${messageId}` } : {}),
+      })),
       Effect.catch((failure) =>
         Effect.succeed({
           error: `${refusal(failure)} A long text goes in more than one post, so a part of it can be posted already. Do not post it again only because of this error.`,

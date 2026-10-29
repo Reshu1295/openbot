@@ -78,6 +78,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "Доставка в канал не создана.",
   "error.backend.channelAssignmentStopped": "Это назначение в канале остановлено или заменено.",
   "error.backend.channelAssigneeUnavailable": "Назначенный агент недоступен.",
+  "error.backend.channelAssigneeRemoved": "Назначенный участник удалён.",
+  "error.backend.channelAssigneeReassign": "Назначенный участник недоступен. Переназначьте эту задачу.",
   "error.backend.channelAssignmentChanged": "Это назначение в канале изменилось.",
   "error.backend.channelMemberRequired": "Выберите доступного участника этого канала.",
   "error.backend.memoryEssentialBudget":
@@ -190,8 +192,11 @@ export const messages = {
   "error.backend.routineFlowHandoffFailed": "Регулярной задаче не удалось передать работу этому агенту.",
   "error.backend.mcpServerLimit": "OpenBot хранит не более {limit} серверов MCP.",
   "error.backend.mcpServerNameTaken": "Сервер MCP с именем {name} уже существует.",
+  "error.backend.mcpServerInvalid": "OpenBot не может сохранить эту конфигурацию сервера MCP.",
   "error.backend.mcpServerNoAnswer": "Сервер не ответил за {seconds} с.",
   "error.backend.mcpSignInNotAccepted": "Сервер не принял этот вход.",
+  "error.backend.mcpSignInClientRefused":
+    "Сервер входа не принял OpenBot при завершении входа. Войдите снова: OpenBot заново зарегистрируется на сервере.",
   "error.backend.mcpCommandNotFound": "Команда не найдена: {command}",
   "error.backend.mcpRegistrationRefused":
     "Сервер входа пока не принимает OpenBot как приложение. Дело не в вашем аккаунте. Подключитесь другим способом, например через локальный сервер MCP.",
@@ -211,6 +216,7 @@ export const messages = {
     "OpenBot не удалось прочитать сведения о входе для этого сервера. Проверьте адрес сервера и повторите попытку.",
   "error.backend.mcpServerExited":
     "Сервер остановился, не ответив. Запустите команду в терминале, чтобы увидеть ошибку.",
+  "error.backend.mcpServerFailedToStart": "Сервер не запустился: {reason}",
   "error.backend.mcpOAuthProxyUnavailable":
     "OpenBot не смог запустить локальное подключение для входа на этот сервер. Перезапустите OpenBot и повторите попытку.",
   "error.backend.mcpOAuthSignInNeeded":
@@ -317,6 +323,15 @@ export const messages = {
   "error.backend.taskNotFound": "Эта задача недоступна.",
   "error.backend.taskClosed": "Эта задача закрыта. Откройте её снова, чтобы отправить сообщение.",
   "error.backend.taskStillRunning": "Эта задача ещё выполняется. Дождитесь её остановки, затем закройте её.",
+  "error.backend.threadNotFound": "Эта ветка недоступна.",
+  "error.backend.threadStillRunning": "Эта ветка ещё выполняется. Остановите её и повторите попытку.",
+  "error.backend.threadArchived": "Эта ветка в архиве. Восстановите её, чтобы отправить сообщение.",
+  "error.backend.threadTitleRequired": "Дайте ветке короткое название.",
+  "error.backend.threadOpenLimitReached":
+    "У этого агента открыто веток: {count}. Архивируйте ветку, затем начните или восстановите другую.",
+  "error.backend.threadRemoteUnsupported": "Ветки доступны только для агентов на этом компьютере.",
+  "error.backend.threadMoveRefused":
+    "В новой ветке можно запустить только сообщение, которое вы отправили одному этому агенту.",
   "error.backend.taskTitleRequired": "Дайте задаче короткое название.",
   "error.backend.taskToolInvalid": "Дайте задаче название не длиннее 120 символов и описание того, что нужно сделать.",
   "error.backend.taskOwnChatOnly":

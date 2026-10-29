@@ -15,7 +15,10 @@ function brandOf(number: string): "visa" | "mastercard" | "amex" | "discover" | 
   return null;
 }
 
-/** An empty Vault kept in memory. The import adds one login, as if the user chose a CSV file. */
+/**
+ * An empty Vault kept in memory. The import adds one login, as if the user chose a CSV file. The
+ * preview has one host, so the `host*` calls of every server use the same items.
+ */
 export function createMockVault(): OpenBotDesktopApi["vault"] {
   let state: VaultState = EMPTY_VAULT;
   const secrets = new Map<string, Partial<Record<VaultSecretField, string>>>();
@@ -42,23 +45,34 @@ export function createMockVault(): OpenBotDesktopApi["vault"] {
       const number = saved.number ?? "";
       return { ...card, id, brand: brandOf(number), last4: number.slice(-4), fillSites };
     }
+    if (input.kind === "apiKey") {
+      if (input.key !== null) saved.key = input.key;
+      secrets.set(id, saved);
+      const { key: _key, ...apiKey } = input;
+      return { ...apiKey, id, hasKey: Boolean(saved.key) };
+    }
     return { ...input, id };
+  };
+  const save = async (input: VaultSaveInput) => {
+    const id = input.id ?? `mock-${nextId++}`;
+    const item = summary(input, id);
+    const exists = state.items.some((current) => current.id === id);
+    return change(exists ? state.items.map((current) => (current.id === id ? item : current)) : [...state.items, item]);
+  };
+  const remove = async (id: string) => {
+    secrets.delete(id);
+    return change(state.items.filter((item) => item.id !== id));
+  };
+  const reveal = async ({ id, field }: { id: string; field: VaultSecretField }) => secrets.get(id)?.[field] ?? "";
+  const reset = async () => {
+    secrets.clear();
+    return change([]);
   };
   return {
     list: async () => state,
-    save: async (input) => {
-      const id = input.id ?? `mock-${nextId++}`;
-      const item = summary(input, id);
-      const exists = state.items.some((current) => current.id === id);
-      return change(
-        exists ? state.items.map((current) => (current.id === id ? item : current)) : [...state.items, item],
-      );
-    },
-    delete: async (id) => {
-      secrets.delete(id);
-      return change(state.items.filter((item) => item.id !== id));
-    },
-    reveal: async ({ id, field }) => secrets.get(id)?.[field] ?? "",
+    save,
+    delete: remove,
+    reveal,
     copy: async () => undefined,
     importCsv: async () => {
       const id = `mock-${nextId++}`;
@@ -75,10 +89,13 @@ export function createMockVault(): OpenBotDesktopApi["vault"] {
       );
       return { imported: 1, skipped: 0, state: change([...state.items, item]) };
     },
-    reset: async () => {
-      secrets.clear();
-      return change([]);
-    },
+    reset,
+    hostList: async () => state,
+    hostSave: (input) => save(input),
+    hostDelete: (id) => remove(id),
+    hostReveal: (request) => reveal(request),
+    hostCopy: async () => undefined,
+    hostReset: () => reset(),
     onChanged: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

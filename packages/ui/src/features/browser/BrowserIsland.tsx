@@ -3,7 +3,7 @@ import { Button, LoaderCircle, MousePointer2, X } from "@openbot/ui";
 import { QuestionPromptBubble } from "@openbot/ui/components/QuestionPromptBubble";
 import type { ComposerAgent } from "@openbot/ui/data";
 import { AgentAvatar } from "@openbot/ui/features/agents/AgentAvatar";
-import { BrowserSecretCard } from "@openbot/ui/features/conversation/BrowserSecretCard";
+import { BrowserSecretCard, type BrowserSecretVault } from "@openbot/ui/features/conversation/BrowserSecretCard";
 import { ApprovalCard } from "@openbot/ui/features/conversation/ConversationPrompts";
 import { RichMessageText } from "@openbot/ui/features/conversation/RichMessageText";
 import type { SendShortcut } from "@openbot/ui/features/conversation/send-shortcut";
@@ -46,8 +46,8 @@ export interface BrowserIslandFaceProps {
   handoffPending?: boolean | undefined;
   sendShortcut?: SendShortcut | undefined;
   onHandoff?: (() => void) | undefined;
-  /** Offer "Save to Vault" on a password card: only on the local server. */
-  vaultSave?: boolean | undefined;
+  /** Offer "Save to Vault" on a password card. */
+  vault?: BrowserSecretVault | undefined;
   onRespondSecret: (input: LocalBrowserSecretResponse) => Promise<void>;
   /** Resolves true when the host has the answers. An empty record cancels the questions. */
   onAnswerPrompt: (requestId: string | number, answers: Record<string, string[]>) => Promise<boolean>;
@@ -109,7 +109,7 @@ export function BrowserIslandFace(props: BrowserIslandFaceProps) {
             <BrowserSecretCard
               variant="island"
               request={current().request}
-              vaultSave={props.vaultSave}
+              vault={props.vault}
               onRespond={props.onRespondSecret}
             />
           </div>

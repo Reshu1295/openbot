@@ -25,6 +25,12 @@ export const messages = {
     "Capturer la zone de l’écran à {x}, {y}, {width} × {height} points et envoyer l’image au modèle de l’agent.",
   "status.agent.screenCaptureProgress": "Demande de capture d’écran…",
   "status.agent.screenCaptureReviewing": "Analyse de la capture d’écran…",
+  "status.agent.browserOpening": "Ouverture d’une page web…",
+  "status.agent.browserReading": "Lecture de la page web…",
+  "status.agent.browserClicking": "Clic sur la page web…",
+  "status.agent.browserTyping": "Saisie sur la page web…",
+  "status.agent.browserActing": "Utilisation de la page web…",
+  "status.agent.browserReviewing": "Analyse de la page web…",
   "status.agent.memoriesSearching": "Recherche dans ses souvenirs…",
   "status.agent.memoriesSearched": {
     one: "Souvenirs consultés : {count} trouvé",
@@ -34,4 +40,6 @@ export const messages = {
   "status.agent.skillUsing": "Utilisation de la compétence {name}…",
   "status.agent.skillReading": "Lecture d’une compétence…",
   "status.agent.memoryChanges": "Souvenirs : {saved} enregistrés, {updated} mis à jour, {forgotten} oubliés.",
+  "status.agent.memoryChangesWithConflicts":
+    "Souvenirs : {saved} enregistrés, {updated} mis à jour, {forgotten} oubliés, {notChanged} non modifiés, car un autre fil les a modifiés avant.",
 } as const satisfies PartialTranslation<typeof source>;

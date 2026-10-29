@@ -71,6 +71,8 @@ interface FilePreviewPanelProps {
    * the selection actions, so the user can quote the passage or ask for a change.
    */
   selectionQuoteId?: string | undefined;
+  /** The window draws the macOS window controls over the top start corner. The image viewer leaves room. */
+  macWindowControls?: boolean | undefined;
   onOpenExternally: () => void;
   allowExternalOpen?: boolean;
   onDownload?: () => void;
@@ -136,7 +138,23 @@ export default function FilePreviewPanel(props: FilePreviewPanelProps) {
         setPreviewUrl(null);
         return;
       }
-      const url = URL.createObjectURL(new Blob([new Uint8Array(preview.bytes).buffer], { type: preview.mimeType }));
+      const blob = new Blob([new Uint8Array(preview.bytes).buffer], { type: preview.mimeType });
+      // The renderer policy allows `data:` images and no object URL images. A `data:` SVG also has
+      // no app origin when it is opened on its own. The reader encodes off the UI thread.
+      if (preview.previewKind === "image") {
+        let current = true;
+        setPreviewUrl(null);
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (current && typeof reader.result === "string") setPreviewUrl(reader.result);
+        };
+        reader.readAsDataURL(blob);
+        return () => {
+          current = false;
+          reader.abort();
+        };
+      }
+      const url = URL.createObjectURL(blob);
       currentPreviewUrl = url;
       setPreviewUrl(url);
     },
@@ -365,6 +383,7 @@ export default function FilePreviewPanel(props: FilePreviewPanelProps) {
             html={pageHtml() ?? undefined}
             title={title()}
             onOpenLink={props.onOpenLink}
+            macWindowControls={props.macWindowControls}
           />
         </Show>
         <Show when={showsSourceText()}>

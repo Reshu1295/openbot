@@ -237,6 +237,13 @@ export function createMessagingConnector(
   const connections = () => overview()?.connections ?? [];
   const shared = {
     disconnect: (workspaceId: string) => run(() => api.disconnect(platform, workspaceId), "disconnected"),
+    /** Disconnects every connection that shows, one after another, in one action. */
+    disconnectAll: () => {
+      const workspaceIds = untrack(connections).map((connection) => connection.workspaceId);
+      run(async () => {
+        for (const workspaceId of workspaceIds) await api.disconnect(platform, workspaceId);
+      }, "disconnected");
+    },
     reconnect: (workspaceId: string) => run(() => api.reconnect(platform, workspaceId), "connect_started"),
     setEnabled: (workspaceId: string, enabled: boolean) =>
       run(() => api.setEnabled(platform, workspaceId, enabled), enabled ? "enabled" : "disabled"),
@@ -295,6 +302,7 @@ export function createMessagingConnector(
               });
             }),
           onDisconnectChat: shared.disconnect,
+          onDisconnectAll: shared.disconnectAll,
           onReconnect: shared.reconnect,
           onSetEnabled: shared.setEnabled,
           onAddOrchestrator: (choice) => addOrchestrator({ platform }, choice),
@@ -348,6 +356,7 @@ export function createMessagingConnector(
         onRetry: reload,
         onConnectWorkspace: connect,
         onDisconnectWorkspace: shared.disconnect,
+        onDisconnectAll: shared.disconnectAll,
         onReconnect: shared.reconnect,
         onSetEnabled: shared.setEnabled,
         onAddOrchestrator: (workspaceId, choice) => addOrchestrator({ platform, workspaceId }, choice),

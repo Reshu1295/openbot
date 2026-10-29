@@ -2,8 +2,9 @@
 // `cursor-agent acp` and a local server in place of the Cursor backend (`CURSOR_API_ENDPOINT`). The
 // sign-in is a fake `auth.json` in a temporary home. Checks that a split plan gives the Cursor
 // models window and the other models window for the billing cycle, that a plan with only a total
-// gives one window, that a merged plan gives the total alone, that a plan info that fails to read
-// keeps the split, and that a rejected token and a missing sign-in give no reading.
+// gives one window, that a merged plan gives the total alone and names Grok as sharing its quota, that
+// a plan info that fails to read keeps the split, and that a rejected token and a missing sign-in give
+// no reading.
 // `bun scripts/cursor-usage-e2e.ts`. Writes .openbot-build/cursor-usage-e2e/report.json.
 //
 // On macOS the reader asks the login Keychain first. With the Cursor CLI signed in there, the
@@ -13,6 +14,7 @@ import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer, type IncomingMessage } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { normalizeAccountUsage } from "../src/backend/agent/account-usage";
 import type { AgentClient } from "../src/backend/agent-client";
 import { cursorAuthFile } from "../src/backend/cursor-usage";
 import { runCauseEffect } from "../src/backend/effect-boundary";
@@ -184,6 +186,7 @@ try {
     primary: { usedPercent: 37.5, ...cycle },
     secondary: { usedPercent: 82, ...cycle },
   });
+  assert.equal(split.reading.sharedQuotaWith, undefined, "a split plan shares no quota");
 
   // 2. A plan with only a total fills the first window with it.
   const total = await readUsage(200, {
@@ -197,8 +200,10 @@ try {
     primary: { usedPercent: 100, ...cycle },
     secondary: null,
   });
+  assert.equal(total.reading.sharedQuotaWith, undefined, "a plan that is not merged shares no quota");
 
-  // 3. A merged plan includes no other models: the total alone, with no other models window.
+  // 3. A merged plan includes no other models: the total alone, with no other models window. That
+  // total is the Grok plan quota, so the reading and the dock limit name Grok as sharing it.
   const merged = await readUsage(
     200,
     {
@@ -214,6 +219,8 @@ try {
     primary: { usedPercent: 45, ...cycle },
     secondary: null,
   });
+  assert.equal(merged.reading.sharedQuotaWith, "grok", "a merged plan shares the Grok quota");
+  assert.equal(normalizeAccountUsage(merged.reading).limits[0]?.sharedQuotaWith, "grok", "the dock limit keeps it");
 
   // 4. A plan info that fails to read keeps the split reading.
   const planInfoFailed = await readUsage(
@@ -231,6 +238,7 @@ try {
     primary: { usedPercent: 37.5, ...cycle },
     secondary: { usedPercent: 82, ...cycle },
   });
+  assert.equal(planInfoFailed.reading.sharedQuotaWith, undefined, "an unread plan info shares no quota");
 
   // 5. A token the backend rejects gives no reading.
   const rejected = await readUsage(

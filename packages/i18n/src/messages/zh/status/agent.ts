@@ -25,12 +25,20 @@ export const messages = {
   "status.agent.vaultCardFillFrames": "银行卡字段位于来自 {origins} 的框架中。",
   "status.agent.screenCaptureProgress": "正在请求截屏…",
   "status.agent.screenCaptureReviewing": "正在查看截屏…",
+  "status.agent.browserOpening": "正在打开网页…",
+  "status.agent.browserReading": "正在读取网页…",
+  "status.agent.browserClicking": "正在点击网页…",
+  "status.agent.browserTyping": "正在网页中输入…",
+  "status.agent.browserActing": "正在使用网页…",
+  "status.agent.browserReviewing": "正在查看网页…",
   "status.agent.memoriesSearching": "正在搜索记忆…",
   "status.agent.memoriesSearched": { other: "已搜索记忆：找到 {count} 条" },
   "status.agent.memoriesUpdating": "正在更新记忆…",
   "status.agent.skillUsing": "正在使用技能 {name}…",
   "status.agent.skillReading": "正在读取技能…",
   "status.agent.memoryChanges": "记忆：已保存 {saved} 条，已更新 {updated} 条，已忘记 {forgotten} 条。",
+  "status.agent.memoryChangesWithConflicts":
+    "记忆：已保存 {saved} 条，已更新 {updated} 条，已忘记 {forgotten} 条，{notChanged} 条因另一个话题先更改而未更改。",
   "status.agent.mcpServerAdd":
     "添加 MCP 服务器 {name}：{target}。该服务器上的每个助手都能使用它的工具。OpenBot 会连接它进行测试。",
   "status.agent.mcpServerChange":

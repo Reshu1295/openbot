@@ -105,7 +105,10 @@ export interface MessagingOutbound {
     connectionId: string,
     target: MessageTarget,
     markdown: string,
-  ): Effect.Effect<{ posted: true } | { error: string; failure: Exclude<MessagingPostFailure, "gone"> }>;
+  ): Effect.Effect<
+    | { posted: true; messageId: string; url?: string }
+    | { error: string; failure: Exclude<MessagingPostFailure, "gone"> }
+  >;
 }
 
 export interface MessagingThreadsHooks {
@@ -120,6 +123,11 @@ export interface MessagingThreadsHooks {
    * still go to the platform, but its events stay in the app, where the chat shows them.
    */
   ownChat(threadId: string): boolean;
+  /**
+   * The active provider session of an execution thread, when its provider reports each compaction.
+   * Null when a compaction could drop the guidance with no signal, so each prompt repeats it.
+   */
+  contextSession(agentId: string, threadId: string): string | null;
 }
 
 /**
@@ -158,6 +166,19 @@ export class MessagingThreads {
    * second time. Past the cap, the oldest goes.
    */
   readonly #finishedTurns = new Set<string>();
+  /**
+   * The provider session that read the guidance and the saved facts of each conversation, by link
+   * id. Kept in memory only: after a restart, the first prompt of each conversation repeats them.
+   */
+  readonly #guided = new Map<string, { sessionId: string; memories: string }>();
+  /**
+   * What `prepare` built for each external message, by delivery id: the saved facts it read, and a
+   * shorter prompt for the session that already read the guidance.
+   */
+  readonly #prepared = new Map<
+    string,
+    { linkId: string; memories: string; delta?: { sessionId: string; text: string } }
+  >();
   #contextSource:
     | ((
         link: MessagingLink,
@@ -465,23 +486,62 @@ export class MessagingThreads {
     const connection = this.store.connection(link.connectionId);
     const prompt = yield* this.#promptContext(link, origin);
     if (prompt.cursor) this.store.touch(link.linkId, prompt.cursor);
-    return {
-      threadId: link.threadId,
-      text: messagingPromptText({
-        platform: connection?.platform ?? "slack",
-        workspaceName: prompt.workspaceName ?? connection?.workspaceName ?? null,
-        isDirect: link.isDirect,
-        place: prompt.place,
-        authorName: origin.authorName,
-        authorId: origin.authorId,
-        text: context.delivery.text,
-        context: prompt.messages,
-        replyTo: origin.replyTo ?? null,
-        skippedFiles: prompt.skippedFiles,
-        memories: this.memories.list(link.connectionId),
-      }),
+    const memories = this.memories.list(link.connectionId);
+    const input = {
+      platform: connection?.platform ?? "slack",
+      workspaceName: prompt.workspaceName ?? connection?.workspaceName ?? null,
+      isDirect: link.isDirect,
+      place: prompt.place,
+      authorName: origin.authorName,
+      authorId: origin.authorId,
+      text: context.delivery.text,
+      context: prompt.messages,
+      replyTo: origin.replyTo ?? null,
+      skippedFiles: prompt.skippedFiles,
+      memories,
     };
+    const memoryKey = JSON.stringify(memories.map((memory) => [memory.id, memory.text]));
+    const guided = this.#guided.get(link.linkId);
+    const sessionId = this.#hooks.contextSession(link.agentId, link.threadId);
+    // A link runs one turn at a time. An entry that no settle removed, such as a turn that started
+    // after its `turn/start` timed out, goes here.
+    for (const [deliveryId, prepared] of this.#prepared) {
+      if (prepared.linkId === link.linkId) this.#prepared.delete(deliveryId);
+    }
+    this.#prepared.set(context.delivery.id, {
+      linkId: link.linkId,
+      memories: memoryKey,
+      ...(guided && sessionId === guided.sessionId && guided.memories === memoryKey
+        ? { delta: { sessionId, text: messagingPromptText({ ...input, guidanceRead: true }) } }
+        : {}),
+    });
+    return { threadId: link.threadId, text: messagingPromptText({ ...input, guidanceRead: false }) };
   });
+
+  /** The prompt of a delivery without the guidance, and the session that read it. */
+  delta(deliveryId: string): { sessionId: string; text: string } | undefined {
+    return this.#prepared.get(deliveryId)?.delta;
+  }
+
+  /**
+   * Whether the turn on this provider session gets the shorter prompt. Another session, as when the
+   * provider cannot resume the old one, has not read the guidance and gets the complete prompt.
+   */
+  sendsDelta(deliveryId: string, sessionId: string): boolean {
+    return this.#prepared.get(deliveryId)?.delta?.sessionId === sessionId;
+  }
+
+  /** The provider session accepted the turn, so it read the guidance and the saved facts. */
+  accepted(deliveryId: string, sessionId: string): void {
+    const prepared = this.#prepared.get(deliveryId);
+    this.#prepared.delete(deliveryId);
+    if (prepared) this.#guided.set(prepared.linkId, { sessionId, memories: prepared.memories });
+  }
+
+  /** The provider compacted this session, and the summary can leave out the guidance. */
+  contextCompacted(sessionId: string): void {
+    for (const [linkId, guided] of this.#guided) if (guided.sessionId === sessionId) this.#guided.delete(linkId);
+  }
 
   /** The prompt context from the platform, or none when it is slow or fails: the message still runs. */
   readonly #promptContext = Effect.fn("MessagingThreads.promptContext")(function* (
@@ -573,6 +633,7 @@ export class MessagingThreads {
    * turn that the recovery found complete posts its answer, without its files.
    */
   deliverySettled(deliveryId: string, status: "completed" | "failed" | "interrupted"): void {
+    this.#prepared.delete(deliveryId);
     const origin = this.#mailbox.messagingOrigin(deliveryId);
     const link = origin ? this.store.link(origin.linkId) : null;
     if (!origin || !link) return;

@@ -264,12 +264,17 @@ its agent count and no actions. A joined server without the capability has no se
 the profile's agents to Shared. The agent has no tool to change its profile, and tool results do not
 name it. See [Browser sessions](browser.md#browser-sessions) for the storage and the partitions.
 
-## Agent tasks
+## Agent threads
 
-A task is a separate execution thread of one agent. The agent keeps one identity, workspace and
-provider settings; each task has its own provider thread, conversation, queue, progress and result.
-`projection_agent_tasks` (migration 38) links a task to its thread. A mailbox message with a
-`taskId` belongs to that task, and `DrainScheduler` drains each task as its own lane. The main chat
+A side thread (in code and on the wire still a **task**) is a separate execution thread of one agent.
+The agent keeps one identity, workspace and provider settings; each side thread has its own provider
+thread, conversation, queue, progress and result. The agent's own chat is its main thread and has no
+side thread row. `projection_agent_threads` (`src/backend/agent-threads/agent-thread-schema.ts`,
+migration 47) holds one row for each side thread, with its title and the source of the title
+(`auto`, `agent` or `user`). Migration 47 moved every task of `projection_agent_tasks` (migration 38)
+there: a closed task became an archived thread, and the task id stays as `legacy_task_id`. The task id
+of a side thread is `legacy_task_id ?? thread_id`, so a stored mailbox message and a released client
+that name the task still find it. A mailbox message with a `taskId` belongs to that side thread, and `DrainScheduler` drains each task as its own lane. The main chat
 lane does not count toward the task limit. At most `limit` task turns of one agent run at the same
 time. `agentTaskLimit` gives the limit: the agent's local `taskLimit` setting (1 to
 `AGENT_TASK_LIMIT_MAX`, in `agent_json`), else `AGENT_TASK_LIMIT_DEFAULT` (2). An owner or admin of
@@ -279,12 +284,23 @@ turn at a time. Other task messages wait with a `hold` reason: `task-limit`, `ag
 `usage-limit`, `server-busy`, `agent-busy` or `one-turn`. The server-wide `TurnSlots` limit of a
 hosted server is separate.
 
-The user starts a task from the Tasks tab of the side panel ("New task") or moves a queued message to one ("Run as
-task"). The agent starts one with the `start_task` OpenBot tool, up to 8 open tasks. An agent has at most 50
+The chat header shows a tab for the main thread and one for each open side thread, a "+" button and a
+menu of all threads with an "Archived" group (`packages/ui/src/features/conversation/threads/`). The
+user starts a side thread with "+" (a draft tab that becomes a thread with its first message) or moves
+a queued message to one ("Run in new thread"). Which tabs are open, their order and the open tab are
+kept per device in `localStorage` (`openbot:thread-tabs:v1`, server id → agent id); closing a tab
+does not change the thread. Archive is the task close; opening or sending to an archived thread
+restores it. Rename sets a `user` title, which later messages do not change. Delete hides the thread
+at once and shows an Undo toast; when the toast ends, `AgentService.deleteTask` cancels the queued
+messages and deletes the thread with its conversation, attachments, event history and provider
+session. It refuses a thread with a running turn. The main thread has no archive, rename or delete.
+
+The agent starts a side thread with the `start_task` OpenBot tool, up to 8 open tasks. On desktop and
+the web, it opens as a tab of the agent and does not take focus. An agent has at most 50
 open tasks (`INPUT_LIMITS.agentTasks`, the size of the task list), so each open task stays visible. A message to a
 running task waits in the task, or steers the turn when the agent's busy-message mode is "steer"
 and the provider steers natively, as in the main chat. Stop interrupts the task turn; close moves
-the task to "Earlier tasks" when no message of it waits, starts or runs, and reopen moves it back. Boot recovery registers the task threads and
+the task to "Closed" on the phone and to "Archived" on desktop and the web when no message of it waits, starts or runs, and reopen moves it back. Boot recovery registers the task threads and
 starts queued tasks again. When a task's provider session ends, the next session gets a handoff of
 that task's own transcript, as the main chat does; channel threads still get none.
 
@@ -293,15 +309,37 @@ capability (`packages/contracts/src/team-protocol/agent-tasks-v1.ts`, host route
 `src/main/team-api/route-agent-tasks.ts`). Its routes are `POST /v1/agent-tasks/{list,read,start,send,stop,close,reopen}`
 with the ids in the body. A member who can send a message to the agent can use them; no role is
 checked, and the member is the sender of a start and of a message. A hidden agent, or one that the
-peer cannot see, answers 404. A start and a message carry text only, and "Run as task" stays local.
+peer cannot see, answers 404. A start and a message carry text only, and "Run in new thread" stays local.
+Files go through `agent-thread-files-v1`, below.
 The host sends the task events (`agent-tasks-changed`, `agent-task-conversation`,
 `agent-task-conversation-delta`) in their local shape, only to a peer with the capability, and not
-for a hidden agent. A server without the capability shows no tasks, and a task control there fails
-with `error.backend.taskRemoteUnsupported`. Prompts, approvals and warnings of a task turn show in the main chat. A provider
+for a hidden agent. The optional `agent-threads-v1` capability
+(`packages/contracts/src/team-protocol/agent-threads-v1.ts`, host route
+`src/main/team-api/route-agent-threads.ts`) adds `POST /v1/agent-threads/{rename,delete}` with the
+agent and task ids in the body. They need the `chat` agent level; a hidden agent answers 404. A server
+with only `agent-tasks-v1` shows threads with no rename or delete. The optional `agent-thread-reads-v1`
+capability (`packages/contracts/src/team-protocol/agent-thread-reads-v1.ts`, host route
+`routeAgentThreadReads` in `src/main/team-api/route-agent-threads.ts`) adds `POST /v1/agent-threads/{reads,read}`: the member's read
+mark of each open side thread, and a move of one. The marks are rows of `projection_thread_reads`
+under the side thread's own `threadId`, so the member's devices share them and no migration was
+needed. A desktop marks the open thread read while its window has focus (`markTaskRead` over IPC, or
+the route for a joined server); the phone marks it while the thread screen is in front, and shows a
+dot on the agent's name for an open thread with unread agent messages. The host sends no event when
+a mark moves; a client reads the marks again when `agent-tasks-changed` arrives or a screen that
+shows them opens. The optional `agent-thread-files-v1` capability
+(`packages/contracts/src/team-protocol/agent-thread-files-v1.ts`, host route `routeAgentThreadFiles` in
+`src/main/team-api/route-agent-threads.ts`) adds `POST /v1/agent-threads/{start-with-files,send-with-files}`:
+a start or a message with up to 10 attachment drafts that the member uploaded with `POST /v1/attachments`,
+and text that can be empty. The answers are the frozen `agent-tasks-v1` task and receipt. The team client
+uses these routes only for a message with files, so a message without files still works on an older host.
+A joined desktop refuses files for a server without the capability with `error.backend.threadRemoteUnsupported`,
+and the phone shows the plus in the thread composer only on a server that has it. A server without either shows only
+the main thread, and a task control there fails with `error.backend.taskRemoteUnsupported`. Prompts, approvals and warnings of a task turn show in the main chat. On desktop and the web, the
+approval of a side thread turn also shows in that thread. A provider
 error of a task turn goes to the task: `AgentTasks` stores the redacted text in the task's `error`
-column, and the next turn of the task clears it. The panel shows it after a restart too.
+column, and the next turn of the task clears it. The thread shows it after a restart too.
 
-The Tasks page and the phone share the section and title rules in `@openbot/team-client/agent-tasks`.
+On desktop and the web, a task opens as a thread in the chat header. The phone uses the section and title rules in `@openbot/team-client/agent-tasks`.
 On the phone, the server drawer opens the Tasks screen (`apps/mobile/src/app/(app)/server-tasks.tsx`) when
 the host serves the capability. A task opens as a full screen (`apps/mobile/src/app/(app)/task/[taskId].tsx`)
 with the message list and header of the agent's chat, the task actions in place of the browser
@@ -387,6 +425,7 @@ and the one action that unblocks it; for a service with a plugin, that action is
 enable the plugin. It can offer to create a specialist teammate, but it creates one only after the user agrees.
 
 An agent that delegates work can follow and stop it. `openbot.list_agents` reports each agent's
+description to 300 characters (`read_agent` returns all of it), its
 `status` (a starting delivery and a context compaction count as `working`), `queuedMessages`
 (channel work excluded), `turnStartedAt`, and `lastActivityAt`. The last two come from the provider
 notifications that `TurnLifecycle` sees; they are in memory only, so after a restart
@@ -404,6 +443,16 @@ another teammate's copy of that request is queued, starting or running (`Mailbox
 When the last copy ends, the waiting answers start in one turn, and the prompt names each teammate
 whose copy ended with no answer. A message from the person does not wait: it starts at once and
 takes the answers that are already in. Each end of a copy schedules a drain for the requester.
+
+A message from another agent follows the recipient's busy-message mode, as a message from the
+person does. When the mode is "steer", the provider steers natively and the recipient runs a chat
+turn, `send_message` and the result relay take the message into that turn
+(`AgentService.#steerAgentMessage`). Channel, messaging and task work, and each answer to a request
+that went to two or more teammates, stay queued (`MailboxStore.steersChatTurn`), so those answers
+still start together. A message from an agent that cannot steer gets no fallback reason on its row.
+The person can steer any queued answer into the running turn from the waiting block on desktop, the
+web and mobile; it has no other queue action. That is the person's choice, so it can take one answer
+of a group before the others.
 
 This policy lives in `src/backend/agent/developer-instructions.ts` and is supplied on both thread
 start and resume. Codex receives `developerInstructions`; Claude and Pi append them to the system
@@ -447,7 +496,12 @@ it into managed avatar storage. Generated avatar settings remove the custom imag
 the existing agent service and validate arguments before changing state.
 `openbot.create_agent` also accepts an optional `provider`, `model` and `reasoningEffort`. The
 read-only `openbot.list_models` returns the models of each provider that the model picker shows, with
-their reasoning efforts and the default model for a request that names only a provider. A provider
+their reasoning efforts and the default model for a request that names only a provider. With no
+`query`, a provider lists its default model, the models that local agents use as their model or as a
+backup model, then its first catalog models up to 8 models in total; `omittedModels` counts the
+others. A `query` searches all models by the words of their id or name and returns 20 at
+most. `create_agent` and `update_profile` still accept each catalog model, and an unknown model
+error names the same short list. A provider
 that can hold more than one account also lists its accounts, with the provider's own sign-in
 (`default`) first: the id, the name the user gave it (or null), and the state. It never lists the
 account email, credentials or account folders. `update_profile` takes the
@@ -630,7 +684,8 @@ in `.agents/skills` and `.claude/skills` that OpenBot does not manage. Workspace
 and leave out `.openbot/`, the skill folders, links, and every path `isUnsafeArchivePath` refuses
 (`.git`, `node_modules`, `.env*`, private keys, nested archives). Server settings are optional: MCP servers,
 custom model providers, custom ACP agents (as a warning, see below), sidebar sections and routine flows
-between exported agents.
+between exported agents. A custom provider model keeps its optional `contextWindow`; an app that
+does not know the field ignores it.
 
 No secret is in the file: MCP variable and header values are empty, custom providers have no key or
 headers, custom agents keep only the names of their variables, and `signedIn` lists provider ids,

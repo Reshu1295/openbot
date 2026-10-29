@@ -5,10 +5,11 @@ To add a provider, or to see how a provider signs in on a joined server, read
 
 ## Built-in tool discovery
 
-`agent/tool-catalog.ts` exposes ten direct tools and three discovery tools to every adapter.
+`agent/tool-catalog.ts` exposes eleven direct tools and three discovery tools to every adapter.
 Claude uses its native question tool instead of `ask_user`. The direct tools are `ask_user`,
 `attach_files_to_response`, `list_agents`, `send_message`, `search_memories`, `remember`,
-`forget_memory`, `react_to_user_message`, `routine_no_update`, and `routine_report_failure`. External plugin registration stays with each provider adapter.
+`forget_memory`, `react_to_user_message`, `request_api_key`, `routine_no_update`, and
+`routine_report_failure`. External plugin registration stays with each provider adapter.
 
 `tool_search` uses local keyword matching. Exact names come first, then word matches, with stable
 catalog order for ties. It returns five results by default and at most ten. It accepts `queries`, or
@@ -35,15 +36,16 @@ receive them through the local MCP bridge.
 `agent/developer-instructions.ts` puts stable rules first, profile and workspace settings next,
 and memories last. Detailed browser, administration, routine, hosting, data, and visual guidance
 loads through `tool_search` or `tool_describe`. Essential secret handling and untrusted-content rules stay in the
-permanent instructions. ACP and Muse still insert these shorter instructions on each normal turn.
+permanent instructions. Each rule has one place: the Vault, wait, and memory-selection details are in
+their tool guidance or descriptions, and the teammate reply format and the rule against
+acknowledgement loops come with each teammate message (`agent/delivery-content.ts`). ACP and Muse still insert these shorter instructions on each normal turn.
 Retention after compaction is not assumed. Compaction thresholds are unchanged.
 
-The default synthetic fixture measures 11,541 instruction characters and 8,382 characters for the
-serialized visible tool definitions, including the 1,912-character catalog. This is 19,923
-characters, or about 4,981 tokens at four characters per token, compared with the earlier 101,602
-characters (about 25,401 tokens). It is an 80.4% reduction in default application text. Schemas and
-guidance loaded later add context and can add model steps. Provider prompts, external plugins,
-caching, billing, and native model serialization are outside this measurement.
+`bun run check:agent-context` measures the instruction text, the visible tool definitions, the
+catalog, and the guidance in bytes, and fails when one of them grows. See
+[Agent context budget](../development-checks.md#agent-context-budget). Schemas and guidance loaded
+later add context and can add model steps. Provider prompts, external plugins, caching, billing, and
+native model serialization are outside this measurement.
 
 ## History retrieval and replacement sessions
 
@@ -84,6 +86,51 @@ reason and Claude configuration restarts, without conversation text.
 Memory refresh behavior remains unchanged. The Codex fake-provider test proves that updated
 instructions are sent on resume; it does not prove native model adoption. Claude prompt snapshots
 stay off so they cannot freeze changed profile or memory text.
+
+## Background memory review
+
+`agent/memory-review.ts` reviews an agent's memories in the background. Each conversation has its
+own count: the agent's own chat and each side thread. A review starts after 20 completed turns of a
+conversation, after 15 minutes with no turn in a conversation that has 3 or more new turns, when
+the user clears the chat, and when a side thread with new turns closes. Turns of channels,
+messaging threads and routine runs do not count. A turn in which the agent changes its memories
+itself starts the count again. A deleted side thread is not reviewed, and its running review ends.
+The counts and the last reviewed message are in memory only; after a restart, a review reads the
+latest messages.
+
+The number of turns is a setting of the server that runs the agents: Server settings > General >
+Memory review, with 10, 20 (the default) or 40 turns, or Off. An owner or admin of a joined server sets
+it through `memory-review-v1` (see [servers.md](servers.md)). Main owns
+`openbot-memory-review-v1.json` (`MemoryReviewPreferenceStore`) and passes
+`memoryReviewInterval()` to the agent service, which reads it at each use, so a change applies from
+the next turn. Off starts no review of any kind: not after turns, a pause, a clear or a closed side
+thread. The counts continue while it is off, so the first turn after it is on again can start a
+review.
+
+The review is one profile-client generation without tools, on the agent's own provider. It uses
+the provider's default model (`defaultProviderModel`) when that model is listed and its standard
+input price in `usage-pricing.ts` is lower than the price of the agent's model, with that model's
+default reasoning effort. Otherwise, also when a price is not known, it uses the agent's own model
+and reasoning effort. Benchmark v2 measured the review quality on `claude-haiku-5-5`. The review
+does not reuse the main chat's prompt cache: its prompt and tools are not the chat's, so its input
+is billed at the full rate. It reads the agent's profile, its memories, and the conversation since the last review and after
+the latest context reset, with the side-question transcript budget. The prompt holds every
+essential memory and as many searchable memories as fit 12,000 characters: first those that share
+the most words with the reviewed conversation, then the newest. It states how many are not shown,
+so a review stays the same size at any memory limit. Chat and memory text pass through
+the secret redaction before the prompt is made. The model answers `add`, `update` and `forget`
+operations as JSON. `AgentMemories.applyReview` commits them as one turn through the checks of the
+memory tools: the memory limit, the essential budget, duplicates and the user's selections. A
+review does not change a memory that the user wrote or whose inclusion the user chose, a memory
+whose text changed after the review read it, or a memory whose text the redaction changed. A memory
+clear during the review drops all of its changes.
+
+Only one review runs at a time, and only when a profile-client slot stays free for the user. A
+review that cannot start waits, and starts when the running review ends or at the next turn. A
+clear's review that waits for longer reads the new chat, not the chat that the clear ended. A failed generation or an answer that is not JSON is logged
+and shows nothing. A usage limit is skipped silently and does not mark the model. The changes show as a
+memory-changes line with its own `memory-review-` turn id, in the conversation that was reviewed.
+While a turn of that conversation runs, the line waits for the turn to end. Agent deletion and service stop end a running review.
 
 ## Compaction ownership
 
@@ -222,6 +269,22 @@ only what was stamped within three hours. So a version another instance or anoth
 worktree's pin still runs is not removed; a collection that fails, as it does on Windows for an open
 binary, never stops startup.
 
+A provider that is off in this profile runs no CLI, so the manager does not stamp its versions. Pi
+counts as in use while a key-only provider that runs on it is on. Its
+provider page in Settings offers Remove download (#3321), which removes every version of that CLI and
+this profile's partial downloads of it, and leaves accounts and sign-ins alone. It is refused while
+the provider is on, while its download runs, and for a provider with an explicit CLI path. The same
+age rule keeps a version another instance stamped, with one change: the manager remembers its own
+last stamp of each directory, and a directory whose mtime is not later than that stamp counts as
+unstamped. Otherwise the stamps this instance wrote before the user turned the provider off would
+keep it for hours. A sibling stamp older than this instance's last one is hidden by it until the
+sibling's next check stamps again. Each version is moved aside before it is deleted, so a version a
+program holds open stays whole, and the removal then reports that it did not finish. The manager
+stamps the version it activates, so an install it made in the same session is its own. Because a
+provider that is off is not stamped, a sibling can collect its version; turning the provider on
+reads the store again when that version is gone. Turning the provider on later downloads the CLI as
+on first use.
+
 ### Managed provider updates
 
 The main process offers the version that the section above selects. The lock pins each provider
@@ -356,6 +419,43 @@ A keyless OpenCode still lists models whose provider has no sign-in. OpenCode 2.
 one with `-32000` "provider authentication required" and no provider ID. `OPENCODE_ACP_FLAVOR`
 maps that code to `error.provider.opencodeAuthRequired`, which names the provider from the model ID
 before its first `/` and lists the fixes: a Free model, a Go key, or `opencode auth login`.
+
+#### Turns of a background subagent
+
+OpenCode 2.2.0 sends session updates only for the execution that a `session/prompt` starts. When a
+background subagent ends, OpenCode answers its result in a turn of its own (a `synthetic` row with
+`source: subagent` in its store), and no update of that turn reaches the client (#3406). The flag
+`unsentBackgroundTurns` of `OPENCODE_ACP_FLAVOR` turns on the recovery in `acp-client.ts`:
+
+- A tool call that ends with `rawOutput.metadata.status` "running" and a `sessionID` started a
+  background task. OpenBot then watches the session for 30 minutes, and longer while it changes.
+  The idle pool does not close a watched session, because a closed one never reports the result.
+- Every 2 seconds, when no prompt runs or opens, OpenBot reads `session/list`. When the session's
+  `updatedAt` changes, it sends `session/load` with the session's own MCP servers, and collects the
+  replay apart from live updates until the load answers, also after the request time limit. A
+  prompt waits for the load meanwhile. A failed load is tried again at the next poll.
+- The client keeps the ACP `messageId` of each message with text and the ID of each tool call that
+  the chat showed. The replay's entries after the last shown one, the updates of the tool calls
+  that are still open, and the added text of the message that the turn shows last go through the
+  live update path in a turn with `unprompted: true`. OpenCode stores a message when it starts and
+  its text when the step ends, so a replay can find it empty first. As for Claude
+  (#1904), no delivery attaches to that turn, and a message sent meanwhile fails with
+  `ProviderTurnActiveError` and waits in the queue.
+- OpenBot ends that turn when the session sends nothing new for 15 seconds and no tool call is open,
+  or after the stall limit while one is. A step that writes for longer can split one turn in two;
+  nothing is lost. A stop cancels the turn and marks its open tool calls as stopped. For 30 seconds
+  after any turn that does not complete, a replay marks new entries as shown and does not show
+  them, because OpenCode can go on with a stopped turn (#2858).
+
+The watch is in memory. A background task that ends while OpenBot is closed, or after OpenBot
+loaded the session again, shows only in OpenCode's own store.
+
+#### Text of two steps
+
+OpenCode 2.2.0 gives the message of each step its own ACP `messageId`. With `messagePerId`, text of a
+new `messageId` with no tool call before it starts a new paragraph of the same answer, so the text
+of two steps does not show as one line. As for every ACP agent, text before a tool call is
+commentary, which the chat folds into the turn's thinking.
 
 Provider session IDs remain in `projection_provider_sessions`; migration 17 adds OpenCode while
 preserving turn links. Provider switches keep the same agent, workspace, and local thread.
@@ -561,7 +661,9 @@ the primary window. The reader also sends `GetPlanInfo`: on a merged plan (`isMe
 subscription, the included usage covers Grok and Composer only, so `totalPercentUsed` alone fills the
 primary window and the dock shows no other models window, as the Cursor app does. The Cursor app
 keeps the split for a merged Enterprise team plan; the reader cannot see the membership type, so it
-does not. A failed `GetPlanInfo` keeps the split. No token, a 401 or 403, or no percentage gives no reading. The dock poll calls
+does not. That merged total is the Grok plan quota, so the reading sets `sharedQuotaWith: "grok"`
+(not sent on the Team API): the page rail then shows the Grok ring alone when Grok has one. Its
+hover card lists the Cursor reading too, and the ring draws the reading with the least left. A failed `GetPlanInfo` keeps the split. No token, a 401 or 403, or no percentage gives no reading. The dock poll calls
 `readCursorUsage` directly, as it does for OpenCode, so it does not start the CLI for a reading.
 `scripts/cursor-usage-e2e.ts` covers it.
 
@@ -627,8 +729,11 @@ provider added after v8 needs no new protocol version. The `providers-v8` routes
 The host hides a provider from a peer below v8 when that protocol's frozen list does not have it
 (`FROZEN_PROVIDERS` in `src/main/team-api/provider-visibility.ts`). So a new provider is hidden
 from old peers with no change there. Do not edit those lists. A key-only provider
-(`KEY_ONLY_PROVIDERS`, now Inception and DeepSeek) is hidden from peers on every protocol, v8 too,
-and the peer key routes refuse its key.
+(`KEY_ONLY_PROVIDERS`, now Inception, DeepSeek and OpenRouter) is not in any frozen list, so a v8
+peer is the first to see it. The `providers-v8` key routes read, set and clear its key. A key set
+there starts the host's Pi download when Pi cannot start, and does not wait for it. Until Pi is
+ready no process uses the key, so the route saves only the key; the provider is checked again when Pi
+is ready. The `providers-v5` and `providers-v1` key routes refuse its key.
 
 A v8 client keeps the agents of a provider that its build does not know (`ForeignProviderId`,
 `AgentProviderRef`). The agent stays in the list and chat works, because the host runs it. The
@@ -800,8 +905,8 @@ only sign-in. The key is stored as the `inception` API key. `pi-key-providers.ts
 calls `pi.registerProvider("inception", …)` with the Mercury models; the key is in the process
 environment and a `globalThis` slot, because Pi runs extensions again on `switch_session`. The
 Inception client lists only the `inception` models, with bare ids such as `mercury-3`. The Pi client
-does not load this extension, so it keeps only the user's own `inception` models. Without a key the provider has no models and asks for a key. Inception is local-only:
-no Team API protocol carries it, v8 included (`KEY_ONLY_PROVIDERS`).
+does not load this extension, so it keeps only the user's own `inception` models. Without a key the provider has no models and asks for a key. Team API v8 carries Inception; peers
+below v8 do not see it.
 
 ## DeepSeek
 
@@ -816,7 +921,25 @@ which replaces either key. A 401 or a 402 from a key provider shows a text about
 the account balance (`#failureText` in `pi-client.ts`). The DeepSeek client lists only the `deepseek`
 models, with bare ids such as `deepseek-v4-pro`. The Pi client loads no key extension, so it keeps
 the user's own `deepseek` models, for example from `DEEPSEEK_API_KEY` in Pi's environment.
-DeepSeek is local-only, as Inception is.
+Peers see DeepSeek from v8, as Inception.
+
+## OpenRouter
+
+OpenRouter works as DeepSeek does: a key-only provider on Pi's managed CLI. The key is stored as the
+`openrouter` API key. Pi has a built-in `openrouter` provider with OpenRouter's model list (401 models
+in Pi 1.1.0 and 1.4.0), so the extension registers only the key and the `Authorization` header, and
+OpenBot keeps no OpenRouter model list. Pi sends some models to OpenRouter's Anthropic Messages
+endpoint and the others to its chat completions endpoint; both read the header. On the Anthropic
+Messages endpoint Pi also sends the key from its own `auth.json` as `x-api-key`, so the extension sets
+that header to the OpenBot key too (checked in Pi 1.4.0 with a local server). Pi's own
+`/api/models/user` request still uses a key from `auth.json` when the user saved one there; it reads
+the model list and sends no turn content. Model ids keep
+OpenRouter's `<lab>/<model>` form, such as `anthropic/claude-opus-5.5`, and the client passes them to
+Pi unchanged. The catalog drops the aliases that start with `~`, such as
+`~anthropic/claude-sonnet-latest`, because `isAgentModel` refuses that character, and the default is
+`anthropic/claude-sonnet-5.5`. The model picker groups the models by lab (`openRouterLab` in
+`provider-model-options.ts`) and marks the `:free` models as free. A 402 means the account has no
+credits. Peers see OpenRouter from v8, as Inception.
 
 ## Muse
 
@@ -864,6 +987,11 @@ The snapshot includes only active personal provider sessions. Reset, session rep
 provider changes remove the old indication. A provider change publishes a runtime snapshot before
 the next turn, so retired counts do not remain on screen. Execution-thread data does not enter
 personal chat.
+
+Optional `threadContextStates` carries the same state for the active provider session of each open
+side thread, keyed by its `threadId`. The side thread's message box shows it. It is local only, as
+`contextStates` is, and `fitRuntimeSnapshot` drops it first. A `handoff` provider cannot replace the
+session of a side thread, so its `autoCompactAt` is null there.
 Codex uses `tokenUsage.last.totalTokens` and its reported `modelContextWindow`. Claude reads the
 SDK `getContextUsage({ detail: "summary" })` result after a turn. This uses the previous response
 and local estimates; it avoids full per-category token-count requests. The read runs outside the
@@ -887,3 +1015,5 @@ summary is not copied into this state.
 when `autoCompactAt` is set, which means that OpenBot compacts the thread (`events`, `request` or
 `handoff`). It refuses while a turn, a queued message or a session start needs the session. It is
 local only: the Team API has no route, and a joined server's agent shows no ring.
+`agent:tasks:compact-context` does the same for one open side thread. It refuses while the thread
+has an active turn or delivery, or while its session compacts or waits after a refused start.

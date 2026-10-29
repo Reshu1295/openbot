@@ -10,19 +10,24 @@ import {
   CUSTOM_PROVIDER_LIMITS,
   composedCustomModelId,
   isAgentModel,
+  isCustomProviderContextWindow,
   isCustomProviderHeaderName,
 } from "@openbot/contracts/ipc";
-import type { AppTranslate } from "@openbot/i18n";
+import type { AppFormat, AppTranslate } from "@openbot/i18n";
 import { currentText } from "../../text";
 
 export interface CustomModelDraft {
   id: string;
   name: string;
+  /** Tokens, as typed. Blank keeps OpenCode's default. */
+  contextWindow?: string;
 }
 
 export interface CustomHeaderDraft {
   name: string;
   value: string;
+  /** The name of a saved header. Main holds its value, which an empty field keeps. */
+  savedName?: string;
 }
 
 export interface CustomProviderDraft {
@@ -57,9 +62,16 @@ export function emptyCustomProviderDraft(): CustomProviderDraft {
   };
 }
 
+/** The header rows of a saved endpoint: each saved name, with an empty value that keeps the saved one. */
+export function savedHeaderDrafts(names: readonly string[] | undefined): CustomHeaderDraft[] {
+  return names && names.length > 0
+    ? names.map((name) => ({ name, value: "", savedName: name }))
+    : [{ name: "", value: "" }];
+}
+
 /**
- * The form for a saved endpoint. The key and the headers stay in main, so their fields open blank,
- * and blank fields keep them (`customProviderUpdate`).
+ * The form for a saved endpoint. The key and the header values stay in main, so their fields open
+ * blank, and blank fields keep them (`customProviderUpdate`).
  */
 export function savedCustomProviderDraft(provider: CustomProviderSummary): CustomProviderDraft {
   return {
@@ -69,19 +81,41 @@ export function savedCustomProviderDraft(provider: CustomProviderSummary): Custo
     apiKey: "",
     models:
       provider.models.length > 0
-        ? provider.models.map((model) => ({ id: model.id, name: model.name }))
+        ? provider.models.map((model) => ({
+            id: model.id,
+            name: model.name,
+            contextWindow: model.contextWindow?.toString() ?? "",
+          }))
         : [{ id: "", name: "" }],
-    headers: [{ name: "", value: "" }],
+    headers: savedHeaderDrafts(provider.headerNames),
   };
 }
 
 /** A row the user has not filled in yet: carried by the form, ignored by validation and submit. */
-function blankModel(model: CustomModelDraft): boolean {
-  return !model.id.trim() && !model.name.trim();
+export function blankModel(model: CustomModelDraft): boolean {
+  return !model.id.trim() && !model.name.trim() && !model.contextWindow?.trim();
+}
+
+/**
+ * The typed context window: undefined when blank, null when it is not a usable token count. The text
+ * is plain digits, or groups of three digits with one separator, so `128,000`, `128 000` and `128.000`
+ * are all 128000. A decimal such as `200000.0` or `1300.5` is refused, not read as a larger number.
+ */
+function contextWindowValue(model: CustomModelDraft): number | null | undefined {
+  const text = model.contextWindow?.trim() ?? "";
+  if (!text) return undefined;
+  if (!/^(?:\d+|\d{1,3}(?:([\s,._'’])\d{3})(?:\1\d{3})*)$/u.test(text)) return null;
+  const value = Number(text.replace(/\D/gu, ""));
+  return isCustomProviderContextWindow(value) ? value : null;
 }
 
 function blankHeader(header: CustomHeaderDraft): boolean {
   return !header.name.trim() && !header.value.trim();
+}
+
+/** A saved header whose value the user left empty. Main fills it in. */
+export function keepsHeaderValue(header: CustomHeaderDraft): boolean {
+  return header.savedName !== undefined && header.name.trim() === header.savedName && !header.value.trim();
 }
 
 /**
@@ -92,6 +126,7 @@ export function validateCustomProvider(
   draft: CustomProviderDraft,
   ids: { taken?: readonly string[] | undefined; locked?: boolean | undefined } = {},
   t: AppTranslate = currentText().t,
+  format: AppFormat = currentText().format,
 ): CustomProviderErrors {
   const providerId = draft.providerId.trim();
   const errors: CustomProviderErrors = {
@@ -149,6 +184,13 @@ export function validateCustomProvider(
       errors.modelRows[index] = t("customProvider.error.displayNameLength", { max: INPUT_LIMITS.modelName });
       return;
     }
+    if (contextWindowValue(model) === null) {
+      errors.modelRows[index] = t("customProvider.error.contextWindowInvalid", {
+        min: format.number(CUSTOM_PROVIDER_LIMITS.contextWindowMin),
+        max: format.number(CUSTOM_PROVIDER_LIMITS.contextWindowMax),
+      });
+      return;
+    }
     // OpenCode reports this model as `<provider id>/<model id>`, and both the IPC and Team API list
     // decoders fail closed on the whole array when one id is malformed - which empties the picker
     // rather than hiding one row. So the composed id is checked here, where the user can still fix it.
@@ -165,7 +207,8 @@ export function validateCustomProvider(
     else if (!isCustomProviderHeaderName(name)) errors.headerRows[index] = t("customProvider.error.headerNameInvalid");
     else if (headerNames.has(name.toLowerCase()))
       errors.headerRows[index] = t("customProvider.error.headerDuplicate", { name });
-    else if (!header.value.trim()) errors.headerRows[index] = t("customProvider.error.headerValueRequired");
+    else if (!header.value.trim() && !keepsHeaderValue(header))
+      errors.headerRows[index] = t("customProvider.error.headerValueRequired");
     else headerNames.add(name.toLowerCase());
   });
   if (draft.headers.filter((header) => !blankHeader(header)).length > CUSTOM_PROVIDER_LIMITS.headers) {
@@ -219,11 +262,19 @@ export function hasCustomProviderError(errors: CustomProviderErrors): boolean {
   );
 }
 
-/** The wire payload: trimmed, with the blank placeholder rows dropped. */
+/**
+ * The wire payload: trimmed, with the blank placeholder rows dropped. A kept saved header has an
+ * empty value, which only `customProviderUpdate` sends.
+ */
 export function customProviderValue(draft: CustomProviderDraft): SaveCustomProviderInput {
   const models = draft.models
     .filter((model) => !blankModel(model))
-    .map((model) => ({ id: model.id.trim(), name: model.name.trim() || model.id.trim() }));
+    .map((model) => {
+      const id = model.id.trim();
+      const name = model.name.trim() || id;
+      const contextWindow = contextWindowValue(model);
+      return typeof contextWindow === "number" ? { id, name, contextWindow } : { id, name };
+    });
   return {
     id: draft.providerId.trim(),
     name: draft.displayName.trim(),
@@ -239,8 +290,10 @@ export function customProviderValue(draft: CustomProviderDraft): SaveCustomProvi
 }
 
 /**
- * An edit of a saved endpoint sends only what the user typed: a blank key and no headers keep the
- * stored ones. There is no way to clear them here, which is the rule of `customProviders.update`.
+ * An edit of a saved endpoint: a blank key keeps the stored one, and an empty header value keeps the
+ * saved value of that name. The header list replaces the saved one, so a removed row removes its
+ * header; main keeps the ciphertext when the list names every saved header unchanged. There is no
+ * way to clear the key here, which is the rule of `customProviders.update`.
  */
 export function customProviderUpdate(value: SaveCustomProviderInput): UpdateCustomProviderInput {
   return {
@@ -249,7 +302,7 @@ export function customProviderUpdate(value: SaveCustomProviderInput): UpdateCust
     baseUrl: value.baseUrl,
     models: value.models,
     ...(value.apiKey === null ? {} : { apiKey: value.apiKey }),
-    ...(value.headers.length === 0 ? {} : { headers: value.headers }),
+    headers: value.headers.map((header) => ({ name: header.name, value: header.value || null })),
   };
 }
 
@@ -265,6 +318,8 @@ export interface CustomProviderEndpoint {
 export interface DiscoveredModel {
   id: string;
   name?: string;
+  /** For a saved model: the context window the user set, which Edit must keep. */
+  contextWindow?: number;
 }
 
 /** The state of one `GET {baseUrl}/models` request, owned by the host that makes it. */

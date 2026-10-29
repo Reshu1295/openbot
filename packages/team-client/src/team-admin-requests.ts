@@ -24,23 +24,26 @@ import { DISCORD_ACCESS_ROUTES } from "@openbot/contracts/team-protocol/discord-
 import { HOST_MEMBER_UPDATE_ROUTES } from "@openbot/contracts/team-protocol/host-member-update-v1";
 import { HOST_RELEASE_ROUTES } from "@openbot/contracts/team-protocol/host-release-v1";
 import { HOST_TIMEZONE_ROUTES } from "@openbot/contracts/team-protocol/host-timezone-v1";
+import { MEMORY_REVIEW_ROUTES } from "@openbot/contracts/team-protocol/memory-review-v1";
 import { PROMPT_CACHE_TTL_ROUTES } from "@openbot/contracts/team-protocol/prompt-cache-ttl-v1";
+import { PROVIDER_DEFAULT_ROUTES } from "@openbot/contracts/team-protocol/provider-default-v1";
 import type { PROVIDERS_V5_ROUTES } from "@openbot/contracts/team-protocol/providers-v5";
 import { PROVIDERS_V8_ROUTES } from "@openbot/contracts/team-protocol/providers-v8";
 // Admin requests to one host: agent settings and skills, shared tables, agent share links, the server name and logo,
-// the server timezone, the agent memory limit, the prompt cache time, the Discord roles that can use OpenBot, the app update, MCP servers, storage, hosted sites and providers.
+// the server timezone, the agent memory limit, the memory review, the prompt cache time, the default provider, the Discord roles that can use OpenBot, the app update, MCP servers, storage, hosted sites and providers.
 //
 // The desktop sends the same routes from the main process. The web client and the mobile app send
 // them through their own transport, so the path, body and decoding of each request are here once.
 // The host answers only an owner or admin; a member gets a refusal, which the transport rejects.
 
-import type { ManagedProviderId } from "@openbot/contracts/agent-providers";
+import { type AgentProviderRef, isAgentProviderRef, type ManagedProviderId } from "@openbot/contracts/agent-providers";
 import { parseHostedSiteList } from "@openbot/contracts/hosted-sites";
 import {
   type AccountUsage,
   type AddedAgent,
   type AddMessagingOrchestratorResult,
   type AgentAdminSettings,
+  type AgentModelId,
   type AgentProviderId,
   type AgentStatus,
   type AgentTemplatePreview,
@@ -65,6 +68,7 @@ import {
   decodeHostBitwardenConnectorStatus,
   decodeHostGitHubConnectorRepositories,
   decodeHostGitHubConnectorStatus,
+  decodeHostMemoryReview,
   decodeHostMessagingOverview,
   decodeHostOnePasswordConnectorStatus,
   decodeHostProviderAccounts,
@@ -72,6 +76,8 @@ import {
   decodeHostReleaseStatus,
   decodeHostTimezoneSettings,
   decodeHostUpdateStatus,
+  decodeHostVaultImport,
+  decodeHostVaultState,
   decodeInstalledSkills,
   decodeMcpServerConfigs,
   decodeMcpSignInAppState,
@@ -97,6 +103,7 @@ import {
   type HostAgentMemoryLimit,
   type HostedSiteList,
   type HostGitHubConnectorStatus,
+  type HostMemoryReview,
   type HostMessagingConnectInput,
   type HostMessagingPlatformInput,
   type HostMessagingWorkspaceInput,
@@ -111,6 +118,7 @@ import {
   type InstallMarketplaceAgentInput,
   type InstallSkillInput,
   isAddMessagingOrchestratorResult,
+  isAgentModel,
   isAgentStatus,
   isSharedTable,
   type McpServerConfig,
@@ -154,6 +162,9 @@ import {
   type UpdateAgentAdminSettingsInput,
   type UpdateHostIdentityInput,
   type UpdateRestartMode,
+  type VaultHostImportResult,
+  type VaultSaveInput,
+  type VaultState,
 } from "@openbot/contracts/ipc";
 import { decodeRecord, guardedListDecoder, nullableString, requiredBoolean } from "@openbot/contracts/ipc-decoding";
 import {
@@ -210,6 +221,9 @@ import { type SIGN_IN_RELAY_PROVIDERS, SIGN_IN_RELAY_ROUTES } from "@openbot/con
 import { SKILLS_ADMIN_ROUTES } from "@openbot/contracts/team-protocol/skills-admin-v1";
 import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
+import { VAULT_IMPORT_ROUTES } from "@openbot/contracts/team-protocol/vault-import-v1";
+import { VAULT_ROUTES } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_ROUTES } from "@openbot/contracts/team-protocol/vault-v2";
 import { WEBHOOK_TESTS_ROUTES } from "@openbot/contracts/team-protocol/webhook-tests-v1";
 import { Effect, Schema } from "effect";
 import { bytesToBase64 } from "./base64";
@@ -569,6 +583,18 @@ export function setHostAgentMemoryLimit(
   return adminCall(() => request("POST", AGENT_MEMORY_LIMIT_ROUTES.update, decodeHostAgentMemoryLimit, { limit }));
 }
 
+export function getHostMemoryReview(request: TeamApiRequest): Effect.Effect<HostMemoryReview, TeamAdminRequestError> {
+  return adminCall(() => request("POST", MEMORY_REVIEW_ROUTES.settings, decodeHostMemoryReview, {}));
+}
+
+/** `0` turns the review off. The host refuses a value that its snapshot does not list in `choices`. */
+export function setHostMemoryReview(
+  request: TeamApiRequest,
+  interval: number,
+): Effect.Effect<HostMemoryReview, TeamAdminRequestError> {
+  return adminCall(() => request("POST", MEMORY_REVIEW_ROUTES.update, decodeHostMemoryReview, { interval }));
+}
+
 /** The roles of the host (`agent-access-v1`). A member reads only `mine`. */
 export function getHostAgentAccess(request: TeamApiRequest): Effect.Effect<AgentAccessSnapshot, TeamAdminRequestError> {
   return adminCall(() => request("POST", AGENT_ACCESS_ROUTES.read, decodeAgentAccessSnapshot, {}));
@@ -603,6 +629,37 @@ export function setHostPromptCacheTtl(
   ttl: PromptCacheTtl,
 ): Effect.Effect<PromptCacheTtlSetting, TeamAdminRequestError> {
   return adminCall(() => request("POST", PROMPT_CACHE_TTL_ROUTES.update, decodePromptCacheTtlSetting, { ttl }));
+}
+
+/** `provider-default-v1`: the provider that a new agent of the host starts on. A newer host can name a provider this build does not know. */
+export interface HostProviderDefault {
+  provider: AgentProviderRef | null;
+  model: AgentModelId | null;
+}
+
+function decodeHostProviderDefault(value: unknown): HostProviderDefault {
+  const record = decodeRecord(value, "default provider");
+  const { provider, model } = record;
+  if (provider !== null && !isAgentProviderRef(provider)) throw new Error("Invalid default provider.");
+  if (model !== null && !isAgentModel(model)) throw new Error("Invalid default model.");
+  return { provider, model };
+}
+
+export function getHostProviderDefault(
+  request: TeamApiRequest,
+): Effect.Effect<HostProviderDefault, TeamAdminRequestError> {
+  return adminCall(() => request("POST", PROVIDER_DEFAULT_ROUTES.settings, decodeHostProviderDefault, {}));
+}
+
+/** A null model is the provider's own default model. */
+export function setHostProviderDefault(
+  request: TeamApiRequest,
+  provider: AgentProviderId,
+  model: AgentModelId | null,
+): Effect.Effect<HostProviderDefault, TeamAdminRequestError> {
+  return adminCall(() =>
+    request("POST", PROVIDER_DEFAULT_ROUTES.update, decodeHostProviderDefault, { provider, model }),
+  );
 }
 
 /** The one MCP read route, and the only one the host answers to a GET. */
@@ -1174,6 +1231,53 @@ export function bitwardenConnectorRequest(
   return adminCall(() =>
     request("POST", BITWARDEN_CONNECTOR_ROUTES[route], decodeHostBitwardenConnectorStatus, { ...body }),
   );
+}
+
+/** The routes of `vault-v2` when the host serves it, else of `vault-v1`, which has no API keys. */
+function vaultRoutes(v2: boolean) {
+  return v2 ? VAULT_V2_ROUTES : VAULT_ROUTES;
+}
+
+/**
+ * The host's Vault (`vault-v2`, or `vault-v1` without API keys). No list item carries a password, a
+ * card number, a security code or an API key.
+ */
+export function listHostVault(request: TeamApiRequest, v2: boolean): Effect.Effect<VaultState, TeamAdminRequestError> {
+  return adminCall(() => request("POST", vaultRoutes(v2).list, decodeHostVaultState, {}));
+}
+
+/** Adds or changes one item of the host's Vault. A null secret keeps the saved one; a new one goes to the host once. */
+export function saveHostVaultItem(
+  request: TeamApiRequest,
+  input: VaultSaveInput,
+  v2: boolean,
+): Effect.Effect<VaultState, TeamAdminRequestError> {
+  // Only a card has approved sites, and an absent list keeps them all.
+  const { fillSites, ...item } = { fillSites: undefined, ...input };
+  return adminCall(() =>
+    request(
+      "POST",
+      vaultRoutes(v2).save,
+      decodeHostVaultState,
+      fillSites === undefined ? item : { ...item, fillSites },
+    ),
+  );
+}
+
+export function deleteHostVaultItem(
+  request: TeamApiRequest,
+  id: string,
+  v2: boolean,
+): Effect.Effect<VaultState, TeamAdminRequestError> {
+  return adminCall(() => request("POST", vaultRoutes(v2).delete, decodeHostVaultState, { id }));
+}
+
+/** Adds the logins of a CSV password export (`vault-import-v1`). The answer has only the counts. */
+export function importHostVaultCsv(
+  request: TeamApiRequest,
+  csv: string,
+): Effect.Effect<VaultHostImportResult, TeamAdminRequestError> {
+  return adminCall(() => request("POST", VAULT_IMPORT_ROUTES.import, decodeHostVaultImport, { csv }));
 }
 
 /** The host's Slack workspaces, Discord servers or Telegram chats (`connectors-v1`). */

@@ -153,6 +153,10 @@ export const messages = {
   "provider.deepseekKey.description":
     "Salva una chiave API di DeepSeek su questo computer per usare i modelli DeepSeek. OpenBot li esegue nella CLI di Pi che scarica.",
   "provider.deepseekKey.label": "Chiave API di DeepSeek",
+  "provider.openrouterKey.title": "Chiave API di OpenRouter",
+  "provider.openrouterKey.description":
+    "Salva una chiave API di OpenRouter su questo computer per usare i modelli di OpenRouter. OpenBot li esegue nella CLI di Pi che scarica.",
+  "provider.openrouterKey.label": "Chiave API di OpenRouter",
 
   "provider.openCodeKey.title": "Accedi a OpenCode Go",
   "provider.openCodeKey.description":
@@ -202,4 +206,17 @@ export const messages = {
   "provider.settings.promptCacheHour": "1 ora",
   "provider.settings.promptCacheDefault": "Predefinito di Claude Code",
   "provider.settings.promptCacheLoadFailed": "Impossibile caricare la durata della cache dei prompt di questo server.",
+  "provider.settings.download": "Download",
+  "provider.settings.downloadedCli": "CLI di {name}",
+  "provider.settings.downloadDetail": {
+    one: "{version} · 1 versione · {size}",
+    other: "{version} · {count} versioni · {size}",
+  },
+  "provider.settings.downloadVersions": { one: "1 versione · {size}", other: "{count} versioni · {size}" },
+  "provider.settings.downloadAgain": "Quando attivi {name}, OpenBot scarica di nuovo la sua CLI.",
+  "provider.settings.removeDownloadConfirm": "Rimuovere {size}?",
+  "provider.settings.removeDownloadKeeps": "Account, accessi e agenti restano.",
+  "provider.settings.removeDownload": "Rimuovi download",
+  "provider.settings.removingDownload": "Rimozione…",
+  "provider.settings.removeDownloadFailed": "Impossibile rimuovere il download.",
 } as const satisfies PartialTranslation<typeof source>;

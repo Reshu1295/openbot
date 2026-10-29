@@ -7,6 +7,7 @@ export const messages = {
   "error.provider.computerUseConfig":
     "OpenBot no pudo registrar el uso del equipo en la configuración de Codex. Comprueba que tu config.toml de Codex sea válido y se pueda escribir, y reinicia OpenBot. Puedes desactivar el uso del equipo en los ajustes del compañero para continuar sin él.",
   "error.provider.codexUnresponsive": "Codex dejó de responder, así que OpenBot terminó su proceso.",
+  "error.provider.acpUnresponsive": "{provider} no respondió a tiempo, así que OpenBot terminó su proceso.",
   "error.provider.endpointsReadOnly":
     "Los endpoints guardados se escribieron con una versión más reciente de OpenBot o el archivo no se puede leer. Actualiza OpenBot para cambiarlos.",
   "error.provider.endpointNoSecureStorage":
@@ -59,6 +60,9 @@ export const messages = {
   "error.provider.runtimesUnsupported":
     "Los entornos de ejecución de proveedores no están disponibles en esta plataforma.",
   "error.provider.closing": "OpenBot se está cerrando.",
+  "error.provider.removeWhileOn": "Desactiva el proveedor antes de quitar su descarga.",
+  "error.provider.removeWhileDownloading": "Espera a que termine la descarga y luego quítala.",
+  "error.provider.removeIncomplete": "Un programa usa archivos de esta CLI. Ciérralo y vuelve a intentarlo.",
   "error.provider.cliOverride": "Elimina la ruta de CLI definida explícitamente antes de actualizar en OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "La actualización del entorno de ejecución no se completó.",
   "error.provider.downloadHttp": "La descarga del entorno de ejecución falló con HTTP {status}.",
@@ -98,11 +102,14 @@ export const messages = {
   "error.provider.modelsTooMany": "Hay demasiados modelos.",
   "error.provider.modelIdCharacter": "Un ID de modelo contiene un carácter no permitido.",
   "error.provider.modelIdDuplicate": "Dos modelos tienen el mismo ID.",
+  "error.provider.contextWindowInvalid":
+    "La ventana de contexto de un modelo debe ser un número entero de tokens entre {min} y {max}.",
   "error.provider.headersTooMany": "Hay demasiadas cabeceras.",
   "error.provider.headerNameCharacter": "El nombre de una cabecera contiene un carácter que HTTP no permite.",
   "error.provider.headerNameTooLong": "El nombre de una cabecera es demasiado largo.",
   "error.provider.headerNameDuplicate": "Dos cabeceras tienen el mismo nombre.",
   "error.provider.headerValueInvalid": "Falta el valor de una cabecera o es demasiado largo.",
+  "error.provider.headerValueMissing": "Introduce un valor para la cabecera {name}.",
   "error.provider.apiKeyTooLong": "La clave de API es demasiado larga.",
   "error.provider.localOnly": "Los proveedores solo se pueden cambiar en el equipo que ejecuta los agentes.",
   "error.provider.keyRequired": "Se requiere una clave de proveedor.",
@@ -266,6 +273,8 @@ export const messages = {
   "error.provider.acpSignInStopped": "El inicio de sesión se detuvo antes de completarse.",
   "error.provider.geminiBrowserUnavailable":
     "Gemini no pudo abrir la página de inicio de sesión. Instala un navegador y xdg-utils, y conéctate desde una sesión de escritorio en este host. Un servidor sin escritorio no puede completar este inicio de sesión.",
+  "error.provider.geminiBrowserOpenFailed":
+    "Gemini no pudo abrir la página de inicio de sesión en tu navegador. Revisa tu navegador predeterminado y vuelve a conectarte.",
   "error.provider.acpSignInFailed": "El inicio de sesión no se completó.",
   "error.provider.acpSignInFailedReason": "El inicio de sesión no se completó: {reason}",
   "error.provider.acpSignInMethodMissing":
@@ -383,6 +392,7 @@ export const messages = {
   "error.provider.museSignIn": "Inicia sesión en Muse en el equipo host para continuar.",
   "error.provider.inceptionSignIn": "Añade una clave de API de Inception para continuar.",
   "error.provider.deepseekSignIn": "Añade una clave de API de DeepSeek para continuar.",
+  "error.provider.openrouterSignIn": "Añade una clave de API de OpenRouter para continuar.",
   "error.provider.terminalLoginFailed":
     "No se pudo abrir la terminal de inicio de sesión. Abre la CLI del proveedor en este host, inicia sesión allí y actualiza los proveedores.",
   "error.provider.nativeArchiveInvalid": "La descarga del proveedor no contiene una instalación válida.",

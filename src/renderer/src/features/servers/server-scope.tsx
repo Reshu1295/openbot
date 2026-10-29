@@ -7,6 +7,7 @@ import { isGlobalSearchShortcut } from "../../global-search-shortcut";
 import { useNavigation } from "../../navigation";
 import { createSimpleContext } from "../../simple-context";
 import { useAuth } from "../account/account-context";
+import { useAgentThreads } from "../agent-threads/agent-threads-context";
 import { useAgents } from "../agents/agents-context";
 import { useBrowserTabs } from "../browser/browser-context";
 import { useChannels } from "../channels/channels-context";
@@ -47,8 +48,15 @@ const ServerScope = createSimpleContext({
     const { centralAuth } = useAuth();
     const { setupState } = useSetup();
     const { servers, activeServerId, initialServersReady, serverLoadRequest, serversLoaded } = useServers();
-    const { pendingAgentSelection, setPendingAgentSelection, pendingChannelSelection, setPendingChannelSelection } =
-      useServerSwitch();
+    const {
+      pendingAgentSelection,
+      setPendingAgentSelection,
+      pendingChannelSelection,
+      setPendingChannelSelection,
+      pendingThreadSelection,
+      setPendingThreadSelection,
+    } = useServerSwitch();
+    const agentThreads = useAgentThreads();
     const channels = useChannels();
     const { setTeamPresence } = usePresence();
     const {
@@ -124,6 +132,13 @@ const ServerScope = createSimpleContext({
     /** This scope still owns the screen - the successor to `activeServerId() !== serverId`. */
     const scopeIsCurrent = (): boolean => !(owner && isDisposed(owner));
 
+    const signedInAccount = () => {
+      const auth = centralAuth();
+      return auth.status === "signed_in" ? auth.user.id : null;
+    };
+    /** The account signed in when the last load started. Undefined until a load starts. */
+    let loadedAccount: string | null | undefined;
+
     let loadGeneration = 0;
     async function loadWorkspace(): Promise<void> {
       const generation = ++loadGeneration;
@@ -133,6 +148,7 @@ const ServerScope = createSimpleContext({
       const isCurrent = () =>
         scopeIsCurrent() && generation === loadGeneration && sequence === selectedServer()?.connectionSequence;
       if (!isCurrent() || !transportReady()) return;
+      loadedAccount = untrack(signedInAccount);
       setConnection((draft) => {
         draft.failed = false;
         draft.failure = null;
@@ -285,6 +301,15 @@ const ServerScope = createSimpleContext({
         }),
     );
 
+    // Read states and direct threads belong to the signed-in reader. At a cold start the saved account
+    // can restore after the first load, which then had no reader, so a sign-in, or another account,
+    // loads the workspace again.
+    createEffect(signedInAccount, (account) =>
+      untrack(() => {
+        if (account && loadedAccount !== undefined && account !== loadedAccount) recovery.refresh();
+      }),
+    );
+
     createEffect(
       () => ({ ready: bootstrapReady() && serversLoaded() && transportReady(), id: activeServerId() }),
       ({ ready }) => {
@@ -303,6 +328,14 @@ const ServerScope = createSimpleContext({
         if (!agentId) return;
         setPendingAgentSelection(null);
         selectAgent(agentId);
+      },
+    );
+    createEffect(
+      () => pendingThreadSelection(),
+      (selection) => {
+        if (!selection) return;
+        setPendingThreadSelection(null);
+        void agentThreads.openConversation(selection.agentId, selection.threadId);
       },
     );
     createEffect(
