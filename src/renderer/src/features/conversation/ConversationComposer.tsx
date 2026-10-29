@@ -219,7 +219,10 @@ export function ConversationComposer() {
     steers() &&
     !editingDeliveryId() &&
     composerHasContent() &&
-    voicePhase() === "idle"
+    voicePhase() === "idle" &&
+    agentReady() &&
+    !attachmentBusy() &&
+    !submitting()
       ? steerComposer
       : undefined;
   /** Why the running turn has no reply: the computer is offline, or the provider sends nothing. */

@@ -732,10 +732,13 @@ export function createComposerActions(deps: ComposerActionsDeps) {
     };
     if (onScreen()) deps.setStickToLatest(true);
     // A message to a working agent waits behind its turn or its queue. A channel has no such queue.
+    // An earlier send that has not failed is about to start a turn, so this one waits behind it.
     const queued =
       onScreen() &&
       !deps.props.channel &&
-      (Boolean(deps.props.activeTurnId) || deps.orderedQueuedDeliveries().length > 0);
+      (Boolean(deps.props.activeTurnId) ||
+        deps.orderedQueuedDeliveries().length > 0 ||
+        deps.pendingSends.list(target).some((send) => send.state !== "failed"));
     // Read the send functions now: the send outlives this view when the user switches server.
     const send = deps.props.onSendMessage;
     const steerQueued = deps.props.onSteerQueuedMessage;
