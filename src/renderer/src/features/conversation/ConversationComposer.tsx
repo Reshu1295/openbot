@@ -667,6 +667,7 @@ export function ConversationComposer() {
             <ComposerEditor
               agentId={props.agent?.id}
               agents={props.mentionAgents ?? props.agents}
+              everyoneMention={Boolean(channel) && (props.mentionAgents ?? props.agents).length > 1}
               skills={installedSkills()}
               skillsLoadFailed={installedSkillsLoadFailed()}
               mcpServers={mcpServers()}
