@@ -564,8 +564,17 @@ export class ChannelService {
         (item, index) =>
           Effect.gen({ self: this }, function* () {
             const before = continued[index];
-            if (before && !(yield* this.#steerEffect(current.id, item, message)))
-              yield* this.interruptTasks(current.id, [before]);
+            if (!before) return;
+            // A failed steer starts the task again from a new delivery, and the other steers go on.
+            const steered = yield* this.#steerEffect(current.id, item, message).pipe(
+              Effect.catch((failure) =>
+                Effect.sync(() => {
+                  this.hooks.error(failure.cause);
+                  return false;
+                }),
+              ),
+            );
+            if (!steered) yield* this.interruptTasks(current.id, [before]);
           }),
         { concurrency: "unbounded", discard: true },
       );
@@ -575,9 +584,10 @@ export class ChannelService {
     if (command.type === "request") {
       const recipientAgentId = command.recipientAgentId;
       if (recipientAgentId) yield* channelSync(() => this.requireAvailableMember(channel, recipientAgentId));
-      // Always new root tasks, one for each member that the text addresses. A routine must never take `send`'s continuation branch above: that
-      // heuristic would let a schedule hijack and supersede a human's in-flight task, because the
-      // text of a routine is fixed and can start with "Also" or "Continue" by accident.
+      // Always new root tasks, one for each member that the text addresses. A routine must never
+      // take `send`'s continuation branch above: that heuristic would let a schedule hijack and
+      // supersede a human's in-flight task, because the text of a routine is fixed and can start
+      // with "Also" or "Continue" by accident.
       const recipients = this.#recipients(this.eligibleMembers(channel), command.text, recipientAgentId);
       const [owner = null, ...rest] = recipients;
       const task = this.newTask(channel.id, command.requestMessageId, command.text, owner);
