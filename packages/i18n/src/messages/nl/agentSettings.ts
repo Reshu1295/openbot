@@ -143,6 +143,8 @@ export const messages = {
   "agentSettings.access.full": "Volledige toegang",
   "agentSettings.busyMessage.appDefaultQueue": "App-standaard (wachtrij)",
   "agentSettings.busyMessage.appDefaultSteer": "App-standaard (bijsturen)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Hoststandaard (Wachtrij)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Hoststandaard (Bijsturen)",
   "agentSettings.busyMessage.queue": "Wachtrij",
   "agentSettings.busyMessage.steer": "Bijsturen",
   "agentSettings.busyMessage.steerUnsupported":

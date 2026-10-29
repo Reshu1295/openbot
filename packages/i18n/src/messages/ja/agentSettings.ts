@@ -144,6 +144,8 @@ export const messages = {
   "agentSettings.access.full": "フルアクセス",
   "agentSettings.busyMessage.appDefaultQueue": "アプリの既定 (キュー)",
   "agentSettings.busyMessage.appDefaultSteer": "アプリの既定 (方向を修正)",
+  "agentSettings.busyMessage.hostDefaultQueue": "ホストの既定 (キュー)",
+  "agentSettings.busyMessage.hostDefaultSteer": "ホストの既定 (方向を修正)",
   "agentSettings.busyMessage.queue": "キュー",
   "agentSettings.busyMessage.steer": "方向を修正",
   "agentSettings.busyMessage.steerUnsupported":

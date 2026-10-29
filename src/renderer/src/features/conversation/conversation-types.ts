@@ -313,7 +313,12 @@ export interface ConversationProps {
   remoteBackupModelsLoaded?: boolean | undefined;
   /** Whether a joined server's host answered with the agent's task limit: owners and admins only. */
   remoteTaskLimitLoaded?: boolean | undefined;
-  /** The app default an agent without its own busy-message setting follows. Local agents only. */
+  /** Whether a joined server's host answered with the agent's busy-message mode: owners and admins only. */
+  remoteBusyMessageModeLoaded?: boolean | undefined;
+  /**
+   * The default an agent without its own busy-message setting follows: this computer's for a local
+   * agent, the host's for an agent of a joined server.
+   */
   defaultBusyMessageMode?: BusyMessageMode | undefined;
   /** The account defaults an agent without its own value follows. Local agents only. */
   agentDefaults?: AgentDefaults | undefined;

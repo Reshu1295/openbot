@@ -139,6 +139,8 @@ export const messages = {
   "agentSettings.access.full": "完全访问",
   "agentSettings.busyMessage.appDefaultQueue": "应用默认（排队）",
   "agentSettings.busyMessage.appDefaultSteer": "应用默认（引导）",
+  "agentSettings.busyMessage.hostDefaultQueue": "主机默认（排队）",
+  "agentSettings.busyMessage.hostDefaultSteer": "主机默认（引导）",
   "agentSettings.busyMessage.queue": "排队",
   "agentSettings.busyMessage.steer": "引导",
   "agentSettings.busyMessage.steerUnsupported": "{provider} 无法在运行中引导。助手工作期间发送的消息会进入队列等待。",

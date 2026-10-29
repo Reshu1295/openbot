@@ -750,6 +750,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
     const agent = selected && host ? withHostProfileAccount(selected, host) : selected;
     const settings = remoteAgentAdmin.settings();
     const automation = remoteAgentAdmin.automation();
+    const busyMessageMode = remoteAgentAdmin.busyMessageMode();
     const backupModels = remoteAgentAdmin.backupModels();
     const usageLimitReturn = remoteAgentAdmin.usageLimitReturn();
     const taskLimit = remoteAgentAdmin.taskLimit();
@@ -758,6 +759,7 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
           ...agent,
           ...(settings ? { access: settings.access } : {}),
           ...(automation === undefined ? {} : { allowAutomation: automation }),
+          ...(busyMessageMode ? { busyMessageMode } : {}),
           ...(backupModels ? { backupModels } : {}),
           ...(usageLimitReturn ? { usageLimitReturn } : {}),
           ...(typeof taskLimit === "number" ? { taskLimit } : {}),
@@ -2524,6 +2526,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                 agentAutoApproves={remoteAgentAdmin.autoApproves()}
                 remoteBackupModelsLoaded={remoteAgentAdmin.backupModels() !== undefined}
                 remoteTaskLimitLoaded={remoteAgentAdmin.taskLimit() !== undefined}
+                remoteBusyMessageModeLoaded={remoteAgentAdmin.busyMessageMode() !== undefined}
+                defaultBusyMessageMode={remoteAgentAdmin.defaultBusyMessageMode()}
                 onUpdateAgentPermissions={remoteAgentAdmin.settings() ? remoteAgentAdmin.update : undefined}
                 onClearAgentContext={clearSelectedAgentContext()}
                 onRespondToBrowserTakeover={(decision, options) =>

@@ -143,6 +143,8 @@ export const messages = defineMessages("agentSettings", {
   "agentSettings.access.full": "Full access",
   "agentSettings.busyMessage.appDefaultQueue": "App default (Queue)",
   "agentSettings.busyMessage.appDefaultSteer": "App default (Steer)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Host default (Queue)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Host default (Steer)",
   "agentSettings.busyMessage.queue": "Queue",
   "agentSettings.busyMessage.steer": "Steer",
   "agentSettings.busyMessage.steerUnsupported":

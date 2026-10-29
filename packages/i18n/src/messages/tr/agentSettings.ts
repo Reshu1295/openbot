@@ -143,6 +143,8 @@ export const messages = {
   "agentSettings.access.full": "Tam erişim",
   "agentSettings.busyMessage.appDefaultQueue": "Uygulama varsayılanı (Kuyruk)",
   "agentSettings.busyMessage.appDefaultSteer": "Uygulama varsayılanı (Yönlendir)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Ana makine varsayılanı (Kuyruk)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Ana makine varsayılanı (Yönlendir)",
   "agentSettings.busyMessage.queue": "Kuyruk",
   "agentSettings.busyMessage.steer": "Yönlendir",
   "agentSettings.busyMessage.steerUnsupported":

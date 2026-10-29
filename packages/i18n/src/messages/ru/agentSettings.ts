@@ -166,6 +166,8 @@ export const messages = {
   "agentSettings.access.full": "Полный доступ",
   "agentSettings.busyMessage.appDefaultQueue": "По умолчанию (очередь)",
   "agentSettings.busyMessage.appDefaultSteer": "По умолчанию (направлять)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Очередь (по умолчанию на хосте)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Направлять (по умолчанию на хосте)",
   "agentSettings.busyMessage.queue": "Очередь",
   "agentSettings.busyMessage.steer": "Направлять",
   "agentSettings.busyMessage.steerUnsupported":

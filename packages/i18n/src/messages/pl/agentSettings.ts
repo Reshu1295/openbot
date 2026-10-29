@@ -161,6 +161,8 @@ export const messages = {
   "agentSettings.access.full": "Pełny dostęp",
   "agentSettings.busyMessage.appDefaultQueue": "Domyślne aplikacji (Kolejka)",
   "agentSettings.busyMessage.appDefaultSteer": "Domyślne aplikacji (Pokieruj)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Domyślne hosta (Kolejka)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Domyślne hosta (Pokieruj)",
   "agentSettings.busyMessage.queue": "Kolejka",
   "agentSettings.busyMessage.steer": "Pokieruj",
   "agentSettings.busyMessage.steerUnsupported":

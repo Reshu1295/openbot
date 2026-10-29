@@ -142,6 +142,8 @@ export const messages = {
   "agentSettings.access.full": "Acesso completo",
   "agentSettings.busyMessage.appDefaultQueue": "Padrão do app (Fila)",
   "agentSettings.busyMessage.appDefaultSteer": "Padrão do app (Orientar)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Padrão do anfitrião (Fila)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Padrão do anfitrião (Orientar)",
   "agentSettings.busyMessage.queue": "Fila",
   "agentSettings.busyMessage.steer": "Orientar",
   "agentSettings.busyMessage.steerUnsupported":

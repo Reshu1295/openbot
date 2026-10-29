@@ -142,6 +142,8 @@ export const messages = {
   "agentSettings.access.full": "Acceso completo",
   "agentSettings.busyMessage.appDefaultQueue": "Predeterminado de la app (En cola)",
   "agentSettings.busyMessage.appDefaultSteer": "Predeterminado de la app (Orientar)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Predeterminado del host (En cola)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Predeterminado del host (Orientar)",
   "agentSettings.busyMessage.queue": "En cola",
   "agentSettings.busyMessage.steer": "Orientar",
   "agentSettings.busyMessage.steerUnsupported":

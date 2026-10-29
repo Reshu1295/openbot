@@ -143,6 +143,8 @@ export const messages = {
   "agentSettings.access.full": "Voller Zugriff",
   "agentSettings.busyMessage.appDefaultQueue": "App-Standard (Warteschlange)",
   "agentSettings.busyMessage.appDefaultSteer": "App-Standard (Steuern)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Host-Standard (Warteschlange)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Host-Standard (Steuern)",
   "agentSettings.busyMessage.queue": "Warteschlange",
   "agentSettings.busyMessage.steer": "Steuern",
   "agentSettings.busyMessage.steerUnsupported":

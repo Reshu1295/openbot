@@ -145,6 +145,8 @@ export const messages = {
   "agentSettings.access.full": "Accesso completo",
   "agentSettings.busyMessage.appDefaultQueue": "Predefinito dell'app (Coda)",
   "agentSettings.busyMessage.appDefaultSteer": "Predefinito dell'app (Indirizza)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Predefinita dell'host (Coda)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Predefinita dell'host (Indirizza)",
   "agentSettings.busyMessage.queue": "Coda",
   "agentSettings.busyMessage.steer": "Indirizza",
   "agentSettings.busyMessage.steerUnsupported":

@@ -148,6 +148,8 @@ export const messages = {
   "agentSettings.access.full": "Accès complet",
   "agentSettings.busyMessage.appDefaultQueue": "Par défaut de l’app (File d’attente)",
   "agentSettings.busyMessage.appDefaultSteer": "Par défaut de l’app (Orienter)",
+  "agentSettings.busyMessage.hostDefaultQueue": "Par défaut de l’hôte (File d’attente)",
+  "agentSettings.busyMessage.hostDefaultSteer": "Par défaut de l’hôte (Orienter)",
   "agentSettings.busyMessage.queue": "File d’attente",
   "agentSettings.busyMessage.steer": "Orienter",
   "agentSettings.busyMessage.steerUnsupported":

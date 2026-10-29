@@ -139,6 +139,8 @@ export const messages = {
   "agentSettings.access.full": "전체 접근",
   "agentSettings.busyMessage.appDefaultQueue": "앱 기본값(대기열)",
   "agentSettings.busyMessage.appDefaultSteer": "앱 기본값(방향 지시)",
+  "agentSettings.busyMessage.hostDefaultQueue": "호스트 기본값 (대기열)",
+  "agentSettings.busyMessage.hostDefaultSteer": "호스트 기본값 (방향 지시)",
   "agentSettings.busyMessage.queue": "대기열",
   "agentSettings.busyMessage.steer": "방향 지시",
   "agentSettings.busyMessage.steerUnsupported":
