@@ -84,7 +84,7 @@ export function createSettingsHostedSitesStore(props: HostedSitesStoreProps, isA
 
   let shownServerId: string | null = null;
   createEffect(
-    () => (props.open && isActive() && props.hostedSitesApi ? props.serverId : null),
+    () => (props.open && isActive() ? props.serverId : null),
     (serverId) => {
       if (serverId === null) return;
       if (serverId !== shownServerId) {
