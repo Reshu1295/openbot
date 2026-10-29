@@ -309,7 +309,7 @@ export class McpOAuth implements McpOAuthAuthority {
     this: McpOAuth,
     url: string,
   ): Effect.fn.Return<string | null, McpOperationError> {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     if (!resource) return null;
     const stored = yield* mcpSync(() => this.#options.storage.read(resource));
     if (!stored?.tokens) return null;
@@ -336,7 +336,7 @@ export class McpOAuth implements McpOAuthAuthority {
     url: string,
     rejected: string,
   ): Effect.fn.Return<string | null, McpOperationError> {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     if (!resource) return null;
     const stored = yield* mcpSync(() => this.#options.storage.read(resource));
     if (!stored?.tokens) return null;
@@ -400,7 +400,7 @@ export class McpOAuth implements McpOAuthAuthority {
   /** The fetch of one exchange for this server. */
   #fetch(resource: string, signal: AbortSignal): FetchLike {
     const { lookup } = this.#options;
-    return secureOAuthFetch({ signal, resource, ...(lookup ? { lookup } : {}) });
+    return secureOAuthFetch({ signal, resource: protocolResource(resource), ...(lookup ? { lookup } : {}) });
   }
 
   readonly #awaitRefresh = Effect.fn("McpOAuth.awaitRefresh")((exchange: Fiber.Fiber<void>) =>
@@ -426,7 +426,7 @@ export class McpOAuth implements McpOAuthAuthority {
 
   /** A sign-in the user asked for, or `null` when the URL is not one this can sign in to. */
   signIn(url: string, open?: McpSignInOpener): McpSignIn | null {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     if (!resource) return null;
     this.#attempts.get(resource)?.();
     const state = randomUUID();
@@ -440,6 +440,7 @@ export class McpOAuth implements McpOAuthAuthority {
     let abandoned = false;
     let cancelled = false;
     const provider = this.#provider(resource, state, () => abandoned, open);
+    const serverUrl = protocolResource(resource);
     const abandon = () => {
       abandoned = true;
       this.#waiting.delete(state);
@@ -477,7 +478,7 @@ export class McpOAuth implements McpOAuthAuthority {
                 return response;
               };
               const metadata = yield* mcpCall(() =>
-                discoverOAuthProtectedResourceMetadata(resource, undefined, metadataFetch),
+                discoverOAuthProtectedResourceMetadata(serverUrl, undefined, metadataFetch),
               ).pipe(
                 Effect.catch(() => {
                   if (
@@ -491,7 +492,7 @@ export class McpOAuth implements McpOAuthAuthority {
                 }),
               );
               if (!metadata?.authorization_servers?.length) return false;
-              return (yield* mcpCall(() => auth(provider, { serverUrl: resource, fetchFn }))) === "REDIRECT";
+              return (yield* mcpCall(() => auth(provider, { serverUrl, fetchFn }))) === "REDIRECT";
             }),
             this.#options.refreshTimeoutMs ?? MCP_TOKEN_TIMEOUT_MS,
             sourceText("error.backend.mcpSignInResponseTimedOut"),
@@ -523,7 +524,7 @@ export class McpOAuth implements McpOAuthAuthority {
             yield* withTimeout(
               mcpCall(() =>
                 auth(provider, {
-                  serverUrl: resource,
+                  serverUrl,
                   authorizationCode: code,
                   fetchFn: this.#fetch(resource, controller.signal),
                 }),
@@ -570,27 +571,27 @@ export class McpOAuth implements McpOAuthAuthority {
   }
 
   cancelSignIn(url: string): boolean {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     const cancel = resource ? this.#attempts.get(resource) : undefined;
     cancel?.();
     return cancel !== undefined;
   }
 
   signedIn(url: string): boolean {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     const record = resource === null ? undefined : this.#options.storage.read(resource);
     // An expired token with no refresh token is a sign-in the server refuses, not one to show as current.
     return Boolean(record?.tokens && (record.tokens.refresh_token || !expiringSoon(record, 0)));
   }
 
   needsSignIn(url: string): boolean {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     const record = resource === null ? undefined : this.#options.storage.read(resource);
     return record?.lostAt !== undefined && !record.tokens;
   }
 
   hasSignIn(url: string): boolean {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     const record = resource === null ? undefined : this.#options.storage.read(resource);
     return record?.tokens !== undefined || record?.lostAt !== undefined;
   }
@@ -604,7 +605,7 @@ export class McpOAuth implements McpOAuthAuthority {
    * tokens are revoked after they are gone from this computer: see `#revoke`.
    */
   readonly forget = Effect.fn("McpOAuth.forget")(function* (this: McpOAuth, url: string) {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     if (!resource) return;
     const record = this.#options.storage.read(resource);
     this.#invalidate(resource);
@@ -617,7 +618,7 @@ export class McpOAuth implements McpOAuthAuthority {
    * registered that app by hand, and signing out of an account is not a reason to type it again.
    */
   readonly signOut = Effect.fn("McpOAuth.signOut")(function* (this: McpOAuth, url: string) {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     if (!resource) return;
     const record = this.#options.storage.read(resource);
     const app = record?.app;
@@ -676,7 +677,7 @@ export class McpOAuth implements McpOAuthAuthority {
   }
 
   signInApp(url: string): McpOAuthAppSummary | null {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     const app = resource ? this.#options.storage.read(resource)?.app : undefined;
     return app ? { clientId: app.clientId, secretSaved: app.clientSecret !== undefined, scope: app.scope ?? "" } : null;
   }
@@ -691,7 +692,7 @@ export class McpOAuth implements McpOAuthAuthority {
     url: string,
     input: McpOAuthAppInput,
   ): Effect.fn.Return<boolean, McpOperationError> {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     if (!resource) return yield* mcpFailure(new Error(sourceText("error.backend.mcpSignInAppUrl")));
     const record = this.#options.storage.read(resource) ?? {};
     const clientId = input.clientId.trim();
@@ -727,7 +728,7 @@ export class McpOAuth implements McpOAuthAuthority {
     this: McpOAuth,
     url: string,
   ): Effect.fn.Return<boolean, McpOperationError> {
-    const resource = normalizeResource(url);
+    const resource = mcpOAuthAccount(url);
     const record = resource ? this.#options.storage.read(resource) : null;
     if (!resource || !record?.app) return false;
     this.#invalidate(resource);
@@ -759,12 +760,15 @@ export class McpOAuth implements McpOAuthAuthority {
         throw new Error(sourceText("error.backend.mcpSignInForgotten"));
       if (isAbandoned()) throw new Error(sourceText("error.backend.mcpSignInAbandoned"));
     };
+    // The provider names the protocol resource; its record lives under the account, fragment and all.
+    const protocol = protocolResource(resource);
+    const filed = (candidate: string) => (candidate === protocol ? resource : candidate);
     const guarded: McpOAuthStorage = {
-      read: (candidate) => storage.read(candidate),
+      read: (candidate) => storage.read(filed(candidate)),
       write: (candidate, record) =>
         Effect.gen({ self: this }, function* () {
           yield* mcpSync(ensureCurrent);
-          yield* storage.write(candidate, record);
+          yield* storage.write(filed(candidate), record);
         }),
       // Removal is guarded exactly as a write is. The SDK answers `invalid_client` by calling
       // `invalidateCredentials("all")`, so a refusal that arrives after this attempt ended would
@@ -772,11 +776,11 @@ export class McpOAuth implements McpOAuthAuthority {
       clear: (candidate) =>
         Effect.gen({ self: this }, function* () {
           yield* mcpSync(ensureCurrent);
-          yield* storage.clear(candidate);
+          yield* storage.clear(filed(candidate));
         }),
     };
     return new McpOAuthClientProvider({
-      resource,
+      resource: protocol,
       state,
       storage: guarded,
       redirectUrl: this.#options.redirectUrl,
@@ -1271,8 +1275,9 @@ class McpOAuthClientProvider implements OAuthClientProvider {
 }
 
 /**
- * The URL a token is filed under: the address as the server itself would resolve it, so a row
- * written with a trailing slash and one without share the account the user signed in to once.
+ * The resource the OAuth exchanges name: the address as the server itself would resolve it, so a row
+ * written with a trailing slash and one without share the account the user signed in to once. The
+ * store files a sign-in under `mcpOAuthAccount`, which adds the row's fragment back.
  *
  * `https`, or `http` on the loopback address. A grant sent to a plain-text address anywhere else is
  * a grant on the wire, and every shipped listing is `https` already. Loopback is the exception RFC
@@ -1287,6 +1292,26 @@ export function normalizeResource(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * The key one sign-in is filed under: the normalized resource, plus the row's `#fragment` when it
+ * has one. A fragment never reaches the server, so `https://mcp.example.com/mcp#work` and
+ * `…/mcp#personal` are the same server holding two accounts, one sign-in each. Without a fragment
+ * this is `normalizeResource`, so the keys already on disk keep their sign-ins.
+ */
+export function mcpOAuthAccount(url: string): string | null {
+  const resource = normalizeResource(url);
+  if (!resource) return null;
+  const { hash } = new URL(url.trim());
+  return hash.length > 1 ? resource + hash : resource;
+}
+
+/** What discovery, the token exchanges and revocation name: the account without its fragment (RFC 8707 §2). */
+function protocolResource(account: string): string {
+  const parsed = new URL(account);
+  parsed.hash = "";
+  return parsed.toString();
 }
 
 /** A legacy binding is useful only when it names an endpoint this client would send credentials to. */

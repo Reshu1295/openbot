@@ -376,6 +376,33 @@ async function main() {
     return { warnings: warnings().length, status: "http 503", credentialsInLog: false };
   });
 
+  // Two accounts on one server: rows `…/mcp#work` and `…/mcp#personal` keep a sign-in each. A
+  // refresh of one leaves the other alone, the bare URL has neither, and no request names the
+  // fragment: the server and the `resource` parameter see `…/mcp` (RFC 8707 forbids a fragment).
+  auth.setTokenMode("rotate");
+  auth.setRevokeStatus(200);
+  const twoAccounts = await withOAuth(expiredRecord(auth.base), async (oauth, records) => {
+    const work = `${mcpUrl}#work`;
+    const personal = `${mcpUrl}#personal`;
+    records.delete(mcpUrl);
+    records.set(work, expiredRecord(auth.base));
+    records.set(personal, expiredRecord(auth.base));
+    assert.equal(await runCauseEffect(oauth.accessToken(work)), "access-rotated");
+    assert.equal(records.get(work)?.tokens?.refresh_token, "refresh-rotated");
+    assert.equal(records.get(personal)?.tokens?.refresh_token, "refresh-on-file");
+    assert.equal(records.has(mcpUrl), false);
+    assert.equal(await runCauseEffect(oauth.accessToken(mcpUrl)), null);
+    const token = auth.hits.find((hit) => hit.path === "/token");
+    assert.equal(token?.body.resource, mcpUrl);
+    await runCauseEffect(oauth.forget(work));
+    await auth.waitFor(() => auth.hits.filter((hit) => hit.path === "/revoke").length === 2);
+    assert.equal(records.has(work), false);
+    assert.equal(oauth.signedIn(personal), true);
+    for (const hit of auth.hits)
+      assert.ok(!JSON.stringify(hit).includes("#"), `A request named the fragment: ${hit.path}`);
+    return { separateTokens: true, bareUrlSignedIn: false, resourceSent: "/mcp", otherKeptOnForget: true };
+  });
+
   const proxy = await proxyCases(auth);
   const network = await networkCases(auth);
   await auth.close();
@@ -387,6 +414,7 @@ async function main() {
     networkError,
     signOut,
     revokeRefused,
+    twoAccounts,
     ...proxy,
     ...network,
   };
