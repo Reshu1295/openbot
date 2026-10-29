@@ -4,7 +4,8 @@
 // ends every turn with "The MCP server 'higgsfield' failed to initialize". Other providers start
 // without that server. Runs the real Antigravity driver over a fake server that acts as 1.4.4 does.
 // Cases: the turn resumes the session without the server and answers, the server is reported as a
-// drop, a new session of the process does not get it, and a failed server that OpenBot did not give
+// drop, a new session gets the server again (a sign-in or a fix can have changed it) and leaves it
+// out the same way, and a failed server that OpenBot did not give
 // (the user's own `mcp_config.json`) stays the turn's error. A last case sends the failure message
 // before the stderr line: the turn still goes on, and the message is not shown as an answer.
 // `bun run test:antigravity-mcp-load-failure`. Writes
@@ -98,15 +99,21 @@ try {
   assert.deepEqual(
     drops.map((drop) => [drop.name, drop.reason]),
     [["higgsfield", "failed_to_start"]],
-    "The server is reported once as left out.",
+    "The server is reported as left out.",
   );
   assert.match(drops[0]?.detail ?? "", /Unauthorized/u, "The report gives the server's reason.");
 
-  // 2. A new session of the same process does not get the server.
+  // 2. A new session gets the server again, and leaves it out again when it still fails.
   const second = await startThread(client, { cwd: workspace });
   const secondTurn = await runTurn(client, second, { text: "Reply with OK only.", timeoutMs: 30_000 });
   report.turns.second = secondTurn;
-  assert.equal(secondTurn.reply, "OK", "The new session answers at once.");
+  assert.equal(secondTurn.error, null, "The new session's turn has no error.");
+  assert.equal(secondTurn.reply, "OK", "The new session answers.");
+  assert.deepEqual(
+    drops.map((drop) => drop.name),
+    ["higgsfield", "higgsfield"],
+    "Each session reports the server that it left out.",
+  );
 
   // 3. A server that OpenBot did not give is not OpenBot's to leave out: the turn fails as before.
   const foreign = await runTurn(client, thread, { text: "fail cloudflare", timeoutMs: 30_000 });
@@ -121,10 +128,13 @@ try {
   const opened = sessionsOf("session/new").filter((request) => request.names?.includes("docs"));
   assert.equal(opened.length, 2, "Each thread opens one session with the user's servers.");
   assert.ok(opened[0]?.names?.includes("higgsfield"), "The first session gets every server.");
-  assert.ok(!opened[1]?.names?.includes("higgsfield"), "The second session does not get the failed server.");
+  assert.ok(opened[1]?.names?.includes("higgsfield"), "A new session gets the server again.");
   const resumed = sessionsOf("session/resume");
-  assert.equal(resumed.length, 1, "The failed turn resumes its session once.");
-  assert.equal(resumed[0]?.sessionId, opened[0]?.sessionId, "The resume is for the failed session.");
+  assert.deepEqual(
+    resumed.map((request) => request.sessionId),
+    [opened[0]?.sessionId, opened[1]?.sessionId],
+    "Each failed turn resumes its own session once.",
+  );
   assert.ok(!resumed[0]?.names?.includes("higgsfield"), "The resumed session does not get the failed server.");
   assert.ok(resumed[0]?.names?.includes("docs"), "The resumed session keeps the other servers.");
   assert.deepEqual(
@@ -135,7 +145,7 @@ try {
   const prompts = requests.filter((request) => request.method === "session/prompt");
   assert.deepEqual(
     prompts.map((request) => request.failed),
-    ["higgsfield", null, null, "cloudflare"],
+    ["higgsfield", null, "higgsfield", null, "cloudflare"],
     "The failed prompt is sent once more, and only once.",
   );
 

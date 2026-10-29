@@ -430,8 +430,6 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
   /** Whether `#endIfUnresponsive` waits for its probe. */
   #probing = false;
   readonly #bridge = new LocalMcpBridge();
-  /** The MCP server entries whose start ended a turn of this process. See `#leaveOutFailedMcpServer`. */
-  readonly #failedMcpServers = new Set<string>();
   readonly #threads = new IdleThreadPool<AcpThread, ReleasedAcpThread>({
     scope: () => this.#scope,
     releaseAfterMs: ACP_SESSION_IDLE_RELEASE_MS,
@@ -1352,10 +1350,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
               ),
             );
             this.options.reportMcpDrops?.(this.provider, handoff.dropped);
-            const mcpServers = [
-              ...handoff.servers.filter((server) => !this.#failedMcpServers.has(JSON.stringify(server))),
-              ...mcp.servers,
-            ];
+            const mcpServers = [...handoff.servers, ...mcp.servers];
             if (resume && requestedThreadId) {
               const response = providerResult(
                 yield* Effect.result(
@@ -1988,12 +1983,12 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
    * for a sign-in that OpenBot does not hold and answers 401 (#3824). The user then cannot use Gemini
    * at all until they find and remove the server. Other providers start without that server.
    *
-   * When the failed server is one that OpenBot gave, this process stops giving it, the user is told
-   * which server was left out, and the session opens again without it. The caller then sends the
-   * prompt again. Only a failure that came before any output is retried: the user saw nothing of it.
-   * A server from the user's own Antigravity configuration is not OpenBot's to leave out, so its
-   * failure stays the turn's error. The entry is the key, so the server is given again when it
-   * changes, such as after a sign-in that routes it through the OAuth proxy.
+   * When the failed server is one that OpenBot gave, the user is told which server was left out, and
+   * the session opens again without it. The caller then sends the prompt again. Only a failure that
+   * came before any output is retried: the user saw nothing of it. Only this session leaves the
+   * server out: a new or reopened session gets it again, so a sign-in or a fix takes effect with the
+   * fresh sessions that every MCP change starts. A server from the user's own Antigravity
+   * configuration is not OpenBot's to leave out, so its failure stays the turn's error.
    */
   readonly #leaveOutFailedMcpServer = Effect.fn("AcpAgentClient.leaveOutFailedMcpServer")(function* (
     this: AcpAgentClient,
@@ -2023,7 +2018,6 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
         )
       : undefined;
     if (!failure || !server) return false;
-    this.#failedMcpServers.add(JSON.stringify(server));
     const configured = this.options
       .mcpServers?.()
       .find((config) => providerMcpServerName(config.name) === failure.name);
