@@ -75,9 +75,9 @@ interface MainWindowApplicationServices {
 }
 
 /**
- * The chat menu's edit entries. They are not Electron roles: Electron localizes a role's label only
- * on macOS, and a role acts on whichever window has focus. Each entry runs on its own window's
- * contents instead, and its accelerator is only the shortcut hint shown beside the label.
+ * The chat menu's edit entries. They are not Electron roles: a role's label does not follow the
+ * app's own language setting, and a role acts on whichever window has focus. Each entry runs on its
+ * own window's contents instead, and its accelerator is only the shortcut hint shown beside the label.
  */
 const CHAT_EDIT_ACTIONS = {
   undo: { label: "menu.undo", accelerator: "CommandOrControl+Z", run: (contents) => contents.undo() },
@@ -478,12 +478,13 @@ function attachAppInput(
     });
     if (items.length === 0) return;
     event.preventDefault();
+    const t = getTranslate();
     Menu.buildFromTemplate(
       items.map((item) => {
         if (item.kind === "separator") return { type: "separator" } as const;
         if (item.kind === "copy-link")
           return {
-            label: getTranslate()("menu.copyLink"),
+            label: t("menu.copyLink"),
             click: () => clipboard.writeText(params.linkURL),
           };
         if (item.kind === "spelling")
@@ -495,7 +496,7 @@ function attachAppInput(
           };
         const action = CHAT_EDIT_ACTIONS[item.action];
         return {
-          label: getTranslate()(action.label),
+          label: t(action.label),
           ...(action.accelerator ? { accelerator: action.accelerator, registerAccelerator: false } : {}),
           enabled: item.enabled,
           click: () => {

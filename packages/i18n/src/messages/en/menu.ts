@@ -2,8 +2,8 @@ import { defineMessages } from "../../message";
 
 export const messages = defineMessages("menu", {
   // The native application menu. Electron localizes its own `role:` entries from the operating
-  // system, so only the custom items are here. Electron localizes roles only on macOS, so the
-  // chat's right-click edit menu takes its labels from here on every platform.
+  // system, so only the custom items are here. A role's label does not follow the app language, so
+  // the chat's right-click edit menu takes its labels from here.
   "menu.stopAllAgents": "Stop all agents",
   "menu.checkForUpdates": "Check for Updates…",
   "menu.preferences": "Settings…",
