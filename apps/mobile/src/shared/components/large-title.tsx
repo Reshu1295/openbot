@@ -19,7 +19,7 @@ import { useReducedMotion } from "@/shared/lib/motion";
 import { useBarTop } from "@/shared/lib/native-bar";
 import { isAndroid, isIOS } from "@/shared/lib/platform";
 import { typeScale } from "@/shared/lib/type-scale";
-import { useVerticalBarShown } from "@/shared/lib/vertical-bar";
+import { useDuoWindow, useVerticalBarShown } from "@/shared/lib/vertical-bar";
 
 const TITLE_EASE = cubicBezier(0.23, 1, 0.32, 1);
 /** The small title shows when the text of the big title reaches the bottom of the bar. */
@@ -29,6 +29,16 @@ const TITLE_FADE = 24;
 const IOS_BAR_HEIGHT = 44;
 /** The side room of the small title: the glass bar button, 16 pt from the edge, and a 16 pt gap. */
 const BAR_TITLE_INSET = 78;
+/**
+ * With the vertical bar of iPhone Duo, iOS moves Back and the other native bar buttons into it, so
+ * the small title of a screen with the native bar has no button beside it and lines up with the content.
+ */
+const VERTICAL_BAR_TITLE_INSET = 20;
+/**
+ * When iPhone Duo puts its native bar in one strip with the status bar, iOS centers the bar buttons
+ * this far above the bottom of the bar that the stack reports. Measured on the iPhone Duo simulator.
+ */
+const DUO_BAR_ITEM_CENTER_FROM_BOTTOM = 35;
 /** The Material 3 small top app bar puts its title on the 72 dp line, after the navigation button. */
 const ANDROID_BAR_TITLE_INSET = 72;
 /** The fade under the solid Android bar, where the content goes under it. */
@@ -42,6 +52,8 @@ export interface LargeTitleScroll {
   headerHeight: number;
   /** Where the top bar starts: the top inset, with a gap from the top edge on iPhone Duo. */
   barTop: number;
+  /** Whether the screen has the native bar, not a bar that it draws itself. */
+  nativeBar: boolean;
   /**
    * Whether the screen pads its content by `headerHeight` itself, with no content inset from iOS:
    * Android, a screen that draws its own bar, and iOS with the vertical bar of iPhone Duo. There iOS
@@ -72,7 +84,7 @@ export function useLargeTitleScroll(customBar?: { headerHeight: number }): Large
   const onScroll = useAnimatedScrollHandler((event) => {
     scrolled.set(event.contentOffset.y - rest);
   });
-  return { onScroll, scrolled, titleHeight, headerHeight, barTop, ownsInset };
+  return { onScroll, scrolled, titleHeight, headerHeight, barTop, ownsInset, nativeBar: customBar === undefined };
 }
 
 /** The first item of the scroll content: an optional caption above the big title. */
@@ -181,6 +193,20 @@ export function LargeTitleBar({
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const [collapsed, setCollapsed] = useState(false);
+  // iPhone Duo can put its native bar above the top inset, in one strip with the status bar. There
+  // the small title is centered on the bar buttons, which iOS places from the bottom of the bar that
+  // the stack reports. With the vertical bar, the screen draws its own bar row.
+  const nativeHeaderHeight = useContext(HeaderHeightContext) ?? 0;
+  const verticalBar = useVerticalBarShown();
+  // `ownsInset` is true with the vertical bar.
+  const duoWindow = useDuoWindow();
+  const duoNativeBar = duoWindow && !scroll.ownsInset;
+  const titleTop = duoNativeBar
+    ? Math.max(0, nativeHeaderHeight - DUO_BAR_ITEM_CENTER_FROM_BOTTOM - IOS_BAR_HEIGHT / 2)
+    : scroll.barTop;
+  // The buttons of the native bar are in the vertical bar. A pane that draws its own bar keeps them.
+  const titleInsetLeft = verticalBar && scroll.nativeBar ? VERTICAL_BAR_TITLE_INSET : insetLeft;
+  const titleInsetRight = verticalBar && scroll.nativeBar ? VERTICAL_BAR_TITLE_INSET : insetRight;
   const { scrolled, titleHeight } = scroll;
   // At rest the Android fade would cover the top of the caption and the big title, so it comes in
   // only as the content scrolls under the bar.
@@ -238,12 +264,12 @@ export function LargeTitleBar({
           style={[
             {
               position: "absolute",
-              top: scroll.barTop,
+              top: titleTop,
               // iOS centers its bar buttons in the 44 pt under the status bar; the header can be taller.
               height: isIOS ? IOS_BAR_HEIGHT : Math.max(0, scroll.headerHeight - scroll.barTop),
               // The side insets (the iPhone Duo rail, the landscape cutout) push the bar buttons in too.
-              left: insets.left + insetLeft,
-              right: insets.right + insetRight,
+              left: insets.left + titleInsetLeft,
+              right: insets.right + titleInsetRight,
               justifyContent: "center",
               opacity: collapsed ? 1 : 0,
               transform: [{ translateY: collapsed || reduced ? 0 : 4 }],
