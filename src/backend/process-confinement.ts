@@ -18,6 +18,8 @@ import { workspaceTemporaryPaths } from "./agent/workspace-sandbox";
  */
 export interface ProcessConfinement {
   readonly writableRoots: readonly string[];
+  /** Folders in the writable roots that the user excluded. They are denied like the protected paths. */
+  readonly excludedFolders?: readonly string[];
 }
 
 /** What a provider must write to run, and what in there it must not write. */
@@ -316,6 +318,7 @@ export function confineSpawnTarget(
   const writable = [...confinement.writableRoots, ...state.writable, ...workspaceTemporaryPaths(platform)];
   const protectedPaths = [
     ...state.protected,
+    ...(confinement.excludedFolders ?? []),
     ...confinement.writableRoots.flatMap((root) => PROJECT_SETTINGS.map((name) => join(root, name))),
   ];
   if (platform === "darwin") {

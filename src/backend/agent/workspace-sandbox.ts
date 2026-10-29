@@ -63,6 +63,16 @@ export function workspaceWritableRoots(
   return [agent.workspacePath, sharedRoot, ...existingAgentFolders(agent)];
 }
 
+/**
+ * The folders in those roots that a Workspace only agent must not change. Claude and the confined
+ * providers block writes there. Codex takes writable roots only and cannot deny a folder in one, so
+ * the instructions ask it instead. A folder that is not on the disk stays: the block also stops a
+ * new folder at that path.
+ */
+export function workspaceExcludedFolders(agent: Pick<AgentSummary, "access" | "excludedFolders">): string[] {
+  return workspaceAccessEnforced(agent) ? (agent.excludedFolders ?? []) : [];
+}
+
 export type CodexSandboxPolicy =
   | { type: "dangerFullAccess" }
   | {

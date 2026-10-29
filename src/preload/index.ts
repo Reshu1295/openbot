@@ -6,6 +6,7 @@ import {
   decodeAgentAdminSettings,
   decodeAgentBackupModelSettings,
   decodeAgentBrowserProfile,
+  decodeAgentExclusionChangeFromMain,
   decodeAgentFolderChangeFromMain,
   decodeAgentFolderListFromMain,
   decodeAgentImportPreview,
@@ -563,6 +564,9 @@ const agentFoldersGroup = bridgeGroup(IPC_ENDPOINTS.agentFolders, {
   chooseAgentFolder: decodeAgentFolderChangeFromMain,
   addAgentFolder: decodeAgentFolderChangeFromMain,
   removeAgentFolder: decodeAgentFolderChangeFromMain,
+  chooseAgentExclusion: decodeAgentExclusionChangeFromMain,
+  addAgentExclusion: decodeAgentExclusionChangeFromMain,
+  removeAgentExclusion: decodeAgentExclusionChangeFromMain,
 });
 
 // Bridged apart from the API object, because the server list calls record the selected server and

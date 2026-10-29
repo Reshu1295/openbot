@@ -88,6 +88,8 @@ type PersistedStoredAgent = Omit<StoredAgent, "avatarUrl" | "provider" | "access
   computerUse?: boolean;
   // Absent on every agent stored before folders existed, and on an agent with none.
   additionalFolders?: string[];
+  // Absent on every agent stored before excluded folders existed, and on an agent with none.
+  excludedFolders?: string[];
   // Absent means the account default, which is off until the user changes it in Settings › Agents.
   allowAutomation?: boolean;
   // Absent means the account default, which is off until the user changes it in Settings › Agents.
@@ -408,6 +410,7 @@ export class AgentStore {
         record.sessionSettingOverrides = structuredClone(source.sessionSettingOverrides);
       record.access = source.access;
       if (source.additionalFolders) record.additionalFolders = [...source.additionalFolders];
+      if (source.excludedFolders) record.excludedFolders = [...source.excludedFolders];
       record.computerUse = source.computerUse;
       if (source.busyMessageMode) record.busyMessageMode = source.busyMessageMode;
       if (source.taskLimit !== undefined) record.taskLimit = source.taskLimit;
@@ -679,6 +682,8 @@ export class AgentStore {
       browserProfileId?: string | null;
       /** The whole list. The caller checks each folder; an empty list removes it. */
       additionalFolders?: string[];
+      /** The whole list, like `additionalFolders`. */
+      excludedFolders?: string[];
     },
     initiatingAgentId?: string,
   ): Effect.fn.Return<AgentSummary, StoredStateFailure> {
@@ -720,6 +725,11 @@ export class AgentStore {
         if (!isAgentAdditionalFolders(input.additionalFolders)) throw new Error("Invalid agent folders.");
         if (input.additionalFolders.length === 0) delete next.additionalFolders;
         else next.additionalFolders = [...input.additionalFolders];
+      }
+      if (input.excludedFolders !== undefined) {
+        if (!isAgentAdditionalFolders(input.excludedFolders)) throw new Error("Invalid agent folders.");
+        if (input.excludedFolders.length === 0) delete next.excludedFolders;
+        else next.excludedFolders = [...input.excludedFolders];
       }
       if (input.computerUse !== undefined) {
         if (!isBoolean(input.computerUse)) throw new Error("Invalid Computer Use value.");
@@ -834,6 +844,7 @@ export class AgentStore {
       if (next.providerAccountId === undefined) delete agent.providerAccountId;
       if (next.backupModels === undefined) delete agent.backupModels;
       if (next.additionalFolders === undefined) delete agent.additionalFolders;
+      if (next.excludedFolders === undefined) delete agent.excludedFolders;
       if (next.usageLimitReturn === undefined) delete agent.usageLimitReturn;
       if (next.pendingRuntime === undefined) delete agent.pendingRuntime;
       if (next.browserProfileId === undefined) delete agent.browserProfileId;
@@ -849,6 +860,7 @@ export class AgentStore {
         if (previous.providerAccountId === undefined) delete agent.providerAccountId;
         if (previous.backupModels === undefined) delete agent.backupModels;
         if (previous.additionalFolders === undefined) delete agent.additionalFolders;
+        if (previous.excludedFolders === undefined) delete agent.excludedFolders;
         if (previous.usageLimitReturn === undefined) delete agent.usageLimitReturn;
         if (previous.pendingRuntime === undefined) delete agent.pendingRuntime;
         if (previous.browserProfileId === undefined) delete agent.browserProfileId;
@@ -1857,6 +1869,7 @@ function isStoredAgent(value: unknown): value is PersistedStoredAgent {
     (record.sessionSettingResets === undefined || isAgentSessionSettingResets(record.sessionSettingResets)) &&
     (record.access === undefined || isAgentAccess(record.access)) &&
     (record.additionalFolders === undefined || isAgentAdditionalFolders(record.additionalFolders)) &&
+    (record.excludedFolders === undefined || isAgentAdditionalFolders(record.excludedFolders)) &&
     (record.computerUse === undefined || isBoolean(record.computerUse)) &&
     (record.allowAutomation === undefined || isBoolean(record.allowAutomation)) &&
     (record.allowNewChat === undefined || isBoolean(record.allowNewChat)) &&
@@ -1928,6 +1941,11 @@ function readStoredAgent(value: unknown): ReadStoredAgent | UnreadableStoredAgen
     value.additionalFolders === undefined || isAgentAdditionalFolders(value.additionalFolders)
       ? value.additionalFolders
       : readableFolders(value.additionalFolders, () => repaired.push("additionalFolders"));
+  // The same for excluded folders: a write block that this build cannot read stays for the paths it can.
+  const excludedFolders =
+    value.excludedFolders === undefined || isAgentAdditionalFolders(value.excludedFolders)
+      ? value.excludedFolders
+      : readableFolders(value.excludedFolders, () => repaired.push("excludedFolders"));
   const computerUse =
     value.computerUse === undefined || isBoolean(value.computerUse) ? value.computerUse : reset("computerUse", true);
   const allowAutomation =
@@ -2023,6 +2041,7 @@ function readStoredAgent(value: unknown): ReadStoredAgent | UnreadableStoredAgen
     ...(provider === undefined ? {} : { provider }),
     ...(access === undefined ? {} : { access }),
     ...(additionalFolders === undefined || additionalFolders.length === 0 ? {} : { additionalFolders }),
+    ...(excludedFolders === undefined || excludedFolders.length === 0 ? {} : { excludedFolders }),
     ...(computerUse === undefined ? {} : { computerUse }),
     ...(allowAutomation === undefined ? {} : { allowAutomation }),
     ...(allowNewChat === undefined ? {} : { allowNewChat }),

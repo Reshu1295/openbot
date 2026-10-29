@@ -405,6 +405,8 @@ export type AgentUpdate = UpdateAgentInput & {
   browserProfileId?: string | null;
   /** Only the local `agentFolders` handler sets it. The IPC and Team API parsers drop it. */
   additionalFolders?: string[];
+  /** Only the local `agentFolders` handler sets it, like `additionalFolders`. */
+  excludedFolders?: string[];
 };
 
 export class AgentService extends EventEmitter<AgentServiceEvents> {

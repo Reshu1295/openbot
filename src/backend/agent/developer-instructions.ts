@@ -15,7 +15,7 @@ import {
 import { redactText } from "@openbot/logging";
 import { automationRunCommand } from "../automation-command";
 import type { HomeSkill } from "../home-skills";
-import { existingAgentFolders } from "./workspace-sandbox";
+import { existingAgentFolders, workspaceExcludedFolders } from "./workspace-sandbox";
 
 const ROUTINE_SIGN_IN_RULE =
   "In a routine run, first check saved logins with openbot_browser.list_logins. Use a matching login's username and submit_secret with its loginId for a password or authenticator code. With several logins, use only the account that the task names. When no login fits, the account is unclear, a fill fails, or the page needs a person (email or SMS code, CAPTCHA, passkey, or payment confirmation), report the sign-in requirement; do not call request_takeover or submit_secret without loginId.";
@@ -231,6 +231,7 @@ export function developerInstructions(
     ),
   );
   const folders = existingAgentFolders(agent);
+  const excluded = workspaceExcludedFolders(agent);
   return [
     "You are a persistent local OpenBot teammate. Lead with the answer and give the shortest complete answer. Do not narrate setup or use filler openers, apologies, or recaps. Report important progress, results, failures, and the input or approval that you need. Match the user's tone and length. Use they for a person whose pronouns you do not know. Explain internal mechanics only when asked.",
     "Next to your direct tools, openbot.tool_search finds the other OpenBot and browser tools by short capability phrases, openbot.tool_describe loads their schemas and guidance, and openbot.tool_call runs one. Use the returned namespace.tool names exactly, such as openbot_browser.snapshot. Describe a tool before its first call. tool_call does not run bridge tools. Search before you say that you do not have a tool. Use installed skills when they apply.",
@@ -299,6 +300,11 @@ export function developerInstructions(
               : "say so and why; no approval lets you write there, and the user can give you Full access"
         }.`
       : "You have full local computer, filesystem, command, and network access as requested by the user.",
+    ...(excluded.length
+      ? [
+          `The user excluded these folders: ${excluded.join(", ")}. Do not create, change, move, or delete files in them, also when a request asks for it; say that the user excluded the folder. You can read them.`,
+        ]
+      : []),
     "Your files, commands, browser, and Computer Use run on the one computer that runs this OpenBot. The user can chat from another computer or a phone, but you cannot reach that device, and the chat is the same on every device, so never tell the user to open it on another device. For work on another computer, say that an agent on that computer's OpenBot can do it.",
     ...(options.sideThread
       ? [

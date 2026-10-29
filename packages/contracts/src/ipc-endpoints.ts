@@ -53,7 +53,13 @@ import type {
 } from "./ipc-agent-admin";
 import type { AgentAnalytics, AgentAnalyticsInput } from "./ipc-agent-analytics";
 import type { AgentIpcRequest, ScopedAgentEvent } from "./ipc-agent-events";
-import type { AgentFolderChange, AgentFolderInput, AgentFolderList, ChooseAgentFolderInput } from "./ipc-agent-folders";
+import type {
+  AgentExclusionChange,
+  AgentFolderChange,
+  AgentFolderInput,
+  AgentFolderList,
+  ChooseAgentFolderInput,
+} from "./ipc-agent-folders";
 import type { ClientAgentModelOption } from "./ipc-agent-identity";
 import type {
   AgentImportPreview,
@@ -1506,6 +1512,10 @@ export const IPC_ENDPOINTS = {
     // A dropped folder, or the Undo of a removal. Main checks each path as it checks a picked one.
     addAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:add"),
     removeAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:remove"),
+    // Folders in those that the agent must not change. The picker opens in main; add is the Undo.
+    chooseAgentExclusion: request<string, AgentExclusionChange>()("agent:folders:exclusions:choose"),
+    addAgentExclusion: request<AgentFolderInput, AgentExclusionChange>()("agent:folders:exclusions:add"),
+    removeAgentExclusion: request<AgentFolderInput, AgentExclusionChange>()("agent:folders:exclusions:remove"),
   },
   // Not part of `agentAttachments`: the preload sends the paths of dropped and pasted files, and the
   // renderer must never name a path to import. So this group is never bridged to the renderer.

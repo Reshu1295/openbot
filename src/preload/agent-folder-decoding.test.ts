@@ -2,6 +2,7 @@
 
 import {
   AGENT_FOLDER_LIMIT,
+  decodeAgentExclusionChangeFromMain,
   decodeAgentFolderChangeFromMain,
   decodeAgentFolderListFromMain,
   isAgentAdditionalFolders,
@@ -15,11 +16,18 @@ const LIST = {
     { path: "/Users/sam/Projects/Leads", found: true },
     { path: "/Users/sam/Documents/Contracts", found: false },
   ],
+  excluded: ["/Users/sam/Projects/Leads/Private"],
 };
 
 describe("decodeAgentFolderListFromMain", () => {
   it("keeps the workspace, the shared folder and each added folder", () => {
     expect(decodeAgentFolderListFromMain(LIST)).toEqual(LIST);
+  });
+
+  it("refuses a list without its excluded folders, or with a path that is not text", () => {
+    const { excluded: _excluded, ...withoutExcluded } = LIST;
+    expect(() => decodeAgentFolderListFromMain(withoutExcluded)).toThrow();
+    expect(() => decodeAgentFolderListFromMain({ ...LIST, excluded: [7] })).toThrow();
   });
 
   it("refuses a folder without its found state", () => {
@@ -60,6 +68,31 @@ describe("decodeAgentFolderChangeFromMain", () => {
       { outcome: "added", path: "/tmp/a", replaced: [7], list: LIST },
     ])
       expect(() => decodeAgentFolderChangeFromMain(change)).toThrow();
+  });
+});
+
+describe("decodeAgentExclusionChangeFromMain", () => {
+  it("keeps each outcome with the fields it needs", () => {
+    const changes = [
+      { outcome: "cancelled", list: LIST },
+      { outcome: "excluded", path: "/tmp/a", replaced: [], list: LIST },
+      { outcome: "excluded", path: "/tmp", replaced: ["/tmp/a"], list: LIST },
+      { outcome: "included", path: "/tmp/a", list: LIST },
+      { outcome: "covered", path: "/tmp/a/b", folder: "/tmp/a", list: LIST },
+      { outcome: "refused", path: "/tmp/a", refusal: "outside", list: LIST },
+    ];
+    for (const change of changes) expect(decodeAgentExclusionChangeFromMain(change)).toEqual(change);
+  });
+
+  it("refuses an unknown outcome or refusal, or a missing field", () => {
+    for (const change of [
+      { outcome: "added", path: "/tmp/a", replaced: [], list: LIST },
+      { outcome: "refused", path: "/tmp/a", refusal: "protected", list: LIST },
+      { outcome: "covered", path: "/tmp/a/b", list: LIST },
+      { outcome: "excluded", path: "/tmp/a", list: LIST },
+      { outcome: "included", path: "/tmp/a" },
+    ])
+      expect(() => decodeAgentExclusionChangeFromMain(change)).toThrow();
   });
 });
 

@@ -338,9 +338,18 @@ export default function AgentSettingsPanel(props: AgentSettingsPanelProps) {
   }
   const agentFolders = createAgentFolders(folderSource);
   // Each activity of the agent gives a new agent object, so the list loads again only when the
-  // agent, its saved folders or the page change. The page opening reads which folders are gone.
+  // agent, its saved or excluded folders or the page change. The page opening reads which folders
+  // are gone.
   const folderLoadKey = createMemo(() =>
-    props.folders ? [props.agent.id, page() === "folders", ...(props.agent.additionalFolders ?? [])].join("\n") : "",
+    props.folders
+      ? [
+          props.agent.id,
+          page() === "folders",
+          ...(props.agent.additionalFolders ?? []),
+          "",
+          ...(props.agent.excludedFolders ?? []),
+        ].join("\n")
+      : "",
   );
   createEffect(
     () => {
