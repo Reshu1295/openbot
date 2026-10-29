@@ -31,6 +31,7 @@ import {
 import { createScrollFades } from "../../components/createScrollFades";
 import { useText } from "../../text";
 import {
+  blankModel,
   type CustomProviderDraft,
   type CustomProviderEndpoint,
   type CustomProviderErrors,
@@ -244,7 +245,7 @@ export function CustomProviderDialog(props: CustomProviderDialogProps) {
       if (state.models.some((row) => row.id.trim() === model.id)) return;
       const row = { id: model.id, name: model.name ?? model.id, contextWindow: model.contextWindow?.toString() ?? "" };
       // The blank row that a new form opens with is a placeholder, not a model the user added.
-      const blank = state.models.findIndex((entry) => !entry.id.trim() && !entry.name.trim());
+      const blank = state.models.findIndex(blankModel);
       if (blank >= 0) state.models[blank] = row;
       else state.models.push(row);
     });

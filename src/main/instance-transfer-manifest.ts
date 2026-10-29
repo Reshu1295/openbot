@@ -13,7 +13,6 @@ import {
   isAgentTaskLimit,
   isAvatarHue,
   isBusyMessageMode,
-  isCustomProviderContextWindow,
   isMcpServerConfig,
   isReasoningEffort,
   isRoutineSchedule,
@@ -92,8 +91,11 @@ const Settings = Schema.Struct({
         Schema.Struct({
           id: name(256),
           name: text(256),
-          /** Added after version 1 shipped. An older app ignores it and uses OpenCode's default. */
-          contextWindow: Schema.optionalKey(guarded(isCustomProviderContextWindow)),
+          /**
+           * Added after version 1 shipped. An older app ignores it and uses OpenCode's default. The import
+           * drops a value out of range, so that a newer limit cannot refuse the whole Settings section.
+           */
+          contextWindow: Schema.optionalKey(Schema.Number),
         }),
       ).check(Schema.isMaxLength(256)),
       /** The provider had a saved key. The key itself is never in the file. */

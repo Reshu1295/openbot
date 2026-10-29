@@ -16,7 +16,7 @@ import type {
   SaveCustomProviderInput,
   UpdateCustomProviderInput,
 } from "@openbot/contracts/ipc";
-import { sameCustomProviderOrigin } from "@openbot/contracts/ipc";
+import { isCustomProviderContextWindow, sameCustomProviderOrigin } from "@openbot/contracts/ipc";
 import { sourceText } from "@openbot/i18n/source";
 import { Effect, Schema, Semaphore } from "effect";
 import { z } from "zod";
@@ -36,8 +36,15 @@ export interface CustomProviderCipher {
   decrypt: (value: Buffer) => string;
 }
 
-/** `contextWindow` was added in a later release: a file without it still reads, and an older build drops it. */
-const modelSchema = z.object({ id: z.string(), name: z.string(), contextWindow: z.number().optional() });
+/**
+ * `contextWindow` was added in a later release: a file without it still reads, and an older build drops it.
+ * A value out of range is dropped, not refused, so that it cannot hide every saved endpoint.
+ */
+const modelSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  contextWindow: z.number().refine(isCustomProviderContextWindow).optional().catch(undefined),
+});
 const headerSchema = z.object({ name: z.string(), value: z.string() });
 
 /**

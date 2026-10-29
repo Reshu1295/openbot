@@ -92,19 +92,20 @@ export function savedCustomProviderDraft(provider: CustomProviderSummary): Custo
 }
 
 /** A row the user has not filled in yet: carried by the form, ignored by validation and submit. */
-function blankModel(model: CustomModelDraft): boolean {
+export function blankModel(model: CustomModelDraft): boolean {
   return !model.id.trim() && !model.name.trim() && !model.contextWindow?.trim();
 }
 
 /**
- * The typed context window: undefined when blank, null when it is not a usable token count. Digit
- * group separators are dropped, so `128,000`, `128 000` and `128.000` are all 128000.
+ * The typed context window: undefined when blank, null when it is not a usable token count. The text
+ * is plain digits, or groups of three digits with one separator, so `128,000`, `128 000` and `128.000`
+ * are all 128000. A decimal such as `200000.0` or `1300.5` is refused, not read as a larger number.
  */
 function contextWindowValue(model: CustomModelDraft): number | null | undefined {
-  const text = model.contextWindow?.replace(/[\s,._'’]/gu, "") ?? "";
+  const text = model.contextWindow?.trim() ?? "";
   if (!text) return undefined;
-  if (!/^\d+$/u.test(text)) return null;
-  const value = Number(text);
+  if (!/^(?:\d+|\d{1,3}(?:([\s,._'’])\d{3})(?:\1\d{3})*)$/u.test(text)) return null;
+  const value = Number(text.replace(/\D/gu, ""));
   return isCustomProviderContextWindow(value) ? value : null;
 }
 
