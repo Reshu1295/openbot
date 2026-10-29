@@ -18,6 +18,7 @@ export const messages = {
   "mobile.app.route.deletedChannels": "Gelöschte Kanäle",
   "mobile.app.route.cropPhoto": "Bewegen und skalieren",
   "mobile.app.route.queuedMessages": "Nachrichten in der Warteschlange",
+  "mobile.app.route.thinking": "Denkprozess",
   "mobile.app.route.messageOptions": "Nachrichtenoptionen",
   "mobile.app.route.editMessage": "Nachricht bearbeiten",
   "mobile.app.route.serverOptions": "Serveroptionen",

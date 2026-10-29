@@ -18,6 +18,7 @@ export const messages = {
   "mobile.app.route.deletedChannels": "Silinen kanallar",
   "mobile.app.route.cropPhoto": "Taşı ve Ölçeklendir",
   "mobile.app.route.queuedMessages": "Kuyruktaki mesajlar",
+  "mobile.app.route.thinking": "Düşünme",
   "mobile.app.route.messageOptions": "Mesaj seçenekleri",
   "mobile.app.route.editMessage": "Mesajı düzenle",
   "mobile.app.route.serverOptions": "Sunucu seçenekleri",

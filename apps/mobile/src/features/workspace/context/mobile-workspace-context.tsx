@@ -154,6 +154,7 @@ import { withoutTaskTurns } from "@/features/workspace/model/task-cache";
 import { applyBrowserEvent, syncEventQueries } from "@/features/workspace/model/team-events";
 import { runTeamRequest } from "@/features/workspace/model/team-request";
 import { trustedHostKeys } from "@/features/workspace/model/trusted-host-keys";
+import { appendTurnStepLine, latestThoughtId } from "@/features/workspace/model/turn-step-lines";
 import {
   decodeAgent,
   decodeAgentSummaries,
@@ -419,6 +420,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
       liveState.update("unreadAgentIds", (current) => current.filter((id) => !removedAgentIds.has(id)));
       liveState.update("unreadCounts", (current) => withoutKeys(current, removedAgentIds));
       liveState.update("activityByServer", (current) => withoutKeys(current, serverIds));
+      liveState.update("turnLinesByServer", (current) => withoutKeys(current, serverIds));
       liveState.update("approvalRequests", (current) => withoutKeys(current, serverIds));
       liveState.update("browserRequests", (current) => withoutKeys(current, serverIds));
       liveState.update("browserTabs", (current) => withoutKeys(current, serverIds));
@@ -1060,6 +1062,15 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
         liveState.update("activityByServer", (current) => {
           const previous = current[serverId] ?? {};
           const next = reduceAgentActivity(previous, chatEvent);
+          return next === previous ? current : { ...current, [serverId]: next };
+        });
+      }
+      if (chatEvent?.type === "turn-progress") {
+        const { agentId, turnId, detail } = chatEvent;
+        const after = latestThoughtId(conversationStore.get(agentId)?.messages ?? [], turnId);
+        liveState.update("turnLinesByServer", (current) => {
+          const previous = current[serverId] ?? {};
+          const next = appendTurnStepLine(previous, turnId, detail, after);
           return next === previous ? current : { ...current, [serverId]: next };
         });
       }

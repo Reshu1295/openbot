@@ -42,8 +42,10 @@ import {
   type PendingChatMessage,
   presentChatMessages,
 } from "@/features/chat/model/chat-messages";
+import { finishedTurnSummaries, type TurnStepsSummary } from "@/features/chat/model/turn-thinking";
 import { replyVoiceReady } from "@/features/voice/model/reply-voice";
 import { ConnectionStatus } from "@/features/workspace/components/connection-status";
+import { useTurnStepLines } from "@/features/workspace/components/use-agent-activity";
 import { useBrowserRequests } from "@/features/workspace/components/use-live-workspace";
 import type { MobileAgent } from "@/features/workspace/context/mobile-workspace-context";
 import {
@@ -364,6 +366,25 @@ export function ChatView({
     [queued, heldQueueEdit, queuePending],
   );
   usePublishedQueuedChat(queue?.chatId ?? `${target.serverId}:${target.id}`, queue ?? null, queuePending);
+  // The thinking sheet reads the agent's conversation, so only an agent chat opens it.
+  const turnLines = useTurnStepLines(target.serverId);
+  const conversationMessages = conversation?.messages;
+  const conversationTurnId = conversation?.activeTurnId ?? null;
+  const lastTurnSummaries = useRef<ReadonlyMap<string, TurnStepsSummary> | undefined>(undefined);
+  const turnSummaries = useMemo(() => {
+    lastTurnSummaries.current =
+      conversationMessages && target.kind === "agent"
+        ? finishedTurnSummaries(conversationMessages, conversationTurnId, turnLines, lastTurnSummaries.current)
+        : undefined;
+    return lastTurnSummaries.current;
+  }, [conversationMessages, conversationTurnId, turnLines, target.kind]);
+  const thinkingAgentId = target.kind === "agent" ? target.id : null;
+  const openTurn = useCallback(
+    (turnId: string) => {
+      if (thinkingAgentId) router.push({ pathname: "/turn-thinking", params: { agentId: thinkingAgentId, turnId } });
+    },
+    [thinkingAgentId],
+  );
   const queuedMessageIds = useMemo(
     () =>
       new Set(
@@ -982,6 +1003,8 @@ export function ChatView({
               }
               appActive={appActive}
               activeTurnId={activeTurnId}
+              turnSummaries={turnSummaries}
+              onOpenTurn={thinkingAgentId ? openTurn : undefined}
               // The form is a new object on each render. Without a question the list does not read it,
               // so it is left out and does not draw the list again.
               questionForm={questionForm?.messageId ? questionForm : undefined}
