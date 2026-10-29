@@ -96,7 +96,8 @@ export function chatTagReferences(value: string): ChatTagReference[] {
  */
 export const EVERYONE_MENTION = "@everyone";
 
-const ADDRESS_SEPARATORS = /^(?:[\s,]|and\b|&|@everyone\b)*/iu;
+/* `@everyone` is an address only as a whole word: "@everyone's notes" names no one. */
+const ADDRESS_SEPARATORS = /^(?:[\s,]|and\b|&|@everyone(?![\p{L}\p{N}_'’-]))*/iu;
 
 /**
  * Whom a message opens by addressing, as a reader addresses several people: "@A @B, @C what do

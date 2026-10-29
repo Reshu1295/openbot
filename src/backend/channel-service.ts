@@ -457,27 +457,19 @@ export class ChannelService {
           return yield* channelFailure(new Error(sourceText("error.backend.channelReferenceUnavailable")));
         const allTasks = yield* channelSync(() => this.store.tasks(current.id));
         const open = allTasks.filter((task) => !terminal(task));
-        // "@A @B what do you think?" asks each of them, and "@everyone" asks every member. The text
-        // carries the address, so a client that sends only the first mention in `recipientAgentId`
-        // still reaches all of them. A mention of an agent that cannot take work here is only a
-        // reference.
         const eligible = this.eligibleMembers(current);
-        const address = leadingAddress(text);
-        const recipients = [
-          ...new Set([
-            ...(command.recipientAgentId ? [command.recipientAgentId] : []),
-            ...address.mentions.map((mention) => mention.id).filter((agentId) => eligible.includes(agentId)),
-            ...(address.everyone ? eligible : []),
-          ]),
-        ];
+        const recipients = this.#recipients(eligible, text, command.recipientAgentId);
         const continues =
           /^(?:also|instead|actually|please change|change that|correction|continue|yes|no|use that|make it)\b/iu.test(
             text.trim(),
           );
         // Each recipient answers separately, so a request to several members starts new work; it
         // does not continue the one task that a reply names. When the open work is the tasks that
-        // several members own for one request, "continue" continues each of them.
-        const openRoots = open.filter((task) => task.parentTaskId === null);
+        // several members own for one request, "continue" continues each one that the user stopped,
+        // or each of them when none is stopped. A member that still works is left as it is.
+        const roots = open.filter((task) => task.parentTaskId === null);
+        const stoppedRoots = roots.filter((task) => task.state === "paused");
+        const openRoots = stoppedRoots.length ? stoppedRoots : roots;
         const continued: ChannelTask[] =
           recipients.length > 1
             ? []
@@ -488,9 +480,9 @@ export class ChannelService {
                 : open.length === 1
                   ? open
                   : !referenced &&
-                      openRoots.length > 1 &&
-                      openRoots.every((task) => task.requestMessageId === openRoots[0]?.requestMessageId) &&
-                      open.every((task) => openRoots.some((root) => root.id === task.rootTaskId))
+                      roots.length > 1 &&
+                      roots.every((task) => task.requestMessageId === roots[0]?.requestMessageId) &&
+                      open.every((task) => roots.some((root) => root.id === task.rootTaskId))
                     ? openRoots
                     : [];
         const previous = continued[0];
@@ -499,7 +491,7 @@ export class ChannelService {
         // used to fall through to a full routing turn to rediscover the author the reply names.
         const repliedMember =
           !previous && referenced && !referenced.taskId && referenced.author.kind === "agent"
-            ? this.eligibleMembers(current).find((agentId) => agentId === referenced.author.id)
+            ? eligible.find((agentId) => agentId === referenced.author.id)
             : undefined;
         const resumed = continued.map(
           (item, index): ChannelTask => ({
@@ -567,21 +559,29 @@ export class ChannelService {
         current.id,
         affected.filter((item) => !continued.some((entry) => entry.id === item.id)),
       );
-      for (const [index, item] of resumed.entries()) {
-        const before = continued[index];
-        if (before && !(yield* this.#steerEffect(current.id, item, message)))
-          yield* this.interruptTasks(current.id, [before]);
-      }
+      yield* Effect.forEach(
+        resumed,
+        (item, index) =>
+          Effect.gen({ self: this }, function* () {
+            const before = continued[index];
+            if (before && !(yield* this.#steerEffect(current.id, item, message)))
+              yield* this.interruptTasks(current.id, [before]);
+          }),
+        { concurrency: "unbounded", discard: true },
+      );
       yield* this.wake(current.id);
       return result;
     }
     if (command.type === "request") {
       const recipientAgentId = command.recipientAgentId;
       if (recipientAgentId) yield* channelSync(() => this.requireAvailableMember(channel, recipientAgentId));
-      // Always a new root task. A routine must never take `send`'s continuation branch above: that
+      // Always new root tasks, one for each member that the text addresses. A routine must never take `send`'s continuation branch above: that
       // heuristic would let a schedule hijack and supersede a human's in-flight task, because the
       // text of a routine is fixed and can start with "Also" or "Continue" by accident.
-      const task = this.newTask(channel.id, command.requestMessageId, command.text, command.recipientAgentId);
+      const recipients = this.#recipients(this.eligibleMembers(channel), command.text, recipientAgentId);
+      const [owner = null, ...rest] = recipients;
+      const task = this.newTask(channel.id, command.requestMessageId, command.text, owner);
+      const others = rest.map((agentId) => this.newTask(channel.id, command.requestMessageId, command.text, agentId));
       const author = {
         kind: "member" as const,
         id: `routine:${command.origin.routineId}`,
@@ -589,7 +589,7 @@ export class ChannelService {
       };
       const message = this.message(channel.id, task.id, author, command.text, command.requestMessageId);
       const result = yield* channelSync(() =>
-        this.store.update(channel, { messages: [message], tasks: [task] }, operationId),
+        this.store.update(channel, { messages: [message], tasks: [task, ...others] }, operationId),
       );
       this.publish(channel.id);
       yield* this.wake(channel.id);
@@ -827,6 +827,23 @@ export class ChannelService {
    * agent can be deleted, unavailable or hidden while its membership stays. This is the same
    * intersection the routing prompt sends as `agents`.
    */
+  /**
+   * The members a message is addressed to. "@A @B what do you think?" asks each of them, and
+   * "@everyone" asks every member. The text carries the address, so a client that sends only the
+   * first mention in `recipientAgentId` still reaches all of them. A mention of an agent that cannot
+   * take work here is only a reference.
+   */
+  #recipients(eligible: readonly string[], text: string, recipientAgentId: string | null | undefined): string[] {
+    const address = leadingAddress(text);
+    return [
+      ...new Set([
+        ...(recipientAgentId ? [recipientAgentId] : []),
+        ...address.mentions.map((mention) => mention.id).filter((agentId) => eligible.includes(agentId)),
+        ...(address.everyone ? eligible : []),
+      ]),
+    ];
+  }
+
   private eligibleMembers(channel: Channel): string[] {
     const live = this.hooks.agents();
     return channel.members
@@ -835,10 +852,9 @@ export class ChannelService {
   }
 
   /** The other members that answer the same request in tasks of their own, by name. */
-  #peers(channelId: string, task: ChannelTask): string[] {
+  #peers(tasks: readonly ChannelTask[], task: ChannelTask): string[] {
     if (task.parentTaskId !== null) return [];
-    const owners = this.store
-      .tasks(channelId)
+    const owners = tasks
       .filter(
         (item) =>
           item.id !== task.id &&
@@ -1068,7 +1084,7 @@ export class ChannelService {
           // A member the model named that cannot take work is left out; with none left, the first
           // one gives the reason.
           const eligible = this.eligibleMembers(channel);
-          const [owner, ...others] = picked.filter((agentId) => eligible.includes(agentId));
+          const [owner, ...rest] = picked.filter((agentId) => eligible.includes(agentId));
           if (!owner) {
             const first = "agentId" in decision ? decision.agentId : decision.agentIds[0];
             channelResult(yield* Effect.result(channelSync(() => this.requireAvailableMember(channel, first))));
@@ -1076,7 +1092,10 @@ export class ChannelService {
           }
           task = { ...task, ownerAgentId: owner };
           // Each other member gets its own task for the same request, so each one answers in its own
-          // reply, and a stop, a failure or a resume of one leaves the others as they are.
+          // reply, and a stop, a failure or a resume of one leaves the others as they are. A task that
+          // an earlier version queued with open drafts has no files on the request until its owner
+          // commits them, so it stays with its owner only.
+          const others = task.attachmentDraftIds.length ? [] : rest;
           const siblings = others.map(
             (agentId): ChannelTask => ({
               ...this.newTask(channelId, task.requestMessageId, task.instruction, agentId),
@@ -1747,7 +1766,8 @@ export class ChannelService {
     if (!assignment) return null;
     const channel = yield* channelSync(() => this.store.get(assignment.channelId));
     if (this.#deletedChannels.has(channel.id)) return null;
-    const task = (yield* channelSync(() => this.store.tasks(channel.id))).find((item) => item.id === assignment.taskId);
+    const tasks = yield* channelSync(() => this.store.tasks(channel.id));
+    const task = tasks.find((item) => item.id === assignment.taskId);
     if (!task || channel.archived || task.revision !== assignment.taskRevision || task.state !== "queued")
       return yield* channelFailure(new Error(sourceText("error.backend.channelAssignmentStopped")));
     yield* channelSync(() => this.requireMember(channel, assignment.agentId));
@@ -1761,7 +1781,7 @@ export class ChannelService {
       agent,
       this.hooks.agents().find((item) => item.id === channel.leadAgentId),
       delivered,
-      this.#peers(channel.id, task),
+      this.#peers(tasks, task),
       this.hooks.contextCharacters?.(agent.id, context.threadId),
     );
     if (delivered && history.delta !== null)
@@ -2429,6 +2449,7 @@ export class ChannelService {
     const context = yield* channelSync(() => this.store.context(channelId, agent.id));
     const threadId = context.threadId;
     const prepared = this.store.completedMessageChanges(channelId);
+    const tasks = yield* channelSync(() => this.store.tasks(channelId));
     let history: Effect.Success<ReturnType<ChannelHistory["prepare"]>>;
     try {
       history = channelResult(
@@ -2438,7 +2459,7 @@ export class ChannelService {
             agent,
             this.hooks.agents().find((item) => item.id === this.store.get(channelId).leadAgentId),
             this.#deliveredContext(channelId, context, agent),
-            this.#peers(channelId, task),
+            this.#peers(tasks, task),
             this.hooks.contextCharacters?.(agent.id, threadId),
           ),
         ),

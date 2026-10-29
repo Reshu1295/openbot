@@ -167,8 +167,10 @@ A message that opens with agent mentions ("@A @B what do you think?") goes to ea
 that can take work, with no routing turn. A message that opens with `@everyone` goes to each member
 that can take work. `@everyone` is plain text, not a tag; the channel composer's mention picker
 offers it. The host reads the address from the text (`leadingAddress`), so a client that sends only
-the first mention in `recipientAgentId` reaches all of them, and the Team API wire does not change. A request to more than one member does not
-continue the task of the message it replies to. A request that needs routing in a channel with no lead stops with the reason
+the first mention in `recipientAgentId` reaches all of them, and the Team API wire does not change.
+A routine run reads its text in the same way. A request to more than one member does not continue
+the task of the message it replies to. After a stop, "continue" continues each stopped task of the
+request and leaves a member that still works as it is. A request that needs routing in a channel with no lead stops with the reason
 `channelLeadRequired`. A save that sets a new lead queues these requests again, and the lead routes
 them. A lead change does not move a task that already has an owner. The member packet names the lead
 (`leadAgentId`).
