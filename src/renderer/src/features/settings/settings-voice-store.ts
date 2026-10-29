@@ -234,10 +234,15 @@ export function createSettingsVoiceStore(active: () => boolean) {
 
   /** Saves the user's own voice server, or removes it with its key when `input` is null. */
   function saveServer(input: VoiceServerInput | null): Promise<boolean> {
+    const spoke = state.server?.routes.speech === true;
     return voicePort()
       .voice.setServer({ server: input })
       .then((server) => {
         setServer(server);
+        // Replies go back to Supertonic: download it now, as Read replies aloud does.
+        const phase = state.speech.status?.phase;
+        const missing = phase === "missing" || phase === "error";
+        if (spoke && !server?.routes.speech && state.speech.settings?.readReplies && missing) downloadSpeech();
         return true;
       })
       .catch((error: unknown) => {

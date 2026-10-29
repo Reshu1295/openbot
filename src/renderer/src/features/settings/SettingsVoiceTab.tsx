@@ -154,10 +154,17 @@ export function SettingsVoiceTab(props: SettingsVoiceTabProps) {
   const { t, format, errorMessage } = useText();
   const settings = () => props.store.state.settings;
   const activeModel = () => VOICE_MODELS.find((model) => model.id === settings()?.modelId);
+  const server = () => props.store.state.server;
+  /** While the user's own server takes dictation, no model on this computer is in use. */
+  const serverDictates = () => server()?.routes.dictation === true;
+  /** While the user's own server reads replies, Supertonic's voices do not apply. */
+  const serverSpeaks = () => server()?.routes.speech === true;
+  /** The server gets the language that the user sets, so a local model's fixed language does not apply. */
   const fixedLanguage = () => {
     const model = activeModel();
-    return model && !model.supportsLanguage ? FIXED_LANGUAGE[model.id] : undefined;
+    return model && !model.supportsLanguage && !serverDictates() ? FIXED_LANGUAGE[model.id] : undefined;
   };
+  const languageLocked = () => !settings() || (!serverDictates() && activeModel()?.supportsLanguage === false);
   const languageName = (language: VoiceLanguage) =>
     language === AUTOMATIC_VOICE_LANGUAGE ? t("settings.voice.language.automatic") : t(LANGUAGE_NAME[language]);
   const languageOptions = createMemo((): VoiceLanguage[] => {
@@ -199,11 +206,6 @@ export function SettingsVoiceTab(props: SettingsVoiceTabProps) {
     return downloadText(model.bytes, status);
   };
 
-  const server = () => props.store.state.server;
-  /** While the user's own server takes dictation, no model on this computer is in use. */
-  const serverDictates = () => server()?.routes.dictation === true;
-  /** While the user's own server reads replies, Supertonic's voices do not apply. */
-  const serverSpeaks = () => server()?.routes.speech === true;
   const [editingServer, setEditingServer] = createSignal(false);
 
   const speech = () => props.store.state.speech;
@@ -366,7 +368,7 @@ export function SettingsVoiceTab(props: SettingsVoiceTabProps) {
                 options={languageOptions()}
                 value={fixedLanguage()?.language ?? settings()?.language ?? null}
                 onChange={(next) => next && props.store.setLanguage(next)}
-                disabled={!settings() || activeModel()?.supportsLanguage === false}
+                disabled={languageLocked()}
                 placement="bottom-end"
                 itemComponent={(selectProps) => (
                   <SelectItem item={selectProps.item}>

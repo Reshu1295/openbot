@@ -1,11 +1,13 @@
-import type {
-  VoiceServerConnection,
-  VoiceServerInput,
-  VoiceServerModels,
-  VoiceServerProbe,
-  VoiceServerProbeField,
-  VoiceServerRoutes,
-  VoiceServerSettings,
+import {
+  sameCustomProviderOrigin,
+  VOICE_SERVER_LIMITS,
+  type VoiceServerConnection,
+  type VoiceServerInput,
+  type VoiceServerModels,
+  type VoiceServerProbe,
+  type VoiceServerProbeField,
+  type VoiceServerRoutes,
+  type VoiceServerSettings,
 } from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import {
@@ -57,7 +59,7 @@ export function voiceServerHost(address: string): string {
 
 /** The key goes into an HTTP header, so main refuses other characters. Checked here to put the error on the key. */
 function keyProblem(apiKey: string): AppTextKey | undefined {
-  if (apiKey.length > 4096) return "error.provider.apiKeyTooLong";
+  if (apiKey.length > VOICE_SERVER_LIMITS.apiKey) return "error.provider.apiKeyTooLong";
   if (apiKey && !/^[\x21-\x7e]+$/u.test(apiKey)) return "error.provider.keyInvalidCharacters";
   return undefined;
 }
@@ -322,7 +324,9 @@ export function VoiceServerDialog(props: VoiceServerDialogProps) {
   const [mount, setMount] = createSignal<HTMLElement | undefined>(undefined);
   const title = t(saved ? "settings.voice.server.dialog.editTitle" : "settings.voice.server.dialog.setUpTitle");
   const action = () => t(server.connected() ? "common.save" : "settings.voice.server.connect");
-  const keyPlaceholder = () => (saved?.hasApiKey ? t("settings.voice.server.apiKeySaved") : undefined);
+  // Main sends the saved key only to the saved origin, so another address shows no saved key.
+  const keySaved = () => saved?.hasApiKey === true && sameCustomProviderOrigin(saved.address, server.form.address);
+  const keyPlaceholder = () => (keySaved() ? t("settings.voice.server.apiKeySaved") : undefined);
   const busy = () => server.testing() || server.form.saving;
   const ariaBusy = () => (busy() ? "true" : undefined);
   const routesLocked = () => !server.connected() || server.form.saving;

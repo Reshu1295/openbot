@@ -430,7 +430,8 @@ export function decodeWav(wav: Uint8Array): SpeechAudio | null {
       const code = view.getUint16(start, true);
       format = {
         // WAVE_FORMAT_EXTENSIBLE names the real format in its sub-format GUID.
-        code: code === 0xfffe && declared >= 26 ? view.getUint16(start + 24, true) : code,
+        code:
+          code === 0xfffe && declared >= 26 && start + 26 <= wav.byteLength ? view.getUint16(start + 24, true) : code,
         channels: view.getUint16(start + 2, true),
         sampleRate: view.getUint32(start + 4, true),
         bits: view.getUint16(start + 14, true),

@@ -19,6 +19,7 @@ import {
   type VoiceRecordingSummary,
 } from "./speech-playback";
 import { speechPort } from "./speech-port";
+import { voiceServer } from "./voice-server";
 
 /** A dictated message that is not sent within this time does not make its reply spoken. */
 const DICTATION_LIFETIME_MS = 10 * 60_000;
@@ -280,6 +281,10 @@ function startRecording(messageId: string, url: string, from: number): void {
   });
 }
 
+function serverLanguage(fallback: SpeechLanguage): SpeechLanguage | null {
+  return voiceServer()?.routes.speech ? fallback : null;
+}
+
 /** Reads a reply aloud. A failure shows a toast, because no control waits for the answer. */
 async function speak(
   markdown: string,
@@ -291,7 +296,8 @@ async function speak(
   const analytics = desktopAnalytics.scope();
   try {
     const text = markdown ? speechTextFromMarkdown(markdown) : "";
-    const language = text ? speechLanguageOf(text, fallback) : null;
+    // Supertonic reads only its own languages. The user's server takes any text, and ignores the language.
+    const language = text ? (speechLanguageOf(text, fallback) ?? serverLanguage(fallback)) : null;
     if (!language) return;
     spoken = own;
     const result = await readAloud(text, language, source);

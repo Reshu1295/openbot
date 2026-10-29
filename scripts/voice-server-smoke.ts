@@ -4,7 +4,8 @@
 // `POST /v1/audio/speech`, behind a Bearer key.
 //   1. Dialog: a wrong key shows its error under the key field; the right key shows both routes;
 //      Save shows the server, its models and its voice in the Voice tab.
-//   2. Tab: no local dictation model is "In use", and the Supertonic voice row is hidden.
+//   2. Tab: no local dictation model is "In use", the dictation language can be set, and the
+//      Supertonic voice row is hidden.
 //   3. Main: prepareModel is ready at once, transcribe sends the WAV and the model, and speak sends
 //      the model and voice and plays the WAV that comes back. Neither the settings nor a test
 //      result holds the key.
@@ -277,6 +278,10 @@ try {
   // 2. Tab.
   const badges = await page.getByRole("tabpanel").getByText(t("settings.voice.model.inUse"), { exact: true }).count();
   check("no local dictation model is in use", badges === 0, badges);
+  const language = page
+    .locator('[data-settings-row="settings.voice.language.title"]')
+    .getByRole("button", { name: t("settings.voice.language.title") });
+  check("the dictation language can be set for the server", await language.isEnabled());
   const voiceRows = await page.locator('[data-settings-row="settings.voice.speech.voice.title"]').count();
   check("the Supertonic voice row is hidden", voiceRows === 0, voiceRows);
   await page.getByRole("tabpanel").screenshot({ path: resolve(OUT, "voice-tab.png") });
