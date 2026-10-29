@@ -229,9 +229,6 @@ export const messages = {
   "server.settings.importDescription": "Перенесите своих агентов из Grok Bot или Hermes Agent на этот сервер.",
   "server.settings.transferTitle": "Перенос",
   "server.settings.transferDescription": "Перенос агентов и настроек этого сервера в файл или из файла.",
-  "server.settings.connectorsTitle": "Коннекторы",
-  "server.settings.connectorsDescription":
-    "Подключайте аккаунты, которыми смогут пользоваться все агенты этого сервера.",
   "server.settings.routinesTitle": "Регулярные задачи",
   "server.settings.routinesDescription":
     "Показывать расписание регулярных задач этого компьютера в приложении-календаре.",
@@ -305,6 +302,17 @@ export const messages = {
   "server.settings.memoryLimit": "Записей памяти на агента",
   "server.settings.memoryLimitDescription": "Сколько записей памяти может хранить каждый агент на этом сервере.",
   "server.settings.memoryLimitLoadFailed": "Не удалось загрузить лимит памяти этого сервера.",
+  "server.settings.memoryReview": "Проверка памяти",
+  "server.settings.memoryReviewDescription":
+    "Как часто агенты на этом сервере сохраняют в фоне устойчивые факты из своих чатов.",
+  "server.settings.memoryReviewOff": "Выкл.",
+  "server.settings.memoryReviewTurns": {
+    one: "Каждый {count} ход",
+    few: "Каждые {count} хода",
+    many: "Каждые {count} ходов",
+    other: "Каждые {count} хода",
+  },
+  "server.settings.memoryReviewLoadFailed": "Не удалось загрузить настройку проверки памяти.",
   "server.settings.remoteOnline": "Хост в сети. Публикацией управляет его владелец.",
   "server.settings.remoteOffline": "Хост не в сети. Публикацией управляет его владелец.",
   "server.settings.reachable": "Доступен из интернета. Войти могут только приглашённые.",

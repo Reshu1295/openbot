@@ -26,7 +26,7 @@ import { createScopeGuard } from "../../scope-lifetime";
 import { createSimpleContext } from "../../simple-context";
 import { useTurns } from "../../turns";
 import { useAgentReadTracking } from "../agents/agent-read-tracking";
-import { appendLatestRuntimeMessages } from "../agents/agent-runtime-snapshot";
+import { appendLatestRuntimeMessages, attentionKey } from "../agents/agent-runtime-snapshot";
 import { useAgents } from "../agents/agents-context";
 import { useChannels } from "../channels/channels-context";
 import { useServers } from "../servers/servers-context";
@@ -172,10 +172,16 @@ const Conversation = createSimpleContext({
 
     let conversationFrame: number | undefined;
 
+    /** The key of the wait in an agent's own chat: the conversations here are those chats. */
+    function ownChatAttentionKey(agentId: string): string {
+      const agent = agentList().find((candidate) => candidate.id === agentId);
+      return attentionKey(agentId, agent?.threadId ?? null);
+    }
+
     const activeMessages = createMemo(() => {
       const agent = activeAgent();
       if (!agent) return [];
-      const prompt = pendingPrompts()[agent.id];
+      const prompt = pendingPrompts()[attentionKey(agent.id, agent.threadId)];
       const requestKey = prompt?.type === "prompt" ? promptRequestKey(prompt.turnId, prompt.requestId) : null;
       const messages = (conversations[agent.id]?.messages ?? []).filter(
         (message) =>
@@ -573,7 +579,8 @@ const Conversation = createSimpleContext({
         if (sourceMessages !== snapshot.messages) conversation.page = { hasOlder: true, olderCursor: null };
       });
       const presentedRequestKey = presentedPromptResolutions()[agentId];
-      const pendingPrompt = pendingPrompts()[agentId];
+      const promptKey = ownChatAttentionKey(agentId);
+      const pendingPrompt = pendingPrompts()[promptKey];
       const pendingRequestKey =
         pendingPrompt?.type === "prompt" ? promptRequestKey(pendingPrompt.turnId, pendingPrompt.requestId) : null;
       const submittedRequestKey = submittedPromptRequests()[agentId];
@@ -590,14 +597,14 @@ const Conversation = createSimpleContext({
             messagePromptRequestKey(message) === presentedRequestKey && message.questionPrompt?.resolution !== null,
         )
       ) {
-        setPendingPrompts((current) => ({ ...current, [agentId]: undefined }));
+        setPendingPrompts((current) => ({ ...current, [promptKey]: undefined }));
         setPresentedPromptResolutions((current) => ({ ...current, [agentId]: undefined }));
         setSubmittedPromptRequests((current) => ({ ...current, [agentId]: undefined }));
       } else if (
         resolvedPendingPrompt &&
         (activeAgent()?.id !== agentId || !submittedRequestKey || submittedRequestKey !== pendingRequestKey)
       ) {
-        setPendingPrompts((current) => ({ ...current, [agentId]: undefined }));
+        setPendingPrompts((current) => ({ ...current, [promptKey]: undefined }));
         setPresentedPromptResolutions((current) => ({ ...current, [agentId]: undefined }));
         setSubmittedPromptRequests((current) => ({ ...current, [agentId]: undefined }));
       }
@@ -952,7 +959,8 @@ const Conversation = createSimpleContext({
     function presentPromptResolution(agentId: string, turnId: string, requestId: string | number): void {
       const requestKey = promptRequestKey(turnId, requestId);
       if (!requestKey) return;
-      const currentPrompt = pendingPrompts()[agentId];
+      const promptKey = ownChatAttentionKey(agentId);
+      const currentPrompt = pendingPrompts()[promptKey];
       if (
         currentPrompt?.type !== "prompt" ||
         promptRequestKey(currentPrompt.turnId, currentPrompt.requestId) !== requestKey
@@ -963,7 +971,7 @@ const Conversation = createSimpleContext({
         (message) => messagePromptRequestKey(message) === requestKey && message.questionPrompt?.resolution !== null,
       );
       if (persisted) {
-        setPendingPrompts((current) => ({ ...current, [agentId]: undefined }));
+        setPendingPrompts((current) => ({ ...current, [promptKey]: undefined }));
         setPresentedPromptResolutions((current) => ({ ...current, [agentId]: undefined }));
         setSubmittedPromptRequests((current) => ({ ...current, [agentId]: undefined }));
         return;

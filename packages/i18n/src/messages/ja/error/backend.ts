@@ -82,6 +82,9 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "チャンネルへの配信を作成できませんでした。",
   "error.backend.channelAssignmentStopped": "このチャンネルの割り当ては停止されたか、置き換えられました。",
   "error.backend.channelAssigneeUnavailable": "割り当てられたエージェントを使用できません。",
+  "error.backend.channelAssigneeRemoved": "割り当てられたメンバーが削除されました。",
+  "error.backend.channelAssigneeReassign":
+    "割り当てられたメンバーを使用できません。このタスクを再割り当てしてください。",
   "error.backend.channelAssignmentChanged": "このチャンネルの割り当ては変更されました。",
   "error.backend.channelMemberRequired": "このチャンネルの使用可能なメンバーを選択してください。",
   "error.backend.memoryEssentialBudget":
@@ -197,8 +200,11 @@ export const messages = {
   "error.backend.routineFlowHandoffFailed": "ルーティンはこのエージェントに作業を渡せませんでした。",
   "error.backend.mcpServerLimit": "OpenBot に保存できる MCP サーバーは {limit} 個までです。",
   "error.backend.mcpServerNameTaken": "{name} という名前の MCP サーバーはすでに存在します。",
+  "error.backend.mcpServerInvalid": "OpenBot はこの MCP サーバーの設定を保存できません。",
   "error.backend.mcpServerNoAnswer": "サーバーは {seconds} 秒以内に応答しませんでした。",
   "error.backend.mcpSignInNotAccepted": "サーバーはそのサインインを受け付けませんでした。",
+  "error.backend.mcpSignInClientRefused":
+    "サインインの完了時に、サインインサーバーが OpenBot を受け付けませんでした。もう一度サインインしてください。OpenBot はサーバーに再登録します。",
   "error.backend.mcpCommandNotFound": "コマンドが見つかりません: {command}",
   "error.backend.mcpRegistrationRefused":
     "サインインサーバーはまだ OpenBot をアプリとして受け付けていません。原因はお使いのアカウントではありません。ローカル MCP サーバーなど、別の方法で接続してください。",
@@ -326,6 +332,15 @@ export const messages = {
   "error.backend.taskNotFound": "このタスクは利用できません。",
   "error.backend.taskClosed": "このタスクは閉じています。メッセージを送信するには、もう一度開いてください。",
   "error.backend.taskStillRunning": "このタスクはまだ実行中です。停止するまで待ってから閉じてください。",
+  "error.backend.threadNotFound": "このスレッドは利用できません。",
+  "error.backend.threadStillRunning": "このスレッドはまだ実行中です。停止してから、もう一度お試しください。",
+  "error.backend.threadArchived": "このスレッドはアーカイブされています。メッセージを送信するには、復元してください。",
+  "error.backend.threadTitleRequired": "スレッドに短いタイトルを付けてください。",
+  "error.backend.threadOpenLimitReached":
+    "このエージェントには {count} 件の開いているスレッドがあります。スレッドをアーカイブしてから、別のスレッドを開始するか復元してください。",
+  "error.backend.threadRemoteUnsupported": "スレッドは、このコンピューター上のエージェントでのみ利用できます。",
+  "error.backend.threadMoveRefused":
+    "新しいスレッドで実行できるのは、このエージェントだけに送信したメッセージのみです。",
   "error.backend.taskTitleRequired": "タスクに短いタイトルを付けてください。",
   "error.backend.taskToolInvalid": "タスクには 120 文字以内のタイトルと、何をするかを説明する指示を付けてください。",
   "error.backend.taskOwnChatOnly":

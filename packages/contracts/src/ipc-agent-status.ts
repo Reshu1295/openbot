@@ -1,4 +1,4 @@
-import type { AgentProviderId } from "./agent-providers";
+import { type AgentProviderId, isAgentProvider } from "./agent-providers";
 import { INPUT_LIMITS } from "./input-limits";
 import { isBoundedString, isFiniteNumber, isNullableBoundedString } from "./ipc-bounded-values";
 import type { McpSignInRelayPage } from "./ipc-mcp-servers";
@@ -157,6 +157,7 @@ export type AgentAuthState =
   | { kind: "muse"; email: string | null }
   | { kind: "inception"; email: string | null }
   | { kind: "deepseek"; email: string | null }
+  | { kind: "openrouter"; email: string | null }
   | { kind: "acp"; email: string | null };
 
 export interface AccountUsageWindow {
@@ -198,6 +199,11 @@ export interface AccountUsageLimit {
    * the model that was read, or the "Gemini Models" group. The Team API does not send this field.
    */
   groups?: AccountUsageGroup[];
+  /**
+   * The provider whose plan quota this reading also counts: Grok for Cursor on a merged plan. The
+   * rail then shows the ring of that provider alone. The Team API does not send this field.
+   */
+  sharedQuotaWith?: AgentProviderId;
 }
 
 export interface AccountUsage {
@@ -218,7 +224,8 @@ export function isAccountUsage(value: unknown): value is AccountUsage {
         (limit.groups === undefined ||
           (Array.isArray(limit.groups) &&
             limit.groups.length <= MAX_USAGE_GROUPS &&
-            limit.groups.every(isAccountUsageGroup))),
+            limit.groups.every(isAccountUsageGroup))) &&
+        (limit.sharedQuotaWith === undefined || isAgentProvider(limit.sharedQuotaWith)),
     )
   );
 }

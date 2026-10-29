@@ -4,6 +4,7 @@
 import { INPUT_LIMITS } from "@openbot/contracts/input-limits";
 import type {
   CustomProviderHeader,
+  CustomProviderHeaderInput,
   CustomProviderModel,
   DeleteCustomProviderInput,
   SaveCustomProviderInput,
@@ -13,6 +14,7 @@ import {
   CUSTOM_PROVIDER_LIMITS,
   composedCustomModelId,
   isAgentModel,
+  isCustomProviderContextWindow,
   isCustomProviderHeaderName,
   isCustomProviderId,
   isNewCustomProviderId,
@@ -72,16 +74,49 @@ function parseModels(providerId: string, value: unknown): CustomProviderModel[] 
       throw new Error(sourceText("error.provider.modelIdCharacter"));
     if (seen.has(id)) throw new Error(sourceText("error.provider.modelIdDuplicate"));
     seen.add(id);
-    models.push({ id, name: requireString(entry.name, "Model name", INPUT_LIMITS.modelName) });
+    const name = requireString(entry.name, "Model name", INPUT_LIMITS.modelName);
+    if (entry.contextWindow === undefined) {
+      models.push({ id, name });
+      continue;
+    }
+    if (!isCustomProviderContextWindow(entry.contextWindow)) {
+      throw new Error(
+        sourceText("error.provider.contextWindowInvalid", {
+          min: CUSTOM_PROVIDER_LIMITS.contextWindowMin,
+          max: CUSTOM_PROVIDER_LIMITS.contextWindowMax,
+        }),
+      );
+    }
+    models.push({ id, name, contextWindow: entry.contextWindow });
   }
   return models;
 }
 
 export function parseHeaders(value: unknown): CustomProviderHeader[] {
+  return parseHeaderList(value, parseHeaderValue);
+}
+
+/** The headers of an edit: a `null` value keeps the saved value of that name. */
+function parseHeaderInputs(value: unknown): CustomProviderHeaderInput[] {
+  return parseHeaderList(value, (entry) => (entry === null ? null : parseHeaderValue(entry)));
+}
+
+function parseHeaderValue(value: unknown): string {
+  // A header value is bounded like the key, because it is as often a credential as the key is.
+  if (!isString(value) || value.length > CUSTOM_PROVIDER_LIMITS.apiKey) {
+    throw new Error(sourceText("error.provider.headerValueInvalid"));
+  }
+  return value;
+}
+
+function parseHeaderList<T extends string | null>(
+  value: unknown,
+  parseValue: (value: unknown) => T,
+): { name: string; value: T }[] {
   if (value === undefined) return [];
   if (!Array.isArray(value)) throw new Error("The headers are not a list.");
   if (value.length > CUSTOM_PROVIDER_LIMITS.headers) throw new Error(sourceText("error.provider.headersTooMany"));
-  const headers: CustomProviderHeader[] = [];
+  const headers: { name: string; value: T }[] = [];
   const seen = new Set<string>();
   for (const entry of value) {
     if (!isObject(entry)) throw new Error("Every header needs a name and a value.");
@@ -90,11 +125,7 @@ export function parseHeaders(value: unknown): CustomProviderHeader[] {
     const lower = entry.name.toLowerCase();
     if (seen.has(lower)) throw new Error(sourceText("error.provider.headerNameDuplicate"));
     seen.add(lower);
-    // A header value is bounded like the key, because it is as often a credential as the key is.
-    if (!isString(entry.value) || entry.value.length > CUSTOM_PROVIDER_LIMITS.apiKey) {
-      throw new Error(sourceText("error.provider.headerValueInvalid"));
-    }
-    headers.push({ name: entry.name, value: entry.value });
+    headers.push({ name: entry.name, value: parseValue(entry.value) });
   }
   return headers;
 }
@@ -126,8 +157,9 @@ export function parseSaveCustomProvider(input: unknown): SaveCustomProviderInput
 }
 
 /**
- * An edit. The id names a saved endpoint. An absent key or header list keeps the stored one; `null`
- * is refused, because an edit cannot say "no key" without discarding one that the user did not see.
+ * An edit. The id names a saved endpoint. An absent key or header list keeps the stored one, and a
+ * header with a `null` value keeps its stored value. A `null` key is refused, because an edit cannot
+ * say "no key" without discarding one that the user did not see.
  */
 export function parseUpdateCustomProvider(input: unknown): UpdateCustomProviderInput {
   if (!isObject(input)) throw new Error("Invalid endpoint.");
@@ -140,7 +172,7 @@ export function parseUpdateCustomProvider(input: unknown): UpdateCustomProviderI
     baseUrl: parseBaseUrl(input.baseUrl),
     models: parseModels(id, input.models),
     ...(apiKey ? { apiKey } : {}),
-    ...(input.headers === undefined ? {} : { headers: parseHeaders(input.headers) }),
+    ...(input.headers === undefined ? {} : { headers: parseHeaderInputs(input.headers) }),
   };
 }
 

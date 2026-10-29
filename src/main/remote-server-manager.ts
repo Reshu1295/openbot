@@ -61,6 +61,7 @@ import { TEAM_MEMBER_LEAVE_CAPABILITY, type TeamCurrentCapability } from "@openb
 import { FOCUS_USE_CAPABILITY, FOCUS_USE_ROUTES } from "@openbot/contracts/team-protocol/focus-use-v1";
 import type { HostRestartEvent } from "@openbot/contracts/team-protocol/host-update-v1";
 import { INSTANCE_TRANSFER_ROUTES } from "@openbot/contracts/team-protocol/instance-transfer-v1";
+import type { MachineAlertEvent } from "@openbot/contracts/team-protocol/machine-resources-v1";
 import { decodeTeamProtocolV1CurrentHttpResponse } from "@openbot/contracts/team-protocol/v1-adapter";
 import { sourceText } from "@openbot/i18n/source";
 import { createFocusUsePing } from "@openbot/team-client/focus-use";
@@ -129,6 +130,7 @@ interface RemoteServerEvents {
   presence: [serverId: string, snapshot: TeamPresenceSnapshot];
   directMessage: [serverId: string, event: DirectMessageRealtimeEvent];
   directTyping: [serverId: string, event: DirectTypingRealtimeEvent];
+  machineAlert: [serverId: string, event: MachineAlertEvent];
 }
 
 interface CentralAccountSession {
@@ -317,6 +319,7 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
       onDirectMessage: (serverId, event) => this.emit("directMessage", serverId, event),
       onDirectTyping: (serverId, event) => this.emit("directTyping", serverId, event),
       onHostRestart: (serverId, event) => this.#applyHostRestart(serverId, event),
+      onMachineAlert: (serverId, event) => this.emit("machineAlert", serverId, event),
       onOffline: (serverId) => this.#presence.markOffline(serverId),
       onChanged: () => this.#emitChanged(),
     });
@@ -1878,13 +1881,14 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
       this: RemoteServerManager,
       sharedPath: string,
       serverId = this.#store.activeServerId,
+      maxBytes?: number,
     ): Effect.fn.Return<{ bytes: Uint8Array; name: string }, RemoteWorkflowError, RemoteRequest> {
       const server = yield* remoteDecode(() => this.#store.require(serverId));
       const url = new URL(TEAM_API_ROUTES.sharedFiles, server.apiUrl);
       url.searchParams.set("path", sharedPath);
       const response = yield* this.#client.fetch(server, url);
       return {
-        bytes: new Uint8Array(yield* remoteCall(() => response.arrayBuffer())),
+        bytes: yield* remoteCall(() => fileResponseBytes(response, maxBytes)),
         name: contentDispositionFileName(response.headers.get("content-disposition"), basename(sharedPath)),
       };
     },
@@ -1897,6 +1901,7 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
       agentId: string,
       workspacePath: string,
       serverId = this.#store.activeServerId,
+      maxBytes?: number,
     ): Effect.fn.Return<{ bytes: Uint8Array; name: string }, RemoteWorkflowError, RemoteRequest> {
       const server = yield* remoteDecode(() => this.#store.require(serverId));
       const url = new URL(TEAM_API_ROUTES.workspaceFiles, server.apiUrl);
@@ -1905,7 +1910,7 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
       url.searchParams.set("path", workspacePath);
       const response = yield* this.#client.fetch(server, url);
       return {
-        bytes: new Uint8Array(yield* remoteCall(() => response.arrayBuffer())),
+        bytes: yield* remoteCall(() => fileResponseBytes(response, maxBytes)),
         name: contentDispositionFileName(response.headers.get("content-disposition"), basename(workspacePath)),
       };
     },
@@ -2010,6 +2015,7 @@ export class RemoteServerManager extends EventEmitter<RemoteServerEvents> {
     } else if (event.type === "team-direct-message") this.emit("directMessage", serverId, event);
     else if (event.type === "team-direct-typing") this.emit("directTyping", serverId, event);
     else if (event.type === "host-restart") this.#applyHostRestart(serverId, event);
+    else if (event.type === "machine-alert") this.emit("machineAlert", serverId, event);
     else this.#background(this.#owned(this.#refresh.forward(serverId, event)));
   }
 
@@ -2063,4 +2069,19 @@ function requiredServerSummary(servers: ServerSummary[], serverId: string): Serv
   const server = servers.find((candidate) => candidate.id === serverId);
   if (!server) throw new Error("Remote server summary is missing.");
   return server;
+}
+
+/**
+ * The body of a host file. With `maxBytes`, a preview that names a larger size stops before it reads
+ * the body. A host that names no size is read, and the result is checked.
+ */
+async function fileResponseBytes(response: Response, maxBytes: number | undefined): Promise<Uint8Array> {
+  if (maxBytes !== undefined && Number(response.headers.get("content-length")) > maxBytes) {
+    await response.body?.cancel();
+    throw new Error(sourceText("error.attachment.previewTooLarge"));
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (maxBytes !== undefined && bytes.byteLength > maxBytes)
+    throw new Error(sourceText("error.attachment.previewTooLarge"));
+  return bytes;
 }

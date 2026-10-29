@@ -228,8 +228,6 @@ export const messages = {
   "server.settings.transferTitle": "Transfert",
   "server.settings.transferDescription":
     "Déplacez les agents et les réglages de ce serveur vers un fichier ou depuis un fichier.",
-  "server.settings.connectorsTitle": "Connecteurs",
-  "server.settings.connectorsDescription": "Connectez des comptes que chaque agent de ce serveur peut utiliser.",
   "server.settings.routinesTitle": "Routines",
   "server.settings.routinesDescription":
     "Affichez la planification des routines de cet ordinateur dans une application de calendrier.",
@@ -303,6 +301,12 @@ export const messages = {
   "server.settings.memoryLimit": "Souvenirs par agent",
   "server.settings.memoryLimitDescription": "Nombre de souvenirs que chaque agent de ce serveur peut conserver.",
   "server.settings.memoryLimitLoadFailed": "Impossible de charger la limite de souvenirs de ce serveur.",
+  "server.settings.memoryReview": "Revue des souvenirs",
+  "server.settings.memoryReviewDescription":
+    "À quelle fréquence les agents de ce serveur enregistrent en arrière-plan les faits durables de leurs discussions.",
+  "server.settings.memoryReviewOff": "Désactivée",
+  "server.settings.memoryReviewTurns": { one: "Tous les {count} tour", other: "Tous les {count} tours" },
+  "server.settings.memoryReviewLoadFailed": "Impossible de charger le réglage de revue des souvenirs.",
   "server.settings.remoteOnline": "L’hôte est en ligne. Son propriétaire contrôle la publication.",
   "server.settings.remoteOffline": "L’hôte est hors ligne. Son propriétaire contrôle la publication.",
   "server.settings.reachable": "Accessible en ligne. Seules les personnes invitées peuvent se connecter.",

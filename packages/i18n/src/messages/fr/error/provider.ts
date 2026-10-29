@@ -7,6 +7,7 @@ export const messages = {
   "error.provider.computerUseConfig":
     "OpenBot n’a pas pu enregistrer Computer Use dans la configuration de Codex. Vérifiez que votre fichier config.toml de Codex est valide et accessible en écriture, puis redémarrez OpenBot. Vous pouvez désactiver Computer Use dans les réglages du coéquipier pour continuer sans.",
   "error.provider.codexUnresponsive": "Codex ne répondait plus, OpenBot a donc arrêté son processus.",
+  "error.provider.acpUnresponsive": "{provider} n’a pas répondu à temps, OpenBot a donc arrêté son processus.",
   "error.provider.endpointsReadOnly":
     "Les points de terminaison enregistrés ont été écrits par une version plus récente d’OpenBot, ou le fichier est illisible. Mettez à jour OpenBot pour les modifier.",
   "error.provider.endpointNoSecureStorage":
@@ -61,6 +62,9 @@ export const messages = {
   "error.provider.runtimesUnsupported":
     "Les environnements d’exécution des fournisseurs ne sont pas disponibles sur cette plateforme.",
   "error.provider.closing": "OpenBot se ferme.",
+  "error.provider.removeWhileOn": "Désactivez le fournisseur avant de supprimer son téléchargement.",
+  "error.provider.removeWhileDownloading": "Attendez la fin du téléchargement, puis supprimez-le.",
+  "error.provider.removeIncomplete": "Un programme utilise des fichiers de cette CLI. Fermez-le, puis réessayez.",
   "error.provider.cliOverride": "Supprimez le chemin CLI explicite avant de mettre à jour dans OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "La mise à jour de l’environnement d’exécution ne s’est pas terminée.",
   "error.provider.downloadHttp": "Le téléchargement de l’environnement d’exécution a échoué avec HTTP {status}.",
@@ -106,11 +110,14 @@ export const messages = {
   "error.provider.modelsTooMany": "Il y a trop de modèles.",
   "error.provider.modelIdCharacter": "Un ID de modèle contient un caractère inutilisable.",
   "error.provider.modelIdDuplicate": "Deux modèles ont le même ID.",
+  "error.provider.contextWindowInvalid":
+    "La fenêtre de contexte d’un modèle doit être un nombre entier de jetons entre {min} et {max}.",
   "error.provider.headersTooMany": "Il y a trop d’en-têtes.",
   "error.provider.headerNameCharacter": "Un nom d’en-tête contient un caractère que HTTP n’autorise pas.",
   "error.provider.headerNameTooLong": "Un nom d’en-tête est trop long.",
   "error.provider.headerNameDuplicate": "Deux en-têtes ont le même nom.",
   "error.provider.headerValueInvalid": "Une valeur d’en-tête est manquante ou trop longue.",
+  "error.provider.headerValueMissing": "Saisissez une valeur pour l’en-tête {name}.",
   "error.provider.apiKeyTooLong": "La clé d’API est trop longue.",
   "error.provider.localOnly": "Les fournisseurs ne peuvent être modifiés que sur l’ordinateur qui exécute les agents.",
   "error.provider.keyRequired": "Une clé de fournisseur est requise.",
@@ -279,6 +286,8 @@ export const messages = {
   "error.provider.acpSignInStopped": "La connexion s’est arrêtée avant la fin.",
   "error.provider.geminiBrowserUnavailable":
     "Gemini n’a pas pu ouvrir la page de connexion. Installez un navigateur et xdg-utils, puis connectez-vous depuis une session de bureau sur cet hôte. Un serveur sans bureau ne peut pas terminer cette connexion.",
+  "error.provider.geminiBrowserOpenFailed":
+    "Gemini n’a pas pu ouvrir la page de connexion dans votre navigateur. Vérifiez votre navigateur par défaut, puis reconnectez-vous.",
   "error.provider.acpSignInFailed": "La connexion n’a pas abouti.",
   "error.provider.acpSignInFailedReason": "La connexion n’a pas abouti : {reason}",
   "error.provider.acpSignInMethodMissing":
@@ -395,6 +404,7 @@ export const messages = {
   "error.provider.museSignIn": "Connectez-vous à Muse sur l’ordinateur hôte pour continuer.",
   "error.provider.inceptionSignIn": "Ajoutez une clé d’API Inception pour continuer.",
   "error.provider.deepseekSignIn": "Ajoutez une clé d’API DeepSeek pour continuer.",
+  "error.provider.openrouterSignIn": "Ajoutez une clé d’API OpenRouter pour continuer.",
   "error.provider.terminalLoginFailed":
     "Le terminal de connexion n’a pas pu s’ouvrir. Ouvrez la CLI du fournisseur sur cet hôte et connectez-vous-y, puis actualisez les fournisseurs.",
   "error.provider.nativeArchiveInvalid": "Le téléchargement du fournisseur ne contient pas d’installation valide.",

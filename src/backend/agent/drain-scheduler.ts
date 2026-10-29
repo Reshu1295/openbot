@@ -35,7 +35,7 @@ import {
 import type { ThreadLifecycle } from "./thread-lifecycle";
 import { TurnSlots } from "./turn-slots";
 import type { UsageLimitGate } from "./usage-limit-gate";
-import { codexSandboxPolicy, workspaceWritableRoots } from "./workspace-sandbox";
+import { checkAgentFolders, codexSandboxPolicy, workspaceWritableRoots } from "./workspace-sandbox";
 
 /** Shown to the user when a message names a model of an endpoint that was taken out. */
 export const REMOVED_ENDPOINT_MESSAGE = sourceText("error.agent.endpointRemoved");
@@ -223,8 +223,8 @@ export class DrainScheduler {
           .map(laneKey),
       isRunning: (key) => {
         const lane = laneOf(key);
-        // A compaction holds the agent's own session, so it uses the slot of the agent's own chat.
-        return this.#laneRunning(lane) || (lane.taskId === null && !this.#compaction.mayDrain(lane.agentId));
+        // A compaction is a provider turn of the lane whose thread it compacts, so it uses that slot.
+        return this.#laneRunning(lane) || this.#compactionHolds(lane);
       },
       isWaiting: (key) => {
         const lane = laneOf(key);
@@ -271,6 +271,20 @@ export class DrainScheduler {
       .some((snapshot) => snapshot.threadId === threadId && snapshot.activeTurnId);
   }
 
+  /**
+   * Whether a compaction holds this lane. A side thread waits for a compaction of its own thread
+   * only; the agent's own chat waits for one of any other thread (its chat, channel or messaging
+   * thread), so threads that run in parallel do not wait for each other.
+   */
+  #compactionHolds(lane: Lane): boolean {
+    const sideThreadId = lane.taskId === null ? null : this.#tasks.threadId(lane.taskId);
+    return this.#compaction.heldThreads(lane.agentId).some((externalThreadId) => {
+      const publicThreadId = this.#conversation.publicThreadId(lane.agentId, externalThreadId);
+      if (!this.#conversation.isTaskThread(publicThreadId)) return lane.taskId === null;
+      return publicThreadId === sideThreadId;
+    });
+  }
+
   /** The first clause of `mayDrain` that holds this lane, or null when none does. */
   #heldBy(lane: Lane): string | null {
     const { agentId, taskId } = lane;
@@ -304,7 +318,7 @@ export class DrainScheduler {
     if (taskId === null && !(this.#channels?.mayDrain(agentId) ?? true)) return "channel";
     if (!this.#profileSave.mayDrain(agentId)) return "profile-save";
     if (!this.#duplication.mayDrain(agentId)) return "duplication";
-    if (!this.#compaction.mayDrain(agentId)) return "compaction";
+    if (this.#compactionHolds(lane)) return "compaction";
     if (!this.#routines.mayDrain(agentId)) return "routine";
     if (!this.#usageLimits.mayDrain(agentId)) return "usage-limit";
     return null;
@@ -502,8 +516,9 @@ export class DrainScheduler {
         if (taskId === null) yield* this.#hooks.startRequestedNewChat(agentId);
         return;
       }
-      // A task compacts its context in its provider only: the OpenBot compaction holds every lane of
-      // the agent and runs on the agent's own chat or the thread of the work it serves.
+      // A side thread compacts at the end of its own turns (`TurnLifecycle`), and that compaction
+      // holds its own lane only. Here the agent's own chat compacts its chat, or the thread of the
+      // channel or messaging work it serves.
       if (taskId === null) {
         const agent = this.#store.list().find((candidate) => candidate.id === agentId);
         const assignment = this.#channels?.store.assignmentForDelivery(context.delivery.id);
@@ -548,12 +563,16 @@ export class DrainScheduler {
     // The teammate answers that start in this turn too. A channel task, an external message and a
     // routine run in its own session always run alone; a teammate's answer in an external
     // conversation takes the other answers to the same request. The person's message goes last, so
-    // the turn answers it with the answers already read.
-    const companions =
+    // the turn answers it with the answers already read, and the person's later queued messages
+    // follow it in queue order.
+    const replies =
       channelDelivery || ownSession || (messagingDelivery && delivery.sender.kind !== "agent")
         ? []
         : this.#mailbox.repliesToStartWith(delivery.id);
-    let batch = delivery.sender.kind === "user" ? [...companions, context] : [context, ...companions];
+    const laterMessages =
+      channelDelivery || ownSession || messagingDelivery ? [] : this.#mailbox.userMessagesToStartWith(delivery.id);
+    const companions = [...replies, ...laterMessages];
+    let batch = delivery.sender.kind === "user" ? [...replies, context, ...laterMessages] : [context, ...replies];
     let confirmedTurnId: string | null = null;
     // The session of a routine run in its own session. Closed here when no turn starts on it.
     let routineThreadId: string | null = null;
@@ -593,6 +612,8 @@ export class DrainScheduler {
         this.#mailboxSync.emitQueue(delivery.recipientAgentId);
       }
       const agent = yield* this.#store.getOrCreate(delivery.recipientAgentId).pipe(toDeliveryStartFailed);
+      // Once for the turn: its process, its session and its sandbox roots read the result.
+      yield* checkAgentFolders(agent);
       requestedModel = agent.model;
       // The endpoint was removed while this agent was busy, so no other model could be given to it
       // then. The old process would still answer on the removed endpoint, with the credentials it
@@ -603,7 +624,7 @@ export class DrainScheduler {
       };
       yield* drainStep(requireServedModel);
       yield* this.#threads.applyPendingRuntimeRefresh(agent, new Set(batch.map((item) => item.delivery.id)));
-      releaseRuntimeRefresh = this.#threads.holdRuntimeRefresh(agent.id);
+      releaseRuntimeRefresh = this.#threads.holdRuntimeRefresh(agent.id, taskId !== null);
       const client = yield* this.#providers.ensureAgentClient(agent).pipe(toDeliveryStartFailed);
       const messaging = this.#messaging;
       const channels = this.#channels;
@@ -621,19 +642,22 @@ export class DrainScheduler {
               ? yield* channels.prepare(context).pipe(toDeliveryStartFailed)
               : null;
       if ((channelDelivery || messagingDelivery || taskId !== null) && !execution) {
-        const current = this.#mailbox.getDelivery(delivery.id)?.delivery;
-        if (current?.status === "starting")
-          yield* this.#mailbox
-            .markTerminal(
-              delivery.id,
-              "interrupted",
-              taskId !== null
-                ? sourceText("error.backend.taskClosed")
-                : channelDelivery
-                  ? "The channel was deleted before starting."
-                  : "The messaging thread was removed before starting.",
-            )
-            .pipe(toDeliveryStartFailed);
+        // Every delivery of the batch, so no later message stays `starting` in a removed lane.
+        for (const item of batch) {
+          const current = this.#mailbox.getDelivery(item.delivery.id)?.delivery;
+          if (current?.status === "starting")
+            yield* this.#mailbox
+              .markTerminal(
+                item.delivery.id,
+                "interrupted",
+                taskId !== null
+                  ? sourceText("error.backend.threadArchived")
+                  : channelDelivery
+                    ? "The channel was deleted before starting."
+                    : "The messaging thread was removed before starting.",
+              )
+              .pipe(toDeliveryStartFailed);
+        }
         this.#mailboxSync.emitQueue(agent.id);
         return;
       }
@@ -690,12 +714,14 @@ export class DrainScheduler {
         );
       };
       const completeInput = promptInput(execution?.text);
-      // A channel packet with only unread messages goes only to the session that read the others. The
-      // session can change from here to the retry below, as when the provider cannot resume it.
-      const delta = channelDelivery ? channels?.delta(delivery.id) : undefined;
+      // A channel packet with only unread messages, or an external message without the guidance, goes
+      // only to the session that read the rest. The session can change from here to the retry below,
+      // as when the provider cannot resume it.
+      const shortened = channelDelivery ? channels : messagingDelivery ? messaging : undefined;
+      const delta = shortened?.delta(delivery.id);
       const deltaInput = delta ? promptInput(delta.text) : null;
       const inputForThread = (providerThreadId: string) => {
-        const input = deltaInput && channels?.sendsDelta(delivery.id, providerThreadId) ? deltaInput : completeInput;
+        const input = deltaInput && shortened?.sendsDelta(delivery.id, providerThreadId) ? deltaInput : completeInput;
         const handoff = this.#threads.consumePendingHandoff(providerThreadId);
         if (!handoff) return input;
         return input.map((item, index) =>
@@ -804,6 +830,7 @@ export class DrainScheduler {
         yield* this.#mailbox.markRunning(item.delivery.id, response.turn.id).pipe(toDeliveryStartFailed);
       if (this.#channels)
         yield* this.#channels.accepted(delivery.id, threadId, response.turn.id).pipe(toDeliveryStartFailed);
+      if (messagingDelivery) this.#messaging?.accepted(delivery.id, threadId);
       if (this.#hooks.turnEnded(response.turn.id)) {
         // The end found these messages before they ran, or while the writes above waited, so it
         // left them running. Nothing else settles them.

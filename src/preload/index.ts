@@ -6,6 +6,8 @@ import {
   decodeAgentAdminSettings,
   decodeAgentBackupModelSettings,
   decodeAgentBrowserProfile,
+  decodeAgentFolderChangeFromMain,
+  decodeAgentFolderListFromMain,
   decodeAgentImportPreview,
   decodeAgentImportResult,
   decodeAgentProfileDraft,
@@ -25,12 +27,14 @@ import {
   decodeHermesImportPreview,
   decodeHermesImportResult,
   decodeHostAgentMemoryLimit,
+  decodeHostMemoryReview,
   decodeHostTimezoneSettings,
   decodeHostUpdateStatus,
   decodeInstanceExportResult,
   decodeInstanceTransferPreview,
   decodeInstanceTransferResult,
   decodeInstanceTransferSummary,
+  decodeMachineAlertSettings,
   decodeMcpServerConfigs,
   decodeMcpSignInAppState,
   decodeMcpSignInPage,
@@ -38,11 +42,13 @@ import {
   decodeMcpSignInStates,
   decodeMcpTestResult,
   decodeOldRuntimeVersions,
+  decodeOptionalMachineMetrics,
   decodeOptionalStorageDisk,
   decodeOptionalStorageUsage,
   decodePromptCacheTtlSetting,
   decodeProviderHostSignInStatus,
   decodeProviderRelaySignInStatus,
+  decodeProviderRuntimeDownload,
   decodeRegistryEntries,
   decodeRegistryInstallations,
   decodeRegistryInstallResult,
@@ -199,6 +205,7 @@ import {
 } from "./computer-use-decoding";
 import {
   decodeAgentTask,
+  decodeAgentTaskReadState,
   decodeAgentTasks,
   decodeAttachment,
   decodeAttachments,
@@ -221,6 +228,7 @@ import {
   decodeDynamicIslandPresentation,
 } from "./dynamic-island-decoding";
 import { decodeHostReleaseStatusFromMain } from "./host-release-decoding";
+import { decodeMacAutomationResults } from "./mac-automation-decoding";
 import {
   decodeAddOrchestratorReply,
   decodeDiscordAccessReply,
@@ -529,6 +537,9 @@ const agentGroup = bridgeGroup(IPC_ENDPOINTS.agent, {
   stopTask: decodeVoid,
   closeTask: decodeVoid,
   reopenTask: decodeVoid,
+  renameTask: decodeVoid,
+  deleteTask: decodeVoid,
+  markTaskRead: decodeAgentTaskReadState,
   acknowledgeFailedTurn: decodeVoid,
   cancelQueuedMessage: decodeVoid,
   steerQueuedMessage: decodeVoid,
@@ -538,11 +549,20 @@ const agentGroup = bridgeGroup(IPC_ENDPOINTS.agent, {
   interrupt: decodeVoid,
   clearContext: decodeVoid,
   compactContext: decodeVoid,
+  compactTaskContext: decodeVoid,
   respondToPrompt: decodeVoid,
   respondToApproval: decodeVoid,
   respondToBrowserSecret: decodeVoid,
   respondToBrowserTakeover: decodeVoid,
   scopedEvent: decodeScopedAgentEvent,
+});
+
+// Bridged apart from the API object, because a dropped folder with no path reads the list.
+const agentFoldersGroup = bridgeGroup(IPC_ENDPOINTS.agentFolders, {
+  listAgentFolders: decodeAgentFolderListFromMain,
+  chooseAgentFolder: decodeAgentFolderChangeFromMain,
+  addAgentFolder: decodeAgentFolderChangeFromMain,
+  removeAgentFolder: decodeAgentFolderChangeFromMain,
 });
 
 // Bridged apart from the API object, because the server list calls record the selected server and
@@ -592,6 +612,7 @@ const openbotApi: OpenBotDesktopApi = {
     getAppInfo: decodeAppInfo,
     getSetupState: decodeAppSetupState,
     saveSetup: decodeAppSetupState,
+    setupState: decodeAppSetupState,
     getAnalyticsPreference: decodeAnalyticsPreference,
     setAnalyticsPreference: decodeAnalyticsPreference,
     getApprovalAutomation: decodeApprovalAutomationPreference,
@@ -684,10 +705,15 @@ const openbotApi: OpenBotDesktopApi = {
     revealPermissionApp: decodeVoid,
     highlightPlacement: decodeComputerUseHighlightPlacement,
   }),
+  macAutomation: bridgeGroup(IPC_ENDPOINTS.macAutomation, {
+    request: decodeMacAutomationResults,
+  }),
   providerRuntimes: bridgeGroup(IPC_ENDPOINTS.providerRuntimes, {
     getStatus: decodeProviderRuntimeSnapshot,
     download: decodeProviderRuntimeSnapshot,
     cancel: decodeProviderRuntimeSnapshot,
+    measureDownload: decodeProviderRuntimeDownload,
+    removeDownload: decodeProviderRuntimeSnapshot,
     checkForUpdates: decodeProviderRuntimeSnapshot,
     event: decodeProviderRuntimeSnapshot,
   }),
@@ -831,6 +857,12 @@ const openbotApi: OpenBotDesktopApi = {
     importCsv: decodeVaultImportResult,
     reset: decodeVaultState,
     changed: decodeVaultState,
+    hostList: decodeVaultState,
+    hostSave: decodeVaultState,
+    hostDelete: decodeVaultState,
+    hostReveal: decodeVaultSecret,
+    hostCopy: decodeVoid,
+    hostReset: decodeVaultState,
   }),
   onePasswordConnector: bridgeGroup(IPC_ENDPOINTS.onePasswordConnector, {
     status: decodeOnePasswordConnectorStatus,
@@ -979,6 +1011,10 @@ const openbotApi: OpenBotDesktopApi = {
     setTimezone: decodeHostTimezoneSettings,
     getAgentMemoryLimit: decodeHostAgentMemoryLimit,
     setAgentMemoryLimit: decodeHostAgentMemoryLimit,
+    getMemoryReview: decodeHostMemoryReview,
+    setMemoryReview: decodeHostMemoryReview,
+    getMachineAlerts: decodeMachineAlertSettings,
+    setMachineAlerts: decodeMachineAlertSettings,
     getPromptCacheTtl: decodePromptCacheTtlSetting,
     setPromptCacheTtl: decodePromptCacheTtlSetting,
     getAgentAccess: decodeAgentAccessSnapshot,
@@ -1115,6 +1151,20 @@ const openbotApi: OpenBotDesktopApi = {
       releaseFilePreview: decodeVoid,
       listWorkspaceDirectory: decodeWorkspaceDirectory,
     }),
+    ...agentFoldersGroup,
+    // The page gets the folder, not its path, as for a dropped attachment.
+    addDroppedAgentFolder: async (agentId, folder) => {
+      const path = webUtils.getPathForFile(folder);
+      // An item from another app, with no path here: the page says that it is not a folder on this computer.
+      if (!path)
+        return {
+          outcome: "refused",
+          path: folder.name,
+          refusal: "missing",
+          list: await agentFoldersGroup.listAgentFolders(agentId),
+        };
+      return agentFoldersGroup.addAgentFolder({ agentId, path });
+    },
     onAttachmentImport: (listener) => {
       attachmentImportListeners.add(listener);
       return () => attachmentImportListeners.delete(listener);
@@ -1243,6 +1293,7 @@ const openbotApi: OpenBotDesktopApi = {
   storage: bridgeGroup(IPC_ENDPOINTS.storage, {
     getUsage: decodeOptionalStorageUsage,
     getDisk: decodeOptionalStorageDisk,
+    getMachineMetrics: decodeOptionalMachineMetrics,
     deleteFile: decodeVoid,
     clear: decodeVoid,
     openFile: decodeVoid,

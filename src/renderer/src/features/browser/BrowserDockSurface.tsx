@@ -155,14 +155,14 @@ export function BrowserDockSurface() {
             }}
             onSend={(value) => perform({ type: "send", text: value })}
             onStop={() => perform({ type: "stop" })}
-            onSteer={(deliveryId) => perform({ type: "steer", deliveryId })}
+            onSteer={dock().steerSupported ? (deliveryId) => perform({ type: "steer", deliveryId }) : undefined}
             onRunAsTask={dock().canRunAsTask ? (deliveryId) => perform({ type: "run-as-task", deliveryId }) : undefined}
             onCancel={(deliveryId) => perform({ type: "cancel", deliveryId })}
             onEdit={(delivery) => perform({ type: "edit", deliveryId: delivery.id })}
             onCancelEdit={() => perform({ type: "cancel-edit" })}
             onReorder={(deliveryIds) => perform({ type: "reorder", deliveryIds })}
             onHandoff={dock().canHandoff ? () => perform({ type: "handoff" }) : undefined}
-            vaultSave
+            vault={{ server: null }}
             // The code goes to main from here and never through the main renderer.
             onRespondSecret={(input) => browserDockPort().agent.respondToBrowserSecret(input, LOCAL_SERVER_ID)}
             onAnswerPrompt={(requestId, answers) => send({ type: "answer-prompt", requestId, answers })}

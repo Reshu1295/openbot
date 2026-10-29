@@ -7,6 +7,7 @@ import { frMobile } from "./messages/fr/mobile";
 import { itMobile } from "./messages/it/mobile";
 import { jaMobile } from "./messages/ja/mobile";
 import { koMobile } from "./messages/ko/mobile";
+import { nlMobile } from "./messages/nl/mobile";
 import { plMobile } from "./messages/pl/mobile";
 import { ptMobile } from "./messages/pt/mobile";
 import { ruMobile } from "./messages/ru/mobile";
@@ -21,6 +22,7 @@ const catalogs = {
   it: itMobile,
   ja: jaMobile,
   ko: koMobile,
+  nl: nlMobile,
   pl: plMobile,
   pt: ptMobile,
   ru: ruMobile,

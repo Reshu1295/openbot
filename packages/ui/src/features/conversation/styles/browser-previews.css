@@ -259,10 +259,27 @@
   background: var(--openbot-glass-surface);
 }
 
+.browser-secret-save-option {
+  display: grid;
+  gap: var(--openbot-space-0-5);
+}
+
 .browser-secret-save {
   display: flex;
   align-items: center;
   gap: var(--openbot-space-1-5);
+  font-size: var(--openbot-text-sm);
+}
+
+.browser-secret-save-server {
+  font-weight: var(--openbot-weight-medium);
+}
+
+/* Under the label, past the box. */
+.browser-secret-save-hint {
+  margin: 0;
+  padding-left: calc(var(--openbot-icon-sm) + var(--openbot-space-1-5));
+  color: var(--openbot-text-muted);
   font-size: var(--openbot-text-sm);
 }
 

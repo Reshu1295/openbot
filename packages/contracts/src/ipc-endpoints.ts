@@ -53,6 +53,7 @@ import type {
 } from "./ipc-agent-admin";
 import type { AgentAnalytics, AgentAnalyticsInput } from "./ipc-agent-analytics";
 import type { AgentIpcRequest, ScopedAgentEvent } from "./ipc-agent-events";
+import type { AgentFolderChange, AgentFolderInput, AgentFolderList, ChooseAgentFolderInput } from "./ipc-agent-folders";
 import type { ClientAgentModelOption } from "./ipc-agent-identity";
 import type {
   AgentImportPreview,
@@ -67,6 +68,7 @@ import type {
   CreateAgentMemoryInput,
   DeleteAgentMemoryInput,
   HostAgentMemoryLimit,
+  HostMemoryReview,
   SetAgentMemoryInclusionInput,
   UpdateAgentMemoryInput,
 } from "./ipc-agent-memories";
@@ -100,7 +102,10 @@ import type {
 import type {
   AgentTask,
   AgentTaskInput,
+  AgentTaskReadState,
   AgentTasksSnapshot,
+  MarkAgentTaskReadInput,
+  RenameAgentTaskInput,
   RunQueuedMessageAsTaskInput,
   StartAgentTaskInput,
 } from "./ipc-agent-tasks";
@@ -136,6 +141,8 @@ import type {
   HostUpdateSettingsChange,
   HostUpdateStatus,
   IdleRestartTarget,
+  MacAutomationResult,
+  MacAutomationTarget,
   MacPermissionId,
   ProviderRuntimeSnapshot,
   SaveSetupInput,
@@ -162,6 +169,8 @@ import type {
   OpenAttachmentInput,
   OpenSharedFileInput,
   OpenWorkspaceFileInput,
+  PreviewSharedFileInput,
+  PreviewWorkspaceFileInput,
   WorkspaceDirectory,
 } from "./ipc-attachments";
 import type { BitwardenConnectorStatus, BitwardenHostConnectInput } from "./ipc-bitwarden-connector";
@@ -292,6 +301,7 @@ import type {
   InstanceTransferResult,
   InstanceTransferSummary,
 } from "./ipc-instance-transfer";
+import type { MachineAlertSettings, MachineMetrics } from "./ipc-machine-resources";
 import type {
   AgentPublicationPreview,
   AgentSubmission,
@@ -435,6 +445,7 @@ import type {
   OldRuntimeVersions,
   OpenStorageLocationInput,
   OpenStoredFileInput,
+  ProviderRuntimeDownload,
   StorageDisk,
   StorageUsage,
 } from "./ipc-storage";
@@ -607,6 +618,9 @@ export const IPC_ENDPOINTS = {
     getAppInfo: request<undefined, AppInfo>()("app:get-info"),
     getSetupState: request<undefined, AppSetupState>()("app:get-setup-state"),
     saveSetup: request<SaveSetupInput, AppSetupState>()("app:save-setup"),
+    // A joined owner or admin can set the default provider of this computer (`provider-default-v1`),
+    // so main tells the window.
+    setupState: event<AppSetupState>()("app:setup-state"),
     getAnalyticsPreference: request<undefined, AnalyticsPreference>()("app:get-analytics-preference"),
     setAnalyticsPreference: request<SetAnalyticsPreferenceInput, AnalyticsPreference>()("app:set-analytics-preference"),
     getApprovalAutomation: request<undefined, ApprovalAutomationPreference>()("app:get-approval-automation"),
@@ -757,6 +771,10 @@ export const IPC_ENDPOINTS = {
     getStatus: request<undefined, ProviderRuntimeSnapshot>()("provider-runtimes:get-status"),
     download: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:download"),
     cancel: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:cancel"),
+    /** What `removeDownload` frees now: nothing while the provider is on. */
+    measureDownload: request<ManagedProviderId, ProviderRuntimeDownload>()("provider-runtimes:measure-download"),
+    /** Removes the downloaded CLI of a provider that is off. Rejects while it is on or downloading. */
+    removeDownload: request<ManagedProviderId, ProviderRuntimeSnapshot>()("provider-runtimes:remove-download"),
     /** Asks each provider's upstream for its latest release. Rejects when no source answered. */
     checkForUpdates: request<undefined, ProviderRuntimeSnapshot>()("provider-runtimes:check-for-updates"),
     event: event<ProviderRuntimeSnapshot>()("provider-runtimes:event"),
@@ -857,6 +875,10 @@ export const IPC_ENDPOINTS = {
     startPermissionAppDrag: request<undefined, void>()("computer-use:start-permission-app-drag"),
     revealPermissionApp: request<undefined, void>()("computer-use:reveal-permission-app"),
     highlightPlacement: event<ComputerUseHighlightPlacement>()("computer-use:highlight-placement"),
+  },
+  macAutomation: {
+    /** Sends one harmless Apple Event to each app, so macOS shows its Automation prompts now. */
+    request: request<readonly MacAutomationTarget[], MacAutomationResult[]>()("mac-automation:request"),
   },
   skills: {
     localList: request<undefined, MarketplaceSkillDetail[]>()("skills:local-list"),
@@ -1069,6 +1091,15 @@ export const IPC_ENDPOINTS = {
     // How many memories each agent of the server can keep, and the values its host permits.
     getAgentMemoryLimit: scopedQuery<HostAgentMemoryLimit, "required">()("host-admin:get-agent-memory-limit"),
     setAgentMemoryLimit: scopedRequest<number, HostAgentMemoryLimit, "required">()("host-admin:set-agent-memory-limit"),
+    // How many completed turns of one conversation pass between two background memory reviews of the
+    // server's agents (`0` is off), and the values its host permits.
+    getMemoryReview: scopedQuery<HostMemoryReview, "required">()("host-admin:get-memory-review"),
+    setMemoryReview: scopedRequest<number, HostMemoryReview, "required">()("host-admin:set-memory-review"),
+    // The machine alert levels and the member who gets the alert (`machine-resources-v1`).
+    getMachineAlerts: scopedQuery<MachineAlertSettings, "required">()("host-admin:get-machine-alerts"),
+    setMachineAlerts: scopedRequest<MachineAlertSettings, MachineAlertSettings, "required">()(
+      "host-admin:set-machine-alerts",
+    ),
     getPromptCacheTtl: scopedQuery<PromptCacheTtlSetting, "required">()("host-admin:get-prompt-cache-ttl"),
     setPromptCacheTtl: scopedRequest<PromptCacheTtl, PromptCacheTtlSetting, "required">()(
       "host-admin:set-prompt-cache-ttl",
@@ -1113,7 +1144,9 @@ export const IPC_ENDPOINTS = {
     hostDisconnect: scopedQuery<BitwardenConnectorStatus, "required">()("bitwarden-connector:host-disconnect"),
   },
   // The Vault of this computer. Lists carry no password, card number or security code: `reveal`
-  // returns one when the user asks, and `copy` writes one to the clipboard in main.
+  // returns one when the user asks, and `copy` writes one to the clipboard in main. The `host*`
+  // endpoints do the same for one server: a joined server answers through `vault-v1`, to an owner
+  // or admin. It has no CSV import, as the file is on this computer.
   vault: {
     list: request<undefined, VaultState>()("vault:list"),
     save: request<VaultSaveInput, VaultState>()("vault:save"),
@@ -1123,6 +1156,12 @@ export const IPC_ENDPOINTS = {
     importCsv: request<undefined, VaultImportResult>()("vault:import-csv"),
     reset: request<undefined, VaultState>()("vault:reset"),
     changed: event<VaultState>()("vault:changed"),
+    hostList: scopedQuery<VaultState, "required">()("vault:host-list"),
+    hostSave: scopedRequest<VaultSaveInput, VaultState, "required">()("vault:host-save"),
+    hostDelete: scopedRequest<string, VaultState, "required">()("vault:host-delete"),
+    hostReveal: scopedRequest<VaultSecretRequest, string, "required">()("vault:host-reveal"),
+    hostCopy: scopedRequest<VaultSecretRequest, void, "required">()("vault:host-copy"),
+    hostReset: scopedQuery<VaultState, "required">()("vault:host-reset"),
   },
   // The 1Password connection of this computer. The token goes from the renderer to main once, in
   // `connectWithToken`; every answer is the status only. The `host*` endpoints do the same for a
@@ -1323,6 +1362,11 @@ export const IPC_ENDPOINTS = {
     stopTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:stop"),
     closeTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:close"),
     reopenTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:reopen"),
+    // A joined server takes these through `agent-threads-v1`.
+    renameTask: scopedRequest<RenameAgentTaskInput, void>()("agent:tasks:rename"),
+    deleteTask: scopedRequest<AgentTaskInput, void>()("agent:tasks:delete"),
+    // A joined server takes this through `agent-thread-reads-v1`.
+    markTaskRead: scopedRequest<MarkAgentTaskReadInput, AgentTaskReadState>()("agent:tasks:mark-read"),
     acknowledgeFailedTurn: scopedRequest<AcknowledgeFailedTurnInput, void>()("agent:acknowledge-failed-turn"),
     cancelQueuedMessage: scopedRequest<CancelQueuedMessageInput, void>()("agent:cancel-queued-message"),
     steerQueuedMessage: scopedRequest<SteerQueuedMessageInput, void>()("agent:steer-queued-message"),
@@ -1332,6 +1376,7 @@ export const IPC_ENDPOINTS = {
     interrupt: scopedRequest<InterruptTurnInput, void>()("agent:interrupt"),
     clearContext: scopedRequest<string, void>()("agent:clear-context"),
     compactContext: scopedRequest<string, void>()("agent:compact-context"),
+    compactTaskContext: scopedRequest<AgentTaskInput, void>()("agent:tasks:compact-context"),
     respondToPrompt: scopedRequest<RespondToPromptInput, void>()("agent:respond-to-prompt"),
     respondToApproval: scopedRequest<RespondToApprovalInput, void>()("agent:respond-to-approval"),
     respondToBrowserSecret: scopedRequest<LocalBrowserSecretResponse, void>()("agent:respond-to-browser-secret"),
@@ -1448,13 +1493,23 @@ export const IPC_ENDPOINTS = {
     openAttachment: scopedRequest<OpenAttachmentInput, void>()("agent:open-attachment"),
     openSharedFile: scopedRequest<OpenSharedFileInput, void>()("agent:open-shared-file"),
     openWorkspaceFile: scopedRequest<OpenWorkspaceFileInput, void>()("agent:open-workspace-file"),
-    previewSharedFile: scopedRequest<OpenSharedFileInput, FilePreview>()("agent:preview-shared-file"),
-    previewWorkspaceFile: scopedRequest<OpenWorkspaceFileInput, FilePreview>()("agent:preview-workspace-file"),
+    previewSharedFile: scopedRequest<PreviewSharedFileInput, FilePreview>()("agent:preview-shared-file"),
+    previewWorkspaceFile: scopedRequest<PreviewWorkspaceFileInput, FilePreview>()("agent:preview-workspace-file"),
     /** Releases only this client's temporary HTML bytes, never a file on a host. */
     releaseFilePreview: request<string, void>()("agent:release-file-preview"),
     listWorkspaceDirectory: scopedRequest<OpenWorkspaceFileInput, WorkspaceDirectory>()(
       "agent:list-workspace-directory",
     ),
+  },
+  // The folders a local agent can change besides its workspace. A joined server has no route for them:
+  // the Team API does not carry them, as it does not carry `access`.
+  agentFolders: {
+    listAgentFolders: request<string, AgentFolderList>()("agent:folders:list"),
+    // Opens the folder picker in main.
+    chooseAgentFolder: request<ChooseAgentFolderInput, AgentFolderChange>()("agent:folders:choose"),
+    // A dropped folder, or the Undo of a removal. Main checks each path as it checks a picked one.
+    addAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:add"),
+    removeAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:remove"),
   },
   // Not part of `agentAttachments`: the preload sends the paths of dropped and pasted files, and the
   // renderer must never name a path to import. So this group is never bridged to the renderer.
@@ -1630,6 +1685,8 @@ export const IPC_ENDPOINTS = {
     getUsage: scopedRequest<GetStorageUsageInput, StorageUsage | null, "required">()("storage:get-usage"),
     // Free and total disk space with no scan, for the sidebar storage card. Null before `storage-disk-v1`.
     getDisk: scopedQuery<StorageDisk | null, "required">()("storage:get-disk"),
+    // Disk, memory, and CPU of the machine, for Server settings > Storage. Null before `machine-resources-v1`.
+    getMachineMetrics: scopedQuery<MachineMetrics | null, "required">()("storage:get-machine-metrics"),
     deleteFile: scopedRequest<DeleteStoredFileInput, void, "required">()("storage:delete-file"),
     clear: scopedRequest<ClearStorageInput, void, "required">()("storage:clear"),
     openFile: scopedRequest<OpenStoredFileInput, void, "required">()("storage:open-file"),
@@ -1746,6 +1803,7 @@ export const IPC_GROUP_PATHS = {
   dynamicIsland: "dynamicIsland",
   browserDock: "browserDock",
   computerUse: "computerUse",
+  macAutomation: "macAutomation",
   skills: "skills",
   customProviders: "customProviders",
   providerDetection: "providerDetection",
@@ -1778,6 +1836,7 @@ export const IPC_GROUP_PATHS = {
   channelMemories: "agent",
   channelRoutines: "agent",
   agentAttachments: "agent",
+  agentFolders: "agent",
   // The preload calls it from its own drop, paste, and file input handlers.
   attachmentImports: null,
   browser: "browser",

@@ -39,7 +39,20 @@ export const Authenticator: Story = {
   },
 };
 export const Password: Story = {
-  args: { request: { ...request, secret: { method: "password", origin: "https://accounts.example.com", digits: 6 } } },
+  args: {
+    request: { ...request, secret: { method: "password", origin: "https://accounts.example.com", digits: 6 } },
+    vault: { server: null },
+  },
+};
+/** An owner or admin of a joined server: the box starts unchecked. */
+export const PasswordJoinedServer: Story = {
+  args: { ...Password.args, vault: { server: "Studio Mac mini" } },
+};
+export const PasswordMember: Story = {
+  args: { ...Password.args, vault: { server: "Studio Mac mini", blocked: "role" } },
+};
+export const PasswordOlderHost: Story = {
+  args: { ...Password.args, vault: { server: "Studio Mac mini", blocked: "version" } },
 };
 export const EightDigits: Story = {
   args: { request: { ...request, secret: { method: "otp", origin: "https://accounts.example.com", digits: 8 } } },
@@ -90,6 +103,10 @@ export const IslandAuthenticator: Story = {
 
 export const IslandPassword: Story = {
   args: { ...Password.args, variant: "island" },
+};
+
+export const IslandPasswordJoinedServer: Story = {
+  args: { ...PasswordJoinedServer.args, variant: "island" },
 };
 
 export const IslandEightDigits: Story = {

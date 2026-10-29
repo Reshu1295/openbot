@@ -11,7 +11,11 @@ import { currentText } from "@openbot/ui/text";
 import { createEffect, createMemo, createSignal, untrack } from "solid-js";
 import { desktopAnalytics } from "./analytics";
 import { useAnsweredPrompts } from "./answered-prompts";
-import { seededAttentionPrompts } from "./features/agents/agent-runtime-snapshot";
+import {
+  attentionKey,
+  type PendingAttentionPrompts,
+  seededAttentionPrompts,
+} from "./features/agents/agent-runtime-snapshot";
 import { useAgents } from "./features/agents/agents-context";
 import { agentConversationKey, promptRequestKey } from "./features/conversation/conversation-keys";
 import type { PromptAnswerOptions } from "./features/conversation/conversation-types";
@@ -25,7 +29,6 @@ import { turnsPort } from "./turns-port";
 type PromptEvent = Extract<AgentEvent, { type: "prompt" }>;
 /** `current` is false while a new list loads. */
 type RoutineSnapshot = { routines: RoutineFields[]; current: boolean };
-type BrowserTakeoverEvent = Extract<AgentEvent, { type: "browser-takeover-requested" }>;
 
 /**
  * What each agent is *doing*: the turn it is running, the queue behind it, and
@@ -86,6 +89,8 @@ const Turns = createSimpleContext({
     const [failedTurns, setFailedTurns] = createSignal<Record<string, string | undefined>>(seed?.failedTurns ?? {});
     // The agents whose queue waits for a provider plan to reset, in epoch seconds. Only a runtime snapshot of the local host carries it.
     const [contextStates, setContextStates] = createSignal<Record<string, AgentContextState>>({});
+    // The context of each side thread, by thread id. Only a runtime snapshot of the local host carries it.
+    const [threadContextStates, setThreadContextStates] = createSignal<Record<string, AgentContextState>>({});
     const [usageLimits, setUsageLimits] = createSignal<Record<string, number | null>>({});
     // Each provider account and model that a usage limit holds, also with no agent on it.
     const [usageLimitedModels, setUsageLimitedModels] = createSignal<AgentModelChoice[]>([]);
@@ -103,9 +108,7 @@ const Turns = createSimpleContext({
       submittedPromptRequests,
       setSubmittedPromptRequests,
     } = useAnsweredPrompts().promptMarkersFor(scopeServerId);
-    const [pendingPrompts, setPendingPrompts] = createSignal<
-      Record<string, PromptEvent | BrowserTakeoverEvent | undefined>
-    >(
+    const [pendingPrompts, setPendingPrompts] = createSignal<PendingAttentionPrompts>(
       untrack(() =>
         seededAttentionPrompts(seed?.pendingPrompts, presentedPromptResolutions(), submittedPromptRequests()),
       ),
@@ -228,15 +231,23 @@ const Turns = createSimpleContext({
       },
     );
 
-    async function answerPrompt(answers: Record<string, string[]>, options?: PromptAnswerOptions): Promise<boolean> {
+    /** Answers the prompt of the agent's chat, or of its side thread `threadId`. */
+    async function answerPrompt(
+      answers: Record<string, string[]>,
+      options?: PromptAnswerOptions,
+      threadId?: string,
+    ): Promise<boolean> {
       const agent = activeAgent();
-      const prompt = agent ? pendingPrompts()[agent.id] : undefined;
+      const prompt = agent ? pendingPrompts()[attentionKey(agent.id, threadId ?? agent.threadId)] : undefined;
       if (!agent || prompt?.type !== "prompt") return false;
-      return submitPromptAnswers(agent.id, prompt, answers, options);
+      // A side thread marks its answer by its own key: the agent id marks the agent's own chat.
+      const mark = threadId === undefined ? agent.id : attentionKey(agent.id, threadId);
+      return submitPromptAnswers(agent.id, mark, prompt, answers, options);
     }
 
     async function submitPromptAnswers(
       agentId: string,
+      mark: string,
       prompt: PromptEvent,
       answers: Record<string, string[]>,
       options?: PromptAnswerOptions,
@@ -245,7 +256,7 @@ const Turns = createSimpleContext({
       const analytics = desktopAnalytics.scope();
       setSubmittedPromptRequests((current) => ({
         ...current,
-        [agentId]: promptRequestKey(prompt.turnId, prompt.requestId) ?? undefined,
+        [mark]: promptRequestKey(prompt.turnId, prompt.requestId) ?? undefined,
       }));
       try {
         await turnsPort().agent.respondToPrompt({
@@ -259,7 +270,7 @@ const Turns = createSimpleContext({
         });
         return true;
       } catch (error) {
-        setSubmittedPromptRequests((current) => ({ ...current, [agentId]: undefined }));
+        setSubmittedPromptRequests((current) => ({ ...current, [mark]: undefined }));
         analytics.track("agent_input_action", {
           kind: "prompt",
           decision: "answered",
@@ -276,7 +287,7 @@ const Turns = createSimpleContext({
       agentId: string,
       requestId: string | number,
       decision: "accept" | "decline",
-      options?: { onError?: (error: unknown) => void },
+      options?: PromptAnswerOptions,
     ): Promise<boolean> {
       const serverId = activeServerId();
       const approval = approvals().find(
@@ -312,17 +323,24 @@ const Turns = createSimpleContext({
       return respondToApprovalRequest(agent.id, approval.requestId, decision);
     }
 
-    async function respondToBrowserTakeover(decision: "complete" | "cancel"): Promise<boolean> {
+    /** Answers the takeover of the agent's chat, or of its side thread `threadId`. */
+    async function respondToBrowserTakeover(
+      decision: "complete" | "cancel",
+      threadId?: string,
+      options?: PromptAnswerOptions,
+    ): Promise<boolean> {
       const agent = activeAgent();
-      const event = agent ? pendingPrompts()[agent.id] : undefined;
-      if (!agent || event?.type !== "browser-takeover-requested") return false;
+      const key = agent ? attentionKey(agent.id, threadId ?? agent.threadId) : undefined;
+      const event = key ? pendingPrompts()[key] : undefined;
+      if (!agent || !key || event?.type !== "browser-takeover-requested") return false;
       const serverId = activeServerId();
       try {
         await turnsPort().agent.respondToBrowserTakeover({ requestId: event.request.requestId, decision });
-        setPendingPrompts((current) => ({ ...current, [agent.id]: undefined }));
+        setPendingPrompts((current) => ({ ...current, [key]: undefined }));
         return true;
       } catch (error) {
-        appendUiError(agent.id, error, currentText().t("app.errorStatus.browserTakeover"), serverId);
+        if (options?.onError) options.onError(error);
+        else appendUiError(agent.id, error, currentText().t("app.errorStatus.browserTakeover"), serverId);
         return false;
       }
     }
@@ -361,6 +379,8 @@ const Turns = createSimpleContext({
         .then(() => analytics.track("queue_action", { action: "steer", result: "succeeded" }))
         .catch((error) => {
           analytics.track("queue_action", { action: "steer", result: "failed", failure_code: "steer_failed" });
+          // After the turn ended, the message runs as the next turn. The refusal is old news (#3206).
+          if (activeTurns()[agent.id] !== turnId) return;
           appendUiError(agent.id, error, currentText().t("app.errorStatus.steer"), serverId);
         });
     }
@@ -463,6 +483,8 @@ const Turns = createSimpleContext({
       setFailedTurns,
       contextStates,
       setContextStates,
+      threadContextStates,
+      setThreadContextStates,
       usageLimits,
       setUsageLimits,
       usageLimitedModels,

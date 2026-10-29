@@ -46,7 +46,7 @@ export function createSidebarScope(props: SidebarProps) {
     userHiddenSince,
     visiblePinnedKeys,
     visibleSectionIds,
-    waitingAgents,
+    waitingChats,
   } = createSidebarDataStore({ props, dragActive: () => dragActive() });
   const {
     cancelSectionEditor,
@@ -123,7 +123,7 @@ export function createSidebarScope(props: SidebarProps) {
   });
 
   createEffect(
-    () => [resolvedPinnedItems(), waitingAgents(), filteredChats(), orderedPeople(), userHiddenAgentList()],
+    () => [resolvedPinnedItems(), waitingChats(), filteredChats(), orderedPeople(), userHiddenAgentList()],
     () => {
       scrollFades.remeasure();
     },
@@ -198,7 +198,7 @@ export function createSidebarScope(props: SidebarProps) {
     userHiddenAgentList,
     userHiddenSince,
     visibleSectionIds,
-    waitingAgents,
+    waitingChats,
   };
 }
 

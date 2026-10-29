@@ -69,7 +69,7 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .settings-modal-nav-item:not([aria-current="page"]):hover {
+  .settings-modal-nav-item:not([aria-current]):hover {
     background: var(--openbot-hover);
     color: var(--openbot-text-primary);
   }

@@ -45,7 +45,7 @@ export const messages = {
     "Вкладка OpenBot, которая начала подключение к {name}, не ответила. Откройте OpenBot в браузере и подключите {name} снова.",
   "sitePage.connect.failure.failed": "{name} не завершил подключение. Попробуйте снова.",
   "sitePage.connect.restartHint":
-    "В OpenBot откройте «{serverSettings}», затем «{connectors}», затем {name} и выберите «{connect}».",
+    "В OpenBot откройте «{marketplace}», затем «{apps}», затем {name} и выберите «{connect}».",
   "sitePage.connect.notOpened":
     "Запустите OpenBot и попробуйте снова. Если OpenBot нет на этом компьютере, скачайте его и подключите {name} в приложении.",
   "sitePage.openApp.title": "Ничего не открылось?",

@@ -20,6 +20,11 @@ import { createDiagnosticStream } from "./stderr-diagnostics";
 import { endProcessTree } from "./windows-process-tree";
 
 const EXIT_REPORT_WAIT_MS = 2_000;
+/**
+ * The first line of a crash report. A crash handler such as the one in Google's Gemini server ends its
+ * report with `RAW: Raising signal 6`, which does not say why: the reason is in the first line.
+ */
+const CRASH_LINE = /^(?:F\d{4} \d\d:\d\d:\d\d|FATAL ERROR:|Fatal Python error:|\*\*\* SIG[A-Z]+ .*received)/u;
 const logger = createOpenBotLogger("acp-connection");
 interface ProcessEnd {
   ending: string;
@@ -120,10 +125,14 @@ export class AcpConnection {
     // One record at a time, never one chunk at a time: a chunk can end inside a JSON record, and a
     // record read in halves keeps the credential in its second half.
     let lastDiagnostic: string | null = null;
+    let crashDiagnostic: string | null = null;
     const diagnostics = createDiagnosticStream({
       redact: (text) => this.options.redact(text),
       emit: (message) => {
-        if (!this.options.privateDiagnostic?.test(message)) lastDiagnostic = message;
+        if (!this.options.privateDiagnostic?.test(message)) {
+          lastDiagnostic = message;
+          if (crashDiagnostic === null && CRASH_LINE.test(message)) crashDiagnostic = message;
+        }
         this.options.diagnostic(message, { duringStop: this.#stoppedProcesses.has(child) });
       },
     });
@@ -139,7 +148,7 @@ export class AcpConnection {
         ended,
         Effect.succeed({
           ending: signal ? `signal ${signal}` : `exit code ${code ?? "unknown"}`,
-          detail: lastDiagnostic,
+          detail: crashDiagnostic ?? lastDiagnostic,
         }),
       );
     });

@@ -41,9 +41,13 @@ export function serverSupportsCapability(
       capability === "connectors-v1" ||
       capability === "onepassword-connector-v1" ||
       capability === "bitwarden-connector-v1" ||
+      capability === "vault-v1" ||
+      capability === "vault-v2" ||
+      capability === "browser-secret-vault-v1" ||
       capability === "provider-host-sign-in-v1" ||
       capability === "storage-v1" ||
       capability === "storage-disk-v1" ||
+      capability === "machine-resources-v1" ||
       capability === "hosted-sites-v1" ||
       capability === "agent-admin-v1" ||
       capability === "agent-host-settings-v1" ||
@@ -68,6 +72,7 @@ export function serverSupportsCapability(
       capability === "host-release-v1" ||
       capability === "host-timezone-v1" ||
       capability === "agent-memory-limit-v1" ||
+      capability === "memory-review-v1" ||
       capability === "prompt-cache-ttl-v1" ||
       capability === "claude-api-key-v1" ||
       capability === "agent-access-v1" ||
@@ -81,6 +86,8 @@ export function serverSupportsCapability(
       capability === "instance-transfer-v1" ||
       capability === "agent-hidden-v1" ||
       capability === "agent-tasks-v1" ||
+      capability === "agent-threads-v1" ||
+      capability === "agent-thread-reads-v1" ||
       capability === "side-question-v1") &&
     server?.kind === "remote"
   ) {

@@ -4,6 +4,7 @@ import type { messages as source } from "../en/dialog";
 export const messages = {
   // Native file pickers.
   "dialog.chooseSiteDirectory": "정적 사이트 폴더 선택",
+  "dialog.chooseAgentFolder": "{agent}의 폴더 선택",
   "dialog.chooseSkill": "스킬 폴더 또는 ZIP 선택",
   "dialog.filter.skillPackages": "스킬 패키지",
   "dialog.filter.images": "이미지",

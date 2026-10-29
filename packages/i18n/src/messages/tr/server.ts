@@ -232,8 +232,6 @@ export const messages = {
   "server.settings.transferTitle": "Aktarım",
   "server.settings.transferDescription":
     "Bu sunucunun ajanlarını ve sunucu ayarlarını bir dosyaya veya bir dosyadan taşıyın.",
-  "server.settings.connectorsTitle": "Bağlayıcılar",
-  "server.settings.connectorsDescription": "Bu sunucudaki her ajanın kullanabileceği hesapları bağlayın.",
   "server.settings.routinesTitle": "Rutinler",
   "server.settings.routinesDescription": "Bu bilgisayarın rutin programını bir takvim uygulamasında gösterin.",
   "server.routineFeed.title": "Takvim akışı",
@@ -305,6 +303,12 @@ export const messages = {
   "server.settings.memoryLimit": "Ajan başına bellek",
   "server.settings.memoryLimitDescription": "Bu sunucudaki her ajanın tutabileceği bellek sayısı.",
   "server.settings.memoryLimitLoadFailed": "Bu sunucunun bellek sınırı yüklenemedi.",
+  "server.settings.memoryReview": "Bellek incelemesi",
+  "server.settings.memoryReviewDescription":
+    "Bu sunucudaki ajanların sohbetlerindeki kalıcı bilgileri arka planda ne sıklıkla kaydettiği.",
+  "server.settings.memoryReviewOff": "Kapalı",
+  "server.settings.memoryReviewTurns": { one: "Her {count} turda", other: "Her {count} turda" },
+  "server.settings.memoryReviewLoadFailed": "Bellek incelemesi ayarı yüklenemedi.",
   "server.settings.remoteOnline": "Ana makine çevrim içi. Yayımlama sahibi tarafından kontrol edilir.",
   "server.settings.remoteOffline": "Ana makine çevrim dışı. Yayımlama sahibi tarafından kontrol edilir.",
   "server.settings.reachable": "Çevrim içi erişilebilir. Yalnızca davet edilen kişiler oturum açabilir.",

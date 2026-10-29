@@ -199,7 +199,7 @@ export function deliveryPromptInput(context: DeliveryContext, sources: DeliveryP
       ? [
           "This is a reply to a message you sent earlier.",
           "Surface or summarize the result naturally for the user, and start with the name of the teammate.",
-          "When the reply reports blocked work, do not repeat that work with the same tools. Give the user the blocker and the action from its Unblock line. When OpenBot has a plugin for the service and that plugin is not in your tools, end your answer with the plugin sentence from your instructions.",
+          "When the reply reports blocked work, do not repeat that work with the same tools. Give the user the blocker and the action from its Unblock line. When OpenBot has a plugin for the service and that plugin is not in your tools, call openbot.suggest_marketplace_app and end your answer as its guidance says.",
           "Reply to the teammate only when the message requests another action, or when you have new information that unblocks its work. Do not send it the same request again. Otherwise do not send an acknowledgement and avoid reply loops.",
         ]
       : delivery.expectsReply === false
@@ -211,7 +211,7 @@ export function deliveryPromptInput(context: DeliveryContext, sources: DeliveryP
         : [
             `After completing the request, send a concise result back to ${senderName} with openbot.send_message.`,
             `Use recipientAgentIds ["${senderAgentId}"], replyToMessageId "${delivery.messageId}", and expectsReply false.`,
-            "Format the reply as three lines: Status: done | partial | blocked, Result: <concrete outcome>, Evidence: <file, test, command, or none>. When Status is blocked, add a fourth line, Unblock: <the one action that unblocks the task>. When OpenBot has a plugin for the service and that plugin is not in your tools, that action is the plugin sentence from your instructions.",
+            "Format the reply as three lines: Status: done | partial | blocked, Result: <concrete outcome>, Evidence: <file, test, command, or none>. When Status is blocked, add a fourth line, Unblock: <the one action that unblocks the task>. When OpenBot has a plugin for the service and that plugin is not in your tools, call openbot.suggest_marketplace_app, and that action is the plugin sentence from its guidance.",
             "Do not acknowledge without a Status line. Do not leave the sender waiting for a result.",
           ];
     text = [

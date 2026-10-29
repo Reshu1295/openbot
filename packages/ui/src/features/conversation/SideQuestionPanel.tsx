@@ -31,6 +31,8 @@ export interface SideQuestionPanelProps {
   onAsk: (question: string) => void;
   onClosePanel: () => void;
   onOpenLink: (url: string) => void;
+  /** The window draws the macOS window controls over the top start corner. The image viewer leaves room. */
+  macWindowControls?: boolean | undefined;
 }
 
 function exchangeMessages(exchange: SideQuestionExchange): AgentMessage[] {
@@ -88,7 +90,7 @@ export function SideQuestionPanel(props: SideQuestionPanelProps) {
           type="button"
           variant="ghost"
           class="browser-toolbar-button side-panel-pane-close"
-          aria-label={t("conversation.tasks.panel.closePanel")}
+          aria-label={t("conversation.sidePanel.closePanel")}
           onClick={() => props.onClosePanel()}
         >
           <X class="browser-toolbar-icon" />
@@ -122,6 +124,7 @@ export function SideQuestionPanel(props: SideQuestionPanelProps) {
                     onOpenLink={props.onOpenLink}
                     onPreview={() => undefined}
                     onAttachmentAction={() => undefined}
+                    macWindowControls={props.macWindowControls}
                   />
                 </div>
               )}

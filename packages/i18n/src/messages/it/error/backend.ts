@@ -81,6 +81,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "La consegna del canale non è stata creata.",
   "error.backend.channelAssignmentStopped": "Questa assegnazione del canale è stata interrotta o sostituita.",
   "error.backend.channelAssigneeUnavailable": "L'agente assegnato non è disponibile.",
+  "error.backend.channelAssigneeRemoved": "Il membro assegnato è stato rimosso.",
+  "error.backend.channelAssigneeReassign": "Il membro assegnato non è disponibile. Riassegna questa attività.",
   "error.backend.channelAssignmentChanged": "Questa assegnazione del canale è cambiata.",
   "error.backend.channelMemberRequired": "Seleziona un membro disponibile di questo canale.",
   "error.backend.memoryEssentialBudget":
@@ -198,8 +200,11 @@ export const messages = {
   "error.backend.routineFlowHandoffFailed": "La routine non è riuscita a passare il lavoro a questo agente.",
   "error.backend.mcpServerLimit": "OpenBot conserva fino a {limit} server MCP.",
   "error.backend.mcpServerNameTaken": "Esiste già un server MCP chiamato {name}.",
+  "error.backend.mcpServerInvalid": "OpenBot non può salvare questa configurazione del server MCP.",
   "error.backend.mcpServerNoAnswer": "Il server non ha risposto entro {seconds} secondi.",
   "error.backend.mcpSignInNotAccepted": "Il server non ha accettato quell'accesso.",
+  "error.backend.mcpSignInClientRefused":
+    "Il server di accesso non ha accettato OpenBot al completamento dell'accesso. Accedi di nuovo: OpenBot si registra di nuovo sul server.",
   "error.backend.mcpCommandNotFound": "Comando non trovato: {command}",
   "error.backend.mcpRegistrationRefused":
     "Il server di accesso non accetta ancora OpenBot come app. La causa non è il tuo account. Usa un altro modo per connetterti, ad esempio un server MCP locale.",
@@ -327,6 +332,15 @@ export const messages = {
   "error.backend.taskNotFound": "Questa attività non è disponibile.",
   "error.backend.taskClosed": "Questa attività è chiusa. Riaprila per inviare un messaggio.",
   "error.backend.taskStillRunning": "Questa attività è ancora in corso. Attendi che si fermi, poi chiudila.",
+  "error.backend.threadNotFound": "Questo thread non è disponibile.",
+  "error.backend.threadStillRunning": "Questo thread è ancora in esecuzione. Interrompilo, poi riprova.",
+  "error.backend.threadArchived": "Questo thread è archiviato. Ripristinalo per inviare un messaggio.",
+  "error.backend.threadTitleRequired": "Dai al thread un titolo breve.",
+  "error.backend.threadOpenLimitReached":
+    "Questo agente ha {count} thread aperti. Archivia un thread, poi avviane o ripristinane un altro.",
+  "error.backend.threadRemoteUnsupported": "I thread sono disponibili solo per gli agenti su questo computer.",
+  "error.backend.threadMoveRefused":
+    "Solo un messaggio che hai inviato soltanto a questo agente può essere eseguito in un nuovo thread.",
   "error.backend.taskTitleRequired": "Dai all'attività un titolo breve.",
   "error.backend.taskToolInvalid":
     "Dai all'attività un titolo di al massimo 120 caratteri e una descrizione che dica cosa fare.",

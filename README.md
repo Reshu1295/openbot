@@ -517,8 +517,11 @@ Attach MP3 audio and MOV video through the file picker or drag and drop. The lim
 file, 250 MB per message, and 10 files per message. OpenBot gives the agent the original file; it does
 not play, decode, transcribe, or validate the recording during import. Damaged recordings can be
 attached for inspection. Analysis depends on the tools available to the agent. For other audio or
-video formats, export as MP3 or MOV, or attach a text transcript. Remote hosts must advertise the
+video formats, export as MP3, MOV, or MP4, or attach a text transcript. Remote hosts must advertise the
 `media-attachments` capability; update the host if this feature is unavailable.
+
+MP4 video uses the same limits and rules as MOV. Remote hosts must also advertise the
+`mp4-attachments` capability.
 
 ZIP archives use the same limits. OpenBot does not extract or inspect an archive: the agent gets the
 original file and extracts it with its own tools. An agent sends a ZIP archive back with

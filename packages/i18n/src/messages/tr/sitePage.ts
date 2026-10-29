@@ -44,7 +44,7 @@ export const messages = {
     "{name} bağlantısını başlatan OpenBot sekmesi yanıt vermedi. OpenBot'u tarayıcınızda açın ve {name} bağlantısını yeniden kurun.",
   "sitePage.connect.failure.failed": "{name} bağlantıyı tamamlamadı. Tekrar deneyin.",
   "sitePage.connect.restartHint":
-    "OpenBot'ta {serverSettings}, ardından {connectors}, ardından {name} bölümünü açın ve {connect} seçeneğini seçin.",
+    "OpenBot'ta {marketplace}, ardından {apps}, ardından {name} bölümünü açın ve {connect} seçeneğini seçin.",
   "sitePage.connect.notOpened":
     "OpenBot'u başlatın, sonra tekrar deneyin. OpenBot bu bilgisayarda yoksa indirin ve {name} bağlantısını uygulamadan kurun.",
   "sitePage.openApp.title": "Hiçbir şey açılmadı mı?",

@@ -26,6 +26,12 @@ import {
 
 const PROVIDERS = MANAGED_RUNTIME_PROVIDERS;
 
+/**
+ * The runtime calls a joined server's host serves too. Removing a download is this computer's only,
+ * so the store does not need it.
+ */
+export type ProviderRuntimeSource = Omit<ProviderRuntimesDesktopApi, "measureDownload" | "removeDownload">;
+
 /** The analytics code of each catalog reason that the runtime manager shows for a failed download. */
 const DOWNLOAD_FAILURE_CODES: Readonly<Record<string, string>> = {
   "error.provider.diskSpace": "disk_space",
@@ -81,7 +87,7 @@ export interface ProviderCliOwners {
  * snapshot, so nothing from the previous computer is shown for the next one.
  */
 export function createProviderRuntimeStore(
-  api: () => ProviderRuntimesDesktopApi | undefined,
+  api: () => ProviderRuntimeSource | undefined,
   owners: ProviderCliOwners = {},
 ) {
   const [providerRuntimeSnapshot, setProviderRuntimeSnapshot] =
@@ -241,7 +247,7 @@ export function createProviderRuntimeStore(
   }
 
   /** Drops an answer that arrives after `api` moved to another computer. */
-  function applyFrom(source: ProviderRuntimesDesktopApi, snapshot: ProviderRuntimeSnapshot): void {
+  function applyFrom(source: ProviderRuntimeSource, snapshot: ProviderRuntimeSnapshot): void {
     if (source === api()) applyProviderRuntimeSnapshot(snapshot);
   }
 
@@ -325,6 +331,15 @@ export function createProviderRuntimeStore(
       // A remote workspace announces nothing, and leaves the record of what was announced alone:
       // it says what the user was told about this computer, which the open server does not change.
       if (!next) return;
+      // An offer that main takes back with no update running, as for a provider the user turned off,
+      // takes its notification down: its Update button could only say "up to date".
+      for (const update of next) {
+        const previous = announced.find((entry) => entry.provider === update.provider);
+        if (!previous || !providerUpdateAvailable(previous.runtime, previous.availableVersion)) continue;
+        if (update.availableVersion !== null || updating.has(update.provider) || failed.has(update.provider)) continue;
+        if (update.runtime.phase === "ready" || update.runtime.phase === "not-downloaded")
+          hideProviderUpdateToast(update.provider);
+      }
       for (const update of providerUpdatesToAnnounce(announced, next)) {
         // A closed notification stays closed, including across the server switch that rebuilds this
         // store: the record of it is kept by the notification module, which outlives the switch.

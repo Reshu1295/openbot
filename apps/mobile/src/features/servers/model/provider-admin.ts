@@ -6,6 +6,7 @@ import {
   agentProviderDescriptor,
   agentProviderName,
   isAgentStatus,
+  isKeyOnlyProvider,
   isLocalOnlyProvider,
   loopbackCallback,
   type ManagedProviderId,
@@ -17,6 +18,7 @@ import {
 } from "@openbot/contracts/ipc";
 import { isOneOf } from "@openbot/contracts/runtime-values";
 import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
+import { PROVIDER_DEFAULT_CAPABILITY } from "@openbot/contracts/team-protocol/provider-default-v1";
 import {
   PROVIDERS_ADMIN_CODE_SIGN_IN_PROVIDERS,
   PROVIDERS_ADMIN_ROUTES,
@@ -41,6 +43,7 @@ import {
   PROVIDERS_V5_ROUTES,
   PROVIDERS_V5_RUNTIME_PROVIDERS,
 } from "@openbot/contracts/team-protocol/providers-v5";
+import { PROVIDERS_V8_CAPABILITY, PROVIDERS_V8_ROUTES } from "@openbot/contracts/team-protocol/providers-v8";
 import { SIGN_IN_RELAY_CAPABILITY, SIGN_IN_RELAY_PROVIDERS } from "@openbot/contracts/team-protocol/sign-in-relay-v1";
 import type { MobileTextKey } from "@openbot/i18n/mobile";
 import {
@@ -51,8 +54,11 @@ import {
   clearProviderApiKey,
   completeSignInRelay,
   downloadProviderRuntime,
+  getHostProviderDefault,
   getProviderApiKeyState,
   getProviderRuntimes,
+  type HostProviderDefault,
+  setHostProviderDefault,
   setProviderApiKey,
   signInRelayStatus,
   startProviderCodeLogin,
@@ -104,9 +110,13 @@ function runtimeProviders(capabilities: readonly string[]): readonly ManagedProv
   return V1_RUNTIME_PROVIDERS;
 }
 
-/** The providers whose API key the host saves: OpenCode Go, and Muse and Gemini from `providers-v5`. */
+/**
+ * The providers whose API key the host saves: OpenCode Go, Muse and Gemini from `providers-v5`, and
+ * Inception, DeepSeek and OpenRouter from `providers-v8`.
+ */
 function providerHasApiKey(provider: AgentProviderId, capabilities: readonly string[]): boolean {
   if (provider === "opencode") return true;
+  if (isKeyOnlyProvider(provider)) return capabilities.includes(PROVIDERS_V8_CAPABILITY);
   return capabilities.includes(PROVIDERS_V5_CAPABILITY) && (provider === "muse" || provider === "antigravity");
 }
 
@@ -228,8 +238,9 @@ export function relayPage(
 }
 
 /**
- * The Providers admin of one host (`providers-v1` to `providers-v5`, `sign-in-relay-v1`), with the
- * newest route set that the host serves. The host checks the role on every route.
+ * The Providers admin of one host (`providers-v1` to `providers-v5`, the `providers-v8` key routes,
+ * `sign-in-relay-v1`, `provider-default-v1`), with the newest route set that the host serves. The
+ * host checks the role on every route.
  */
 export function createProviderAdmin(request: TeamApiRequest, capabilities: readonly string[]) {
   const has = (capability: string) => capabilities.includes(capability);
@@ -245,7 +256,12 @@ export function createProviderAdmin(request: TeamApiRequest, capabilities: reado
     : has(PROVIDERS_SIGN_IN_V3_CAPABILITY)
       ? PROVIDERS_SIGN_IN_V3_ROUTES
       : PROVIDERS_ADMIN_ROUTES;
-  const keyRoutes = has(PROVIDERS_V5_CAPABILITY) ? PROVIDERS_V5_ROUTES : PROVIDERS_ADMIN_ROUTES;
+  // As on the web client: `providers-v8` keeps every key that `providers-v5` keeps, and the key-only providers.
+  const keyRoutes = has(PROVIDERS_V8_CAPABILITY)
+    ? PROVIDERS_V8_ROUTES
+    : has(PROVIDERS_V5_CAPABILITY)
+      ? PROVIDERS_V5_ROUTES
+      : PROVIDERS_ADMIN_ROUTES;
   return {
     capabilities,
     readStatus: (): Promise<AgentStatus> => request("GET", TEAM_API_ROUTES.agents.status, decodeAgentStatus),
@@ -286,6 +302,15 @@ export function createProviderAdmin(request: TeamApiRequest, capabilities: reado
       runTeamRequest(setProviderApiKey(request, { provider, key }, keyRoutes)),
     clearKey: (provider: AgentProviderId): Promise<AgentStatus> =>
       runTeamRequest(clearProviderApiKey(request, provider, keyRoutes)),
+    /** Null when the host does not serve `provider-default-v1`. */
+    defaultProvider: has(PROVIDER_DEFAULT_CAPABILITY)
+      ? {
+          read: (): Promise<HostProviderDefault> => runTeamRequest(getHostProviderDefault(request)),
+          /** The provider's own default model, as the desktop Settings choice of a provider. */
+          set: (provider: AgentProviderId): Promise<HostProviderDefault> =>
+            runTeamRequest(setHostProviderDefault(request, provider, null)),
+        }
+      : null,
   };
 }
 

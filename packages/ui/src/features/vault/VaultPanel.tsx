@@ -11,7 +11,15 @@ import type {
   VaultSecretRequest,
   VaultState,
 } from "@openbot/contracts/ipc";
-import { cardBrand, VAULT_NOTES_LIMIT, VAULT_PASSWORD_LIMIT, VAULT_TEXT_LIMIT } from "@openbot/contracts/ipc";
+import {
+  API_KEY_NAME_PATTERN,
+  cardBrand,
+  VAULT_API_KEY_LIMIT,
+  VAULT_COUNTRY_CODES,
+  VAULT_NOTES_LIMIT,
+  VAULT_PASSWORD_LIMIT,
+  VAULT_TEXT_LIMIT,
+} from "@openbot/contracts/ipc";
 import type { AppTextKey } from "@openbot/i18n";
 import {
   Alert,
@@ -44,6 +52,7 @@ import {
   ItemMedia,
   ItemTitle,
   KeyRound,
+  KeySquare,
   NativeSelect,
   Pencil,
   Search,
@@ -65,17 +74,19 @@ import { useText } from "../../text";
 
 export interface VaultPanelProps {
   state: VaultState;
+  /** False for a server that cannot keep API keys: the kind is not offered. */
+  apiKeys: boolean;
   /** Adds an item when `id` is null. A null secret keeps the saved value. */
   onSave: (input: VaultSaveInput) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  /** The saved password, card number or security code, for the edit dialog. */
+  /** The saved password, card number, security code or API key, for the edit dialog. */
   onReveal: (request: VaultSecretRequest) => Promise<string>;
-  /** Puts the saved value on the clipboard. The value does not come to this window. */
+  /** Puts the saved value on the clipboard. On desktop the value does not come to this window. */
   onCopy: (request: VaultSecretRequest) => Promise<void>;
   /** Puts a username or an address on the clipboard. */
   onCopyText: (value: string) => Promise<void>;
-  /** Opens the file dialog. Null when the user closes it. */
-  onImportCsv: () => Promise<VaultImportResult>;
+  /** Opens the file dialog. Null when the user closes it. Absent for a joined server: no import. */
+  onImportCsv?: (() => Promise<VaultImportResult>) | undefined;
   /** Deletes the Vault file that cannot be read, and starts again with no items. */
   onReset: () => Promise<void>;
   /** Where the menus open, so they stay inside the settings page. */
@@ -89,6 +100,7 @@ const FILTERS = [
   { value: "login", label: "vault.filter.login", empty: "vault.emptyLogin" },
   { value: "card", label: "vault.filter.card", empty: "vault.emptyCard" },
   { value: "contact", label: "vault.filter.contact", empty: "vault.emptyContact" },
+  { value: "apiKey", label: "vault.filter.apiKey", empty: "vault.emptyApiKey" },
 ] as const satisfies readonly { value: Filter; label: AppTextKey; empty: AppTextKey }[];
 
 const isFilter = (value: string): value is Filter => FILTERS.some((item) => item.value === value);
@@ -97,12 +109,14 @@ const KIND_LABEL = {
   login: "vault.kind.login",
   card: "vault.kind.card",
   contact: "vault.kind.contact",
+  apiKey: "vault.kind.apiKey",
 } as const satisfies Record<VaultItemKind, AppTextKey>;
 
 const NEW_TITLE = {
   login: "vault.newLogin",
   card: "vault.newCard",
   contact: "vault.newContact",
+  apiKey: "vault.newApiKey",
 } as const satisfies Record<VaultItemKind, AppTextKey>;
 
 /** Brand names are not translated. */
@@ -120,27 +134,8 @@ const SECRET_TEXT = {
   password: { show: "vault.showPassword", hide: "vault.hidePassword", copy: "vault.copyPassword" },
   number: { show: "vault.showNumber", hide: "vault.hideNumber", copy: "vault.copyNumber" },
   securityCode: { show: "vault.showSecurityCode", hide: "vault.hideSecurityCode", copy: "vault.copySecurityCode" },
+  key: { show: "vault.showKey", hide: "vault.hideKey", copy: "vault.copyKey" },
 } as const satisfies Record<VaultSecretField, { show: AppTextKey; hide: AppTextKey; copy: AppTextKey }>;
-
-const COUNTRY_CODES = [
-  "AT",
-  "AU",
-  "BE",
-  "CA",
-  "CH",
-  "DE",
-  "DK",
-  "ES",
-  "FR",
-  "GB",
-  "IE",
-  "IT",
-  "JP",
-  "NL",
-  "PL",
-  "SE",
-  "US",
-];
 
 const digitsOf = (value: string) => value.replace(/\D/gu, "");
 
@@ -169,7 +164,8 @@ type CardDraft = {
   fillSites: string[];
 };
 type ContactDraft = { kind: "contact" } & VaultContactFields;
-type Draft = LoginDraft | CardDraft | ContactDraft;
+type ApiKeyDraft = { kind: "apiKey"; name: string; notes: string; key: string };
+type Draft = LoginDraft | CardDraft | ContactDraft | ApiKeyDraft;
 
 const EMPTY_CONTACT: VaultContactFields = {
   label: "",
@@ -212,6 +208,10 @@ function draftOf(kind: VaultItemKind, item: VaultItemSummary | null): Draft {
           billingContactId: "",
           fillSites: [],
         };
+  if (kind === "apiKey")
+    return item?.kind === "apiKey"
+      ? { kind, name: item.name, notes: item.notes, key: "" }
+      : { kind, name: "", notes: "", key: "" };
   if (item?.kind === "contact") {
     const { id: _id, kind: _kind, ...fields } = item;
     return { kind, ...fields };
@@ -229,6 +229,11 @@ function draftReady(draft: Draft, saved: VaultItemSummary | null): boolean {
     const codeReady = draft.securityCode === "" || /^\d{3,4}$/u.test(draft.securityCode.trim());
     return numberReady && codeReady && parseExpiry(draft.expiry) !== null;
   }
+  if (draft.kind === "apiKey")
+    return (
+      API_KEY_NAME_PATTERN.test(draft.name.trim()) &&
+      (draft.key.trim() !== "" || (saved?.kind === "apiKey" && saved.hasKey))
+    );
   // The same rule as main: a label alone is not contact info.
   return [draft.fullName, draft.address, draft.phone, draft.email].some((field) => field.trim() !== "");
 }
@@ -261,6 +266,14 @@ function saveInput(draft: Draft, id: string | null): VaultSaveInput {
       fillSites: draft.fillSites,
     };
   }
+  if (draft.kind === "apiKey")
+    return {
+      kind: "apiKey",
+      id,
+      name: draft.name.trim(),
+      notes: draft.notes,
+      key: draft.key.trim() === "" ? null : draft.key,
+    };
   const { kind: _kind, ...fields } = draft;
   return { kind: "contact", id, ...fields };
 }
@@ -273,14 +286,16 @@ function itemMatches(item: VaultItemSummary, query: string): boolean {
       ? [item.website, item.username, item.notes]
       : item.kind === "card"
         ? [item.label, item.nameOnCard, item.last4, item.brand ? BRAND_NAME[item.brand] : ""]
-        : [item.label, item.fullName, item.address, item.city, item.email, item.phone];
+        : item.kind === "apiKey"
+          ? [item.name, item.notes]
+          : [item.label, item.fullName, item.address, item.city, item.email, item.phone];
   return text.some((value) => value.toLowerCase().includes(needle));
 }
 
 /**
  * The Vault of the computer that runs the agents, in its server settings: filter tabs with counts,
- * one list, and a dialog to add or edit an item. A list item never carries a password, a card number
- * or a security code; the edit dialog asks for one only when the user shows it.
+ * one list, and a dialog to add or edit an item. A list item never carries a password, a card number,
+ * a security code or an API key; the edit dialog asks for one only when the user shows it.
  */
 export function VaultPanel(props: VaultPanelProps) {
   const { t, errorDetails, locale } = useText();
@@ -298,7 +313,7 @@ export function VaultPanel(props: VaultPanelProps) {
   const regionNames = createMemo(() => new Intl.DisplayNames([locale()], { type: "region" }));
   const countryName = (code: string) => (code ? (regionNames().of(code) ?? code) : "");
   const countries = createMemo(() =>
-    COUNTRY_CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) => a.name.localeCompare(b.name)),
+    VAULT_COUNTRY_CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) => a.name.localeCompare(b.name)),
   );
   const contactLine = (contact: VaultContactFields) =>
     [contact.address, contact.city, contact.postalCode, countryName(contact.country)].filter(Boolean).join(", ");
@@ -308,12 +323,14 @@ export function VaultPanel(props: VaultPanelProps) {
   const itemTitle = (item: VaultItemSummary) => {
     if (item.kind === "login") return item.website || t("vault.untitledLogin");
     if (item.kind === "card") return item.label || maskedCard(item);
+    if (item.kind === "apiKey") return item.name;
     return item.label || item.fullName || t("vault.untitledContact");
   };
   const itemDetail = (item: VaultItemSummary) => {
     if (item.kind === "login") return item.username || t("vault.noUsername");
     if (item.kind === "card")
       return t("vault.cardSummary", { last4: item.last4, expiry: expiryText(item.expMonth, item.expYear) });
+    if (item.kind === "apiKey") return item.notes || t("vault.kind.apiKey");
     return contactLine(item) || item.email || item.phone;
   };
   // An item that an agent added names the agent, so the user can find what agents saved.
@@ -321,6 +338,7 @@ export function VaultPanel(props: VaultPanelProps) {
     [itemDetail(item), item.addedBy ? t("vault.addedBy", { agent: item.addedBy }) : ""].filter(Boolean).join(" · ");
 
   const ready = () => props.state.status === "ready";
+  const filters = () => FILTERS.filter((item) => item.value !== "apiKey" || props.apiKeys);
   const contacts = () => props.state.items.filter((item): item is VaultContactSummary => item.kind === "contact");
   const count = (kind: Filter) => props.state.items.filter((item) => kind === "all" || item.kind === kind).length;
   const visible = (kind: Filter) =>
@@ -356,7 +374,7 @@ export function VaultPanel(props: VaultPanelProps) {
   async function importCsv(): Promise<void> {
     let result: VaultImportResult = null;
     const done = await run(async () => {
-      result = await props.onImportCsv();
+      result = (await props.onImportCsv?.()) ?? null;
     });
     const imported: VaultImportResult = result;
     if (!done || imported === null) return;
@@ -425,21 +443,25 @@ export function VaultPanel(props: VaultPanelProps) {
             description={t("vault.items.description")}
             actions={
               <NewItemMenu
+                kinds={filters().flatMap((item) => (item.value === "all" ? [] : [item.value]))}
                 mount={props.menuMount}
                 onNew={(kind) => openEdit(kind, null)}
-                onImport={() =>
-                  setUi((draft) => {
-                    draft.failure = null;
-                    draft.notice = null;
-                    draft.importing = true;
-                  })
+                onImport={
+                  props.onImportCsv
+                    ? () =>
+                        setUi((draft) => {
+                          draft.failure = null;
+                          draft.notice = null;
+                          draft.importing = true;
+                        })
+                    : undefined
                 }
               />
             }
           >
             <div class="vault-toolbar">
               <SlidingTabs.List aria-label={t("vault.filter.label")}>
-                <For each={FILTERS}>
+                <For each={filters()}>
                   {(item) => (
                     <SlidingTabs.Trigger value={item.value}>
                       {t(item.label)} <span class="vault-count">{count(item.value)}</span>
@@ -477,7 +499,7 @@ export function VaultPanel(props: VaultPanelProps) {
               )}
             </Show>
             <SlidingTabs.ContentSlot>
-              <For each={FILTERS}>
+              <For each={filters()}>
                 {(tab) => (
                   <SlidingTabs.Content value={tab.value}>
                     <ItemGroup class="settings-modal-card" surface="subtle" aria-label={t(tab.label)}>
@@ -621,7 +643,18 @@ function KindIcon(props: { kind: VaultItemKind }) {
         <Match when={props.kind === "contact"}>
           <UserRound />
         </Match>
+        <Match when={props.kind === "apiKey"}>
+          <KeySquare />
+        </Match>
       </Switch>
+    </span>
+  );
+}
+
+function ApiKeyLogo() {
+  return (
+    <span class="vault-logo integration-logo-tile" aria-hidden="true">
+      <KeySquare />
     </span>
   );
 }
@@ -721,6 +754,9 @@ function ItemLogo(props: { item: VaultItemSummary }) {
       <Match when={props.item.kind === "contact" ? props.item : undefined}>
         {(contact) => <ContactLogo name={contact().fullName || contact().label} />}
       </Match>
+      <Match when={props.item.kind === "apiKey"}>
+        <ApiKeyLogo />
+      </Match>
     </Switch>
   );
 }
@@ -738,6 +774,9 @@ function DraftLogo(props: { draft: Draft; saved: VaultItemSummary | null }) {
       </Match>
       <Match when={props.draft.kind === "contact" ? props.draft : undefined}>
         {(contact) => <ContactLogo name={contact().fullName || contact().label} />}
+      </Match>
+      <Match when={props.draft.kind === "apiKey"}>
+        <ApiKeyLogo />
       </Match>
     </Switch>
   );
@@ -758,9 +797,11 @@ function ItemMenu(props: {
   const secrets = (): VaultSecretField[] => {
     const item = props.item;
     if (item.kind === "login") return item.hasPassword ? ["password"] : [];
+    if (item.kind === "apiKey") return item.hasKey ? ["key"] : [];
     return item.kind === "card" ? ["number", "securityCode"] : [];
   };
   const username = () => (props.item.kind === "login" ? props.item.username : "");
+  const variableName = () => (props.item.kind === "apiKey" ? props.item.name : "");
   return (
     <DropdownMenu.Root placement="bottom-end" gutter={4} modal={false}>
       <DropdownMenu.Trigger
@@ -780,6 +821,14 @@ function ItemMenu(props: {
               <DropdownMenu.Item onSelect={() => props.onCopyText(value())}>
                 <Copy aria-hidden="true" />
                 {t("vault.copyUsername")}
+              </DropdownMenu.Item>
+            )}
+          </Show>
+          <Show when={variableName()}>
+            {(value) => (
+              <DropdownMenu.Item onSelect={() => props.onCopyText(value())}>
+                <Copy aria-hidden="true" />
+                {t("vault.copyVariableName")}
               </DropdownMenu.Item>
             )}
           </Show>
@@ -810,11 +859,12 @@ function ItemMenu(props: {
   );
 }
 
-/** "New item" with the three kinds and the import. */
+/** "New item" with each kind that the server keeps, and the import when the server has one. */
 function NewItemMenu(props: {
+  kinds: readonly VaultItemKind[];
   mount: HTMLElement | undefined;
   onNew: (kind: VaultItemKind) => void;
-  onImport: () => void;
+  onImport: (() => void) | undefined;
 }) {
   const { t } = useText();
   return (
@@ -825,7 +875,7 @@ function NewItemMenu(props: {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal mount={props.mount ?? document.body}>
         <DropdownMenu.Content>
-          <For each={["login", "card", "contact"] as const}>
+          <For each={props.kinds}>
             {(kind) => (
               <DropdownMenu.Item onSelect={() => props.onNew(kind)}>
                 <KindIcon kind={kind} />
@@ -833,11 +883,17 @@ function NewItemMenu(props: {
               </DropdownMenu.Item>
             )}
           </For>
-          <DropdownMenu.Separator />
-          <DropdownMenu.Item onSelect={() => props.onImport()}>
-            <Upload aria-hidden="true" />
-            {t("vault.importMenu")}
-          </DropdownMenu.Item>
+          <Show when={props.onImport}>
+            {(onImport) => (
+              <>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item onSelect={() => onImport()()}>
+                  <Upload aria-hidden="true" />
+                  {t("vault.importMenu")}
+                </DropdownMenu.Item>
+              </>
+            )}
+          </Show>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -932,9 +988,14 @@ function ItemDialog(props: {
     const current = draft();
     return current.kind === "contact" ? current : undefined;
   };
+  const apiKeyDraft = () => {
+    const current = draft();
+    return current.kind === "apiKey" ? current : undefined;
+  };
   const saved = (field: VaultSecretField) => {
     const item = props.item;
     if (field === "password") return item?.kind === "login" && item.hasPassword;
+    if (field === "key") return item?.kind === "apiKey" && item.hasKey;
     return item?.kind === "card";
   };
   const secretProps = (field: VaultSecretField) => ({
@@ -1164,6 +1225,45 @@ function ItemDialog(props: {
                 maxlength={VAULT_TEXT_LIMIT}
                 value={contact().email}
                 onValueChange={(email) => set(contact(), { email })}
+              />
+            </Field>
+          </div>
+        )}
+      </Match>
+      <Match when={apiKeyDraft()}>
+        {(apiKey) => (
+          <div class="vault-fields">
+            <Field label={t("vault.field.variableName")} description={t("vault.variableNameHint")} class="vault-wide">
+              <Input
+                placeholder={t("vault.placeholder.variableName")}
+                autocomplete="off"
+                spellcheck={false}
+                maxlength={64}
+                value={apiKey().name}
+                onInput={(event) => {
+                  // The field shows the capitals that it keeps, so the binding has no other text to restore.
+                  const input = event.currentTarget;
+                  const { selectionStart, selectionEnd } = input;
+                  input.value = input.value.toUpperCase();
+                  input.setSelectionRange(selectionStart, selectionEnd);
+                  set(apiKey(), { name: input.value });
+                }}
+              />
+            </Field>
+            <Field label={t("vault.field.apiKey")} class="vault-wide">
+              <SecretInput
+                {...secretProps("key")}
+                maxlength={VAULT_API_KEY_LIMIT}
+                value={apiKey().key}
+                onChange={(key) => set(apiKey(), { key })}
+              />
+            </Field>
+            <Field label={t("vault.field.notes")} class="vault-wide">
+              <Textarea
+                rows={2}
+                maxlength={VAULT_NOTES_LIMIT}
+                value={apiKey().notes}
+                onInput={(event) => set(apiKey(), { notes: event.currentTarget.value })}
               />
             </Field>
           </div>

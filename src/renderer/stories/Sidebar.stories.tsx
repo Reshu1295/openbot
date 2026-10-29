@@ -2,6 +2,7 @@ import type { ChannelSummary, HiddenAgent, SidebarLayoutAction, SidebarLayoutSna
 import type { AvatarMood } from "@openbot/ui/bloub-avatar";
 import { Sidebar } from "@openbot/ui/features/sidebar/Sidebar";
 import { SidebarCommunityCard } from "@openbot/ui/features/sidebar/SidebarCommunityCard";
+import { SidebarMachineCard } from "@openbot/ui/features/sidebar/SidebarMachineCard";
 import { SidebarMobileAppCard } from "@openbot/ui/features/sidebar/SidebarMobileAppCard";
 import { SidebarStorageCard } from "@openbot/ui/features/sidebar/SidebarStorageCard";
 import { normalizeSidebarPinnedItems, type SidebarPinnedItem } from "@openbot/ui/features/sidebar/sidebar-pins";
@@ -369,6 +370,46 @@ export const StorageFull: Story = {
   decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
 };
 
+/** The disk of a hosted server passed the 80% alert level that an admin set. */
+export const MachineDiskAlert: Story = {
+  args: {
+    footer: (
+      <SidebarMachineCard
+        serverName="Acme HQ"
+        metric="disk"
+        percent={87}
+        level={80}
+        freeBytes={9.6 * GB}
+        recipientName="Alice Chen"
+        critical={false}
+        onOpenDetails={fn()}
+        onDismiss={fn()}
+      />
+    ),
+  },
+  decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
+};
+
+/** Memory far above its level: the card is red and has no close button. */
+export const MachineMemoryCritical: Story = {
+  args: {
+    footer: (
+      <SidebarMachineCard
+        serverName="Acme HQ"
+        metric="memory"
+        percent={97}
+        level={85}
+        freeBytes={0.4 * GB}
+        recipientName="Alice Chen"
+        critical
+        onOpenDetails={fn()}
+        onDismiss={fn()}
+      />
+    ),
+  },
+  decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
+};
+
 export const PinnedOne: Story = {
   args: { pinnedItems: pinnedOne },
   decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
@@ -657,6 +698,19 @@ export const Channels: Story = {
       { kind: "channel", id: "channel-4" },
       { kind: "agent", id: "chief" },
     ],
+  },
+  decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
+};
+
+/** Two channels whose work waits for the user: one in "Needs you" with an agent, one pinned. */
+export const ChannelsWaiting: Story = {
+  args: {
+    ...Channels.args,
+    agentStates: { ...agentStates, research: { kind: "waiting", reason: "question", detail: "Which quarter?" } },
+    channelWaits: {
+      "channel-2": { kind: "waiting", reason: "takeover", detail: null },
+      "channel-4": { kind: "waiting", reason: "approval", detail: "git push origin main" },
+    },
   },
   decorators: [(Story) => <div style={{ width: "280px", height: "100vh" }}>{Story()}</div>],
 };

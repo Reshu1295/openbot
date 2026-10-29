@@ -125,6 +125,7 @@ const PROVIDER_DESCRIPTION_KEYS: Readonly<Record<string, AppTextKey>> = {
   "Free models with a Cline account": "onboarding.provider.clineAccount",
   "Mercury models with an Inception API key": "onboarding.provider.inceptionKey",
   "DeepSeek models with a DeepSeek API key": "onboarding.provider.deepseekKey",
+  "Many models with an OpenRouter API key": "onboarding.provider.openrouterKey",
 };
 
 /**
@@ -719,6 +720,7 @@ export function SetupProviderPicker(props: SetupProviderPickerProps) {
       <Show when={source().onAddCustomProvider}>
         <CustomProviderDialog
           open={props.providers.host.state.open}
+          contextWindows={!source().hostProviders}
           busy={props.providers.host.state.saving}
           submitError={props.providers.host.state.submitError}
           takenProviderIds={(source().customProviders ?? []).map((provider) => provider.id)}

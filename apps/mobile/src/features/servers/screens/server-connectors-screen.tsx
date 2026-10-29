@@ -59,18 +59,25 @@ function messagingSummary(
 
 /**
  * Server settings › Connectors: the connectors of a joined server, for an owner or admin. A row that
- * is set up sorts into the first section with its status; the others wait below. Bitwarden runs only
- * on the computer that runs OpenBot, so it shows with no action, as on the desktop.
+ * is set up sorts into the first section with its status; the others wait below. A host without
+ * `bitwarden-connector-v1` connects Bitwarden only on its own computer, so it shows with no action.
  */
 export function ServerConnectorsScreen() {
   const text = useText();
   const { t } = text;
   const { serverId } = useLocalSearchParams<{ serverId: string }>();
-  const { server, agents, connectors, onePasswordAvailable, messaging, github, onePassword } = useServerConnectors(
-    serverId,
-    "all",
-  );
-  if (!server || !(connectors || onePasswordAvailable))
+  const {
+    server,
+    agents,
+    connectors,
+    onePasswordAvailable,
+    bitwardenAvailable,
+    messaging,
+    github,
+    onePassword,
+    bitwarden,
+  } = useServerConnectors(serverId, "all");
+  if (!server || !(connectors || onePasswordAvailable || bitwardenAvailable))
     return (
       <SettingsContent>
         <SettingsNote>{t(server ? "mobile.server.connectors.unavailable" : "mobile.server.unavailable")}</SettingsNote>
@@ -84,15 +91,31 @@ export function ServerConnectorsScreen() {
     summary: t("mobile.server.connectors.readFailed"),
   });
   const row = (id: MobileConnectorId): ConnectorRow[] => {
-    if (id === "bitwarden")
+    if (id === "bitwarden") {
+      if (!bitwardenAvailable)
+        return [
+          {
+            id,
+            status: "unavailable",
+            statusLabel: t(CONNECTOR_STATUS_KEYS.unavailable),
+            summary: t("mobile.server.connectors.bitwarden.summary"),
+          },
+        ];
+      const status = bitwarden.data;
+      if (!status) return bitwarden.isError ? [unknown(id)] : [];
+      const state: ConnectorStatus = status.connecting ? "connecting" : status.connected ? "connected" : "idle";
       return [
         {
           id,
-          status: "unavailable",
-          statusLabel: t(CONNECTOR_STATUS_KEYS.unavailable),
-          summary: t("mobile.server.connectors.bitwarden.summary"),
+          status: state,
+          statusLabel: t(CONNECTOR_STATUS_KEYS[state]),
+          summary:
+            status.connected && status.serverUrl
+              ? status.serverUrl
+              : t("mobile.server.connectors.bitwarden.hostSummary"),
         },
       ];
+    }
     if (id === "github") {
       if (!connectors) return [];
       const status = github.data;
@@ -159,7 +182,7 @@ export function ServerConnectorsScreen() {
   const waits = (item: ConnectorRow) => item.status === "idle" || item.status === "unavailable";
   const active = rows.filter((item) => !waits(item));
   const idle = rows.filter(waits);
-  const loading = [messaging.slack, messaging.discord, messaging.telegram, github, onePassword].some(
+  const loading = [messaging.slack, messaging.discord, messaging.telegram, github, onePassword, bitwarden].some(
     (query) => query.isLoading,
   );
   const item = (entry: ConnectorRow) => (

@@ -83,6 +83,8 @@ export const messages = {
   "error.backend.channelDeliveryNotCreated": "La distribution dans le canal n’a pas été créée.",
   "error.backend.channelAssignmentStopped": "Cette tâche de canal a été arrêtée ou remplacée.",
   "error.backend.channelAssigneeUnavailable": "L’agent assigné est indisponible.",
+  "error.backend.channelAssigneeRemoved": "Le membre assigné a été retiré.",
+  "error.backend.channelAssigneeReassign": "Le membre assigné est indisponible. Réassignez cette tâche.",
   "error.backend.channelAssignmentChanged": "Cette tâche de canal a changé.",
   "error.backend.channelMemberRequired": "Sélectionnez un membre disponible de ce canal.",
   "error.backend.memoryEssentialBudget":
@@ -202,8 +204,11 @@ export const messages = {
   "error.backend.routineFlowHandoffFailed": "La routine n’a pas pu transmettre le travail à cet agent.",
   "error.backend.mcpServerLimit": "OpenBot garde jusqu’à {limit} serveurs MCP.",
   "error.backend.mcpServerNameTaken": "Un serveur MCP nommé {name} existe déjà.",
+  "error.backend.mcpServerInvalid": "OpenBot ne peut pas enregistrer cette configuration de serveur MCP.",
   "error.backend.mcpServerNoAnswer": "Le serveur n’a pas répondu en {seconds} secondes.",
   "error.backend.mcpSignInNotAccepted": "Le serveur n’a pas accepté cette connexion.",
+  "error.backend.mcpSignInClientRefused":
+    "Le serveur de connexion n’a pas accepté OpenBot à la fin de la connexion. Connectez-vous à nouveau : OpenBot s’enregistre de nouveau auprès du serveur.",
   "error.backend.mcpCommandNotFound": "Commande introuvable : {command}",
   "error.backend.mcpRegistrationRefused":
     "Le serveur de connexion n’accepte pas encore OpenBot comme application. Votre compte n’en est pas la cause. Utilisez un autre moyen de connexion, par exemple un serveur MCP local.",
@@ -336,6 +341,15 @@ export const messages = {
   "error.backend.taskNotFound": "Cette tâche n’est pas disponible.",
   "error.backend.taskClosed": "Cette tâche est fermée. Rouvrez-la pour envoyer un message.",
   "error.backend.taskStillRunning": "Cette tâche est toujours en cours. Attendez qu’elle s’arrête, puis fermez-la.",
+  "error.backend.threadNotFound": "Ce fil n’est pas disponible.",
+  "error.backend.threadStillRunning": "Ce fil est toujours en cours. Arrêtez-le, puis réessayez.",
+  "error.backend.threadArchived": "Ce fil est archivé. Restaurez-le pour envoyer un message.",
+  "error.backend.threadTitleRequired": "Donnez un titre court au fil.",
+  "error.backend.threadOpenLimitReached":
+    "Cet agent a {count} fils ouverts. Archivez un fil, puis lancez-en ou restaurez-en un autre.",
+  "error.backend.threadRemoteUnsupported": "Les fils sont disponibles uniquement pour les agents de cet ordinateur.",
+  "error.backend.threadMoveRefused":
+    "Seul un message envoyé uniquement à cet agent peut s’exécuter dans un nouveau fil.",
   "error.backend.taskTitleRequired": "Donnez un titre court à la tâche.",
   "error.backend.taskToolInvalid":
     "Donnez à la tâche un titre de 120 caractères au plus et des consignes qui disent quoi faire.",

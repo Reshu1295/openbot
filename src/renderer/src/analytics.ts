@@ -1,3 +1,4 @@
+import { isKeyOnlyProvider } from "@openbot/contracts/agent-providers";
 import {
   BILLING_CURRENCIES,
   BILLING_INTERVALS,
@@ -752,7 +753,9 @@ function sanitizeDesktopAnalyticsEvent(
 function reportedModel(value: string): string {
   const separator = value.indexOf("/");
   if (separator < 0) return value;
-  return isOneOf(AGENT_PROVIDERS, value.slice(0, separator)) ? value : "custom";
+  // A key-only provider never puts its own id before a model id, so that prefix comes from OpenCode.
+  const prefix = value.slice(0, separator);
+  return isOneOf(AGENT_PROVIDERS, prefix) && !isKeyOnlyProvider(prefix) ? value : "custom";
 }
 
 function sanitizeDesktopProperty(

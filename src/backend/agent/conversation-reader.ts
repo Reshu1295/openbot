@@ -95,8 +95,14 @@ export class ConversationReader {
     });
   }, Effect.uninterruptible);
 
-  search(query: string, agentId?: string, cursor?: string, limit = 100): ConversationSearchPage {
-    return this.#store.database.searchConversationMessages(query, agentId, cursor, limit);
+  search(
+    query: string,
+    agentId?: string,
+    cursor?: string,
+    limit = 100,
+    includeSideThreads = false,
+  ): ConversationSearchPage {
+    return this.#store.database.searchConversationMessages(query, agentId, cursor, limit, includeSideThreads);
   }
 
   searchFiles(query: string, cursor?: string, limit = 50): ConversationFileSearchPage {
@@ -109,6 +115,21 @@ export class ConversationReader {
 
   adoptReads(sourceMemberId: string, targetMemberId: string): void {
     this.#reads.adoptMemberState(sourceMemberId, targetMemberId);
+  }
+
+  /** The member's read mark of a side thread, by the thread's own id. */
+  readThread(memberId: string, threadId: string, options: ConversationMarkerExclusions = {}) {
+    return this.#reads.readStateForThread(memberId, threadId, options);
+  }
+
+  /** Moves the member's read mark of a side thread. The mark never moves back. */
+  markThreadRead(
+    memberId: string,
+    threadId: string,
+    throughMessageId: string,
+    options: ConversationMarkerExclusions = {},
+  ) {
+    return this.#reads.markReadForThread(memberId, threadId, throughMessageId, options);
   }
 
   readonly markRead = Effect.fn("ConversationReader.markRead")(function* (

@@ -83,6 +83,24 @@ missing, the command stops with setup instructions. The standard command does no
 look for RocketSim, even if `ROCKETSIM_APP_PATH` or the old `OPENBOT_ROCKETSIM`
 variable is set.
 
+The iOS commands keep the Xcode build in `ios/DerivedData`, not in
+`~/Library/Developer/Xcode/DerivedData`, so removing a worktree removes its build. Do not remove
+`ios/build`: CocoaPods writes codegen output there. When that output is missing, `bun mobile:ios`
+installs the pods again. Metro keeps its
+caches in `.expo/metro-cache` and `.expo/metro-file-map` of the worktree.
+
+`bun mobile:android` also applies the config plugins without clearing `android/`, then runs
+`expo run:android`. Three local settings make a build in a new worktree faster:
+
+- A release variant builds native code only for the ABIs of the connected devices and running
+  emulators, not for all four. Pass `--all-arch` to build every ABI.
+- The local `android/gradle.properties` gets `org.gradle.caching=true`. Worktrees share Gradle task
+  outputs in `~/.gradle/caches/build-cache-1`. The app config, fingerprint and EAS builds stay the
+  same.
+- `CCACHE_BASEDIR` and `CCACHE_NOHASHDIR` let ccache share the C++ results of the app CMake project
+  between worktrees. Install ccache with `brew install ccache`; React Native uses it when it is on
+  `PATH`.
+
 The local launcher enables RocketSim Connect in the local native project. The config plugin
 loads it before React Native starts, only in Debug builds on the iOS Simulator.
 It does not copy the framework into the app. Release builds and physical devices
@@ -484,7 +502,7 @@ store and the file is not ready, and the Changelog workflow stops such a pull re
 
 The message mentions the `Mobile Release Pings` role, then has the title
 `OpenBot vx.y.z is out on iOS and Android`, the highlights, and one line of links:
-`iOS (TestFlight) · Android · Full Changelog`. The last link opens the version on the Mobile tab of
+`iOS · Android · Full Changelog`. The last link opens the version on the Mobile tab of
 `/changelog`. It notifies only that role.
 
 One-time setup:

@@ -681,6 +681,8 @@ Agent processes (`AgentProcesses` in `src/main/server-memory.ts`):
   `os.availableParallelism()` count only the CPUs of the cgroup limit (`cpu.max`) and of the CPU
   affinity. It changes nothing without a limit, or when `/proc` already shows the limit (LXCFS). Codex gets both variables in the
   environment of its app-server, not in each thread configuration, so its sessions are not replaced.
+  The Claude Agent SDK removes `NODE_OPTIONS` from the environment of the CLI, so Claude gets it in
+  the `env` of its flag settings (`--settings`), which the CLI gives to the Bash tool and its hooks.
 
 When the level is `ok` again, each held message starts. If a file cannot be read, the level stays
 `ok` and main logs one warning.

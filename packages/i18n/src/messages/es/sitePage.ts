@@ -45,8 +45,7 @@ export const messages = {
   "sitePage.connect.failure.tabClosed":
     "La pestaña de OpenBot que inició la conexión con {name} no respondió. Abre OpenBot en tu navegador y vuelve a conectar {name}.",
   "sitePage.connect.failure.failed": "{name} no terminó la conexión. Inténtalo de nuevo.",
-  "sitePage.connect.restartHint":
-    "En OpenBot, abre {serverSettings}, luego {connectors}, luego {name}, y selecciona {connect}.",
+  "sitePage.connect.restartHint": "En OpenBot, abre {marketplace}, luego {apps}, luego {name}, y selecciona {connect}.",
   "sitePage.connect.notOpened":
     "Inicia OpenBot y vuelve a intentarlo. Si OpenBot no está en este ordenador, descárgalo y conecta {name} desde la app.",
   "sitePage.openApp.title": "¿No se abrió nada?",

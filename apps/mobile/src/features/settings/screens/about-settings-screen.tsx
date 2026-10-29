@@ -31,7 +31,7 @@ export function AboutSettingsScreen() {
         <SettingsRow onPress={() => open("https://openbot.run")}>
           <Typography.Paragraph>{t("mobile.settings.about.website")}</Typography.Paragraph>
         </SettingsRow>
-        <SettingsRow onPress={() => open("https://github.com/nightly-labs/openbot/blob/main/PRIVACY.md")}>
+        <SettingsRow onPress={() => open("https://openbot.run/privacy-policy")}>
           <Typography.Paragraph>{t("mobile.settings.about.privacy")}</Typography.Paragraph>
         </SettingsRow>
         {error ? <SettingsNote>{error}</SettingsNote> : null}

@@ -13,6 +13,7 @@ import { usePlatform } from "../../platform";
 import { useProviders } from "../../providers";
 import { queueAfterTurnCompleted } from "../../queue-reconciliation";
 import { useTurns } from "../../turns";
+import { useUiErrors } from "../../ui-errors";
 import { useAuth } from "../account/account-context";
 import { useAgentTasks } from "../agent-tasks/agent-tasks-context";
 import { useBrowserTabs } from "../browser/browser-context";
@@ -27,7 +28,14 @@ import { useSidebar } from "../sidebar/sidebar-context";
 import { readDictatedReplies } from "../speech/speech-replies";
 import { claimErrorToast, providerErrorTitle, readableAgentError } from "./agent-error-text";
 import { createAgentEventSounds } from "./agent-event-sounds";
-import { reconcileAttentionApprovals, reconcileAttentionPrompts } from "./agent-runtime-snapshot";
+import {
+  attentionAgentId,
+  attentionEventKey,
+  attentionKey,
+  reconcileAttentionApprovals,
+  reconcileAttentionPrompts,
+  withoutAttention,
+} from "./agent-runtime-snapshot";
 import { useAgents } from "./agents-context";
 import { agentsPort } from "./agents-port";
 
@@ -54,6 +62,7 @@ export function AgentEventBridge() {
   const { agentList, setModelOptions, explicitlyOpenedAgentChatId, applyStoredAgents, applyUserHiddenAgents } =
     useAgents();
   const { setConversationErrors, setConversationErrorRuns } = useConversationController();
+  const { setUiErrors } = useUiErrors();
   const agentTasks = useAgentTasks();
   const {
     applyRuntimeMessages,
@@ -77,6 +86,7 @@ export function AgentEventBridge() {
     setUsageLimitedModels,
     setWaitedUsageLimits,
     setContextStates,
+    setThreadContextStates,
     setQueues,
     setPendingPrompts,
     setPresentedPromptResolutions,
@@ -223,14 +233,24 @@ export function AgentEventBridge() {
             : withoutAgent(current, event.agentId),
         );
         setActiveTurns((current) => ({ ...current, [event.agentId]: null }));
+        // A steer refusal is about the turn that ended. Kept, it shows below the turn's last reply (#3206).
+        setUiErrors((current) => {
+          const key = agentConversationKey(activeServerId(), event.agentId);
+          const steerStatus = currentText().t("app.errorStatus.steer");
+          const errors = current[key];
+          if (!errors?.some((error) => error.status === steerStatus)) return current;
+          return { ...current, [key]: errors.filter((error) => error.status !== steerStatus) };
+        });
         setQueues((current) => {
           const snapshot = current[event.agentId];
           if (!snapshot) return current;
           const next = queueAfterTurnCompleted(snapshot, event.turnId);
           return next === snapshot ? current : { ...current, [event.agentId]: next };
         });
+        // Only the wait of this turn's thread: another thread of the agent can still wait for the user.
         setPendingPrompts((current) => {
-          const pending = current[event.agentId];
+          const key = attentionKey(event.agentId, event.threadId);
+          const pending = current[key];
           const submittedRequestKey = submittedPromptRequests()[event.agentId];
           if (
             pending?.type === "prompt" &&
@@ -238,7 +258,7 @@ export function AgentEventBridge() {
           ) {
             return current;
           }
-          return { ...current, [event.agentId]: undefined };
+          return pending ? withoutAttention(current, (candidate) => attentionEventKey(candidate) === key) : current;
         });
         // Only the approvals of this turn's thread: a task of the agent can still wait for one.
         setApprovals((current) =>
@@ -250,18 +270,30 @@ export function AgentEventBridge() {
         }
         return;
       case "prompt":
-        setPendingPrompts((current) => ({ ...current, [event.agentId]: event }));
-        setPresentedPromptResolutions((current) => ({ ...current, [event.agentId]: undefined }));
-        setSubmittedPromptRequests((current) => ({ ...current, [event.agentId]: undefined }));
+        setPendingPrompts((current) => ({ ...current, [attentionEventKey(event)]: event }));
+        // The agent id keys the answer marks of the agent's own chat. A side thread's question keeps
+        // them and clears only the mark of its own thread.
+        if (agentList().some((agent) => agent.id === event.agentId && agent.threadId === event.threadId)) {
+          setPresentedPromptResolutions((current) => ({ ...current, [event.agentId]: undefined }));
+          setSubmittedPromptRequests((current) => ({ ...current, [event.agentId]: undefined }));
+        } else {
+          const mark = attentionEventKey(event);
+          setSubmittedPromptRequests((current) =>
+            current[mark] === undefined ? current : { ...current, [mark]: undefined },
+          );
+        }
         return;
       case "agent-input-resolved":
         if (event.kind === "prompt") {
-          setPendingPrompts((current) => {
-            const prompt = current[event.agentId];
-            return prompt?.type === "prompt" && String(prompt.requestId) === String(event.requestId)
-              ? { ...current, [event.agentId]: undefined }
-              : current;
-          });
+          setPendingPrompts((current) =>
+            withoutAttention(
+              current,
+              (prompt) =>
+                prompt.type === "prompt" &&
+                prompt.agentId === event.agentId &&
+                String(prompt.requestId) === String(event.requestId),
+            ),
+          );
         } else {
           forgetApproval(event.agentId, event.requestId);
         }
@@ -281,18 +313,18 @@ export function AgentEventBridge() {
         applyAgentRuntimeSnapshot(event.snapshot);
         return;
       case "browser-takeover-requested":
-        setPendingPrompts((current) => ({
-          ...current,
-          [event.request.agentId]: event,
-        }));
+        setPendingPrompts((current) => ({ ...current, [attentionEventKey(event)]: event }));
         return;
       case "browser-takeover-resolved":
-        setPendingPrompts((current) => {
-          const pending = current[event.agentId];
-          return pending?.type === "browser-takeover-requested" && pending.request.requestId === event.requestId
-            ? { ...current, [event.agentId]: undefined }
-            : current;
-        });
+        setPendingPrompts((current) =>
+          withoutAttention(
+            current,
+            (pending) =>
+              pending.type === "browser-takeover-requested" &&
+              attentionAgentId(pending) === event.agentId &&
+              pending.request.requestId === event.requestId,
+          ),
+        );
         return;
       case "error": {
         // A provider reports an expired account as a 401 quoted inside the whole HTTP exchange, so
@@ -364,6 +396,9 @@ export function AgentEventBridge() {
     );
     setFailedTurns(Object.fromEntries(snapshot.failedTurns.map((turn) => [turn.agentId, turn.turnId])));
     setContextStates(Object.fromEntries((snapshot.contextStates ?? []).map((state) => [state.agentId, state])));
+    setThreadContextStates(
+      Object.fromEntries((snapshot.threadContextStates ?? []).map((state) => [state.threadId, state])),
+    );
     const usageLimits = Object.fromEntries(
       (snapshot.usageLimits ?? []).map((limit) => [limit.agentId, limit.resetsAt]),
     );

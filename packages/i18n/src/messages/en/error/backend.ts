@@ -77,6 +77,8 @@ export const messages = defineMessages("error.backend", {
   "error.backend.channelDeliveryNotCreated": "Channel delivery was not created.",
   "error.backend.channelAssignmentStopped": "This channel assignment has been stopped or replaced.",
   "error.backend.channelAssigneeUnavailable": "The assigned agent is unavailable.",
+  "error.backend.channelAssigneeRemoved": "The assigned member was removed.",
+  "error.backend.channelAssigneeReassign": "The assigned member is unavailable. Reassign this task.",
   "error.backend.channelAssignmentChanged": "This channel assignment has changed.",
   "error.backend.channelMemberRequired": "Select an available member of this channel.",
   "error.backend.memoryEssentialBudget":
@@ -129,6 +131,8 @@ export const messages = defineMessages("error.backend", {
   "error.backend.recipientHidden": "This agent is hidden. Restore it to send messages.",
   "error.backend.attachBetween": "Attach between 1 and {limit} files.",
   "error.backend.attachmentNotFile": "Attachment is not a file: {path}",
+  "error.backend.attachSvg":
+    "{name} is an SVG file and cannot be attached. Write its absolute path in your answer: the chat shows the image there.",
   "error.backend.generatedImageTooLarge": "Generated image exceeds the 100 MB limit.",
   "error.backend.attachmentNotRegularFile": "Only regular files can be attached: {name}",
   "error.backend.attachmentCopyFailed": "OpenBot could not copy {name}.",
@@ -184,8 +188,11 @@ export const messages = defineMessages("error.backend", {
   "error.backend.routineFlowHandoffFailed": "The routine could not pass the work on to this agent.",
   "error.backend.mcpServerLimit": "OpenBot keeps up to {limit} MCP servers.",
   "error.backend.mcpServerNameTaken": "An MCP server named {name} already exists.",
+  "error.backend.mcpServerInvalid": "OpenBot cannot save this MCP server configuration.",
   "error.backend.mcpServerNoAnswer": "The server did not answer in {seconds} seconds.",
   "error.backend.mcpSignInNotAccepted": "The server did not accept that sign-in.",
+  "error.backend.mcpSignInClientRefused":
+    "The sign-in server did not accept OpenBot when it completed the sign-in. Sign in again: OpenBot registers with the server again.",
   "error.backend.mcpCommandNotFound": "Command not found: {command}",
   "error.backend.mcpRegistrationRefused":
     "The sign-in server does not accept OpenBot as an app yet. Your account is not the cause. Use another way to connect, such as a local MCP server.",
@@ -311,6 +318,15 @@ export const messages = defineMessages("error.backend", {
   "error.backend.taskNotFound": "This task is not available.",
   "error.backend.taskClosed": "This task is closed. Open it again to send a message.",
   "error.backend.taskStillRunning": "This task still runs. Wait until it stops, then close it.",
+  // Side threads. Hosts before side threads send the task texts above, so those keys stay.
+  "error.backend.threadNotFound": "This thread is not available.",
+  "error.backend.threadStillRunning": "This thread still runs. Stop it, then try again.",
+  "error.backend.threadArchived": "This thread is archived. Restore it to send a message.",
+  "error.backend.threadTitleRequired": "Give the thread a short title.",
+  "error.backend.threadOpenLimitReached":
+    "This agent has {count} open threads. Archive a thread, then start or restore another one.",
+  "error.backend.threadRemoteUnsupported": "Threads are only available for agents on this computer.",
+  "error.backend.threadMoveRefused": "Only a message that you sent to this agent alone can run in a new thread.",
   "error.backend.taskTitleRequired": "Give the task a short title.",
   "error.backend.taskToolInvalid": "Give the task a title of at most 120 characters and a brief that says what to do.",
   "error.backend.taskOwnChatOnly":

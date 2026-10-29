@@ -42,8 +42,9 @@ export function parseBrowserSecretResponse(value: unknown): RespondToBrowserSecr
 }
 
 /**
- * The response of the local desktop app. `saveToVault` keeps a submitted password in the Vault of this
- * computer. It is not part of the Team API: a remote response carries only the released fields.
+ * The response of the desktop app or the web client. `saveToVault` keeps a submitted password in the
+ * Vault of the server that runs the agent. The released Team API route carries only the released
+ * fields; a joined server gets the save on the `browser-secret-vault-v1` route.
  */
 export type LocalBrowserSecretResponse = RespondToBrowserSecretInput & { saveToVault?: true };
 

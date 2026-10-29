@@ -7,6 +7,7 @@ export const messages = {
   "error.provider.computerUseConfig":
     "OpenBot이 Codex 구성에 컴퓨터 제어를 등록할 수 없었어요. Codex config.toml이 올바르고 쓰기 가능한지 확인한 후 OpenBot을 다시 시작하세요. 에이전트 설정에서 컴퓨터 제어를 끄면 그 기능 없이 계속할 수 있어요.",
   "error.provider.codexUnresponsive": "Codex가 응답하지 않아 OpenBot이 프로세스를 종료했습니다.",
+  "error.provider.acpUnresponsive": "{provider}가 제시간에 응답하지 않아 OpenBot이 프로세스를 종료했습니다.",
   "error.provider.endpointsReadOnly":
     "저장된 엔드포인트가 더 새로운 버전의 OpenBot에서 작성되었거나 파일을 읽을 수 없어요. 변경하려면 OpenBot을 업데이트하세요.",
   "error.provider.endpointNoSecureStorage":
@@ -57,6 +58,9 @@ export const messages = {
     "OpenBot이 제공자 릴리스 소스에 연결할 수 없었어요. 연결을 확인한 후 다시 시도해 주세요.",
   "error.provider.runtimesUnsupported": "이 플랫폼에서는 제공자 런타임을 사용할 수 없어요.",
   "error.provider.closing": "OpenBot이 종료되는 중이에요.",
+  "error.provider.removeWhileOn": "다운로드를 삭제하기 전에 제공자를 끄세요.",
+  "error.provider.removeWhileDownloading": "다운로드가 끝난 뒤 삭제하세요.",
+  "error.provider.removeIncomplete": "다른 프로그램이 이 CLI의 파일을 사용하고 있어요. 닫은 뒤 다시 시도하세요.",
   "error.provider.cliOverride": "OpenBot에서 업데이트하기 전에 명시적인 CLI 경로 재정의를 제거하세요.",
   "error.provider.runtimeUpdateIncomplete": "런타임 업데이트가 완료되지 않았어요.",
   "error.provider.downloadHttp": "런타임 다운로드가 HTTP {status}(으)로 실패했어요.",
@@ -94,11 +98,13 @@ export const messages = {
   "error.provider.modelsTooMany": "모델이 너무 많아요.",
   "error.provider.modelIdCharacter": "모델 ID에 사용할 수 없는 문자가 있어요.",
   "error.provider.modelIdDuplicate": "모델 두 개의 ID가 같아요.",
+  "error.provider.contextWindowInvalid": "모델의 컨텍스트 창은 {min}에서 {max} 사이의 정수 토큰 수여야 해요.",
   "error.provider.headersTooMany": "헤더가 너무 많아요.",
   "error.provider.headerNameCharacter": "헤더 이름에 HTTP에서 허용하지 않는 문자가 있어요.",
   "error.provider.headerNameTooLong": "헤더 이름이 너무 길어요.",
   "error.provider.headerNameDuplicate": "헤더 두 개의 이름이 같아요.",
   "error.provider.headerValueInvalid": "헤더 값이 없거나 너무 길어요.",
+  "error.provider.headerValueMissing": "헤더 {name}의 값을 입력하세요.",
   "error.provider.apiKeyTooLong": "API 키가 너무 길어요.",
   "error.provider.localOnly": "제공자는 에이전트를 실행하는 컴퓨터에서만 변경할 수 있어요.",
   "error.provider.keyRequired": "제공자 키가 필요해요.",
@@ -255,6 +261,8 @@ export const messages = {
   "error.provider.acpSignInStopped": "로그인이 완료되기 전에 중단되었어요.",
   "error.provider.geminiBrowserUnavailable":
     "Gemini가 로그인 페이지를 열 수 없었어요. 브라우저와 xdg-utils를 설치한 후 이 호스트의 데스크톱 세션에서 연결하세요. 데스크톱이 없는 서버에서는 이 로그인을 완료할 수 없어요.",
+  "error.provider.geminiBrowserOpenFailed":
+    "Gemini가 브라우저에서 로그인 페이지를 열 수 없었어요. 기본 브라우저를 확인한 후 다시 연결하세요.",
   "error.provider.acpSignInFailed": "로그인이 완료되지 않았어요.",
   "error.provider.acpSignInFailedReason": "로그인이 완료되지 않았어요: {reason}",
   "error.provider.acpSignInMethodMissing":
@@ -366,6 +374,7 @@ export const messages = {
   "error.provider.museSignIn": "계속하려면 호스트 컴퓨터에서 Muse에 로그인하세요.",
   "error.provider.inceptionSignIn": "계속하려면 Inception API 키를 추가하세요.",
   "error.provider.deepseekSignIn": "계속하려면 DeepSeek API 키를 추가하세요.",
+  "error.provider.openrouterSignIn": "계속하려면 OpenRouter API 키를 추가하세요.",
   "error.provider.terminalLoginFailed":
     "로그인 터미널을 열 수 없었어요. 이 호스트에서 제공자 CLI를 열어 로그인한 후 제공자를 새로 고치세요.",
   "error.provider.nativeArchiveInvalid": "제공자 다운로드에 올바른 설치 파일이 없어요.",

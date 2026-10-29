@@ -907,6 +907,23 @@ export function createRemoteTeamPeer(actions: ActionsRef, options: { waitForHost
       if (event?.code === 1008 && (refusal === null || refusal === "rate_limited"))
         signalRetryAt = Date.now() + SIGNAL_RATE_LIMIT_MS;
       diagnose(state, "signal-closed", `code ${event?.code ?? "unknown"}`);
+      // An attempt that is not authenticated has nothing to keep, and a new socket would wait 60 s. Its
+      // refusal, such as `host_unavailable`, is handled after the close and is lost. Fail the attempt now
+      // with that refusal, so the recovery owner retries it, and not the connect deadline 30 s later.
+      // A rate limit and a revoked session have no text here: they keep their own steps.
+      const refused = refusal === null ? sourceText("error.remote.signalClosed") : SIGNAL_ERROR_TEXT.get(refusal);
+      if (
+        refused !== undefined &&
+        !state.authenticated &&
+        state.connected &&
+        !state.waitingForHost &&
+        Date.now() >= signalRetryAt
+      ) {
+        const reference =
+          refusal === null ? referenceFrom("signal", "close", event?.code) : referenceFrom("signal", refusal);
+        failPeer(state, referenced(refused, reference), actions);
+        return;
+      }
       scheduleReconnect(state, actions);
     };
   }
@@ -1262,7 +1279,11 @@ export function createRemoteTeamPeer(actions: ActionsRef, options: { waitForHost
             status: frame.result.status,
             body: sideRoute
               ? yield* peerDecode(() =>
-                  sideRoute.response(pending.path, status, body, { historyExtent: true, channelAttention: true }),
+                  sideRoute.response(pending.path, status, body, {
+                    historyExtent: true,
+                    channelAttention: true,
+                    agentTaskUiBlocks: true,
+                  }),
                 )
               : yield* peerDecode(() =>
                   decodeTeamProtocolV8WebRtcHttpResponse(pending.method, pending.path, status, body),
@@ -1301,7 +1322,7 @@ export function createRemoteTeamPeer(actions: ActionsRef, options: { waitForHost
         diagnose(state, "event-gap", `expected ${state.lastEventSequence + 1}, got ${frame.sequence}`);
         return yield* new RemotePeerError({ message: sourceText("error.remote.eventStreamGap") });
       }
-      const channel = yield* peerDecode(() => optionalTeamEvent(frame.payload));
+      const channel = yield* peerDecode(() => optionalTeamEvent(frame.payload, { agentTaskUiBlocks: true }));
       const decoded = channel
         ? { status: "known" as const, event: optionalTeamEventToCurrent(channel) }
         : yield* peerDecode(() => decodeTeamProtocolV8CurrentEvent(frame));

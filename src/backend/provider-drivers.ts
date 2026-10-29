@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import type { ClientSideConnection, InitializeResponse } from "@agentclientprotocol/sdk";
@@ -509,6 +509,12 @@ function piClient(
           confine: (target) => {
             const paths = piStatePaths();
             for (const path of paths.writable) mkdirSync(path, { recursive: true, mode: 0o700 });
+            // Pi writes an empty `auth.json` before it reads one, and the confined process cannot.
+            try {
+              writeFileSync(join(piAgentDirectory(), "auth.json"), "{}", { flag: "wx", mode: 0o600 });
+            } catch (error) {
+              if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) throw error;
+            }
             return confineSpawnTarget(target, confinement, paths);
           },
         }
@@ -573,6 +579,17 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
     createClient: (cli, timeout, context, confinement) => piClient("deepseek", cli, timeout, context, confinement),
     createProfileClient: (cli, timeout, context) => piProfileClient("deepseek", cli, timeout, context),
     authState: (account) => ({ kind: "deepseek", email: account?.email ?? null }),
+    validateAccount: () => undefined,
+  },
+  {
+    id: "openrouter",
+    // The key is pasted into OpenBot. Pi's own sign-in stays on the Pi row.
+    signIn: { kind: "external" },
+    cliProvider: "pi",
+    resolveCli: resolvePiCli,
+    createClient: (cli, timeout, context, confinement) => piClient("openrouter", cli, timeout, context, confinement),
+    createProfileClient: (cli, timeout, context) => piProfileClient("openrouter", cli, timeout, context),
+    authState: (account) => ({ kind: "openrouter", email: account?.email ?? null }),
     validateAccount: () => undefined,
   },
   {
@@ -721,7 +738,18 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
         withAccountEnvironment(context),
         context.history?.("grok"),
       ),
-    createProfileClient: (cli, requestTimeoutMs) => new GrokAgentClient(cli, requestTimeoutMs, true),
+    createProfileClient: (cli, requestTimeoutMs, { accountEnvironment }) =>
+      new GrokAgentClient(
+        cli,
+        requestTimeoutMs,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        accountEnvironment && (() => accountEnvironment),
+      ),
     authState: (account) => ({ kind: "grok", email: account?.email ?? null }),
     validateAccount: () => undefined,
   },
@@ -799,6 +827,9 @@ export const BUILT_IN_PROVIDER_DRIVERS: readonly BuiltInProviderDriver[] = [
       // Each new Antigravity session keeps a conversation database in the account's folder.
       usageLeavesSession: true,
     },
+    // `model/list` opens a probe session and then probes the efforts of each model. On a busy
+    // computer the two together pass 5 s, and the picker then had no Gemini models (#3546).
+    catalog: { slowList: true },
     resolveCli: resolveAntigravityCli,
     createClient: (cli, timeout, context, confinement) =>
       new AcpAgentClient(cli, timeout, {

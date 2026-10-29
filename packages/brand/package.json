@@ -27,7 +27,7 @@
   },
   "peerDependencies": {
     "@solidjs/web": "catalog:",
-    "solid-js": "2.0.0-rc.0"
+    "solid-js": "2.0.0-rc.18"
   },
   "devDependencies": {
     "typescript": "catalog:"

@@ -7,6 +7,7 @@ export const messages = defineMessages("error.provider", {
   "error.provider.computerUseConfig":
     "OpenBot could not register Computer Use in the Codex configuration. Check that your Codex config.toml is valid and writable, then restart OpenBot. You can turn off Computer Use in the teammate settings to continue without it.",
   "error.provider.codexUnresponsive": "Codex stopped answering, so OpenBot ended its process.",
+  "error.provider.acpUnresponsive": "{provider} did not answer in time, so OpenBot ended its process.",
   "error.provider.endpointsReadOnly":
     "The saved endpoints were written by a newer version of OpenBot, or the file cannot be read. Update OpenBot to change them.",
   "error.provider.endpointNoSecureStorage":
@@ -57,6 +58,9 @@ export const messages = defineMessages("error.provider", {
     "OpenBot could not reach the provider release sources. Check the connection and try again.",
   "error.provider.runtimesUnsupported": "Provider runtimes are not available on this platform.",
   "error.provider.closing": "OpenBot is closing.",
+  "error.provider.removeWhileOn": "Turn the provider off before you remove its download.",
+  "error.provider.removeWhileDownloading": "Wait for the download to end, then remove it.",
+  "error.provider.removeIncomplete": "A program uses some files of this CLI. Close it, then try again.",
   "error.provider.cliOverride": "Remove the explicit CLI path override before updating in OpenBot.",
   "error.provider.runtimeUpdateIncomplete": "The runtime update did not complete.",
   "error.provider.downloadHttp": "Runtime download failed with HTTP {status}.",
@@ -94,11 +98,14 @@ export const messages = defineMessages("error.provider", {
   "error.provider.modelsTooMany": "There are too many models.",
   "error.provider.modelIdCharacter": "A model ID has an unusable character.",
   "error.provider.modelIdDuplicate": "Two models have the same ID.",
+  "error.provider.contextWindowInvalid":
+    "A model's context window must be a whole number of tokens from {min} to {max}.",
   "error.provider.headersTooMany": "There are too many headers.",
   "error.provider.headerNameCharacter": "A header name has a character HTTP does not allow.",
   "error.provider.headerNameTooLong": "A header name is too long.",
   "error.provider.headerNameDuplicate": "Two headers have the same name.",
   "error.provider.headerValueInvalid": "A header value is missing or too long.",
+  "error.provider.headerValueMissing": "The header {name} needs a value.",
   "error.provider.apiKeyTooLong": "The API key is too long.",
   "error.provider.localOnly": "Providers can only be changed on the computer that runs the agents.",
   "error.provider.keyRequired": "A provider key is required.",
@@ -252,6 +259,8 @@ export const messages = defineMessages("error.provider", {
   "error.provider.acpSignInStopped": "The sign-in stopped before it was complete.",
   "error.provider.geminiBrowserUnavailable":
     "Gemini could not open the sign-in page. Install a browser and xdg-utils, then connect from a desktop session on this host. A server with no desktop cannot complete this sign-in.",
+  "error.provider.geminiBrowserOpenFailed":
+    "Gemini could not open the sign-in page in your browser. Check your default browser, then connect again.",
   "error.provider.acpSignInFailed": "The sign-in did not complete.",
   "error.provider.acpSignInFailedReason": "The sign-in did not complete: {reason}",
   "error.provider.acpSignInMethodMissing":
@@ -362,6 +371,7 @@ export const messages = defineMessages("error.provider", {
   "error.provider.museSignIn": "Sign in to Muse on the host computer to continue.",
   "error.provider.inceptionSignIn": "Add an Inception API key to continue.",
   "error.provider.deepseekSignIn": "Add a DeepSeek API key to continue.",
+  "error.provider.openrouterSignIn": "Add an OpenRouter API key to continue.",
   "error.provider.terminalLoginFailed":
     "The sign-in terminal could not open. Open the provider CLI on this host and sign in there, then refresh providers.",
   "error.provider.nativeArchiveInvalid": "The provider download does not contain a valid installation.",

@@ -38,7 +38,11 @@ import { AGENT_MEMORY_LIMIT_CAPABILITY } from "@openbot/contracts/team-protocol/
 import { AGENT_PUBLISH_CAPABILITY } from "@openbot/contracts/team-protocol/agent-publish-v1";
 import { AGENT_SESSION_SETTINGS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-session-settings-v1";
 import { AGENT_TASKS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-tasks-v1";
+import { AGENT_THREAD_FILES_CAPABILITY } from "@openbot/contracts/team-protocol/agent-thread-files-v1";
+import { AGENT_THREAD_READS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-thread-reads-v1";
+import { AGENT_THREADS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-threads-v1";
 import { AGENT_UPDATE_CAPABILITY } from "@openbot/contracts/team-protocol/agent-update-v1";
+import { BITWARDEN_CONNECTOR_CAPABILITY } from "@openbot/contracts/team-protocol/bitwarden-connector-v1";
 import { CHANNEL_ROUTES } from "@openbot/contracts/team-protocol/channels-v1";
 import { CONNECTORS_CAPABILITY } from "@openbot/contracts/team-protocol/connectors-v1";
 import { CONTEXT_RESET_CAPABILITY } from "@openbot/contracts/team-protocol/context-reset-v1";
@@ -53,6 +57,7 @@ import {
   TEAM_EML_ATTACHMENTS_CAPABILITY,
   TEAM_MEDIA_ATTACHMENTS_CAPABILITY,
   TEAM_MESSAGE_CLIENT_ID_CAPABILITY,
+  TEAM_MP4_ATTACHMENTS_CAPABILITY,
   TEAM_SEMANTIC_TAGS_CAPABILITY,
   TEAM_ZIP_ATTACHMENTS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
@@ -74,12 +79,17 @@ import { SIGN_IN_RELAY_CAPABILITY } from "@openbot/contracts/team-protocol/sign-
 import { SKILLS_ADMIN_CAPABILITY } from "@openbot/contracts/team-protocol/skills-admin-v1";
 import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import type { TeamProtocolV2Json } from "@openbot/contracts/team-protocol/v2";
+import { VAULT_IMPORT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-import-v1";
+import { VAULT_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v1";
+import { VAULT_V2_CAPABILITY } from "@openbot/contracts/team-protocol/vault-v2";
+import { WORKFLOWS_CAPABILITY } from "@openbot/contracts/team-protocol/workflows-v1";
 import type { MobileTextKey } from "@openbot/i18n/mobile";
 import { readHostAnalytics } from "@openbot/team-client";
 import { readPlanLimits } from "@openbot/team-client/plan-limits";
 import type { RemoteFileUpload } from "@openbot/team-client/remote-peer";
 import { buildRoutineCalendar, type RoutineCalendarSource } from "@openbot/team-client/routine-calendar";
 import {
+  bitwardenConnectorRequest,
   cancelHostUpdate,
   cancelSignInRelay,
   checkHostForUpdate,
@@ -87,6 +97,7 @@ import {
   completeSignInRelay,
   deleteEventRoutine,
   deleteHostedSite,
+  deleteHostVaultItem,
   deleteSharedTable,
   getHostAgentAccess,
   getHostAgentMemoryLimit,
@@ -96,6 +107,7 @@ import {
   getRoutineResultDestination,
   githubConnectorRepositories,
   githubConnectorRequest,
+  importHostVaultCsv,
   installAgentSkill,
   installAgentTemplate,
   installMarketplaceAgent,
@@ -104,6 +116,7 @@ import {
   listEventRoutines,
   listHiddenAgents,
   listHostedSites,
+  listHostVault,
   listMcpServers,
   listMcpSignIns,
   listProviderAccounts,
@@ -124,6 +137,7 @@ import {
   resetAgentSessionSetting,
   rotateEventRoutineSecret,
   saveEventRoutine,
+  saveHostVaultItem,
   saveMcpServer,
   setAgentHidden,
   setAgentProviderAccount,
@@ -148,10 +162,14 @@ import {
   type AgentMemoriesRequest,
   agentTaskControl,
   clearAgentContext,
+  deleteAgentThread,
   listAgentTasks,
+  listAgentThreadReads,
+  markAgentThreadRead,
   readAgentMemories,
   readAgentMemorySelection,
   readAgentTask,
+  renameAgentThread,
   sendAgentTaskMessage,
   setAgentMemoryInclusion,
   startAgentTask,
@@ -225,6 +243,10 @@ type HostRequestActions = Pick<
   | "startAgentTask"
   | "sendAgentTaskMessage"
   | "controlAgentTask"
+  | "renameAgentThread"
+  | "deleteAgentThread"
+  | "loadAgentThreadReads"
+  | "markAgentThreadRead"
   | "respondToTaskPrompt"
   | "loadAgentSkills"
   | "installAgentSkill"
@@ -253,6 +275,13 @@ type HostRequestActions = Pick<
   | "loadOnePasswordConnector"
   | "connectOnePassword"
   | "disconnectOnePassword"
+  | "loadBitwardenConnector"
+  | "connectBitwarden"
+  | "disconnectBitwarden"
+  | "loadVault"
+  | "saveVaultItem"
+  | "deleteVaultItem"
+  | "importVaultCsv"
   | "loadMessagingConnections"
   | "connectMessaging"
   | "completeMessagingInstall"
@@ -370,7 +399,18 @@ export function createHostRequestActions({
     capabilityApi(serverId, AGENT_SESSION_SETTINGS_CAPABILITY, "mobile.agent.session.unsupported");
   /** The tasks are an optional route set. Any member who can message the agent can use them. */
   const tasksApi = (serverId: string) =>
-    capabilityApi(serverId, AGENT_TASKS_CAPABILITY, "mobile.server.tasks.unsupported");
+    capabilityApi(serverId, AGENT_TASKS_CAPABILITY, "mobile.server.threads.unsupported");
+  /** Rename and delete of a thread are an optional route set beside the tasks. */
+  const threadsApi = (serverId: string) =>
+    capabilityApi(serverId, AGENT_THREADS_CAPABILITY, "mobile.chat.threads.unsupported");
+  /** Files in a thread are an optional route set beside the tasks. A message without files uses the tasks. */
+  const threadMessageApi = (serverId: string, attachmentDraftIds: readonly string[] | undefined) =>
+    attachmentDraftIds?.length
+      ? capabilityApi(serverId, AGENT_THREAD_FILES_CAPABILITY, "mobile.chat.threads.filesUnsupported")
+      : tasksApi(serverId);
+  /** The read marks of the threads are an optional route set beside the tasks. */
+  const threadReadsApi = (serverId: string) =>
+    capabilityApi(serverId, AGENT_THREAD_READS_CAPABILITY, "mobile.chat.threads.unsupported");
   /** The server timezone and the agent memory limit are optional admin route sets. */
   const timezoneAdmin = (serverId: string) =>
     capabilityApi(serverId, HOST_TIMEZONE_CAPABILITY, "mobile.server.settings.timezoneUnsupported");
@@ -384,6 +424,11 @@ export function createHostRequestActions({
     capabilityApi(serverId, CONNECTORS_CAPABILITY, "mobile.server.connectors.unsupported");
   const onePasswordAdmin = (serverId: string) =>
     capabilityApi(serverId, ONEPASSWORD_CONNECTOR_CAPABILITY, "mobile.server.connectors.unsupported");
+  const bitwardenAdmin = (serverId: string) =>
+    capabilityApi(serverId, BITWARDEN_CONNECTOR_CAPABILITY, "mobile.server.connectors.unsupported");
+  const vaultAdmin = (serverId: string) => capabilityApi(serverId, VAULT_CAPABILITY, "mobile.server.vault.unsupported");
+  const vaultImportAdmin = (serverId: string) =>
+    capabilityApi(serverId, VAULT_IMPORT_CAPABILITY, "mobile.server.vault.unsupported");
   /** The OpenBot update of the host: the admin route set, or the member set that only checks and starts. */
   const updateApi = (serverId: string, access: ServerUpdateAccess) =>
     capabilityApi(
@@ -410,6 +455,10 @@ export function createHostRequestActions({
   const checks: HostRequestChecks = {
     canSearchFiles: (serverId) => has(serverId, CONVERSATION_FILE_SEARCH_CAPABILITY),
     canUseTasks: (serverId) => has(serverId, AGENT_TASKS_CAPABILITY),
+    canEditThreads: (serverId) => has(serverId, AGENT_THREADS_CAPABILITY),
+    canReadThreads: (serverId) => has(serverId, AGENT_THREAD_READS_CAPABILITY),
+    canAttachThreadFiles: (serverId) => has(serverId, AGENT_THREAD_FILES_CAPABILITY),
+    canUseWorkflows: (serverId) => has(serverId, WORKFLOWS_CAPABILITY),
     canReadServerStorage: (serverId) => has(serverId, STORAGE_CAPABILITY),
     canStartNewChat: (serverId) => has(serverId, CONTEXT_RESET_CAPABILITY),
     canChooseNewAgentModel: (serverId) => has(serverId, TEAM_AGENT_CREATE_MODEL_CAPABILITY),
@@ -422,6 +471,7 @@ export function createHostRequestActions({
         eml: advertised.includes(TEAM_EML_ATTACHMENTS_CAPABILITY),
         media: advertised.includes(TEAM_MEDIA_ATTACHMENTS_CAPABILITY),
         zip: advertised.includes(TEAM_ZIP_ATTACHMENTS_CAPABILITY),
+        mp4: advertised.includes(TEAM_MP4_ATTACHMENTS_CAPABILITY),
       };
     },
   };
@@ -443,6 +493,19 @@ export function createHostRequestActions({
       runTeamRequest(onePasswordConnectorRequest(onePasswordAdmin(serverId), "connect", { token })),
     disconnectOnePassword: async (serverId) =>
       runTeamRequest(onePasswordConnectorRequest(onePasswordAdmin(serverId), "disconnect")),
+    loadBitwardenConnector: async (serverId) =>
+      runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "status")),
+    connectBitwarden: async (input, serverId) =>
+      runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "connect", input)),
+    disconnectBitwarden: async (serverId) =>
+      runTeamRequest(bitwardenConnectorRequest(bitwardenAdmin(serverId), "disconnect")),
+    loadVault: async (serverId) =>
+      runTeamRequest(listHostVault(vaultAdmin(serverId), has(serverId, VAULT_V2_CAPABILITY))),
+    saveVaultItem: async (input, serverId) =>
+      runTeamRequest(saveHostVaultItem(vaultAdmin(serverId), input, has(serverId, VAULT_V2_CAPABILITY))),
+    deleteVaultItem: async (id, serverId) =>
+      runTeamRequest(deleteHostVaultItem(vaultAdmin(serverId), id, has(serverId, VAULT_V2_CAPABILITY))),
+    importVaultCsv: async (csv, serverId) => runTeamRequest(importHostVaultCsv(vaultImportAdmin(serverId), csv)),
     loadMessagingConnections: async (platform, serverId) =>
       runTeamRequest(messagingConnectorOverview(connectorsAdmin(serverId), { platform })),
     connectMessaging: async (input, serverId) =>
@@ -660,10 +723,18 @@ export function createHostRequestActions({
     // Async, so a host without the capability rejects the promise and does not throw at the call.
     loadAgentTasks: async (agentId, serverId) => runTeamRequest(listAgentTasks(tasksApi(serverId), agentId)),
     loadAgentTaskConversation: async (input, serverId) => runTeamRequest(readAgentTask(tasksApi(serverId), input)),
-    startAgentTask: async (input, serverId) => runTeamRequest(startAgentTask(tasksApi(serverId), input)),
-    sendAgentTaskMessage: async (input, serverId) => runTeamRequest(sendAgentTaskMessage(tasksApi(serverId), input)),
+    startAgentTask: async (input, serverId) =>
+      runTeamRequest(startAgentTask(threadMessageApi(serverId, input.attachmentDraftIds), input)),
+    sendAgentTaskMessage: async (input, serverId) =>
+      runTeamRequest(sendAgentTaskMessage(threadMessageApi(serverId, input.attachmentDraftIds), input)),
     controlAgentTask: async (action, input, serverId) =>
       runTeamRequest(agentTaskControl(tasksApi(serverId), action, input)),
+    renameAgentThread: async (input, serverId) => runTeamRequest(renameAgentThread(threadsApi(serverId), input)),
+    deleteAgentThread: async (input, serverId) => runTeamRequest(deleteAgentThread(threadsApi(serverId), input)),
+    loadAgentThreadReads: async (agentId, serverId) =>
+      runTeamRequest(listAgentThreadReads(threadReadsApi(serverId), agentId)),
+    markAgentThreadRead: async (input, serverId) =>
+      runTeamRequest(markAgentThreadRead(threadReadsApi(serverId), input)),
     respondToTaskPrompt: async (input, serverId) => {
       await request(
         "POST",

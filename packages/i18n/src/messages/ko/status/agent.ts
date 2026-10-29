@@ -25,6 +25,12 @@ export const messages = {
     "화면의 {x}, {y} 위치에서 {width} × {height} 포인트 영역을 캡처해서 이미지를 에이전트의 모델에 보내요.",
   "status.agent.screenCaptureProgress": "화면 캡처를 요청하는 중…",
   "status.agent.screenCaptureReviewing": "화면 캡처를 확인하는 중…",
+  "status.agent.browserOpening": "웹 페이지를 여는 중…",
+  "status.agent.browserReading": "웹 페이지를 읽는 중…",
+  "status.agent.browserClicking": "웹 페이지를 클릭하는 중…",
+  "status.agent.browserTyping": "웹 페이지에 입력하는 중…",
+  "status.agent.browserActing": "웹 페이지를 사용하는 중…",
+  "status.agent.browserReviewing": "웹 페이지를 확인하는 중…",
   "status.agent.memoriesSearching": "메모리를 검색하는 중…",
   "status.agent.memoriesSearched": {
     other: "메모리를 검색했어요: {count}개 찾음",
@@ -33,6 +39,8 @@ export const messages = {
   "status.agent.skillUsing": "스킬 {name}을(를) 사용하는 중…",
   "status.agent.skillReading": "스킬을 읽는 중…",
   "status.agent.memoryChanges": "메모리: {saved}개 저장, {updated}개 업데이트, {forgotten}개 삭제.",
+  "status.agent.memoryChangesWithConflicts":
+    "메모리: {saved}개 저장, {updated}개 업데이트, {forgotten}개 삭제, {notChanged}개는 다른 스레드가 먼저 변경해서 변경 안 됨.",
   "status.agent.mcpServerAdd":
     "MCP 서버 {name}을(를) 추가해요: {target}. 이 서버의 모든 에이전트가 해당 도구를 사용할 수 있어요. OpenBot이 연결을 테스트해요.",
   "status.agent.mcpServerChange":

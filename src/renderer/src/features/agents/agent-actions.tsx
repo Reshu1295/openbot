@@ -16,12 +16,14 @@ import { useNavigation } from "../../navigation";
 import { createScopeGuard } from "../../scope-lifetime";
 import { createSimpleContext } from "../../simple-context";
 import { useTurns } from "../../turns";
+import { useAgentThreads } from "../agent-threads/agent-threads-context";
 import { useConversation } from "../conversation/conversation-context";
 import { agentConversationKey } from "../conversation/conversation-keys";
 import { useDirectMessages } from "../conversation/direct-messages-context";
 import { useServers } from "../servers/servers-context";
 import { useSidebar } from "../sidebar/sidebar-context";
 import { type NewAgentDraft, newAgentInput } from "./agent-create-input";
+import { attentionAgentId, withoutAttention } from "./agent-runtime-snapshot";
 import { useAgents } from "./agents-context";
 import { agentsPort } from "./agents-port";
 
@@ -69,6 +71,7 @@ const AgentActions = createSimpleContext({
       applyUserHiddenAgents,
     } = useAgents();
     const { initializeConversation, removeConversation } = useConversation();
+    const threads = useAgentThreads();
     const { setActiveTurns, setFailedTurns, setQueues, setPendingPrompts } = useTurns();
     const { sidebarLayout, setSidebarLayout, applySidebarLayoutAction, removePinnedSidebarItemEverywhere } =
       useSidebar();
@@ -293,12 +296,13 @@ const AgentActions = createSimpleContext({
         }
         if (!scopeIsCurrent()) return;
         forgetHiddenAgent(agentId);
+        threads.forgetAgent(agentId);
         removeConversation(agentId);
         setUiErrors((current) => withoutAgent(current, agentConversationKey(serverId, agentId)));
         setActiveTurns((current) => withoutAgent(current, agentId));
         setFailedTurns((current) => withoutAgent(current, agentId));
         setQueues((current) => withoutAgent(current, agentId));
-        setPendingPrompts((current) => withoutAgent(current, agentId));
+        setPendingPrompts((current) => withoutAttention(current, (event) => attentionAgentId(event) === agentId));
       }
 
       async function commit(): Promise<void> {

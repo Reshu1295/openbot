@@ -40,7 +40,7 @@ process.env.OPENBOT_FAKE_CODEX_CONTROL = controlPath;
 mkdirSync(home, { recursive: true });
 
 const { AgentService } = await import("../src/backend/agent-service");
-const { AgentTaskStore } = await import("../src/backend/agent-tasks/agent-task-store");
+const { AgentThreadStore } = await import("../src/backend/agent-threads/agent-thread-store");
 const { AgentStore } = await import("../src/backend/agent-store");
 const { runCauseEffect } = await import("../src/backend/effect-boundary");
 const { MailboxStore } = await import("../src/backend/mailbox-store");
@@ -656,10 +656,11 @@ try {
     const agent = second.store.list()[0];
     if (!agent?.threadId) return "No agent thread survived the restart.";
     // The agent's own chat, a task thread and a channel thread each keep one stale row.
-    const taskThreadId = new AgentTaskStore(second.database).create({
+    const taskThreadId = new AgentThreadStore(second.database).create({
       agentId: agent.id,
       origin: "user",
       title: "Stale turn task",
+      titleSource: "auto",
     }).threadId;
     const channels = second.agents.channels.store;
     const channelId = `channel-${randomUUID()}`;

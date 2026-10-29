@@ -11,6 +11,7 @@ import {
   IMAGE_ATTACHMENT_EXTENSIONS,
   isOpenableAttachmentName,
   MEDIA_ATTACHMENT_EXTENSIONS,
+  MP4_ATTACHMENT_EXTENSIONS,
   supportedAttachmentExtensions,
 } from "@openbot/contracts/attachment-files";
 import { ATTACHMENT_LIMITS, INPUT_LIMITS } from "@openbot/contracts/input-limits";
@@ -26,6 +27,7 @@ import { TEAM_API_ROUTES } from "@openbot/contracts/team-api-routes";
 import {
   TEAM_EML_ATTACHMENTS_CAPABILITY,
   TEAM_MEDIA_ATTACHMENTS_CAPABILITY,
+  TEAM_MP4_ATTACHMENTS_CAPABILITY,
   TEAM_ZIP_ATTACHMENTS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/current";
 import {
@@ -56,6 +58,8 @@ import {
   parseOpenAttachment,
   parseOpenSharedFile,
   parseOpenWorkspaceFile,
+  parsePreviewSharedFile,
+  parsePreviewWorkspaceFile,
 } from "./agent-inputs";
 import { type IpcGroupHandlers, payloadHandler } from "./define-ipc-group";
 import { routeToServer } from "./route-to-server";
@@ -152,6 +156,8 @@ export function attachmentIpcHandlers({
           serverId === LOCAL_SERVER_ID || remoteServers.supportsCapability(serverId, TEAM_MEDIA_ATTACHMENTS_CAPABILITY);
         const supportsZip =
           serverId === LOCAL_SERVER_ID || remoteServers.supportsCapability(serverId, TEAM_ZIP_ATTACHMENTS_CAPABILITY);
+        const supportsMp4 =
+          serverId === LOCAL_SERVER_ID || remoteServers.supportsCapability(serverId, TEAM_MP4_ATTACHMENTS_CAPABILITY);
         const options: OpenDialogOptions = {
           properties: ["openFile", "multiSelections"],
           filters:
@@ -164,6 +170,7 @@ export function attachmentIpcHandlers({
                       eml: supportsEml,
                       media: supportsMedia,
                       zip: supportsZip,
+                      mp4: supportsMp4,
                     }),
                   },
                 ],
@@ -259,28 +266,32 @@ export function attachmentIpcHandlers({
           );
         },
       }),
-      previewSharedFile: scopedHandler(parseOpenSharedFile, {
+      previewSharedFile: scopedHandler(parsePreviewSharedFile, {
         local: async (parsed) => {
           const generation = filePreviewPages.generation;
           const sharedFile = await runCauseEffect(service.resolveSharedFile(parsed.path));
-          return runCauseEffect(localFilePreview(sharedFile.path, sharedFile.name, sharedFile.size, generation));
-        },
-        remote: async (parsed, serverId) => {
-          const downloaded = await runCauseEffect(remoteServers.downloadSharedFile(parsed.path, serverId));
-          return filePreviewFromBytes(downloaded.name, downloaded.bytes);
-        },
-      }),
-      previewWorkspaceFile: scopedHandler(parseOpenWorkspaceFile, {
-        local: async (parsed) => {
-          const generation = filePreviewPages.generation;
-          const workspaceFile = await runCauseEffect(service.resolveLocalWorkspaceFile(parsed.agentId, parsed.path));
           return runCauseEffect(
-            localFilePreview(workspaceFile.path, workspaceFile.name, workspaceFile.size, generation),
+            localFilePreview(sharedFile.path, sharedFile.name, sharedFile.size, generation, parsed.maxBytes),
           );
         },
         remote: async (parsed, serverId) => {
           const downloaded = await runCauseEffect(
-            remoteServers.downloadWorkspaceFile(parsed.agentId, parsed.path, serverId),
+            remoteServers.downloadSharedFile(parsed.path, serverId, parsed.maxBytes),
+          );
+          return filePreviewFromBytes(downloaded.name, downloaded.bytes);
+        },
+      }),
+      previewWorkspaceFile: scopedHandler(parsePreviewWorkspaceFile, {
+        local: async (parsed) => {
+          const generation = filePreviewPages.generation;
+          const workspaceFile = await runCauseEffect(service.resolveLocalWorkspaceFile(parsed.agentId, parsed.path));
+          return runCauseEffect(
+            localFilePreview(workspaceFile.path, workspaceFile.name, workspaceFile.size, generation, parsed.maxBytes),
+          );
+        },
+        remote: async (parsed, serverId) => {
+          const downloaded = await runCauseEffect(
+            remoteServers.downloadWorkspaceFile(parsed.agentId, parsed.path, serverId, parsed.maxBytes),
           );
           return filePreviewFromBytes(downloaded.name, downloaded.bytes);
         },
@@ -513,6 +524,12 @@ function assertRemoteAttachmentSupport(
     !remoteServers.supportsCapability(serverId, TEAM_ZIP_ATTACHMENTS_CAPABILITY)
   ) {
     throw new Error(sourceText("error.attachment.zipUnsupported"));
+  }
+  if (
+    names.some((name) => MP4_ATTACHMENT_EXTENSIONS.some((extension) => extension === attachmentFileExtension(name))) &&
+    !remoteServers.supportsCapability(serverId, TEAM_MP4_ATTACHMENTS_CAPABILITY)
+  ) {
+    throw new Error(sourceText("error.attachment.mp4Unsupported"));
   }
   if (!names.some((name) => attachmentFileExtension(name) === "eml")) return;
   if (remoteServers.supportsCapability(serverId, TEAM_EML_ATTACHMENTS_CAPABILITY)) return;
