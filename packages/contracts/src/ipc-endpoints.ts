@@ -1489,8 +1489,6 @@ export const IPC_ENDPOINTS = {
       "agent:list-workspace-directory",
     ),
   },
-  // Not part of `agentAttachments`: the preload sends the paths of dropped and pasted files, and the
-  // renderer must never name a path to import. So this group is never bridged to the renderer.
   // The folders a local agent can change besides its workspace. A joined server has no route for them:
   // the Team API does not carry them, as it does not carry `access`.
   agentFolders: {
@@ -1501,6 +1499,8 @@ export const IPC_ENDPOINTS = {
     addAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:add"),
     removeAgentFolder: request<AgentFolderInput, AgentFolderChange>()("agent:folders:remove"),
   },
+  // Not part of `agentAttachments`: the preload sends the paths of dropped and pasted files, and the
+  // renderer must never name a path to import. So this group is never bridged to the renderer.
   attachmentImports: {
     importAttachments: scopedRequest<ImportAttachmentsInput, DraftAttachment[]>()("agent:import-attachments"),
   },
