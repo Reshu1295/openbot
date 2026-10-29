@@ -69,19 +69,18 @@ export type WorkflowTools = Pick<WorkflowsHandle, "list" | "get" | "create">;
 export const WORKFLOW_TOOL_DEFINITIONS = [
   {
     name: "list_workflows",
-    description:
-      "List this server's saved workflows before creating one. A workflow is a graph on the Workflows page, with several steps, agents, conditions or approvals. A routine is one saved instruction with a schedule or webhook trigger.",
+    description: "List saved workflows on this host.",
     shape: listSchema.shape,
   },
   {
     name: "read_workflow",
-    description: "Read a saved workflow's title, graph, revision and triggers by its workflowId from list_workflows.",
+    description: "Read a saved workflow by workflowId.",
     shape: readSchema.shape,
   },
   {
     name: "create_workflow",
     description:
-      "Create a workflow on this server's Workflows page with a title and complete graph. Use list_workflows first to avoid duplicates and list_agents for stable agent ids. Creating does not start a manual run; schedule triggers become active. Use create_routine for one agent's scheduled instruction.",
+      "Save a workflow graph on the Workflows page. Manual runs do not start; schedule triggers become active.",
     shape: createSchema.shape,
   },
 ] as const;

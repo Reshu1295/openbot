@@ -348,6 +348,27 @@ try {
       isWorkflowDetail(scheduled.value) &&
       scheduled.value.triggers.some((trigger) => trigger.type === "schedule" && trigger.nextDueAt !== null),
   );
+  const once = await call("create_workflow", {
+    title: "One-time report",
+    graph: {
+      ...graph,
+      nodes: [
+        {
+          ...graph.nodes[0],
+          fields: { trigger: "schedule", timezone: "UTC" },
+          schedule: { kind: "once", date: "2035-01-02", time: "09:00" },
+        },
+        ...graph.nodes.slice(1),
+      ],
+    },
+  });
+  check(
+    "one-time creation preserves the schedule and its due time",
+    once.success &&
+      isWorkflowDetail(once.value) &&
+      once.value.graph.nodes[0]?.schedule?.kind === "once" &&
+      once.value.triggers.some((trigger) => trigger.nextDueAt === "2035-01-02T09:00:00.000Z"),
+  );
   const opaqueSecret = "fixture-opaque-credential-3580";
   const secrets = ["sk-ant-fixture3580abcdefgh1234567890", opaqueSecret];
   registerSecretValue(opaqueSecret);
