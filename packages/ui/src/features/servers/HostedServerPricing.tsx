@@ -584,12 +584,12 @@ export function HostedUseSwitch(props: {
   );
 }
 
+const LICENSE_MINIMUM_TOAST = "hosted-license-minimum";
+
 /**
  * The people at work, under the plans. It stays in place for personal use, disabled, so that the dialog
  * does not change size.
  */
-const LICENSE_MINIMUM_TOAST = "hosted-license-minimum";
-
 export function HostedLicensePeople(props: {
   value: number;
   /** The fewest people to choose. */
