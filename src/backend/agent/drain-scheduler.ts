@@ -629,7 +629,10 @@ export class DrainScheduler {
           ? []
           : this.#mailbox.userMessagesToStartWith(delivery.id);
     const companions = [...replies, ...laterMessages];
-    let batch = delivery.sender.kind === "user" ? [...replies, context, ...laterMessages] : [context, ...replies];
+    let batch =
+      planNote !== undefined || delivery.sender.kind === "user"
+        ? [...replies, context, ...laterMessages]
+        : [context, ...replies];
     let confirmedTurnId: string | null = null;
     // The session of a routine run in its own session. Closed here when no turn starts on it.
     let routineThreadId: string | null = null;

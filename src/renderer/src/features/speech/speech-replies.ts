@@ -38,6 +38,8 @@ interface DictatedMessage {
   messageId: string | undefined;
   /** The turns that took this agent's messages, by message id, from its queue. A steered message starts no turn. */
   deliveryTurns: Map<string, string>;
+  /** The turn that ended while the request continues. The queue shows it until the next turn starts. */
+  continuedTurnId: string | undefined;
   /** A voice conversation reads its replies also when the setting is off. */
   always: boolean;
 }
@@ -78,6 +80,7 @@ export function noteDictatedMessage(agent: SpeechAgent, transcript: string, opti
     sending: false,
     messageId: undefined,
     deliveryTurns: new Map(),
+    continuedTurnId: undefined,
     always: options?.always ?? false,
   });
   void warmSpeech(options?.always ?? false);
@@ -154,7 +157,12 @@ export function readDictatedReplies(event: AgentEvent, serverId: string): void {
     if (!message || message.turnId) return;
     // A steer that is not confirmed yet can fail, and the message then starts its own turn.
     for (const delivery of event.snapshot.deliveries)
-      if (delivery.turnId && delivery.status === "running" && delivery.sender.kind === "user")
+      if (
+        delivery.turnId &&
+        delivery.turnId !== message.continuedTurnId &&
+        delivery.status === "running" &&
+        delivery.sender.kind === "user"
+      )
         message.deliveryTurns.set(delivery.messageId, delivery.turnId);
     takeDeliveryTurn(message);
     return;
@@ -177,6 +185,7 @@ export function readDictatedReplies(event: AgentEvent, serverId: string): void {
   if (!message || message.turnId !== event.turnId) return;
   if (event.status === "completed" && event.continues) {
     // The request continues in a new turn; its answer is the one to read.
+    message.continuedTurnId = event.turnId;
     message.turnId = undefined;
     message.deliveryTurns.clear();
     return;
