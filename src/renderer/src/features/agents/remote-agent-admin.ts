@@ -5,6 +5,7 @@ import type {
   AgentHostSettings,
   AgentTaskLimitSettings,
   AgentUsageLimitReturn,
+  BusyMessageMode,
   ServerSummary,
   UpdateAgentAdminSettingsInput,
   UpdateAgentInput,
@@ -211,6 +212,20 @@ export function createRemoteAgentAdmin(
       if (hostKey() === JSON.stringify([server.id, agentId])) hostReadGeneration += 1;
       acceptHost(JSON.stringify([server.id, agentId]), settings);
     },
+    /** Undefined for a local agent, before the host answers, and without the capability. Null: the host default. */
+    busyMessageMode: (): BusyMessageMode | null | undefined =>
+      state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings?.busyMessageMode : undefined,
+    /** The host's own default, which a remote client reads but cannot change. */
+    defaultBusyMessageMode: (): BusyMessageMode | undefined =>
+      state.hostKey !== null && state.hostKey === hostKey() ? state.hostSettings?.defaultBusyMessageMode : undefined,
+    async updateBusyMessageMode(agentId: string, busyMessageMode: BusyMessageMode | null): Promise<void> {
+      const server = target()?.server;
+      if (server?.kind !== "remote" || !serverCanAdminister(server, AGENT_HOST_SETTINGS_CAPABILITY))
+        throw new Error(currentText().t("agent.error.adminOnly"));
+      const settings = await calls().updateAgentHostSettings({ agentId, busyMessageMode }, server.id);
+      if (hostKey() === JSON.stringify([server.id, agentId])) hostReadGeneration += 1;
+      acceptHost(JSON.stringify([server.id, agentId]), settings);
+    },
     /** Undefined for a local agent, before the host answers, and when it does not serve the capability. */
     backupModels: (): AgentBackupModels | null | undefined =>
       state.backupKey !== null && state.backupKey === backupKey() ? state.backupModels?.backupModels : undefined,
@@ -260,21 +275,26 @@ export function createRemoteAgentAdmin(
 
 /**
  * Sends a profile change to an agent of a joined server. The Team API agent route ignores access,
- * so access, Local scripts, backup models and the task limit go to their admin routes. Other fields
+ * so access, Local scripts, the busy-message mode, backup models and the task limit go to their admin
+ * routes. Other fields
  * keep the agent route.
  */
 export async function updateRemoteAgent(
-  admin: Pick<RemoteAgentAdmin, "update" | "updateAutomation" | "updateBackupModels" | "updateTaskLimit">,
+  admin: Pick<
+    RemoteAgentAdmin,
+    "update" | "updateAutomation" | "updateBusyMessageMode" | "updateBackupModels" | "updateTaskLimit"
+  >,
   input: UpdateAgentInput,
   updateProfile: (input: UpdateAgentInput) => Promise<void>,
 ): Promise<void> {
-  const { access, allowAutomation, backupModels, taskLimit, agentId, ...fields } = input;
+  const { access, allowAutomation, busyMessageMode, backupModels, taskLimit, agentId, ...fields } = input;
   // A joined server's host keeps one value for each agent: it has no account default to return to.
   // Only Settings › Agents sends `null`, and only for this computer, so no user sees this error.
   // It comes before the first write, so that a wrong call changes nothing.
   if (allowAutomation === null) throw new Error("A joined server has no default for Local scripts.");
   if (access !== undefined) await admin.update({ agentId, access });
   if (allowAutomation !== undefined) await admin.updateAutomation(agentId, allowAutomation);
+  if (busyMessageMode !== undefined) await admin.updateBusyMessageMode(agentId, busyMessageMode);
   if (backupModels !== undefined) await admin.updateBackupModels(agentId, backupModels);
   if (taskLimit !== undefined) await admin.updateTaskLimit(agentId, taskLimit);
   if (Object.keys(fields).length) await updateProfile({ agentId, ...fields });
