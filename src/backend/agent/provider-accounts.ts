@@ -638,6 +638,8 @@ export class ProviderAccounts {
       if (!first || (!first.primary && !first.secondary)) return null;
       const limit = { ...first, id: account.provider, accountId: account.id };
       this.#usage.set(account.id, { limit, resetCredits: this.#host.resetCredits(client) });
+      // Also a reading of an account check or a reset counts, so the next poll does not read again.
+      this.#usageGate(account.id).succeeded();
       return limit;
     });
   }

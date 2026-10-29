@@ -729,7 +729,7 @@ export class ProviderRuntime implements ProviderPort {
       yield* this.#stopProviderClient(provider);
       this.#cli.delete(provider);
       this.#accounts.delete(provider);
-      this.#usageGate(provider).reset();
+      this.#forgetUsage(provider);
       this.#setStatus({
         providers: updateProviderStatus(this.#status.providers, provider, {
           state: "not-started",
@@ -945,11 +945,12 @@ export class ProviderRuntime implements ProviderPort {
       // By provider, then by provider and account: the provider's own sign-in comes first.
       const collected = new Map<string, AccountUsage["limits"][number]>();
       const logFailure = (provider: AgentProvider) => this.#logUsageFailure(provider);
-      /** The provider's last reading, while no window of it has reset. */
-      const keptReading = (provider: AgentProvider) => {
-        const kept = this.#lastUsage.get(provider);
-        return kept && !this.#usageUnreported.has(provider) && !usageWindowHasReset(kept) ? kept : null;
-      };
+      /**
+       * The provider's last reading, also with a window that has reset, as an account after the first keeps
+       * it: a window that resets after the read starts a read, and the row must not leave the rail between.
+       */
+      const keptReading = (provider: AgentProvider) =>
+        this.#usageUnreported.has(provider) ? null : (this.#lastUsage.get(provider) ?? null);
       const readOwn = (provider: AgentProvider) =>
         Effect.gen({ self: this }, function* () {
           let usage: AccountUsage;
@@ -1236,6 +1237,16 @@ export class ProviderRuntime implements ProviderPort {
     if (!limit || (!limit.primary && !limit.secondary)) return;
     this.#usageUnreported.delete(provider);
     this.#lastUsage.set(provider, { ...limit, id: provider });
+  }
+
+  /**
+   * Another login or credential: the next poll reads at once, and no view shows the old login's reading or
+   * credits, also when that read fails.
+   */
+  #forgetUsage(provider: AgentProvider): void {
+    this.#usageGate(provider).reset();
+    this.#lastUsage.delete(provider);
+    this.#ownResetCredits.delete(provider);
   }
 
   #usageGate(provider: AgentProvider): UsageReadGate {
@@ -1992,7 +2003,7 @@ export class ProviderRuntime implements ProviderPort {
     // agent's own process would then keep the old credential until it idles out (#2544).
     this.#countActivation(provider);
     // The new credential's usage is read at the next poll, not after the old one's wait.
-    this.#usageGate(provider).reset();
+    this.#forgetUsage(provider);
     return yield* this.#reprobeProvider(provider);
   }, Effect.uninterruptible);
 
@@ -2689,7 +2700,7 @@ export class ProviderRuntime implements ProviderPort {
         this.#cli.delete(provider);
         this.#accounts.delete(provider);
         // The next sign-in can be another login.
-        this.#usageGate(provider).reset();
+        this.#forgetUsage(provider);
         yield* client.stop().pipe(toProviderOperationFailed).pipe(Effect.ignore);
         yield* this.#hooks.onClientStopped(client);
         yield* Effect.forEach(
@@ -2862,7 +2873,7 @@ export class ProviderRuntime implements ProviderPort {
             previousAccount.email !== account.email ||
             previousAccount.planType !== account.planType)
         )
-          this.#usageGate(provider).reset();
+          this.#forgetUsage(provider);
         const restorePrevious = Effect.gen({ self: this }, function* () {
           if (previousClient) this.#clients.set(provider, previousClient);
           else this.#clients.delete(provider);

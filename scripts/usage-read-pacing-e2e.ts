@@ -3,8 +3,8 @@
 // while a flag file exists. The service clock moves forward in place of a wait. Cases: polls from many
 // views at once share one read; a poll within four minutes of a read reads nothing; a failed read keeps
 // the last reading and the next read waits 5, 10, 20 and 40 minutes, up to an hour; a read that succeeds
-// ends the wait; a window that had reset before the read does not start a read at each poll; the poll after
-// a credential change shows the new credential's reading.
+// ends the wait; a window that had reset before the read does not start a read at each poll and stays on the
+// rail; after a credential change, no view shows the old credential's reading.
 // `bun scripts/usage-read-pacing-e2e.ts`. Writes .openbot-build/usage-read-pacing-e2e/report.json.
 import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -230,6 +230,7 @@ try {
   await rm(pastFlag);
   assert.equal(past.sent, 1);
   assert.equal(afterPast.sent, 0, "A window that had reset before the read does not ask for a read at each poll.");
+  assert.equal(afterPast.percent, past.percent, "The reading stays on the rail until the next read.");
   const rolled = await pollAfter(4 + 1 / 60);
   assert.equal(rolled.sent, 1);
   report.cases.push({
@@ -240,19 +241,27 @@ try {
 
   const pid = reads().at(-1)?.pid;
   const oldPercent = (await poll()) ?? 0;
+  // The new credential's first reads fail: no view shows the old credential's reading in its place.
+  writeFileSync(failFlag, "");
   await runCauseEffect(agents.changeProviderCredential("codex", () => Effect.void));
-  // The new process reads the usage when it starts. The poll answers with that reading, or reads it.
   await waitFor("the read of the new process", () => reads().some((read) => read.pid !== pid));
-  const changed = await poll();
-  const newReads = reads().filter((read) => read.pid !== pid).length;
-  assert.ok(newReads >= 1 && newReads <= 2, `The new process reads once or twice: ${newReads}`);
+  const failedAfterChange = await poll();
+  assert.equal(
+    failedAfterChange,
+    null,
+    `A failed read after a credential change shows no old reading: ${failedAfterChange}`,
+  );
+  await rm(failFlag);
+  const changed = await pollAfter(5 + 1 / 60);
+  const newReads = reads().filter((read) => read.pid !== pid);
+  assert.equal(changed.sent, 1, "After the wait, the new credential is read.");
   assert.ok(
-    changed !== null && changed <= newReads && changed < oldPercent,
-    `The poll after a credential change shows the new credential's reading: ${changed}, before ${oldPercent}`,
+    changed.percent !== null && changed.percent < oldPercent,
+    `The new credential's reading shows: ${changed.percent}, before ${oldPercent}`,
   );
   report.cases.push({
-    name: "a credential change shows the new credential's reading at the next poll",
-    details: { oldPercent, changed, newReads },
+    name: "after a credential change, no view shows the old credential's reading",
+    details: { oldPercent, failedAfterChange, changed, newReads: newReads.length },
     passed: true,
   });
   report.passed = true;
