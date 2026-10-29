@@ -1,7 +1,7 @@
 import type { ChannelSummary } from "@openbot/contracts/ipc";
 import { Link } from "expo-router";
-import { memo, type ReactNode } from "react";
-import { ScrollView, View } from "react-native";
+import { memo, type ReactNode, useMemo } from "react";
+import { FlatList, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AgentWaitBadge } from "@/features/agents/components/agent-wait-badge";
 import { BloubAvatar } from "@/features/agents/components/bloub-avatar";
@@ -16,6 +16,39 @@ import { useBarTop } from "@/shared/lib/native-bar";
 import { useText } from "@/shared/lib/text";
 
 const AVATAR_SIZE = 44;
+const RAIL_BATCH = 16;
+const RAIL_WINDOW_SIZE = 5;
+
+type RailEntry =
+  | { kind: "agent"; key: string; agent: MobileAgent }
+  | { kind: "channel"; key: string; channel: ChannelSummary }
+  | { kind: "divider"; key: string };
+
+/**
+ * The avatars in the order of the list: the pinned chats, then each section. A section or the waiting
+ * group starts with a divider; the first one has a divider only below the pins.
+ */
+function railEntries(
+  pinnedAgents: readonly MobileAgent[],
+  pinnedChannels: readonly ChannelSummary[],
+  items: readonly MobileSidebarItem[],
+): RailEntry[] {
+  const entries: RailEntry[] = [
+    ...pinnedAgents.map((agent): RailEntry => ({ kind: "agent", key: `pin:${agent.id}`, agent })),
+    ...pinnedChannels.map((channel): RailEntry => ({ kind: "channel", key: `pin:${channel.id}`, channel })),
+  ];
+  for (const item of items) {
+    if (item.kind === "agent") entries.push({ kind: "agent", key: `agent:${item.id}`, agent: item.agent });
+    else if (item.kind === "channel")
+      entries.push({ kind: "channel", key: `channel:${item.id}`, channel: item.channel });
+    else if (entries.length > 0) entries.push({ kind: "divider", key: `${item.kind}:${item.id}` });
+  }
+  return entries;
+}
+
+function railEntryKey(entry: RailEntry): string {
+  return entry.key;
+}
 
 function RailUnreadDot() {
   return <View pointerEvents="none" className="absolute top-1 right-1 size-2.5 rounded-full bg-accent" />;
@@ -113,36 +146,37 @@ export function ChatListRail({
 }) {
   const insets = useSafeAreaInsets();
   const barTop = useBarTop();
-  const hasPins = pinnedAgents.length + pinnedChannels.length > 0;
+  const entries = useMemo(
+    () => railEntries(pinnedAgents, pinnedChannels, items),
+    [pinnedAgents, pinnedChannels, items],
+  );
   return (
     <View className="flex-1 bg-background" style={{ paddingLeft: insets.left }}>
       <View className="items-center justify-center" style={{ marginTop: barTop, height: headerHeight }}>
         {header}
       </View>
-      <ScrollView
+      {/* Virtualized: the rail stays mounted under the full list, so it renders only the avatars
+          near the screen, however many chats the server has. */}
+      <FlatList
         className="flex-1"
+        data={entries}
+        keyExtractor={railEntryKey}
+        renderItem={({ item }) =>
+          item.kind === "agent" ? (
+            <RailAgent agent={item.agent} />
+          ) : item.kind === "channel" ? (
+            <RailChannel channel={item.channel} serverId={serverId} agents={channelAgents} />
+          ) : (
+            <RailDivider />
+          )
+        }
+        initialNumToRender={RAIL_BATCH}
+        maxToRenderPerBatch={RAIL_BATCH}
+        windowSize={RAIL_WINDOW_SIZE}
         contentContainerClassName="items-center gap-1"
         contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 16 }}
         showsVerticalScrollIndicator={false}
-      >
-        {pinnedAgents.map((agent) => (
-          <RailAgent key={agent.id} agent={agent} />
-        ))}
-        {pinnedChannels.map((channel) => (
-          <RailChannel key={channel.id} channel={channel} serverId={serverId} agents={channelAgents} />
-        ))}
-        {items.map((item, index) =>
-          item.kind === "agent" ? (
-            <RailAgent key={`agent:${item.id}`} agent={item.agent} />
-          ) : item.kind === "channel" ? (
-            <RailChannel key={`channel:${item.id}`} channel={item.channel} serverId={serverId} agents={channelAgents} />
-          ) : // A section or the waiting group starts a new group. The first one needs a divider only
-          // below the pins.
-          index > 0 || hasPins ? (
-            <RailDivider key={`${item.kind}:${item.id}`} />
-          ) : null,
-        )}
-      </ScrollView>
+      />
     </View>
   );
 }
