@@ -122,11 +122,11 @@ class ChannelRoutingError extends Schema.TaggedError<ChannelRoutingError>()("Cha
 const ROUTING_RECENT_MESSAGES = 5;
 const ROUTING_TEXT_CHARACTERS = 600;
 /**
- * A request can hold 100k characters; its start is enough to choose members. Grok CLI 1.0.70 moves a
- * prompt above 100,000 bytes to a file and shows the model only an excerpt, so a router that got the
- * whole request saw part of it and stopped at a tool permission.
+ * In UTF-8 bytes. A request can hold 100k characters; its start is enough to choose members. Grok CLI
+ * 1.0.70 moves a prompt above 100,000 bytes to a file and shows the model only an excerpt, so a
+ * router that got the whole request saw part of it and stopped at a tool permission.
  */
-const ROUTING_REQUEST_CHARACTERS = 20_000;
+const ROUTING_REQUEST_BYTES = 20_000;
 const ROUTING_PROMPT_CHARACTERS = 120_000;
 
 /** One outcome only; reject extra fields when decoding the model response. */
@@ -972,13 +972,7 @@ export class ChannelService {
                     channel.members.some((member) => member.agentId === agent.id) && !this.hooks.hidden?.(agent.id),
                 )
                 .map(({ id, name, title, description }) => ({ id, name, title, description })),
-              task: {
-                ...task,
-                instruction:
-                  task.instruction.length > ROUTING_REQUEST_CHARACTERS
-                    ? `${task.instruction.slice(0, ROUTING_REQUEST_CHARACTERS)}\n\n[truncated]`
-                    : task.instruction,
-              },
+              task: { ...task, instruction: routingRequest(task.instruction) },
               summary: summary.text || undefined,
               recent: channelResult(
                 yield* Effect.result(
@@ -2853,6 +2847,12 @@ export class ChannelService {
     ]);
     yield* Scope.close(this.#scope, Exit.void);
   }, Effect.uninterruptible).bind(this);
+}
+
+/** The start of the request that fits in its routing bytes. Only whole characters are kept. */
+function routingRequest(text: string): string {
+  const { read } = new TextEncoder().encodeInto(text, new Uint8Array(ROUTING_REQUEST_BYTES));
+  return read < text.length ? `${text.slice(0, read)}\n\n[truncated]` : text;
 }
 
 /**
