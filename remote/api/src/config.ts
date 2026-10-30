@@ -32,6 +32,21 @@ export interface RemoteApiConfig {
   // The OpenBot Discord bot. Without it, Signal keeps no Gateway connection and the Discord API route
   // answers 503.
   discord: DiscordBotConfig | null;
+  // The OpenBot Google sign-in apps, production and development, which share this Signal. Without
+  // them, the Google token route answers 503.
+  google: GoogleOAuthConfig | null;
+}
+
+export interface GoogleOAuthClient {
+  clientId: string;
+  // Only Signal has it: never log it or put it in an answer.
+  clientSecret: string;
+}
+
+export interface GoogleOAuthConfig {
+  clients: GoogleOAuthClient[];
+  // Google's token endpoint. Only a test changes it.
+  tokenUrl: string;
 }
 
 export interface DiscordBotConfig {
@@ -139,6 +154,40 @@ function readDiscordBot(
   return { botToken, applicationId: id, messageContent: messageContent !== "false" };
 }
 
+/**
+ * `GOOGLE_OAUTH_CLIENTS` is a comma-separated list of `<client ID>:<client secret>`. A malformed value
+ * turns off only the Google token route, which then answers 503: the remote sessions keep running.
+ * `GOOGLE_OAUTH_TOKEN_URL` replaces Google's token endpoint, for a test only.
+ */
+function readGoogleOAuthConfig(environment: Record<string, string | undefined>): GoogleOAuthConfig | null {
+  const off = (message: string) => {
+    console.error(`${message} The Google token route is off.`);
+    return null;
+  };
+  const clients: GoogleOAuthClient[] = [];
+  for (const entry of (environment.GOOGLE_OAUTH_CLIENTS ?? "").split(",").map((part) => part.trim())) {
+    if (!entry) continue;
+    const separator = entry.indexOf(":");
+    const clientId = entry.slice(0, separator).trim();
+    const clientSecret = entry.slice(separator + 1).trim();
+    if (
+      separator < 0 ||
+      !GOOGLE_CLIENT_ID_PATTERN.test(clientId) ||
+      !/^[A-Za-z0-9_-]{8,128}$/u.test(clientSecret) ||
+      clients.some((client) => client.clientId === clientId)
+    )
+      return off("GOOGLE_OAUTH_CLIENTS must list different <client ID>:<client secret> pairs.");
+    clients.push({ clientId, clientSecret });
+  }
+  if (clients.length === 0) return null;
+  const override = optional(environment.GOOGLE_OAUTH_TOKEN_URL);
+  if (override && !URL.canParse(override)) return off("GOOGLE_OAUTH_TOKEN_URL must be a URL.");
+  return { clients, tokenUrl: override ?? GOOGLE_TOKEN_URL };
+}
+
+const GOOGLE_CLIENT_ID_PATTERN = /^[0-9]{1,30}-[a-z0-9]{1,64}\.apps\.googleusercontent\.com$/u;
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+
 export function readRemoteApiConfig(environment: Record<string, string | undefined> = process.env): RemoteApiConfig {
   const tlsDisabled = environment.REMOTE_TLS_DISABLED === "true";
   const ticketJwks = optional(environment.REMOTE_TICKET_PUBLIC_KEYS ?? environment.REMOTE_TICKET_PUBLIC_JWKS);
@@ -173,6 +222,7 @@ export function readRemoteApiConfig(environment: Record<string, string | undefin
       environment.DISCORD_APPLICATION_ID,
       environment.DISCORD_MESSAGE_CONTENT,
     ),
+    google: readGoogleOAuthConfig(environment),
   };
 }
 
