@@ -8,7 +8,7 @@ export type ThreadTabRow = "chat" | "side";
  * A thread tab that the pointer takes over the other row. A drop there moves the thread to that row.
  * Only one pointer moves a tab at a time, so one value serves the chat header and the side panel.
  */
-export interface ThreadTabCarry {
+interface ThreadTabCarry {
   thread: ThreadItem;
   from: ThreadTabRow;
   /** The pointer, in viewport pixels. */

@@ -437,7 +437,7 @@ export interface ConversationThreads {
 }
 
 /** The side threads in the side panel. Each shows beside the agent's own chat. */
-export interface SideThreads {
+interface SideThreads {
   /** In tab order. */
   tabs: readonly ThreadItem[];
   /** A thread of a tab, with the actions of its own message box. Undefined when the thread is gone. */
