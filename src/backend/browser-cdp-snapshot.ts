@@ -17,6 +17,7 @@ import {
   textMatches,
 } from "./browser-cdp-values";
 import { browserFailure, browserSync } from "./browser-effects";
+import { TimeoutError } from "./with-timeout";
 
 const MAX_SNAPSHOT_ELEMENTS = 200;
 const MAX_SNAPSHOT_CANDIDATES = MAX_SNAPSHOT_ELEMENTS * 2;
@@ -84,7 +85,6 @@ export const collectBoundedSnapshot = Effect.fn("Browser.collectBoundedSnapshot"
   const textParts: string[] = [];
   let textLength = 0;
   let hasVisualSurface = false;
-  let hasFrame = captures.length > 1;
   let truncated = false;
   for (const capture of captures) {
     yield* browserSync(() => assertBeforeDeadline(deadline));
@@ -100,11 +100,10 @@ export const collectBoundedSnapshot = Effect.fn("Browser.collectBoundedSnapshot"
         }
         truncated ||= summary.truncated;
         hasVisualSurface ||= summary.hasVisualSurface;
-        hasFrame ||= summary.hasFrame;
       }
     }
     const remainingElements = MAX_SNAPSHOT_ELEMENTS - elements.length;
-    if (remainingElements <= 0) break;
+    if (remainingElements <= 0) continue;
     const candidates =
       capture.sessionId && deadline === undefined
         ? yield* collectActionableNodesEffect(send, capture, remainingElements).pipe(
@@ -151,7 +150,6 @@ export const collectBoundedSnapshot = Effect.fn("Browser.collectBoundedSnapshot"
     text: text.slice(0, MAX_SNAPSHOT_TEXT),
     truncated: truncated || text.length > MAX_SNAPSHOT_TEXT || elements.length >= MAX_SNAPSHOT_ELEMENTS,
     hasVisualSurface,
-    hasFrame,
   };
 });
 
@@ -176,7 +174,6 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
         let truncated = false;
         let scanned = 0;
         let hasVisualSurface = false;
-        let hasFrame = false;
         const visibleRects = node => {
           let element = node.parentElement;
           while (element) {
@@ -189,6 +186,10 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
               const root = element.getRootNode();
               element = root?.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? root.host : null;
             }
+          }
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const rects = [...node.getClientRects()];
+            return rects.length > 0 ? rects : null;
           }
           const range = node.ownerDocument.createRange();
           range.selectNodeContents(node);
@@ -230,9 +231,12 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
             }
             if (node.nodeType !== 1) continue;
             const tag = node.localName;
-            if (tag === 'canvas' || tag === 'video') hasVisualSurface = true;
+            if (tag === 'canvas' || tag === 'video') {
+              const view = node.ownerDocument.defaultView;
+              const style = view?.getComputedStyle(node);
+              if (style?.visibility === 'visible' && style.opacity !== '0' && visibleRects(node)?.some(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < (view?.innerHeight ?? 0) && rect.left < (view?.innerWidth ?? 0))) hasVisualSurface = true;
+            }
             if (tag === 'iframe' || tag === 'frame') {
-              hasFrame = true;
               try { if (node.contentDocument) roots.push(node.contentDocument); } catch {}
             }
             if (node.shadowRoot) roots.push(node.shadowRoot);
@@ -241,7 +245,7 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
         if (scanned >= maxNodes) truncated = true;
         const text = [...inView.parts, ...outside.parts].join(' ');
         if (text.length > maxText) truncated = true;
-        return { text: text.slice(0, maxText), truncated, hasVisualSurface, hasFrame };
+        return { text: text.slice(0, maxText), truncated, hasVisualSurface };
       })()`,
       contextId,
       returnByValue: true,
@@ -253,7 +257,6 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
     text: stringValue(value?.text),
     truncated: value?.truncated === true,
     hasVisualSurface: value?.hasVisualSurface === true,
-    hasFrame: value?.hasFrame === true,
   };
 });
 
@@ -378,7 +381,7 @@ export const pageContainsText = Effect.fn("Browser.pageContainsText")(function* 
     ).pipe(Effect.catch(() => Effect.succeed(null)));
     yield* browserSync(() => assertBeforeDeadline(deadline));
     const value = recordValue(recordValue(result?.result)?.value);
-    if (value?.expired === true) return yield* browserFailure(new Error("Browser wait condition timed out."));
+    if (value?.expired === true) return yield* browserFailure(new TimeoutError("Browser wait condition timed out."));
     if (value?.matched === true) return true;
   }
   return false;
@@ -537,6 +540,11 @@ export const visibleTextObjectMatches = Effect.fn("Browser.visibleTextObjectMatc
         let truncated = false;
         const isCandidate = node => {
           if (node.nodeType !== 1) return false;
+          const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
+          const tag = node.localName;
+          const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
+            tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
+          if (!semantic && !roles.has(explicitRole)) return false;
           let element = node;
           while (element) {
             if (element.hidden || element.inert || String(element.getAttribute('aria-hidden')).toLowerCase() === 'true') return false;
@@ -549,11 +557,6 @@ export const visibleTextObjectMatches = Effect.fn("Browser.visibleTextObjectMatc
               element = root?.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? root.host : null;
             }
           }
-          const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
-          const tag = node.localName;
-          const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
-            tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
-          if (!semantic && !roles.has(explicitRole)) return false;
           return node.getClientRects().length > 0;
         };
         while (roots.length && matches.length < 2) {
@@ -665,25 +668,27 @@ const collectActionableNodesEffect = Effect.fn("Browser.collectActionableNodes")
         .filter(Boolean)
         .slice(0, MAX_SNAPSHOT_CANDIDATES),
     );
+    const textResult = yield* send(
+      "Runtime.callFunctionOn",
+      {
+        objectId: collectionId,
+        functionDeclaration: String.raw`function() { return this.map(node => String(node.innerText ?? node.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 500)); }`,
+        returnByValue: true,
+      },
+      capture.sessionId,
+    );
+    const textValues = recordValue(textResult.result)?.value;
+    if (!Array.isArray(textValues) || textValues.length !== objectIds.length)
+      return yield* browserFailure(new Error("Browser candidate text collection changed."));
     for (let offset = 0; offset < objectIds.length && results.length < limit; offset += batchSize) {
       const batch = objectIds.slice(offset, offset + batchSize);
       const resolved = yield* Effect.all(
-        batch.map((objectId) =>
+        batch.map((objectId, index) =>
           Effect.gen(function* () {
-            const [description, partialAxTree, visibleTextResult] = yield* Effect.all(
+            const [description, partialAxTree] = yield* Effect.all(
               [
                 send("DOM.describeNode", { objectId, depth: 0 }, capture.sessionId),
                 send("Accessibility.getPartialAXTree", { objectId, fetchRelatives: false }, capture.sessionId),
-                send(
-                  "Runtime.callFunctionOn",
-                  {
-                    objectId,
-                    functionDeclaration:
-                      "function() { return String(this.innerText ?? this.textContent ?? '').replace(/\\s+/g, ' ').trim().slice(0, 500); }",
-                    returnByValue: true,
-                  },
-                  capture.sessionId,
-                ),
               ],
               { concurrency: "unbounded" },
             );
@@ -701,7 +706,7 @@ const collectActionableNodesEffect = Effect.fn("Browser.collectActionableNodes")
               node,
               ax,
               role,
-              visibleText: stringValue(recordValue(visibleTextResult.result)?.value),
+              visibleText: stringValue(textValues[offset + index]),
             };
           }),
         ),
@@ -731,10 +736,16 @@ function actionableNodesExpression(limit: number): string {
     const roles = new Set(${JSON.stringify([...ACTIONABLE_ROLES])});
     const roots = [document];
     const seenRoots = new Set();
-    const matches = [];
+    const inView = [];
+    const outside = [];
     let scanned = 0;
     const isCandidate = node => {
       if (node.nodeType !== 1) return false;
+      const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
+      const tag = node.localName;
+      const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
+        tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
+      if (!semantic && !roles.has(explicitRole)) return false;
       let element = node;
       while (element) {
         if (element.hidden || element.inert || String(element.getAttribute('aria-hidden')).toLowerCase() === 'true') return false;
@@ -747,29 +758,28 @@ function actionableNodesExpression(limit: number): string {
           element = root?.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? root.host : null;
         }
       }
-      const explicitRole = (node.getAttribute('role') || '').trim().split(/\\s+/)[0].toLowerCase();
-      const tag = node.localName;
-      const semantic = tag === 'button' || tag === 'summary' || (tag === 'a' && node.hasAttribute('href')) ||
-        tag === 'select' || tag === 'textarea' || (tag === 'input' && node.type !== 'hidden') || node.isContentEditable;
-      if (!semantic && !roles.has(explicitRole)) return false;
       return node.getClientRects().length > 0;
     };
-    while (roots.length && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && matches.length < ${Math.max(0, limit)}) {
+    while (roots.length && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && inView.length < ${Math.max(0, limit)}) {
       const root = roots.shift();
       if (!root || seenRoots.has(root)) continue;
       seenRoots.add(root);
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
       let node;
-      while ((node = walker.nextNode()) && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && matches.length < ${Math.max(0, limit)}) {
+      while ((node = walker.nextNode()) && scanned < ${MAX_SNAPSHOT_SCANNED_NODES} && inView.length < ${Math.max(0, limit)}) {
         scanned++;
         if (node.shadowRoot) roots.push(node.shadowRoot);
         if (node.localName === 'iframe' || node.localName === 'frame') {
           try { if (node.contentDocument) roots.push(node.contentDocument); } catch {}
         }
-        if (isCandidate(node)) matches.push(node);
+        if (!isCandidate(node)) continue;
+        const view = node.ownerDocument.defaultView;
+        const visible = [...node.getClientRects()].some(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < (view?.innerHeight ?? 0) && rect.left < (view?.innerWidth ?? 0));
+        if (visible) inView.push(node);
+        else if (outside.length < ${Math.max(0, limit)}) outside.push(node);
       }
     }
-    return matches;
+    return [...inView, ...outside].slice(0, ${Math.max(0, limit)});
   })()`;
 }
 

@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { constants } from "node:fs";
 import { mkdir, mkdtemp, open, readFile, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -5,12 +6,14 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { BrowserBounds } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isDynamicRecord, isNumber, isString } from "@openbot/contracts/runtime-values";
+import { teeLogLines } from "@openbot/logging";
 import { Effect } from "effect";
 import {
   app,
   BrowserWindow,
   clipboard,
   type DownloadItem,
+  dialog,
   type Event as ElectronEvent,
   type WebContents,
   type WebContentsConsoleMessageEventParams,
@@ -19,13 +22,18 @@ import {
 import { BrowserUploads } from "../src/backend/agent/browser-uploads";
 import { attachmentCall } from "../src/backend/attachment-effects";
 import { BrowserHost } from "../src/backend/browser-host";
+import { navigateAndWait } from "../src/backend/browser-navigation";
 import { runCauseEffect } from "../src/backend/effect-boundary";
 import { type DynamicToolResult, getString } from "../src/backend/protocol";
+import { TimeoutError } from "../src/backend/with-timeout";
 import { runSecretHandoffScenario } from "./browser-secret-smoke";
 import { waitForPresentedFrame } from "./browser-smoke-frames";
 
 let cachedPageVersion = 1;
 let slowDocumentVersion = 0;
+let uncommittedNavigationRequests = 0;
+let previousDocumentGates = 0;
+let releasePreviousDocumentRedirect = (): void => {};
 // `/slow-document?action` stays open until the smoke releases it, so the navigation that the timed
 // click starts is still pending when the click reaches its deadline.
 let actionNavigationRequests = 0;
@@ -155,6 +163,37 @@ const server = createServer((request, response) => {
   }
   if (url.pathname === "/abort") {
     response.destroy();
+    return;
+  }
+  if (url.pathname === "/navigation-pending") {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.write("<!doctype html><main>pending navigation</main>");
+    return;
+  }
+  if (url.pathname === "/navigation-uncommitted") {
+    uncommittedNavigationRequests++;
+    releasePreviousDocumentRedirect();
+    return;
+  }
+  if (url.pathname === "/previous-document-gate") {
+    releasePreviousDocumentRedirect = () => response.end("continue");
+    previousDocumentGates++;
+    return;
+  }
+  if (url.pathname === "/redirect-http") {
+    response.writeHead(302, { location: "/redirect-end" }).end();
+    return;
+  }
+  if (url.pathname === "/frame-redirect-parent") {
+    response.setHeader("content-type", "text/html; charset=utf-8");
+    response.end("<script>parent.location.replace('/redirect-end')</script>");
+    return;
+  }
+  if (url.pathname === "/reload-redirect") {
+    response.setHeader("content-type", "text/html; charset=utf-8");
+    response.end(
+      "<script>if (sessionStorage.getItem('reload-redirect')) location.replace('/redirect-end');</script><img src='/redirect-image'>",
+    );
     return;
   }
   if (url.pathname === "/identity-frame") {
@@ -353,8 +392,13 @@ const server = createServer((request, response) => {
   // The slow image keeps the first load open until the redirect starts.
   if (url.pathname === "/redirect-start") {
     response.setHeader("content-type", "text/html; charset=utf-8");
+    if (url.search === "?frame") {
+      response.end('<iframe src="/frame-redirect-parent"></iframe><img src="/redirect-image">');
+      return;
+    }
+    const destination = url.search === "?failed" ? "/abort" : `/redirect-end${url.search}`;
     response.end(
-      `<!doctype html><script>setTimeout(() => location.replace('/redirect-end${url.search}'), 0)</script><img src="/redirect-image">`,
+      `<!doctype html><script>setTimeout(() => location.replace(${JSON.stringify(destination)}), 0)</script><img src="/redirect-image">`,
     );
     return;
   }
@@ -364,7 +408,9 @@ const server = createServer((request, response) => {
   }
   if (url.pathname === "/redirect-end") {
     response.setHeader("content-type", "text/html; charset=utf-8");
-    if (url.search === "?slow") {
+    if (url.search === "?pending") {
+      response.write("<!doctype html><main>pending successor</main>");
+    } else if (url.search === "?slow") {
       response.write("<!doctype html><main>loading</main>");
       setTimeout(() => response.end("<script>document.querySelector('main').textContent='redirected'</script>"), 200);
     } else response.end("<!doctype html><main>redirected</main>");
@@ -426,6 +472,12 @@ const server = createServer((request, response) => {
 });
 
 const SCENARIOS = [
+  "hit-testing",
+  "dialogs",
+  "input-recovery",
+  "snapshot-coverage",
+  "typing-audit",
+  "snapshot-performance",
   "identity",
   "background",
   "focus",
@@ -533,6 +585,21 @@ async function main(): Promise<void> {
               await runDoubleClickScenario(browser, origin);
               await runKeyboardScenario(browser, origin, temporaryRoot);
               await runCanvasGridScenario(browser, origin);
+              await runTypingAudit(browser, origin);
+            } else if (scenario === "snapshot-performance") {
+              await measureSnapshots(browser, tab.id, contents);
+            } else if (scenario === "hit-testing") {
+              await runHitTesting(browser, tab.id, contents);
+            } else if (scenario === "dialogs") {
+              await runDialogScenario(browser, tab.id, contents);
+            } else if (scenario === "input-recovery") {
+              await runWaitDeadlines(browser, tab.id, contents);
+              await runTimeoutClassification(browser, tab.id, contents);
+              await runInputRecovery(browser, tab.id, contents);
+            } else if (scenario === "snapshot-coverage") {
+              await runSnapshotCoverage(browser, tab.id, contents);
+            } else if (scenario === "typing-audit") {
+              await runTypingAudit(browser, origin);
             } else if (scenario === "wait-deadlines") {
               await runWaitDeadlines(browser, tab.id, contents);
             } else if (scenario === "live-view") {
@@ -982,6 +1049,7 @@ async function main(): Promise<void> {
     await runControlActions(browser, v2Tab.id, v2Contents);
     await runKeyboardScenario(browser, origin, temporaryRoot);
     await runCanvasGridScenario(browser, origin);
+    await runTypingAudit(browser, origin);
     // A snapshot walks every frame, and Electron's `sendCommand` has no timeout of its own, so a frame
     // whose process is spinning never answers the walk. The timeout must return an error to the caller
     // and cancel the command, or the promise the tab's queue was told to wait on stays pending and
@@ -1994,6 +2062,16 @@ async function runFocusScenario(browser: BrowserHost, origin: string): Promise<v
   if (!backgroundAction.success || webContents.getFocusedWebContents() !== focusSentinel.webContents) {
     throw new Error("A background browser action did not restore focus to the unrelated application renderer.");
   }
+  const backgroundTyped = await callBrowserTool(browser, "type", {
+    tabId: backgroundTab.id,
+    target: { kind: "role", role: "textbox", name: "Task", exact: true },
+    text: "background typing",
+  });
+  const backgroundContents = webContents.getAllWebContents().find((contents) => contents.getURL() === `${origin}/`);
+  assert(backgroundContents);
+  const backgroundValue = await backgroundContents.executeJavaScript("document.querySelector('input').value");
+  assert(backgroundTyped.success && backgroundValue === "background typing");
+  assert(webContents.getFocusedWebContents() === focusSentinel.webContents);
   // An agent click opens a popup, and the popup closes itself after sign-in. The visible panel
   // shows both changes; neither may take focus from the person typing.
   const opener = await runCauseEffect(browser.open(`${origin}/popup-parent`, "smoke-thread", "smoke-bot"));
@@ -2024,7 +2102,17 @@ async function runFocusScenario(browser: BrowserHost, origin: string): Promise<v
   await mkdir(".openbot-build", { recursive: true });
   await writeFile(
     ".openbot-build/browser-focus-report.json",
-    JSON.stringify({ focusLosses, success: backgroundAction.success, popupKeptFocus, closeKeptFocus }, null, 2),
+    JSON.stringify(
+      {
+        focusLosses,
+        success: backgroundAction.success,
+        typingSuccess: backgroundTyped.success,
+        popupKeptFocus,
+        closeKeptFocus,
+      },
+      null,
+      2,
+    ),
   );
   if (!popupKeptFocus)
     throw new Error("A popup from an agent click stole focus from an unrelated application renderer.");
@@ -2042,8 +2130,33 @@ async function runFocusScenario(browser: BrowserHost, origin: string): Promise<v
  * redirected page.
  */
 async function runRedirectNavigationScenario(browser: BrowserHost, origin: string): Promise<void> {
-  const tab = await runCauseEffect(browser.open(origin, "smoke-thread", "smoke-bot"));
   const outcomes: { via: string; url: string; success: boolean; error?: string }[] = [];
+  for (const suffix of ["", "?slow"]) {
+    const url = `${origin}/redirect-start${suffix}`;
+    const redirected = await runCauseEffect(browser.open(url, "smoke-thread", "smoke-bot"));
+    try {
+      assert.equal(redirected.url, `${origin}/redirect-end${suffix}`);
+      assert.equal(redirected.loading, false);
+      const snapshot = await runCauseEffect(browser.snapshot(redirected.id));
+      assert.equal(snapshot.url, `${origin}/redirect-end${suffix}`);
+      assert(snapshot.text.includes("redirected"), snapshot.text);
+      outcomes.push({ via: "open", url, success: true });
+    } finally {
+      await runCauseEffect(browser.close(redirected.id));
+    }
+  }
+  const tabsBeforeFailure = browser.listTabs().map((tab) => tab.id);
+  const httpRedirect = await runCauseEffect(browser.open(`${origin}/redirect-http`, "smoke-thread", "smoke-bot"));
+  assert.equal(httpRedirect.url, `${origin}/redirect-end`);
+  await runCauseEffect(browser.close(httpRedirect.id));
+  outcomes.push({ via: "http-redirect", url: `${origin}/redirect-http`, success: true });
+  await expectFailure(() => runCauseEffect(browser.open(`${origin}/abort`, "smoke-thread", "smoke-bot")));
+  assert.deepEqual(
+    browser.listTabs().map((tab) => tab.id),
+    tabsBeforeFailure,
+  );
+  outcomes.push({ via: "failed-open-cleanup", url: `${origin}/abort`, success: true });
+  const { tab, contents } = await openTabWithContents(browser, origin, "smoke-thread", "smoke-bot");
   try {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       for (const url of [`${origin}/redirect-start`, `${origin}/redirect-start?slow`]) {
@@ -2054,6 +2167,8 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
           success: result.success,
           ...(result.success ? {} : { error: toolError(result) }),
         });
+        assert(result.success, toolError(result));
+        assert.equal(toolTextPayload(result)?.url, url.replace("redirect-start", "redirect-end"));
         const exit = await Effect.runPromiseExit(browser.loadUrl(tab.id, url));
         outcomes.push({
           via: "loadUrl",
@@ -2061,6 +2176,7 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
           success: exit._tag === "Success",
           ...(exit._tag === "Success" ? {} : { error: String(exit.cause) }),
         });
+        assert.equal(exit._tag, "Success", JSON.stringify(exit));
       }
     }
     await waitFor(
@@ -2071,6 +2187,124 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
           ?.url.includes("/redirect-end") === true,
       "redirected tab URL",
     );
+    const requestsBefore = uncommittedNavigationRequests;
+    const gatesBefore = previousDocumentGates;
+    let previousDocumentStarted = false;
+    const observePreviousDocument = (_event: unknown, url: string, _inPlace: boolean, mainFrame: boolean) => {
+      if (mainFrame && url === `${origin}/redirect-end?previous-document`) previousDocumentStarted = true;
+    };
+    contents.on("did-start-navigation", observePreviousDocument);
+    await contents.executeJavaScript(
+      "fetch('/previous-document-gate').then(() => location.replace('/redirect-end?previous-document')); true",
+    );
+    await waitFor(async () => previousDocumentGates > gatesBefore, "previous document redirect gate");
+    const provisionalNavigation = callBrowserTool(browser, "navigate", {
+      tabId: tab.id,
+      url: `${origin}/navigation-uncommitted`,
+      timeoutMs: 5_000,
+    });
+    await waitFor(async () => uncommittedNavigationRequests > requestsBefore, "uncommitted requested navigation");
+    await waitFor(async () => previousDocumentStarted, "previous document started a new load");
+    const previousDocumentResult = await provisionalNavigation;
+    contents.off("did-start-navigation", observePreviousDocument);
+    await writeFile(
+      ".openbot-build/browser-previous-document-refusal.json",
+      JSON.stringify(
+        {
+          success: previousDocumentResult.success,
+          error: previousDocumentResult.success ? null : toolError(previousDocumentResult),
+        },
+        null,
+        2,
+      ),
+    );
+    assert(!previousDocumentResult.success, JSON.stringify(previousDocumentResult));
+    assert(!toolError(previousDocumentResult).includes("timed out"), toolError(previousDocumentResult));
+    await waitFor(async () => !contents.isLoading(), "previous-document navigation stopped");
+    outcomes.push({ via: "previous-document-refusal", url: `${origin}/navigation-uncommitted`, success: true });
+    await expectFailure(() =>
+      runCauseEffect(browser.open(`${origin}/redirect-start?failed`, "smoke-thread", "smoke-bot")),
+    );
+    assert.deepEqual(
+      browser.listTabs().map((candidate) => candidate.id),
+      [...tabsBeforeFailure, tab.id],
+    );
+    outcomes.push({ via: "successor-failure", url: `${origin}/redirect-start?failed`, success: true });
+    await expectFailure(() =>
+      runCauseEffect(browser.open(`${origin}/redirect-start?frame`, "smoke-thread", "smoke-bot")),
+    );
+    assert.deepEqual(
+      browser.listTabs().map((candidate) => candidate.id),
+      [...tabsBeforeFailure, tab.id],
+    );
+    outcomes.push({ via: "other-frame-refusal", url: `${origin}/redirect-start?frame`, success: true });
+
+    for (const action of ["stop", "replace", "cancel", "timeout"]) {
+      const pendingUrl = `${origin}/navigation-pending`;
+      const controller = new AbortController();
+      let replacement: Promise<unknown> | undefined;
+      const changeNavigation = (_event: unknown, url: string, _inPlace: boolean, mainFrame: boolean) => {
+        if (!mainFrame || url !== pendingUrl || action === "timeout") return;
+        setImmediate(() => {
+          if (action === "stop") contents.stop();
+          else if (action === "cancel") controller.abort();
+          else replacement = contents.loadURL(`${origin}/redirect-end`).catch(() => undefined);
+        });
+      };
+      contents.on("did-start-navigation", changeNavigation);
+      const beforeListeners = contents.listenerCount("did-finish-load");
+      try {
+        const exit = await Effect.runPromiseExit(
+          navigateAndWait(contents, () => contents.loadURL(pendingUrl), 1_000),
+          { signal: controller.signal },
+        );
+        assert.equal(exit._tag, "Failure", `${action} unexpectedly succeeded`);
+        if (replacement) await replacement;
+        await waitFor(async () => !contents.isLoading(), `${action} navigation stopped`);
+        await waitFor(
+          async () => contents.listenerCount("did-finish-load") === beforeListeners,
+          `${action} navigation listener cleanup`,
+        );
+        outcomes.push({ via: `refused-${action}`, url: pendingUrl, success: true });
+      } finally {
+        contents.off("did-start-navigation", changeNavigation);
+      }
+    }
+    const timedOut = await Effect.runPromise(
+      navigateAndWait(contents, () => contents.loadURL(`${origin}/redirect-start?pending`), 1_000).pipe(Effect.flip),
+    );
+    assert(timedOut.cause instanceof TimeoutError, String(timedOut.cause));
+    await waitFor(async () => !contents.isLoading(), "successor deadline stopped navigation");
+    outcomes.push({ via: "successor-deadline", url: `${origin}/redirect-start?pending`, success: true });
+    await contents.loadURL(`${origin}/reload-redirect`);
+    await contents.executeJavaScript("sessionStorage.setItem('reload-redirect', 'yes'); true");
+    await runCauseEffect(
+      navigateAndWait(contents, () => {
+        contents.reload();
+        return true;
+      }),
+    );
+    assert.equal(contents.getURL(), `${origin}/redirect-end`);
+    assert((await contents.executeJavaScript("document.body.textContent")).includes("redirected"));
+    outcomes.push({ via: "boolean-reload-successor", url: `${origin}/reload-redirect`, success: true });
+    await contents.executeJavaScript("sessionStorage.removeItem('reload-redirect'); true");
+    const existingTabs = new Set(browser.listTabs().map((candidate) => candidate.id));
+    await expectFailure(() =>
+      runCauseEffect(browser.open(`${origin}/navigation-pending`, "smoke-thread", "smoke-bot")),
+    );
+    const retainedOpen = browser.listTabs().filter((candidate) => !existingTabs.has(candidate.id));
+    assert.equal(retainedOpen.length, 1);
+    const retainedTab = retainedOpen[0];
+    assert(retainedTab);
+    assert.equal(retainedTab.url, `${origin}/navigation-pending`);
+    const retainedSnapshot = await runCauseEffect(browser.snapshot(retainedTab.id));
+    assert(retainedSnapshot.text.includes("pending navigation"), retainedSnapshot.text);
+    await runCauseEffect(browser.close(retainedTab.id));
+    assert.deepEqual(new Set(browser.listTabs().map((candidate) => candidate.id)), existingTabs);
+    outcomes.push({ via: "open-timeout-retains-tab", url: `${origin}/navigation-pending`, success: true });
+    await expectFailure(() => runCauseEffect(browser.openPrivate(`${origin}/navigation-pending`)));
+    assert.deepEqual(new Set(browser.listTabs().map((candidate) => candidate.id)), existingTabs);
+    outcomes.push({ via: "private-open-timeout-cleanup", url: `${origin}/navigation-pending`, success: true });
   } finally {
     await runCauseEffect(browser.close(tab.id));
   }
@@ -2112,6 +2346,1479 @@ async function runBackgroundScenario(browser: BrowserHost, origin: string): Prom
   } finally {
     await runCauseEffect(browser.close(tab.id));
     await runCauseEffect(browser.close(other.id));
+  }
+}
+
+async function runHitTesting(browser: BrowserHost, tabId: string, contents: WebContents): Promise<void> {
+  const native = contents.debugger.sendCommand.bind(contents.debugger);
+  const logs: string[] = [];
+  const stopLog = teeLogLines(["browser-actions"], (line) => logs.push(line));
+  const checks: string[] = [];
+  let mode = "first_miss";
+  let misses = 0;
+  let mouseDispatches = 0;
+  const setup = async () => {
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<a href="#" style="display:block;width:200px;height:60px">Hit fixture</a>'; globalThis.hits = 0; document.querySelector('a').onclick = event => { event.preventDefault(); if (event.isTrusted) globalThis.hits++; }; true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    await runCauseEffect(browser.snapshot(tabId));
+  };
+  try {
+    await setup();
+    contents.debugger.sendCommand = (method, params, sessionId) => {
+      if (method === "Input.dispatchMouseEvent") mouseDispatches++;
+      if (method === "DOM.getNodeForLocation" && (mode === "all_miss" || (mode === "first_miss" && misses === 0))) {
+        misses++;
+        // Ask Chromium for a real empty hit; later points still use their original coordinates.
+        return native(method, { ...params, x: -2, y: -2 }, sessionId);
+      }
+      if (method === "DOM.getNodeForLocation" && mode === "invalid") {
+        misses++;
+        return native(method, { ...params, x: "invalid" }, sessionId);
+      }
+      return native(method, params, sessionId);
+    };
+    const click = () =>
+      callBrowserTool(browser, "click", {
+        tabId,
+        target: { kind: "role", role: "link", name: "Hit fixture", exact: true },
+        timeoutMs: 700,
+      });
+    assert((await click()).success);
+    assert.equal(misses, 1);
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    checks.push("native empty center hit continues to checked alternative points and clicks once");
+
+    mode = "all_miss";
+    await setup();
+    const absent = await click();
+    assert(!absent.success && toolTextPayload(absent)?.inputState === "not_started");
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 0);
+    checks.push("all missing hit points stop without unchecked input");
+
+    mode = "normal";
+    await runCauseEffect(browser.snapshot(tabId));
+    assert((await click()).success);
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    checks.push("fresh checked target works after hit data recovers");
+
+    mode = "invalid";
+    await setup();
+    misses = 0;
+    assert(!(await click()).success);
+    assert.equal(misses, 1);
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 0);
+    checks.push("other native protocol errors are not swallowed or retried");
+
+    const finished = logs.filter((line) => line.includes("Browser action finished"));
+    assert(finished.length >= 4);
+    for (const line of finished) {
+      const timing = JSON.parse(line.slice(line.indexOf("{")));
+      for (const name of ["targetResolutionMs", "inputMs", "settlingMs", "snapshotMs", "totalMs"])
+        assert(typeof timing[name] === "number" && timing[name] >= 0);
+      assert(!line.includes("Hit fixture") && !line.includes("http"));
+    }
+    checks.push("stage logs record numeric durations and exclude page targets and URLs");
+
+    mode = "normal";
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<section style="position:relative;width:400px;height:80px"><div role="link" tabindex="0" aria-label="Virtual flight" style="position:absolute;inset:0;pointer-events:none"></div><button style="width:400px;height:80px">Visual sibling</button></section>'; globalThis.hits = 0; globalThis.wrongHits = 0; document.querySelector('[role=link]').onkeydown = event => { if (event.isTrusted && event.key === 'Enter') globalThis.hits++; }; document.querySelector('button').onclick = event => { if (event.isTrusted) globalThis.wrongHits++; }; true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const virtualSnapshot = await runCauseEffect(browser.snapshot(tabId));
+    const virtualTarget = virtualSnapshot.elements.find((element) => element.name === "Virtual flight");
+    assert(virtualTarget);
+    const beforeVirtualClick = mouseDispatches;
+    const virtualClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: virtualTarget.ref, revision: virtualSnapshot.revision },
+      timeoutMs: 700,
+    });
+    const virtualFailure = toolTextPayload(virtualClick);
+    assert(!virtualClick.success && virtualFailure?.inputState === "not_started");
+    assert(String(virtualFailure.message).includes("pointer-events"), JSON.stringify(virtualFailure));
+    assert.equal(await contents.executeJavaScript("globalThis.hits + globalThis.wrongHits"), 0);
+    assert.equal(mouseDispatches, beforeVirtualClick);
+    checks.push("virtual pointer-disabled link returns a precise failure without clicking its visual sibling");
+    const keyboardSnapshot = await runCauseEffect(browser.snapshot(tabId));
+    const keyboardTarget = keyboardSnapshot.elements.find((element) => element.name === "Virtual flight");
+    assert(keyboardTarget);
+    const keyboardActivation = await callBrowserTool(browser, "press", {
+      tabId,
+      target: { kind: "ref", ref: keyboardTarget.ref, revision: keyboardSnapshot.revision },
+      key: "Enter",
+    });
+    assert(keyboardActivation.success, toolError(keyboardActivation));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    assert.equal(await contents.executeJavaScript("globalThis.wrongHits"), 0);
+    checks.push("separate targeted trusted keyboard activation works for a keyboard-enabled virtual link");
+
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button aria-label="Pointer-enabled child" style="pointer-events:none"><span style="display:block;width:200px;height:60px;pointer-events:auto">Clickable child</span></button>'; globalThis.hits = 0; document.querySelector('button').onclick = event => { if (event.isTrusted) globalThis.hits++; }; true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    await runCauseEffect(browser.snapshot(tabId));
+    const childClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Pointer-enabled child", exact: true },
+    });
+    assert(childClick.success, toolError(childClick));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    checks.push("pointer-disabled target keeps its genuinely activating pointer-enabled descendant");
+
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button aria-label="Covered result" style="width:200px;height:80px">Result</button><div role="dialog" aria-label="Cookie choices" style="position:fixed;inset:0;z-index:10;background:white"><button aria-label="Reject cookies">Reject cookies</button></div>'; globalThis.hits = 0; document.querySelector('[aria-label="Covered result"]').onclick = event => { if (event.isTrusted) globalThis.hits++; }; document.querySelector('[aria-label="Reject cookies"]').onclick = () => document.querySelector('[role=dialog]').remove(); true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    await runCauseEffect(browser.snapshot(tabId));
+    const beforeCookieClick = mouseDispatches;
+    const cookieBlocked = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Covered result", exact: true },
+      timeoutMs: 700,
+    });
+    assert(!cookieBlocked.success && toolTextPayload(cookieBlocked)?.inputState === "not_started");
+    assert(toolError(cookieBlocked).includes("covered by"), toolError(cookieBlocked));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 0);
+    assert.equal(mouseDispatches, beforeCookieClick);
+    const rejectCookies = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Reject cookies", exact: true },
+    });
+    assert(rejectCookies.success, toolError(rejectCookies));
+    const uncoveredResult = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Covered result", exact: true },
+    });
+    assert(uncoveredResult.success, toolError(uncoveredResult));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    checks.push("real consent overlay blocks input until an explicit dismissal, then the result activates once");
+
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<nav>' + Array.from({length: 450}, (_, i) => '<button style="display:block;height:32px">Earlier ' + i + '</button>').join('') + '</nav><main id="choices"><a href="#destination">Repeated destination</a><br><a href="#destination">Repeated destination</a><button hidden>Hidden choice</button><div inert><button>Inert choice</button></div></main>'; globalThis.chosen = 0; document.querySelectorAll('#choices a').forEach((link, i) => link.onclick = event => { event.preventDefault(); if (event.isTrusted) globalThis.chosen = i + 1; }); document.querySelector('#choices').scrollIntoView(); true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const scrolled = await runCauseEffect(browser.snapshot(tabId));
+    assert.equal(scrolled.elements.filter((element) => element.name === "Repeated destination").length, 2);
+    assert(scrolled.elements.length <= 200 && scrolled.truncated);
+    assert(!scrolled.elements.some((element) => element.name === "Hidden choice" || element.name === "Inert choice"));
+    checks.push("scrolled snapshot exposes viewport links after 450 earlier controls within existing bounds");
+
+    const ambiguous = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "link", name: "Repeated destination", exact: true },
+    });
+    const ambiguity = toolTextPayload(ambiguous);
+    assert(!ambiguous.success && ambiguity?.inputState === "not_started");
+    assert(String(ambiguity.message).includes("Candidates:") && !/main:\d+/.test(String(ambiguity.message)));
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 0);
+    const recovery = ambiguity.snapshot;
+    assert(isDynamicRecord(recovery) && Array.isArray(recovery.elements) && typeof recovery.revision === "number");
+    const choices = recovery.elements
+      .filter(isDynamicRecord)
+      .filter((element) => element.name === "Repeated destination");
+    const selected = choices[1];
+    assert(selected && typeof selected.ref === "string");
+    const selectedClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: selected.ref, revision: recovery.revision },
+    });
+    assert(selectedClick.success, toolError(selectedClick));
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 2);
+    checks.push("ambiguous targets refuse input and recovery refs select exactly one visible link");
+
+    await contents.executeJavaScript(
+      "document.querySelector('#choices').style.marginLeft = '1800px'; document.querySelector('#choices').scrollIntoView(); true",
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const horizontal = await runCauseEffect(browser.snapshot(tabId));
+    const horizontalTarget = horizontal.elements.find((element) => element.name === "Repeated destination");
+    assert(horizontalTarget);
+    assert(await contents.executeJavaScript("scrollX > 0 && scrollY > 0"));
+    const horizontalClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: horizontalTarget.ref, revision: horizontal.revision },
+    });
+    assert(horizontalClick.success, toolError(horizontalClick));
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 1);
+    checks.push("native hit validation and trusted input agree after horizontal and vertical scrolling");
+
+    for (const crossOrigin of [false, true]) {
+      const frameUrl = new URL("/frame", contents.getURL());
+      if (crossOrigin) frameUrl.hostname = "localhost";
+      const name = crossOrigin ? "Scrolled cross-origin frame" : "Scrolled same-origin frame";
+      frameUrl.searchParams.set("action_label", name);
+      await contents.executeJavaScript(
+        `(async () => { document.querySelector('#scroll-frame')?.remove(); const frame = document.createElement('iframe'); frame.id = 'scroll-frame'; frame.style.cssText = 'display:block;width:400px;height:180px;border:0'; const loaded = new Promise(resolve => frame.onload = resolve); frame.src = ${JSON.stringify(frameUrl.toString())}; document.querySelector('#choices').append(frame); await loaded; frame.scrollIntoView(); return true; })()`,
+        true,
+      );
+      const frame = contents.mainFrame.framesInSubtree.find((candidate) => candidate.url === frameUrl.toString());
+      assert(frame);
+      await frame.executeJavaScript(
+        "document.body.style.cssText = 'width:1000px;height:2000px'; const button = document.querySelector('button'); button.style.cssText = 'margin-top:1200px;margin-left:500px'; globalThis.clicks = 0; button.onclick = event => { if (event.isTrusted) globalThis.clicks++; }; scrollTo(400, 1100); true",
+      );
+      await waitForPresentedFrame(contents);
+      const framed = await runCauseEffect(browser.snapshot(tabId));
+      if (!crossOrigin) assert(framed.elements.some((element) => element.name === name));
+      assert(await frame.executeJavaScript("scrollX > 0 && scrollY > 0"));
+      const frameClick = await callBrowserTool(browser, "click", {
+        tabId,
+        target: { kind: "role", role: "button", name, exact: true },
+      });
+      assert(frameClick.success, toolError(frameClick));
+      assert.equal(await frame.executeJavaScript("globalThis.clicks"), 1);
+      checks.push(`${name} retains native hit validation and exactly one trusted click`);
+    }
+
+    await contents.executeJavaScript("scrollTo(0, 0); true", true);
+    await waitForPresentedFrame(contents);
+    const top = await runCauseEffect(browser.snapshot(tabId));
+    assert(top.elements.some((element) => element.name === "Earlier 0"));
+    assert(
+      !(
+        await callBrowserTool(browser, "click", {
+          tabId,
+          target: { kind: "ref", ref: selected.ref, revision: recovery.revision },
+        })
+      ).success,
+    );
+    assert.equal(await contents.executeJavaScript("globalThis.chosen"), 1);
+    checks.push("scrolling updates available controls and an earlier snapshot cannot dispatch another click");
+    await mkdir(".openbot-build", { recursive: true });
+    await writeFile(
+      ".openbot-build/browser-hit-testing.json",
+      JSON.stringify({ status: "passed", checks, logs }, null, 2),
+    );
+  } finally {
+    contents.debugger.sendCommand = native;
+    stopLog();
+  }
+}
+
+async function runDialogScenario(browser: BrowserHost, tabId: string, contents: WebContents): Promise<void> {
+  const checks: string[] = [];
+  const logs: string[] = [];
+  const stopLog = teeLogLines(["browser-dialogs"], (line) => logs.push(line));
+  const original = dialog.showMessageBox;
+  let nativeSheets = 0;
+  let releaseNative: (() => void) | undefined;
+  dialog.showMessageBox = async () => {
+    nativeSheets++;
+    return { response: 1, checkboxChecked: false };
+  };
+  const setup = async () => {
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button>Cancel reservation</button><output>Reserved</output>'; globalThis.cancellations = 0; document.querySelector('button').onclick = () => { if (confirm('Cancel the Saturday reservation?')) { globalThis.cancellations++; document.querySelector('output').textContent = 'Cancelled'; } }; true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    await runCauseEffect(browser.snapshot(tabId));
+  };
+  const click = () =>
+    callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Cancel reservation", exact: true },
+    });
+  try {
+    await setup();
+    const opened = toolTextPayload(await click());
+    assert(
+      isDynamicRecord(opened?.dialog) &&
+        opened.dialog.type === "confirm" &&
+        opened.dialog.message === "Cancel the Saturday reservation?",
+    );
+    assert.equal(nativeSheets, 0);
+    const observed = toolTextPayload(await callBrowserTool(browser, "snapshot", { tabId }));
+    assert(isDynamicRecord(observed?.dialog) && observed.dialog.id === opened.dialog.id);
+    const refused = await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: "stale-dialog", accept: true });
+    assert(!refused.success);
+    const accepted = await callBrowserTool(browser, "handle_dialog", {
+      tabId,
+      dialogId: opened.dialog.id,
+      accept: true,
+    });
+    assert(accepted.success, JSON.stringify(accepted));
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    assert(String(toolTextPayload(accepted)?.text).includes("Cancelled"));
+    assert(
+      !(await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: opened.dialog.id, accept: true })).success,
+    );
+    checks.push("agent reads and accepts exact confirmation once without a native sheet; stale IDs fail");
+
+    await setup();
+    const next = toolTextPayload(await click());
+    assert(isDynamicRecord(next?.dialog));
+    assert(
+      (await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: next.dialog.id, accept: false })).success,
+    );
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 0);
+    checks.push("agent can dismiss a confirmation without cancellation");
+
+    await setup();
+    await contents.executeJavaScript(
+      `document.querySelector('button').onclick = () => { if (confirm('First confirmation') && confirm('Second confirmation')) globalThis.cancellations++; }; true`,
+      true,
+    );
+    const first = toolTextPayload(await click());
+    const firstTurnId = `browser-v2-${browserToolCall}`;
+    assert(isDynamicRecord(first?.dialog));
+    const second = toolTextPayload(
+      await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: first.dialog.id, accept: true }),
+    );
+    assert(isDynamicRecord(second?.dialog) && second.dialog.message === "Second confirmation");
+    browser.endControl("smoke-thread", firstTurnId);
+    assert.equal(nativeSheets, 0);
+    assert(
+      (await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: second.dialog.id, accept: true })).success,
+    );
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    checks.push("chained confirmations return each decision without blocking snapshots");
+
+    await setup();
+    const detached = new Promise<void>((resolve) => contents.debugger.once("detach", () => resolve()));
+    const delayed = toolTextPayload(
+      await callBrowserTool(browser, "click", {
+        tabId,
+        target: { kind: "role", role: "button", name: "Cancel reservation", exact: true },
+        timeoutMs: 1_000,
+      }),
+    );
+    assert(isDynamicRecord(delayed?.dialog));
+    await detached;
+    const afterDeadline = await callBrowserTool(browser, "handle_dialog", {
+      tabId,
+      dialogId: delayed.dialog.id,
+      accept: true,
+    });
+    assert(afterDeadline.success, JSON.stringify(afterDeadline));
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    checks.push("dialog decision survives the original action deadline");
+
+    await setup();
+    await contents.executeJavaScript(
+      "document.querySelector('button').onclick = () => { confirm('Before takeover'); alert('Follow-up during cancellation'); }; true",
+      true,
+    );
+    const takeoverDialog = toolTextPayload(await click());
+    assert(isDynamicRecord(takeoverDialog?.dialog));
+    await runCauseEffect(browser.beginTakeover(tabId));
+    assert(
+      !(await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: takeoverDialog.dialog.id, accept: true }))
+        .success,
+    );
+    browser.endTakeover(tabId);
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 0);
+    checks.push("takeover dismisses pending confirmation and blocks agent approval");
+
+    await contents.executeJavaScript("globalThis.humanAnswer = confirm('Human confirmation'); true", true);
+    assert.equal(nativeSheets, 1);
+    assert.equal(await contents.executeJavaScript("globalThis.humanAnswer"), false);
+    checks.push("human actions retain Electron's native handler");
+
+    await contents.executeJavaScript(
+      `document.querySelector('button').onclick = () => { alert('Done'); document.querySelector('output').textContent = 'Alert closed'; }; true`,
+      true,
+    );
+    const alert = toolTextPayload(await click());
+    assert(isDynamicRecord(alert?.dialog) && alert.dialog.type === "alert");
+    assert(
+      (await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: alert.dialog.id, accept: true })).success,
+    );
+    assert.equal(nativeSheets, 1);
+    checks.push("agent closes alert without native UI");
+
+    for (const ending of ["turn end", "stop after result", "alert turn end"]) {
+      await setup();
+      if (ending === "alert turn end")
+        await contents.executeJavaScript(
+          "document.querySelector('button').onclick = () => { alert('End-turn alert'); document.querySelector('output').textContent = 'Alert closed'; }; true",
+          true,
+        );
+      let answerNative: ((response: number) => void) | undefined;
+      dialog.showMessageBox = async () => {
+        nativeSheets++;
+        return new Promise((resolve) => {
+          answerNative = (response) => resolve({ response, checkboxChecked: false });
+          releaseNative = () => answerNative?.(1);
+        });
+      };
+      const beforeSheets: number = nativeSheets;
+      const pending = toolTextPayload(await click());
+      const turnId = `browser-v2-${browserToolCall}`;
+      assert(isDynamicRecord(pending?.dialog));
+      browser.endControl("another-thread", turnId);
+      browser.endControl("smoke-thread", "stale-turn");
+      assert.equal(nativeSheets, beforeSheets);
+      if (ending === "turn end") {
+        await new Promise<void>((resolve) => {
+          const stop = browser.onControlChanged((state) => {
+            if (!state.sessions.some((session) => session.turnId === turnId)) {
+              stop();
+              resolve();
+            }
+          });
+          if (!browser.getControlState().sessions.some((session) => session.turnId === turnId)) {
+            stop();
+            resolve();
+          }
+        });
+      }
+      browser.endControl("smoke-thread", turnId);
+      assert.equal(nativeSheets, beforeSheets + 1);
+      assert(answerNative);
+      const handedOff = toolTextPayload(await callBrowserTool(browser, "snapshot", { tabId }));
+      assert(isDynamicRecord(handedOff?.dialog) && handedOff.dialog.handledBy === "user");
+      assert.equal(handedOff.dialog.message, undefined);
+      const previousUrl = contents.getURL();
+      const blockedNavigation = toolTextPayload(
+        await callBrowserTool(browser, "navigate", { tabId, url: new URL("/frame?must-not-run", previousUrl).href }),
+      );
+      assert(isDynamicRecord(blockedNavigation?.dialog) && blockedNavigation.dialog.id === pending.dialog.id);
+      assert(
+        !(await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: pending.dialog.id, accept: true }))
+          .success,
+      );
+      browser.endControl("smoke-thread", turnId);
+      assert.equal(nativeSheets, beforeSheets + 1);
+      answerNative(ending === "stop after result" ? 1 : 0);
+      releaseNative = undefined;
+      const drained = await runCauseEffect(browser.snapshot(tabId));
+      assert.equal(contents.getURL(), previousUrl);
+      assert.equal(
+        await contents.executeJavaScript("globalThis.cancellations"),
+        ending === "alert turn end" || ending === "stop after result" ? 0 : 1,
+      );
+      if (ending === "alert turn end") assert(drained.text.includes("Alert closed"));
+      assert(
+        !(await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: pending.dialog.id, accept: true }))
+          .success,
+      );
+      checks.push(`${ending} transfers the pending decision to native UI once without choosing for the user`);
+    }
+    dialog.showMessageBox = async () => {
+      nativeSheets++;
+      return { response: 1, checkboxChecked: false };
+    };
+
+    await setup();
+    await contents.executeJavaScript(
+      "document.querySelector('button').onclick = () => { if (confirm('Shutdown confirmation')) globalThis.cancellations++; alert('Shutdown follow-up'); }; true",
+      true,
+    );
+    const shutdownDialog = toolTextPayload(await click());
+    assert(isDynamicRecord(shutdownDialog?.dialog));
+    const beforeShutdownSheets: number = nativeSheets;
+    browser.clearControls();
+    await runCauseEffect(browser.snapshot(tabId));
+    assert.equal(nativeSheets, beforeShutdownSheets);
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 0);
+    assert(
+      !(await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: shutdownDialog.dialog.id, accept: true }))
+        .success,
+    );
+    checks.push("shutdown control cleanup cancels pending and chained agent dialogs without a new native sheet");
+
+    await setup();
+    await contents.executeJavaScript(
+      "globalThis.promptCalls = 0; globalThis.promptThrew = false; globalThis.promptReturned = false; delete globalThis.promptAnswer; document.querySelector('button').onclick = () => { globalThis.promptCalls++; try { globalThis.promptAnswer = prompt('password=synthetic-prompt-secret'); globalThis.promptReturned = true; } catch { globalThis.promptThrew = true; } }; true",
+      true,
+    );
+    const beforePromptSheets: number = nativeSheets;
+    const beforePromptLogs = logs.length;
+    const promptResult = await click();
+    const prompt = toolTextPayload(promptResult);
+    const promptDialog = isDynamicRecord(prompt?.dialog) ? prompt.dialog : undefined;
+    const promptType = promptDialog?.type;
+    const promptStatus = promptDialog?.status;
+    const promptMetadata = {
+      success: promptResult.success,
+      keys: Object.keys(prompt ?? {}).slice(0, 20),
+      hasDialog: promptDialog !== undefined,
+      type:
+        typeof promptType === "string" && ["alert", "confirm", "prompt", "beforeunload"].includes(promptType)
+          ? promptType
+          : "absent",
+      status:
+        typeof promptStatus === "string" && ["unsupported", "prevented", "allowed"].includes(promptStatus)
+          ? promptStatus
+          : "absent",
+    };
+    assert(
+      promptResult.success && prompt && prompt.dialog === undefined && prompt.nextTool === undefined,
+      JSON.stringify(promptMetadata),
+    );
+    assert(!JSON.stringify(promptResult).includes("synthetic-prompt-secret"));
+    assert.equal(nativeSheets, beforePromptSheets);
+    assert(!logs.slice(beforePromptLogs).some((line) => line.includes('"type":"prompt"')));
+    assert(
+      !(await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: "unsupported-prompt", accept: true }))
+        .success,
+    );
+    await runCauseEffect(browser.snapshot(tabId));
+    assert.equal(await contents.executeJavaScript("globalThis.promptCalls"), 1);
+    assert.equal(await contents.executeJavaScript("globalThis.promptThrew"), true);
+    assert.equal(await contents.executeJavaScript("globalThis.promptReturned"), false);
+    assert.equal(await contents.executeJavaScript("typeof globalThis.promptAnswer"), "undefined");
+    checks.push(
+      "Electron rejects prompt in the renderer before a dialog event; no sheet, waiting signal, timeout, or replay",
+    );
+
+    for (const [externalDebugger, followUp, clearControls, afterDeadline] of [
+      [false, null, false, false],
+      [true, null, true, false],
+      [true, "alert", false, false],
+      [true, "confirm", false, false],
+      [true, "alert", true, false],
+      [true, "confirm", true, false],
+      [false, "confirm", false, true],
+    ] as const) {
+      const closing = await openTabWithContents(
+        browser,
+        new URL("/frame?dialog-native-close", contents.getURL()).href,
+        "smoke-thread",
+        "smoke-bot",
+      );
+      let nativeAborts = 0;
+      let nativeAbortedBeforeDestruction = false;
+      let nativeDecisions = 0;
+      let nativeSheetsOpen = 0;
+      let answerNative: ((response: number) => void) | undefined;
+      const nativeSignals: AbortSignal[] = [];
+      let debuggerDetaches = 0;
+      let actionFinished = false;
+      let gapAttempt: Promise<DynamicToolResult> | undefined;
+      const stopActionLog = teeLogLines(["browser-actions"], (line) => {
+        if (line.includes("Browser action finished") && line.includes(`"tabId":"${closing.tab.id}"`))
+          actionFinished = true;
+      });
+      const stopGapLog = teeLogLines(["browser-dialogs"], (line) => {
+        if (
+          afterDeadline &&
+          !gapAttempt &&
+          line.includes(`"webContentsId":${closing.contents.id},`) &&
+          line.includes('"source":"native_handler"') &&
+          line.includes('"accepted":true')
+        )
+          gapAttempt = callBrowserTool(browser, "handle_dialog", {
+            tabId: closing.tab.id,
+            dialogId: "stale-native-gap-dialog",
+            accept: true,
+          });
+      });
+      const detach = closing.contents.debugger.detach.bind(closing.contents.debugger);
+      closing.contents.debugger.detach = () => {
+        debuggerDetaches++;
+        detach();
+      };
+      let closeDeadline: ReturnType<typeof setTimeout> | undefined;
+      try {
+        await closing.contents.executeJavaScript(
+          `document.body.innerHTML = '<button>Native close</button>'; document.querySelector('button').onclick = () => { if (confirm('Close pending native decision')) { ${followUp ? `${followUp}('Follow-up native decision');` : ""} } }; true`,
+          true,
+        );
+        if (externalDebugger) closing.contents.debugger.attach("1.3");
+        dialog.showMessageBox = async (
+          first: import("electron").BaseWindow | import("electron").MessageBoxOptions,
+          second?: import("electron").MessageBoxOptions,
+        ) => {
+          nativeSheets++;
+          const options = second ?? ("message" in first ? first : undefined);
+          const signal = options?.signal;
+          assert(signal);
+          nativeSignals.push(signal);
+          nativeSheetsOpen++;
+          return new Promise((resolve) => {
+            let settled = false;
+            answerNative = (response) => {
+              if (settled) return;
+              settled = true;
+              nativeDecisions++;
+              nativeSheetsOpen--;
+              resolve({ response, checkboxChecked: false });
+            };
+            releaseNative = () => answerNative?.(1);
+            signal.addEventListener(
+              "abort",
+              () => {
+                if (settled) return;
+                settled = true;
+                nativeAborts++;
+                nativeSheetsOpen--;
+                nativeAbortedBeforeDestruction = !closing.contents.isDestroyed();
+                resolve({ response: 1, checkboxChecked: false });
+              },
+              { once: true },
+            );
+          });
+        };
+        const pending = toolTextPayload(
+          await callBrowserTool(browser, "click", {
+            tabId: closing.tab.id,
+            target: { kind: "role", role: "button", name: "Native close", exact: true },
+            ...(afterDeadline ? { timeoutMs: 1_000 } : {}),
+          }),
+        );
+        const turnId = `browser-v2-${browserToolCall}`;
+        assert(isDynamicRecord(pending?.dialog) && pending.dialog.type === "confirm");
+        if (afterDeadline) await waitFor(async () => actionFinished, "the owned action deadline before handoff");
+        browser.endControl("smoke-thread", turnId);
+        const handedOff = toolTextPayload(await callBrowserTool(browser, "snapshot", { tabId: closing.tab.id }));
+        assert(isDynamicRecord(handedOff?.dialog) && handedOff.dialog.handledBy === "user");
+        assert.equal(nativeAborts, 0);
+        if (externalDebugger) {
+          assert(closing.contents.debugger.isAttached());
+          assert.equal(debuggerDetaches, 0);
+        }
+        if (clearControls) browser.clearControls();
+        if (followUp) {
+          assert(answerNative);
+          answerNative(0);
+          await waitFor(async () => nativeSignals.length === 2, "the next native sheet after human acceptance");
+          if (afterDeadline) {
+            assert(gapAttempt);
+            assert(!(await gapAttempt).success);
+          }
+          const next = toolTextPayload(await callBrowserTool(browser, "snapshot", { tabId: closing.tab.id }));
+          assert(
+            isDynamicRecord(next?.dialog) &&
+              next.dialog.type === followUp &&
+              next.dialog.handledBy === "user" &&
+              next.dialog.id !== pending.dialog.id &&
+              next.dialog.message === undefined &&
+              next.dialog.origin === undefined,
+          );
+          assert(
+            !(
+              await callBrowserTool(browser, "handle_dialog", {
+                tabId: closing.tab.id,
+                dialogId: next.dialog.id,
+                accept: true,
+              })
+            ).success,
+          );
+          browser.endControl("smoke-thread", "stale-native-turn");
+          browser.endControl("smoke-thread", turnId);
+          assert.equal(nativeDecisions, 1);
+          assert.equal(nativeAborts, 0);
+          assert.equal(nativeSheetsOpen, 1);
+        }
+        const detachesBeforeClose = debuggerDetaches;
+        await Promise.race([
+          runCauseEffect(browser.close(closing.tab.id)),
+          new Promise<never>((_resolve, reject) => {
+            closeDeadline = setTimeout(() => reject(new Error("Closing a native dialog did not drain.")), 3_000);
+          }),
+        ]);
+        assert(closing.contents.isDestroyed());
+        assert.equal(nativeAborts, 1);
+        assert(nativeAbortedBeforeDestruction);
+        assert.equal(nativeDecisions, followUp ? 1 : 0);
+        assert.equal(nativeSheetsOpen, 0);
+        assert.equal(nativeSignals.filter((signal) => signal.aborted).length, 1);
+        assert(nativeSignals.at(-1)?.aborted);
+        assert.equal(debuggerDetaches, detachesBeforeClose);
+        if (externalDebugger) assert.equal(debuggerDetaches, 0);
+        assert(!browser.listTabs().some((tab) => tab.id === closing.tab.id));
+        checks.push(
+          followUp
+            ? `native ${followUp} continuation ${afterDeadline ? "after action deadline and a stale queued wrapper" : clearControls ? "after clearControls" : "after handoff"} stays human-owned; Close aborts only its current sheet and drains without an extra decision or debugger detach`
+            : `explicit Close cancels a handed-off native sheet and drains ${externalDebugger ? "an external" : "the owned"} debugger without choosing a decision`,
+        );
+      } finally {
+        stopActionLog();
+        stopGapLog();
+        clearTimeout(closeDeadline);
+        releaseNative = undefined;
+        if (!closing.contents.isDestroyed()) closing.contents.close();
+        await runCauseEffect(browser.close(closing.tab.id));
+      }
+    }
+    dialog.showMessageBox = async () => {
+      nativeSheets++;
+      return { response: 1, checkboxChecked: false };
+    };
+
+    for (const action of ["click", "navigate"]) {
+      await setup();
+      const previousUrl = contents.getURL();
+      const destination = new URL("/frame?dialog-beforeunload", previousUrl).href;
+      await contents.executeJavaScript(
+        `globalThis.beforeUnloadCalls = 0; onbeforeunload = () => { globalThis.beforeUnloadCalls++; return 'password=synthetic-unload-secret'; }; document.querySelector('button').onclick = () => { location.href = ${JSON.stringify(destination)}; }; true`,
+        true,
+      );
+      let nativeUnloadEvents = 0;
+      contents.once("will-prevent-unload", () => nativeUnloadEvents++);
+      const beforeUnloadSheets: number = nativeSheets;
+      const unload = toolTextPayload(
+        await (action === "click" ? click() : callBrowserTool(browser, "navigate", { tabId, url: destination })),
+      );
+      assert(
+        isDynamicRecord(unload?.dialog) &&
+          unload.dialog.type === "beforeunload" &&
+          unload.dialog.handledBy === "user" &&
+          unload.dialog.status === "prevented" &&
+          unload.doNotReplay === true &&
+          unload.nextTool === "openbot.ask_user",
+      );
+      assert(!JSON.stringify(unload).includes("synthetic-unload-secret"));
+      assert.equal(nativeUnloadEvents, 1);
+      assert.equal(nativeSheets, beforeUnloadSheets);
+      await runCauseEffect(browser.snapshot(tabId));
+      assert.equal(contents.getURL(), previousUrl);
+      assert.equal(await contents.executeJavaScript("globalThis.beforeUnloadCalls"), 1);
+      assert(
+        !(await callBrowserTool(browser, "handle_dialog", { tabId, dialogId: unload.dialog.id, accept: true })).success,
+      );
+      await contents.executeJavaScript("onbeforeunload = null; true", true);
+      checks.push(`${action} preserves native beforeunload prevention and requests user help without replay`);
+    }
+
+    const { EventEmitter } = await import("node:events");
+    let nativeObservations = 0;
+    const nativeObserver = () => nativeObservations++;
+    const addNativeObserver = (_event: ElectronEvent, created: WebContents) => {
+      EventEmitter.prototype.on.call(created, "-run-dialog", nativeObserver);
+    };
+    app.once("web-contents-created", addNativeObserver);
+    let degraded: Awaited<ReturnType<typeof openTabWithContents>> | undefined;
+    try {
+      degraded = await openTabWithContents(
+        browser,
+        new URL("/frame?dialog-degraded", contents.getURL()).href,
+        "smoke-thread",
+        "smoke-bot",
+      );
+      const handlers = degraded.contents.listeners("-run-dialog");
+      assert.equal(handlers.length, 2);
+      assert(handlers.includes(nativeObserver));
+      await degraded.contents.executeJavaScript(
+        "document.body.innerHTML = '<button>Native confirmation</button>'; globalThis.degradedCalls = 0; document.querySelector('button').onclick = () => { globalThis.degradedCalls++; globalThis.degradedAnswer = confirm('Degraded native confirmation'); }; true",
+        true,
+      );
+      const beforeDegradedSheets: number = nativeSheets;
+      const result = await callBrowserTool(browser, "click", {
+        tabId: degraded.tab.id,
+        target: { kind: "role", role: "button", name: "Native confirmation", exact: true },
+      });
+      assert(result.success, JSON.stringify(result));
+      assert.equal(toolTextPayload(result)?.dialog, undefined);
+      assert.equal(nativeSheets, beforeDegradedSheets + 1);
+      assert.equal(nativeObservations, 1);
+      assert.equal(await degraded.contents.executeJavaScript("globalThis.degradedCalls"), 1);
+      assert.equal(await degraded.contents.executeJavaScript("globalThis.degradedAnswer"), false);
+      assert(logs.some((line) => line.includes('"reason":"native_handler_layout"')));
+      checks.push(
+        "unexpected native listener layout preserves tab construction, native decisions, and fixed warning metadata",
+      );
+    } finally {
+      app.removeListener("web-contents-created", addNativeObserver);
+      if (degraded) await runCauseEffect(browser.close(degraded.tab.id));
+    }
+    assert(logs.some((line) => line.includes('"source":"agent_tool"') && line.includes('"accepted":true')));
+    assert(logs.some((line) => line.includes('"source":"native_handler"')));
+    assert(logs.some((line) => line.includes('"source":"app_cancel"')));
+    assert(logs.some((line) => line.includes('"handler":"app_cancel"')));
+    assert(
+      !logs.some(
+        (line) =>
+          line.includes("Cancel the Saturday reservation?") ||
+          line.includes("Human confirmation") ||
+          line.includes("synthetic-prompt-secret") ||
+          line.includes("synthetic-unload-secret") ||
+          line.includes("http"),
+      ),
+    );
+    checks.push("local dialog logs identify handler, decision and duration without page content");
+    await mkdir(".openbot-build", { recursive: true });
+    await writeFile(
+      ".openbot-build/browser-dialogs.json",
+      JSON.stringify({ status: "passed", versions: process.versions, checks, prompt: promptMetadata, logs }, null, 2),
+    );
+  } finally {
+    releaseNative?.();
+    dialog.showMessageBox = original;
+    stopLog();
+  }
+}
+
+async function runInputRecovery(browser: BrowserHost, tabId: string, contents: WebContents): Promise<void> {
+  const checks: string[] = [];
+  const native = contents.debugger.sendCommand.bind(contents.debugger);
+  const setup = async () => {
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button id="cancel">Cancel reservation</button><output>Reserved</output>'; globalThis.cancellations = 0; document.querySelector('button').onclick = event => { if (event.isTrusted) { globalThis.cancellations++; document.querySelector('output').textContent = 'Cancelled'; } }; true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    return runCauseEffect(browser.snapshot(tabId));
+  };
+  try {
+    await setup();
+    const missing = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Missing", exact: true },
+    });
+    const refused = toolTextPayload(missing);
+    assert(!missing.success && refused?.inputState === "not_started" && isDynamicRecord(refused.snapshot));
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 0);
+    checks.push("refused input returns a fresh snapshot without clicking");
+
+    let takeover: Promise<void> | undefined;
+    contents.debugger.sendCommand = (method, params, sessionId) => {
+      if (!takeover) takeover = runCauseEffect(browser.beginTakeover(tabId));
+      return native(method, params, sessionId);
+    };
+    const protectedFailure = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Missing", exact: true },
+    });
+    await takeover;
+    assert(!protectedFailure.success && toolTextPayload(protectedFailure)?.snapshot === undefined);
+    contents.debugger.sendCommand = native;
+    browser.endTakeover(tabId);
+    checks.push("takeover during failure prevents recovery inspection");
+
+    await setup();
+    contents.debugger.sendCommand = async (method, params, sessionId) => {
+      const result = await native(method, params, sessionId);
+      if (method === "Input.dispatchMouseEvent" && params?.type === "mouseReleased")
+        throw new Error("Synthetic input acknowledgement failure.");
+      return result;
+    };
+    const uncertain = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Cancel reservation", exact: true },
+    });
+    assert(
+      !uncertain.success &&
+        toolTextPayload(uncertain)?.inputState === "attempted" &&
+        toolTextPayload(uncertain)?.stage === "input",
+    );
+    contents.debugger.sendCommand = native;
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    checks.push("lost input acknowledgement reports attempted input without replay");
+
+    const before = await setup();
+    const target = before.elements.find((element) => element.name === "Cancel reservation");
+    assert(target);
+    let sent = false;
+    contents.debugger.sendCommand = async (method, params, sessionId) => {
+      if (method === "Page.getLayoutMetrics" && sent) throw new Error("password=synthetic-recovery-secret");
+      const result = await native(method, params, sessionId);
+      if (method === "Input.dispatchMouseEvent" && params?.type === "mouseReleased") sent = true;
+      return result;
+    };
+    const cancelled = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: target.ref, revision: before.revision },
+    });
+    const outcome = toolTextPayload(cancelled);
+    assert(!cancelled.success && outcome?.inputState === "completed" && outcome.stage === "snapshot");
+    assert(!JSON.stringify(cancelled).includes("synthetic-recovery-secret"));
+    contents.debugger.sendCommand = native;
+    const verified = await runCauseEffect(browser.snapshot(tabId));
+    assert(verified.text.includes("Cancelled"));
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    checks.push("completed cancellation survives capture failure without duplicate input or secret leakage");
+
+    await setup();
+    await contents.executeJavaScript(
+      `document.body.insertAdjacentHTML('beforeend', '<div id="transient-cover" style="position:fixed;inset:0;z-index:999;background:white"></div>'); true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    contents.debugger.sendCommand = async (method, params, sessionId) => {
+      const result = await native(method, params, sessionId);
+      if (method === "DOM.describeNode" && JSON.stringify(result).includes("transient-cover")) {
+        await contents.executeJavaScript(
+          "document.getElementById('transient-cover').style.pointerEvents = 'none'; true",
+          true,
+        );
+      }
+      return result;
+    };
+    const uncovered = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Cancel reservation", exact: true },
+    });
+    assert(uncovered.success, JSON.stringify(uncovered));
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    checks.push("temporary cover clears before exactly one trusted click");
+    contents.debugger.sendCommand = native;
+
+    await setup();
+    await contents.executeJavaScript("document.querySelector('button').disabled = true; true", true);
+    let sawDisabled = false;
+    contents.debugger.sendCommand = async (method, params, sessionId) => {
+      const result = await native(method, params, sessionId);
+      if (
+        method === "Runtime.callFunctionOn" &&
+        String(params?.functionDeclaration).includes("this.matches(':disabled')") &&
+        !sawDisabled
+      ) {
+        sawDisabled = true;
+        await contents.executeJavaScript("document.querySelector('button').disabled = false; true", true);
+      }
+      return result;
+    };
+    const enabled = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Cancel reservation", exact: true },
+    });
+    assert(enabled.success && sawDisabled);
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    checks.push("disabled target waits before exactly one trusted click");
+    contents.debugger.sendCommand = native;
+    await setup();
+    const current = await runCauseEffect(browser.snapshot(tabId));
+    const stale = current.elements.find((element) => element.name === "Cancel reservation");
+    assert(stale);
+    await contents.executeJavaScript(
+      "document.querySelector('button').textContent = 'Different operation'; true",
+      true,
+    );
+    const changed = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: stale.ref, revision: current.revision },
+    });
+    assert(!changed.success && toolTextPayload(changed)?.inputState === "not_started");
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 0);
+    checks.push("changed reference never dispatches input");
+
+    await setup();
+    sent = false;
+    contents.debugger.sendCommand = async (method, params, sessionId) => {
+      const result = await native(method, params, sessionId);
+      if (method === "Input.dispatchMouseEvent" && params?.type === "mouseReleased") sent = true;
+      if (method === "Page.getLayoutMetrics" && sent) {
+        return new Promise((_, reject) =>
+          contents.debugger.once("detach", () => reject(new Error("Synthetic capture deadline."))),
+        );
+      }
+      return result;
+    };
+    const timedCapture = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Cancel reservation", exact: true },
+    });
+    assert(
+      !timedCapture.success &&
+        toolTextPayload(timedCapture)?.inputState === "completed" &&
+        toolTextPayload(timedCapture)?.stage === "snapshot",
+    );
+    contents.debugger.sendCommand = native;
+    assert((await runCauseEffect(browser.snapshot(tabId))).text.includes("Cancelled"));
+    assert.equal(await contents.executeJavaScript("globalThis.cancellations"), 1);
+    checks.push("snapshot deadline drains and permits verification without a second cancellation");
+
+    await contents.executeJavaScript("document.body.textContent = 'Sign in. Verify you are human.'; true", true);
+    const evidence = toolTextPayload(await callBrowserTool(browser, "snapshot", { tabId, image: "never" }));
+    assert(
+      isDynamicRecord(evidence?.pageEvidence) &&
+        evidence.pageEvidence.signInTextPresent === true &&
+        evidence.pageEvidence.challengeTextPresent === true,
+    );
+    checks.push("site evidence reports visible sign-in and challenge text without asserting a block");
+
+    for (const text of [
+      "Sign in",
+      "Log in",
+      "Přihlášení",
+      "prihlasit",
+      "Přihlásit",
+      "PŘIHLÁSIT",
+      "Přihlásit".normalize("NFD"),
+      "Anmelden",
+    ]) {
+      await contents.executeJavaScript(`document.body.textContent = ${JSON.stringify(text)}; true`, true);
+      const observation = toolTextPayload(await callBrowserTool(browser, "snapshot", { tabId, image: "never" }));
+      assert(isDynamicRecord(observation?.pageEvidence) && observation.pageEvidence.signInTextPresent === true, text);
+      assert.equal(observation.pageEvidence.challengeTextPresent, false);
+      assert.deepEqual(observation.pageEvidence.httpDenials, []);
+    }
+    for (const text of [
+      "Reservation confirmed",
+      "nepřihlásit",
+      "přihlásitž",
+      "žpřihlásit",
+      "Anmeldungen",
+      "abmelden",
+      "design input",
+    ]) {
+      await contents.executeJavaScript(`document.body.textContent = ${JSON.stringify(text)}; true`, true);
+      const observation = toolTextPayload(await callBrowserTool(browser, "snapshot", { tabId, image: "never" }));
+      assert(observation && !Object.hasOwn(observation, "pageEvidence"), text);
+    }
+    checks.push(
+      "English, Czech, decomposed Czech, and German sign-in text are observations; unrelated and embedded words omit empty evidence",
+    );
+
+    await contents.executeJavaScript(
+      "document.body.innerHTML = '<button>One</button><button>Two</button><button>Three</button><canvas width=100 height=100></canvas>'; true",
+      true,
+    );
+    const visual = await callBrowserTool(browser, "snapshot", { tabId });
+    assert(visual.contentItems.some((item) => item.type === "inputImage"));
+    const visualPayload = toolTextPayload(visual);
+    assert(visualPayload && !Object.hasOwn(visualPayload, "pageEvidence"));
+    await contents.executeJavaScript("document.querySelector('canvas').hidden = true; true", true);
+    const hiddenVisual = await callBrowserTool(browser, "snapshot", { tabId });
+    assert(!hiddenVisual.contentItems.some((item) => item.type === "inputImage"));
+    const hiddenPayload = toolTextPayload(hiddenVisual);
+    assert(hiddenPayload && !Object.hasOwn(hiddenPayload, "pageEvidence"));
+    checks.push("automatic images include visible canvas and skip hidden canvas");
+
+    await runSnapshotCoverage(browser, tabId, contents);
+    checks.push("later-frame text and viewport-only visual triggers retain their existing bounds");
+
+    const samples = await measureSnapshots(browser, tabId, contents);
+    checks.push("large page preserves all 200 targets across twenty measured snapshots");
+    await mkdir(".openbot-build", { recursive: true });
+    await writeFile(
+      ".openbot-build/browser-input-recovery.json",
+      JSON.stringify(
+        {
+          status: "passed",
+          versions: process.versions,
+          checks,
+          samples,
+          comparison: "Current implementation only; no baseline speed claim.",
+        },
+        null,
+        2,
+      ),
+    );
+  } finally {
+    contents.debugger.sendCommand = native;
+  }
+}
+
+async function runSnapshotCoverage(browser: BrowserHost, tabId: string, contents: WebContents): Promise<void> {
+  const checks: Array<{ name: string; passed: boolean }> = [];
+  const frameOrigin = new URL(contents.getURL());
+  frameOrigin.hostname = "localhost";
+  await contents.executeJavaScript(
+    `(async () => {
+      document.body.innerHTML = Array.from({length: 200}, (_, i) => '<button>Parent control ' + i + '</button>').join('');
+      for (const label of ['First frame budget marker', 'Second frame budget marker']) {
+        const frame = document.createElement('iframe');
+        const loaded = new Promise(resolve => frame.onload = resolve);
+        frame.src = ${JSON.stringify(frameOrigin.origin)} + '/frame?action_label=' + encodeURIComponent(label);
+        document.body.append(frame);
+        await loaded;
+      }
+      scrollTo(0, 0);
+      return true;
+    })()`,
+    true,
+  );
+  const framed = await runCauseEffect(browser.snapshot(tabId));
+  assert.equal(framed.elements.length, 200);
+  assert(Buffer.byteLength(JSON.stringify(framed)) <= 128 * 1024);
+  for (const label of ["First frame budget marker", "Second frame budget marker"])
+    checks.push({ name: `full parent control budget retains ${label}`, passed: framed.text.includes(label) });
+
+  for (const tag of ["canvas", "video"]) {
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button>One</button><button>Two</button><button>Three</button><${tag} style="position:absolute;top:200vh;left:10px;width:100px;height:100px"></${tag}>'; scrollTo(0, 0); true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const outside = await callBrowserTool(browser, "snapshot", { tabId });
+    checks.push({
+      name: `offscreen ${tag} does not add an automatic image`,
+      passed: !outside.contentItems.some((item) => item.type === "inputImage"),
+    });
+    const forced = await callBrowserTool(browser, "snapshot", { tabId, image: "always" });
+    checks.push({
+      name: `requested image remains available with offscreen ${tag}`,
+      passed: forced.contentItems.some((item) => item.type === "inputImage"),
+    });
+    await contents.executeJavaScript(`document.querySelector('${tag}').scrollIntoView(); true`, true);
+    await waitForPresentedFrame(contents);
+    const visible = await callBrowserTool(browser, "snapshot", { tabId });
+    checks.push({
+      name: `viewport ${tag} adds an automatic image`,
+      passed: visible.contentItems.some((item) => item.type === "inputImage"),
+    });
+    const never = await callBrowserTool(browser, "snapshot", { tabId, image: "never" });
+    checks.push({
+      name: `image never remains effective with viewport ${tag}`,
+      passed: !never.contentItems.some((item) => item.type === "inputImage"),
+    });
+  }
+  await contents.executeJavaScript(
+    "document.body.innerHTML = '<p>' + 'Page text with low semantic coverage. '.repeat(20) + '</p>'; scrollTo(0, 0); true",
+    true,
+  );
+  const lowCoverage = await callBrowserTool(browser, "snapshot", { tabId });
+  checks.push({
+    name: "low semantic coverage still adds an automatic image",
+    passed: lowCoverage.contentItems.some((item) => item.type === "inputImage"),
+  });
+  await mkdir(".openbot-build", { recursive: true });
+  await writeFile(
+    ".openbot-build/browser-snapshot-coverage.json",
+    JSON.stringify(
+      { status: checks.every((check) => check.passed) ? "passed" : "failed", versions: process.versions, checks },
+      null,
+      2,
+    ),
+  );
+  assert(
+    checks.every((check) => check.passed),
+    checks
+      .filter((check) => !check.passed)
+      .map((check) => check.name)
+      .join("; "),
+  );
+}
+
+async function runTypingAudit(browser: BrowserHost, origin: string): Promise<void> {
+  const { tab, contents } = await openTabWithContents(
+    browser,
+    `${origin}/blocking-frame?typing-audit`,
+    "smoke-thread",
+    "smoke-bot",
+  );
+  const cases: Array<{ name: string; safe: boolean; toolSuccess: boolean; state: string; error: string }> = [];
+  const native = contents.debugger.sendCommand.bind(contents.debugger);
+  try {
+    for (const surface of [
+      "ordinary",
+      "shadow",
+      "closed shadow",
+      "same-origin frame",
+      "cross-origin frame",
+      "closed-shadow cross-origin frame",
+      "contenteditable",
+    ]) {
+      const inFrame = surface.endsWith("frame");
+      const frameUrl = `${surface.includes("cross-origin frame") ? origin.replace("127.0.0.1", "localhost") : origin}/frame?typing-audit`;
+      if (inFrame) {
+        await contents.executeJavaScript(
+          `new Promise(resolve => {
+            document.body.innerHTML = '';
+            const frame = document.createElement('iframe');
+            frame.src = ${JSON.stringify(frameUrl)};
+            frame.onload = resolve;
+            ${
+              surface === "closed-shadow cross-origin frame"
+                ? `const host = document.createElement('div');
+                   document.body.append(host);
+                   host.attachShadow({mode:'closed'}).append(frame);`
+                : "document.body.append(frame);"
+            }
+          }).then(() => true)`,
+          true,
+        );
+      } else {
+        await contents.executeJavaScript("document.body.innerHTML = ''; true", true);
+      }
+      const frame = inFrame
+        ? contents.mainFrame.framesInSubtree.find((candidate) => candidate.url === frameUrl)
+        : contents.mainFrame;
+      assert(frame, `Typing audit frame is missing: ${surface}`);
+      const names = [
+        "normal append",
+        "normal replace submit",
+        "redirected focus append",
+        "redirected focus replace",
+        "redirected input",
+        "replaced target",
+      ];
+      if (inFrame) names.push("frame focus transfer");
+      if (surface === "closed-shadow cross-origin frame") names.push("sibling frame focus transfer");
+      if (surface === "ordinary")
+        names.push(
+          "readonly",
+          "empty replacement",
+          "empty submit redirected focus",
+          "formatted input",
+          "End redirected focus",
+          "replaced focus target",
+        );
+      for (const name of names) {
+        const frameTransfer = name.endsWith("frame focus transfer");
+        const siblingTransfer = name === "sibling frame focus transfer";
+        const redirectFocus = name.includes("redirected focus") && name !== "End redirected focus";
+        const redirectInput = name === "redirected input" || name === "replaced target" || frameTransfer;
+        const replace = [
+          "normal replace submit",
+          "redirected focus replace",
+          "empty replacement",
+          "readonly",
+          "formatted input",
+        ].includes(name);
+        const empty = name.startsWith("empty");
+        const submit = name !== "normal append" && name !== "empty replacement" && name !== "readonly";
+        const changedBeforeInput = redirectFocus || name === "End redirected focus" || name === "replaced focus target";
+        const expectedSuccess = !changedBeforeInput && !redirectInput;
+        await frame.executeJavaScript(
+          `(() => {
+            document.body.innerHTML = '<div id="typing-root"></div>';
+            const host = document.querySelector('#typing-root');
+            const root = ${!inFrame && surface.includes("shadow") ? `host.attachShadow({mode:'${surface === "closed shadow" ? "closed" : "open"}'})` : "host"};
+            root.innerHTML = ${JSON.stringify(
+              surface === "contenteditable"
+                ? '<div id="intended" contenteditable="true" role="textbox" aria-label="Intended field">alpha</div><input id="other" aria-label="Other field" value="beta">'
+                : '<input id="intended" aria-label="Intended field" value="alpha"><input id="other" aria-label="Other field" value="beta">',
+            )};
+            globalThis.typingRoot = root;
+            globalThis.inputEvents = [];
+            globalThis.keyEvents = [];
+            const intended = root.querySelector('#intended');
+            const other = root.querySelector('#other');
+            for (const field of [intended, other]) field.oninput = event => {
+              globalThis.inputEvents.push({field: field.id, trusted: event.isTrusted});
+            };
+            root.addEventListener('keydown', event => {
+              globalThis.keyEvents.push({field: event.composedPath()[0].id, key: event.key, trusted: event.isTrusted});
+              if (event.key === 'Enter') event.preventDefault();
+            });
+            ${redirectFocus ? "intended.onfocus = () => other.focus();" : ""}
+            ${name === "redirected input" ? "intended.addEventListener('input', () => other.focus());" : ""}
+            ${name === "replaced target" ? "intended.addEventListener('input', () => { const replacement = intended.cloneNode(true); intended.replaceWith(replacement); replacement.focus(); });" : ""}
+            ${name === "replaced focus target" ? "intended.onfocus = () => { const replacement = intended.cloneNode(true); intended.replaceWith(replacement); replacement.focus(); };" : ""}
+            ${name === "readonly" ? "intended.readOnly = true;" : ""}
+            ${name === "formatted input" ? "intended.addEventListener('input', () => { intended.value = intended.value.toLowerCase(); });" : ""}
+            ${name === "End redirected focus" ? "intended.type = 'email'; intended.onkeydown = event => { if (event.key === 'End') other.focus(); };" : ""}
+            return true;
+          })()`,
+          true,
+        );
+        if (frameTransfer) {
+          await contents.executeJavaScript(
+            `(() => {
+              let doc = document;
+              ${
+                siblingTransfer
+                  ? `const sibling = document.createElement('iframe');
+                     sibling.id = 'sibling'; document.body.append(sibling);
+                     doc = sibling.contentDocument;`
+                  : ""
+              }
+              const outside = doc.createElement('input');
+              outside.id = 'outside'; outside.value = 'gamma';
+              globalThis.outsideEvents = []; globalThis.outsideKeys = [];
+              outside.oninput = event => globalThis.outsideEvents.push(event.isTrusted);
+              outside.onkeydown = event => { globalThis.outsideKeys.push(event.key); event.preventDefault(); };
+              doc.body.prepend(outside);
+              return true;
+            })()`,
+            true,
+          );
+          // Keep native input, then move focus before its acknowledgement lets the submit guard run.
+          contents.debugger.sendCommand = async (method, params, sessionId) => {
+            const result = await native(method, params, sessionId);
+            if (method === "Input.insertText")
+              await contents.executeJavaScript(
+                `${siblingTransfer ? "document.querySelector('#sibling').contentDocument" : "document"}.querySelector('#outside').focus(); true`,
+              );
+            return result;
+          };
+        }
+        const snapshot = await runCauseEffect(browser.snapshot(tab.id));
+        const target = snapshot.elements.find((element) => element.name === "Intended field");
+        assert(target || surface === "closed shadow", `Typing audit target is missing: ${surface}: ${name}`);
+        if (surface === "closed-shadow cross-origin frame")
+          assert(
+            target?.frame && new URL(target.frame.url).hostname === "localhost",
+            "Closed-root owner lost its cross-process frame ref.",
+          );
+        const result = await callBrowserTool(browser, "type", {
+          tabId: tab.id,
+          target: target
+            ? { kind: "ref", ref: target.ref, revision: snapshot.revision }
+            : { kind: "role", role: "textbox", name: "Intended field", exact: true },
+          text: empty ? "" : "X",
+          mode: replace ? "replace" : "append",
+          submit,
+        });
+        contents.debugger.sendCommand = native;
+        const state = await frame.executeJavaScript(
+          `JSON.stringify({
+            intended: globalThis.typingRoot.querySelector('#intended').value ?? globalThis.typingRoot.querySelector('#intended').textContent,
+            other: globalThis.typingRoot.querySelector('#other').value,
+            events: globalThis.inputEvents,
+            keys: globalThis.keyEvents,
+            locallyFocused: document.activeElement === globalThis.typingRoot.querySelector('#intended'),
+          })`,
+        );
+        assert(isString(state));
+        const observed = JSON.parse(state);
+        const outside = frameTransfer
+          ? await contents.executeJavaScript(`(() => {
+              const doc = ${siblingTransfer ? "document.querySelector('#sibling').contentDocument" : "document"};
+              return {
+                value: doc.querySelector('#outside').value,
+                focused: doc.activeElement === doc.querySelector('#outside'),
+                events: globalThis.outsideEvents,
+                keys: globalThis.outsideKeys,
+              };
+            })()`)
+          : null;
+        const expectedValue =
+          changedBeforeInput || name === "readonly"
+            ? "alpha"
+            : empty
+              ? ""
+              : name === "formatted input"
+                ? "x"
+                : replace
+                  ? "X"
+                  : "alphaX";
+        const expectedKeys = name === "End redirected focus" ? ["End"] : expectedSuccess && submit ? ["Enter"] : [];
+        const expectedInputs = changedBeforeInput || name === "readonly" ? 0 : 1;
+        const safe =
+          result.success === expectedSuccess &&
+          observed.other === "beta" &&
+          observed.intended === expectedValue &&
+          observed.events.length === expectedInputs &&
+          observed.events.every((event: DynamicRecord) => event.field === "intended" && event.trusted === true) &&
+          JSON.stringify(observed.keys.map((event: DynamicRecord) => event.key)) === JSON.stringify(expectedKeys) &&
+          observed.keys.every((event: DynamicRecord) => event.field === "intended" && event.trusted === true) &&
+          (!frameTransfer ||
+            (outside.focused === true &&
+              outside.value === "gamma" &&
+              outside.events.length === 0 &&
+              outside.keys.length === 0)) &&
+          (result.success || toolTextPayload(result)?.inputState === "attempted");
+        cases.push({
+          name: `${surface}: ${name}`,
+          safe,
+          toolSuccess: result.success,
+          state: frameTransfer ? JSON.stringify({ frame: observed, outside }) : state,
+          error: result.success ? "" : toolError(result),
+        });
+      }
+    }
+    await mkdir(".openbot-build", { recursive: true });
+    await writeFile(
+      ".openbot-build/browser-typing-audit.json",
+      JSON.stringify(
+        { status: cases.every((item) => item.safe) ? "passed" : "issues_found", versions: process.versions, cases },
+        null,
+        2,
+      ),
+    );
+    assert(
+      cases.every((item) => item.safe),
+      cases
+        .filter((item) => !item.safe)
+        .map((item) => item.name)
+        .join("; "),
+    );
+  } finally {
+    contents.debugger.sendCommand = native;
+    await runCauseEffect(browser.close(tab.id));
+  }
+}
+
+async function measureSnapshots(browser: BrowserHost, tabId: string, contents: WebContents) {
+  const native = contents.debugger.sendCommand.bind(contents.debugger);
+  try {
+    await contents.executeJavaScript(
+      `document.body.innerHTML = Array.from({ length: 200 }, (_, i) => '<button>Candidate ' + i + '</button>').join(''); true`,
+      true,
+    );
+    const samples: Array<{ ms: number; commands: number; bytes: number }> = [];
+    let commands = 0;
+    contents.debugger.sendCommand = (method, params, sessionId) => {
+      commands++;
+      return native(method, params, sessionId);
+    };
+    for (let index = 0; index < 23; index++) {
+      commands = 0;
+      const start = performance.now();
+      const snapshot = await runCauseEffect(browser.snapshot(tabId));
+      const ms = performance.now() - start;
+      assert.equal(snapshot.elements.length, 200);
+      if (index >= 3) samples.push({ ms, commands, bytes: Buffer.byteLength(JSON.stringify(snapshot)) });
+    }
+    const sorted = samples.map((sample) => sample.ms).sort((a, b) => a - b);
+    const medianLow = sorted[9];
+    const medianHigh = sorted[10];
+    assert(medianLow !== undefined && medianHigh !== undefined);
+    await mkdir(".openbot-build", { recursive: true });
+    const label = argumentValue("--benchmark-label=") === "baseline" ? "baseline" : "current";
+    await writeFile(
+      `.openbot-build/browser-snapshot-${label}.json`,
+      JSON.stringify(
+        {
+          versions: process.versions,
+          samples,
+          medianMs: (medianLow + medianHigh) / 2,
+          p95Ms: sorted[18],
+        },
+        null,
+        2,
+      ),
+    );
+    return samples;
+  } finally {
+    contents.debugger.sendCommand = native;
+  }
+}
+
+async function runTimeoutClassification(browser: BrowserHost, tabId: string, contents: WebContents): Promise<void> {
+  const native = contents.debugger.sendCommand.bind(contents.debugger);
+  const cases: Array<{ expected: string; reason: string; inputState: string }> = [];
+  try {
+    for (const expected of ["deadline", "operation_failed"]) {
+      await contents.executeJavaScript(
+        `document.body.innerHTML = '<button>Timeout classification</button>'; globalThis.timeoutClicks = 0; document.querySelector('button').onclick = event => { if (event.isTrusted) globalThis.timeoutClicks++; }; true`,
+        true,
+      );
+      await waitForPresentedFrame(contents);
+      const snapshot = await runCauseEffect(browser.snapshot(tabId));
+      const target = snapshot.elements.find((element) => element.name === "Timeout classification");
+      assert(target);
+      let release = (): void => {};
+      const acknowledgement = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      contents.debugger.sendCommand = async (method, params, sessionId) => {
+        const result = await native(method, params, sessionId);
+        if (method === "Input.dispatchMouseEvent" && params?.type === "mouseReleased") {
+          if (expected === "deadline") await acknowledgement;
+          else throw new Error("The site says timed out, but this is an input acknowledgement failure.");
+        }
+        return result;
+      };
+      try {
+        const result = await callBrowserTool(browser, "click", {
+          tabId,
+          target: { kind: "ref", ref: target.ref, revision: snapshot.revision },
+          timeoutMs: 1_000,
+        });
+        const payload = toolTextPayload(result);
+        assert(
+          !result.success && payload?.reason === expected && payload.inputState === "attempted",
+          toolError(result),
+        );
+        assert.equal(await contents.executeJavaScript("globalThis.timeoutClicks"), 1);
+        cases.push({ expected, reason: payload.reason, inputState: payload.inputState });
+      } finally {
+        contents.debugger.sendCommand = native;
+        release();
+      }
+      await runCauseEffect(browser.snapshot(tabId));
+    }
+    await mkdir(".openbot-build", { recursive: true });
+    await writeFile(
+      ".openbot-build/browser-timeout-classification.json",
+      JSON.stringify({ status: "passed", versions: process.versions, cases }, null, 2),
+    );
+  } finally {
+    contents.debugger.sendCommand = native;
   }
 }
 

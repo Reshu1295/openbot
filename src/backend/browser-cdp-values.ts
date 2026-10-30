@@ -1,6 +1,7 @@
 import { type DynamicRecord, isBoolean, isDynamicRecord, isNumber, isString } from "@openbot/contracts/runtime-values";
 import { Effect } from "effect";
 import { type BrowserOperationError, browserFailure } from "./browser-effects";
+import { TimeoutError } from "./with-timeout";
 
 const AUTOMATION_WORLD_NAME = "openbot-browser-automation";
 
@@ -13,7 +14,7 @@ export type SendCommand = (
 ) => Effect.Effect<CdpResult, BrowserOperationError>;
 
 export function assertBeforeDeadline(deadline: number | undefined): void {
-  if (deadline !== undefined && Date.now() >= deadline) throw new Error("Browser wait condition timed out.");
+  if (deadline !== undefined && Date.now() >= deadline) throw new TimeoutError("Browser wait condition timed out.");
 }
 
 export const automationContextId = Effect.fn("Browser.automationContextId")(function* (

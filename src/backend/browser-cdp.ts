@@ -8,7 +8,7 @@ import type {
   BrowserTarget,
 } from "@openbot/contracts/ipc";
 import { type DynamicRecord, isBoolean, isDynamicRecord, isNumber, isString } from "@openbot/contracts/runtime-values";
-import { Deferred, Effect, Exit, Fiber, Scope } from "effect";
+import { Deferred, Effect, Exit, Fiber, Schema, Scope } from "effect";
 import type { NativeImage, WebContents } from "electron";
 import {
   BROWSER_CARD_FIELDS,
@@ -75,6 +75,7 @@ import {
 import { describeBrowserTarget, stopLoadingAndWait, waitForLoading } from "./browser-navigation";
 import { createFramePacer } from "./browser-screencast-pacing";
 import type { VaultCardSecret } from "./vault-items";
+import { TimeoutError } from "./with-timeout";
 
 const ACTION_TIMEOUT_MS = 10_000;
 const WAIT_TIMEOUT_MS = 30_000;
@@ -83,6 +84,10 @@ const DOCUMENT_ID_PROPERTY = "__openbot_browser_document_id__";
 const MAX_SNAPSHOT_FRAMES = 12;
 const DOM_QUIET_MS = 250;
 const CHOOSER_WAIT_MS = 5_000;
+
+class BrowserTargetNotReady extends Schema.TaggedError<BrowserTargetNotReady>()("BrowserTargetNotReady", {
+  message: Schema.String,
+}) {}
 
 type ActionDispatch = () => void;
 
@@ -610,6 +615,7 @@ export class BrowserCdpEngine {
    * perfectly healthy.
    */
   #activeLeases = 0;
+  #appliedEnvironmentKey: string | undefined;
   #highlightSessionId: string | undefined;
   readonly #uploadDocumentIds = new Set<string>();
   readonly #targetSessions = new Map<string, { sessionId: string; url: string }>();
@@ -686,12 +692,8 @@ export class BrowserCdpEngine {
         this.#targets = new Map([...parsed.targets].filter(([ref]) => retainedRefs.has(ref)));
         this.#lastSnapshot = snapshot;
         const lowCoverage = parsed.elements.length < 3 && parsed.text.length > 200;
-        const recommendImage = parsed.hasVisualSurface || parsed.hasFrame || lowCoverage;
-        const imageReason = parsed.hasVisualSurface
-          ? "canvas-or-video"
-          : parsed.hasFrame
-            ? "iframe"
-            : "low-semantic-coverage";
+        const recommendImage = parsed.hasVisualSurface || lowCoverage;
+        const imageReason = parsed.hasVisualSurface ? "canvas-or-video" : "low-semantic-coverage";
         // The kept references compare the page with the unscrubbed elements.
         return { snapshot: this.#cardScrub.snapshot(snapshot), recommendImage, imageReason };
       }),
@@ -711,7 +713,7 @@ export class BrowserCdpEngine {
   ): Effect.fn.Return<void, BrowserOperationError> {
     yield* this.#leaseEffect((send) =>
       Effect.gen({ self: this }, function* () {
-        const point = yield* this.#targetPointEffect(send, target, true, true, deadline);
+        const point = yield* this.#readyClickPoint(send, target, deadline);
         const { sessionId, ...coordinates } = point;
         const button = options.button ?? "left";
         const totalClicks = options.clickCount ?? 1;
@@ -753,13 +755,100 @@ export class BrowserCdpEngine {
     yield* this.#leaseEffect((send) =>
       Effect.gen({ self: this }, function* () {
         const resolved = yield* this.#resolveTargetEffect(send, target, deadline);
-        if (!resolved.backendNodeId) return yield* browserFailure(new Error("Typing requires an element target."));
+        const backendNodeId = resolved.backendNodeId;
+        if (!backendNodeId) return yield* browserFailure(new Error("Typing requires an element target."));
+        const frames = new Map<string, { parentId: string | undefined; sessionId: string | undefined }>();
+        let rootFrameId = "";
+        const sessions = new Set([
+          resolved.sessionId,
+          undefined,
+          ...[...this.#targetSessions.values()].map((frame) => frame.sessionId),
+        ]);
+        for (const sessionId of sessions) {
+          const frameTree = yield* send("Page.getFrameTree", {}, sessionId);
+          const root = recordValue(frameTree.frameTree);
+          rootFrameId ||= stringValue(recordValue(root?.frame)?.id);
+          const pending: Array<{ tree: CdpResult | undefined; parentId: string | undefined }> = [
+            { tree: root, parentId: undefined },
+          ];
+          for (const entry of pending) {
+            if (!entry.tree) continue;
+            const frame = recordValue(entry.tree.frame);
+            const frameId = stringValue(frame?.id);
+            if (!frameId) return yield* browserFailure(new Error("The typing frame is unavailable."));
+            frames.set(frameId, {
+              parentId: stringValue(frame?.parentId) || entry.parentId,
+              sessionId: this.#targetSessions.get(frameId)?.sessionId ?? sessionId,
+            });
+            if (Array.isArray(entry.tree.childFrames))
+              pending.push(...entry.tree.childFrames.map((tree) => ({ tree: recordValue(tree), parentId: frameId })));
+          }
+          let ancestorId: string | undefined = rootFrameId;
+          while (ancestorId && frames.has(ancestorId)) ancestorId = frames.get(ancestorId)?.parentId;
+          if (!ancestorId) break;
+        }
+        const focusTargets: Array<{ backendNodeId: number; contextId: number; sessionId: string | undefined }> = [];
+        let targetFrameId = "";
+        for (const [frameId, frame] of frames) {
+          if (frame.sessionId !== resolved.sessionId) continue;
+          yield* browserSync(() => assertBeforeDeadline(deadline));
+          const contextId = yield* frameAutomationContextId(send, frameId, frame.sessionId);
+          const ownsTarget = yield* this.#callOnNode(
+            send,
+            backendNodeId,
+            "function() { return this.ownerDocument === document; }",
+            [],
+            frame.sessionId,
+            contextId,
+          );
+          if (ownsTarget !== true) continue;
+          targetFrameId = frameId;
+          focusTargets.push({ backendNodeId, contextId, sessionId: frame.sessionId });
+          break;
+        }
+        if (!targetFrameId) return yield* browserFailure(new Error("The typing frame is unavailable."));
+        // Native frame owners remain reachable when a parent's shadow root is closed.
+        for (let frame = frames.get(targetFrameId); frame?.parentId; frame = frames.get(frame.parentId)) {
+          const parent = frames.get(frame.parentId);
+          if (!parent) return yield* browserFailure(new Error("The typing frame owner is unavailable."));
+          const owner = yield* send("DOM.getFrameOwner", { frameId: targetFrameId }, parent.sessionId);
+          const ownerId = numberValue(owner.backendNodeId);
+          if (!ownerId) return yield* browserFailure(new Error("The typing frame owner is unavailable."));
+          const contextId = yield* frameAutomationContextId(send, frame.parentId, parent.sessionId);
+          focusTargets.push({ backendNodeId: ownerId, contextId, sessionId: parent.sessionId });
+          targetFrameId = frame.parentId;
+        }
+        const checkTarget = () =>
+          Effect.gen({ self: this }, function* () {
+            for (const node of focusTargets)
+              yield* this.#callOnNode(
+                send,
+                node.backendNodeId,
+                `function() {
+                  if (!this.isConnected || this.ownerDocument !== document)
+                    throw new Error('Typing target changed or lost focus. Read the page before continuing.');
+                  for (let node = this; node;) {
+                    const root = node.getRootNode();
+                    if (root.activeElement !== node)
+                      throw new Error('Typing target changed or lost focus. Read the page before continuing.');
+                    if (root === document) return;
+                    node = root.host;
+                  }
+                  throw new Error('Typing target changed or lost focus. Read the page before continuing.');
+                }`,
+                [],
+                node.sessionId,
+                node.contextId,
+              );
+          });
         yield* browserSync(() => assertBeforeDeadline(deadline));
         onDispatch?.();
         yield* send("DOM.focus", { backendNodeId: resolved.backendNodeId }, resolved.sessionId);
+        // Focus and input handlers can redirect the next native command to another field.
+        yield* checkTarget();
         const useEndKey = yield* this.#callOnNode(
           send,
-          resolved.backendNodeId,
+          backendNodeId,
           `function(mode) {
           if (!('value' in this) && !this.isContentEditable) throw new Error('Target does not accept text.');
           if (mode === 'replace') {
@@ -783,7 +872,11 @@ export class BrowserCdpEngine {
           [mode],
           resolved.sessionId,
         );
-        if (useEndKey === true) yield* dispatchShortcut(send, "End", resolved.sessionId);
+        if (useEndKey === true) {
+          yield* checkTarget();
+          yield* dispatchShortcut(send, "End", resolved.sessionId);
+        }
+        yield* checkTarget();
         yield* browserSync(() => assertBeforeDeadline(deadline));
         yield* send("Input.insertText", { text }, resolved.sessionId);
         // Submitting is part of typing rather than a second action, because it has to reach the node
@@ -791,6 +884,7 @@ export class BrowserCdpEngine {
         // against its pre-typing text, so a contenteditable would fail with "The target changed after
         // the snapshot" and `submit: true` would insert the text without ever submitting it.
         if (options.submit === true) {
+          yield* checkTarget();
           yield* browserSync(() => assertBeforeDeadline(deadline));
           yield* dispatchShortcut(send, "Enter", resolved.sessionId);
         }
@@ -1730,6 +1824,7 @@ export class BrowserCdpEngine {
             returnByValue: true,
           });
           const viewport = recordValue(recordValue(result.result)?.value);
+          this.#appliedEnvironmentKey = undefined;
           yield* send("Emulation.setDeviceMetricsOverride", {
             width: numberValue(viewport?.width),
             height: numberValue(viewport?.height),
@@ -1742,7 +1837,10 @@ export class BrowserCdpEngine {
         }).pipe(
           Effect.ensuring(
             Effect.gen({ self: this }, function* () {
-              if (fill) yield* send("Emulation.clearDeviceMetricsOverride");
+              if (fill) {
+                this.#appliedEnvironmentKey = undefined;
+                yield* send("Emulation.clearDeviceMetricsOverride");
+              }
             }).pipe(Effect.orDie),
           ),
         );
@@ -2144,8 +2242,8 @@ export class BrowserCdpEngine {
               Effect.catch((failure) =>
                 browserSync(() => {
                   const error = failure.cause;
-                  if (error instanceof Error && error.message === "DOM did not become quiet.") {
-                    throw new Error("Browser wait condition timed out.");
+                  if (error instanceof TimeoutError) {
+                    throw new TimeoutError("Browser wait condition timed out.");
                   }
                   throw error;
                 }),
@@ -2154,7 +2252,7 @@ export class BrowserCdpEngine {
             if (yield* matches()) return;
           }
           const remaining = deadline - Date.now();
-          if (remaining <= 0) return yield* browserFailure(new Error("Browser wait condition timed out."));
+          if (remaining <= 0) return yield* browserFailure(new TimeoutError("Browser wait condition timed out."));
           yield* waitForPageSignal(this.#contents, Math.min(remaining, 500));
         }
       }),
@@ -2233,7 +2331,7 @@ export class BrowserCdpEngine {
             Effect.catch((failure) =>
               browserSync(() => {
                 const error = failure.cause;
-                if (error instanceof Error && error.message === "DOM did not become quiet.") return true;
+                if (error instanceof TimeoutError) return true;
                 if (navigationGeneration !== this.#navigationGeneration || this.#contents.isLoading()) return false;
                 throw error;
               }),
@@ -2480,12 +2578,13 @@ export class BrowserCdpEngine {
     if (candidates.length > 1) {
       const sample = candidates
         .slice(0, 5)
-        .map(
-          (candidate) =>
-            `${candidate.targetId ?? "main"}:${candidate.backendNodeId} ${candidate.role} “${candidate.name.slice(0, 80)}”`,
-        )
+        .map((candidate) => `${candidate.role} “${candidate.name.slice(0, 80)}”`)
         .join("; ");
-      return yield* browserFailure(new Error(`Target is ambiguous (at least 2 matches). Candidates: ${sample}`));
+      return yield* browserFailure(
+        new Error(
+          `Target is ambiguous (at least 2 matches). Choose a ref from a fresh snapshot. Candidates: ${sample}`,
+        ),
+      );
     }
     return {
       backendNodeId: found.backendNodeId,
@@ -2546,6 +2645,62 @@ export class BrowserCdpEngine {
     };
   });
 
+  readonly #readyClickPoint = Effect.fn("BrowserCdp.readyClickPoint")(function* (
+    this: BrowserCdpEngine,
+    send: SendCommand,
+    target: BrowserTarget,
+    deadline?: number,
+  ) {
+    if (target.kind === "point") return yield* this.#targetPointEffect(send, target, true, true, deadline);
+    const until = Math.min(deadline ?? Date.now() + ACTION_TIMEOUT_MS, Date.now() + 2_000);
+    const generation = this.#navigationGeneration;
+    let previous: { x: number; y: number; sessionId?: string | undefined } | undefined;
+    let unavailable: BrowserOperationError | undefined;
+    let identity: string | undefined;
+    while (true) {
+      if (Date.now() >= until && unavailable) return yield* unavailable;
+      yield* browserSync(() => assertBeforeDeadline(until));
+      if (generation !== this.#navigationGeneration)
+        return yield* browserFailure(
+          new Error("Page changed while waiting for a click target. Take a fresh snapshot."),
+        );
+      const point = yield* Effect.gen({ self: this }, function* () {
+        const resolved = yield* this.#resolveTargetEffect(send, target, until);
+        if (!resolved.backendNodeId) return yield* browserFailure(new Error("Click target is unavailable."));
+        const key = `${resolved.sessionId ?? "main"}:${resolved.backendNodeId}`;
+        if (identity !== undefined && identity !== key)
+          return yield* browserFailure(new Error("Click target changed while waiting. Take a fresh snapshot."));
+        identity = key;
+        const enabled = yield* this.#callOnNode(
+          send,
+          resolved.backendNodeId,
+          "function() { return !this.matches(':disabled') && this.getAttribute('aria-disabled') !== 'true'; }",
+          [],
+          resolved.sessionId,
+        );
+        if (enabled !== true)
+          return yield* browserFailure(new BrowserTargetNotReady({ message: "Target is disabled." }));
+        return yield* this.#elementPointEffect(send, resolved.backendNodeId, true, resolved.sessionId);
+      }).pipe(
+        Effect.catch((failure) => {
+          if (!(failure.cause instanceof BrowserTargetNotReady)) return Effect.fail(failure);
+          unavailable = failure;
+          return Effect.succeed(null);
+        }),
+      );
+      if (
+        point &&
+        previous &&
+        point.sessionId === previous.sessionId &&
+        Math.abs(point.x - previous.x) < 0.5 &&
+        Math.abs(point.y - previous.y) < 0.5
+      )
+        return point;
+      previous = point ?? undefined;
+      yield* waitForPageSignal(this.#contents, Math.min(50, Math.max(1, until - Date.now())));
+    }
+  });
+
   readonly #targetPointEffect = Effect.fn("BrowserCdp.targetPoint")(function* (
     this: BrowserCdpEngine,
     send: SendCommand,
@@ -2572,7 +2727,8 @@ export class BrowserCdpEngine {
     const box = yield* send("DOM.getBoxModel", { backendNodeId }, sessionId);
     const model = recordValue(box.model);
     const quad = Array.isArray(model?.content) ? model.content.filter(isFiniteNumber) : [];
-    if (quad.length < 8) return yield* browserFailure(new Error("Element has no visible clickable bounds."));
+    if (quad.length < 8)
+      return yield* browserFailure(new BrowserTargetNotReady({ message: "Element has no visible clickable bounds." }));
     const metrics = yield* send("Page.getLayoutMetrics", {}, sessionId);
     const viewport = recordValue(metrics.cssLayoutViewport);
     const viewportWidth = numberValue(viewport?.clientWidth);
@@ -2585,7 +2741,7 @@ export class BrowserCdpEngine {
     const top = Math.max(0, Math.min(...ys));
     const bottom = Math.min(viewportHeight - 1, Math.max(...ys));
     if (viewportWidth <= 0 || viewportHeight <= 0 || right < left || bottom < top) {
-      return yield* browserFailure(new Error("Element has no visible clickable bounds."));
+      return yield* browserFailure(new BrowserTargetNotReady({ message: "Element has no visible clickable bounds." }));
     }
     const insetX = Math.min(4, Math.max(0, (right - left) / 4));
     const insetY = Math.min(4, Math.max(0, (bottom - top) / 4));
@@ -2601,10 +2757,21 @@ export class BrowserCdpEngine {
     ]);
     let blockerId = 0;
     for (const point of points) {
+      // DOM hit tests use document coordinates; input keeps viewport coordinates.
       const hit = yield* send(
         "DOM.getNodeForLocation",
-        { x: Math.round(point.x), y: Math.round(point.y), includeUserAgentShadowDOM: true },
+        {
+          x: Math.round(point.x + numberValue(viewport?.pageX)),
+          y: Math.round(point.y + numberValue(viewport?.pageY)),
+          includeUserAgentShadowDOM: true,
+        },
         sessionId,
+      ).pipe(
+        Effect.catch((failure) =>
+          failure.cause instanceof Error && failure.cause.message === "No node found at given location"
+            ? Effect.succeed({ backendNodeId: 0 })
+            : Effect.fail(failure),
+        ),
       );
       const hitId = numberValue(hit.backendNodeId);
       if (hitId && (yield* hitActivatesTarget(send, hitId, backendNodeId, sessionId))) {
@@ -2612,14 +2779,30 @@ export class BrowserCdpEngine {
       }
       blockerId ||= hitId;
     }
-    if (!blockerId) return yield* browserFailure(new Error("Element has no visible clickable point."));
+    // A pointer-disabled target can still be activated by its descendant or associated label.
+    const pointerEvents = yield* this.#callOnNode(
+      send,
+      backendNodeId,
+      "function() { return getComputedStyle(this).pointerEvents; }",
+      [],
+      sessionId,
+    );
+    if (pointerEvents === "none")
+      return yield* browserFailure(
+        new BrowserTargetNotReady({
+          message:
+            "Target has pointer-events:none and no checked hit activates it. No mouse click was sent. Inspect the page and dismiss a visible covering layer if present, then take a fresh snapshot and choose a directly clickable control, or request user takeover.",
+        }),
+      );
+    if (!blockerId)
+      return yield* browserFailure(new BrowserTargetNotReady({ message: "Element has no visible clickable point." }));
     const blocker = yield* send("DOM.describeNode", { backendNodeId: blockerId, depth: 0 }, sessionId);
     const node = recordValue(blocker.node);
     const name = stringValue(node?.nodeName).toLowerCase() || "element";
     return yield* browserFailure(
-      new Error(
-        `Target is covered by ${name} (backendNodeId ${blockerId}). Dismiss the covering layer or choose a visible point.`,
-      ),
+      new BrowserTargetNotReady({
+        message: `Target is covered by ${name} (backendNodeId ${blockerId}). Inspect the page and dismiss a visible covering layer if present, or take a fresh snapshot and choose a directly clickable control.`,
+      }),
     );
   });
 
@@ -2630,8 +2813,9 @@ export class BrowserCdpEngine {
     declaration: string,
     args: unknown[],
     sessionId?: string,
+    contextId?: number,
   ): Effect.fn.Return<unknown, BrowserOperationError> {
-    const executionContextId = yield* automationContextId(send, sessionId);
+    const executionContextId = contextId ?? (yield* automationContextId(send, sessionId));
     const resolved = yield* send("DOM.resolveNode", { backendNodeId, executionContextId }, sessionId);
     const objectId = stringValue(recordValue(resolved.object)?.objectId);
     if (!objectId) return yield* browserFailure(new Error("Element is no longer attached to the document."));
@@ -2770,6 +2954,7 @@ export class BrowserCdpEngine {
   }
 
   #clearDebuggerSessions(): void {
+    this.#appliedEnvironmentKey = undefined;
     this.#targetSessions.clear();
     this.#highlightSessionId = undefined;
   }
@@ -2779,6 +2964,9 @@ export class BrowserCdpEngine {
     send: SendCommand,
     environment: BrowserEnvironment,
   ): Effect.fn.Return<void, BrowserOperationError> {
+    const key = JSON.stringify(environment);
+    if (this.#appliedEnvironmentKey === key) return;
+    this.#appliedEnvironmentKey = undefined;
     if (environment.viewport.mode === "fill") {
       yield* send("Emulation.clearDeviceMetricsOverride");
     } else {
@@ -2798,12 +2986,14 @@ export class BrowserCdpEngine {
     }
     if (environment.reducedMotion) features.push({ name: "prefers-reduced-motion", value: "reduce" });
     yield* send("Emulation.setEmulatedMedia", { features });
+    this.#appliedEnvironmentKey = key;
   });
 
   readonly #clearEnvironmentEffect = Effect.fn("BrowserCdp.clearEnvironment")(function* (
     this: BrowserCdpEngine,
     send: SendCommand,
   ): Effect.fn.Return<void, BrowserOperationError> {
+    this.#appliedEnvironmentKey = undefined;
     yield* send("Emulation.clearDeviceMetricsOverride");
     yield* send("Emulation.setEmulatedMedia", { features: [] });
   });
@@ -2826,7 +3016,7 @@ export class BrowserCdpEngine {
 
 function assertTypingProgressBeforeDeadline(deadline: number | undefined, sent: number, total: number): void {
   if (deadline === undefined || Date.now() < deadline) return;
-  throw new Error(
+  throw new TimeoutError(
     `Browser typing timed out after ${sent} of ${total} characters reached the page. The page kept them. Read the page before sending the rest, or the repeated part is entered twice.`,
   );
 }
@@ -2905,7 +3095,7 @@ const waitForDomQuietAcrossTargets = Effect.fn("Browser.waitForDomQuietAcrossTar
   captures: SnapshotTarget[],
   timeoutMs: number,
 ) {
-  if (timeoutMs <= 0) return yield* browserFailure(new Error("DOM did not become quiet."));
+  if (timeoutMs <= 0) return yield* browserFailure(new TimeoutError("DOM did not become quiet."));
   const deadlineMs = Math.max(1, Math.floor(timeoutMs));
   const results = yield* Effect.all(
     captures.map((capture) =>
@@ -2984,7 +3174,7 @@ const waitForDomQuietAcrossTargets = Effect.fn("Browser.waitForDomQuietAcrossTar
     { concurrency: "unbounded" },
   );
   if (results.some((result) => recordValue(result.result)?.value !== true)) {
-    return yield* browserFailure(new Error("DOM did not become quiet."));
+    return yield* browserFailure(new TimeoutError("DOM did not become quiet."));
   }
 });
 
