@@ -401,7 +401,9 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
   }
 
   // The open thread and the threads in the side panel read their conversations once, also when their
-  // tabs are open after a restart. Events then keep them current.
+  // tabs are open after a restart. Events then keep them current. A thread that waits for its read is
+  // not read again when another thread loads; it is read again only after it stops waiting and waits again.
+  let reading: ReadonlySet<string> = new Set();
   createEffect(
     () => {
       const agentId = activeAgentId();
@@ -412,9 +414,9 @@ export function createAgentThreadTabs(options: AgentThreadTabsOptions) {
       return ids.length === 0 ? null : [agentId, ...ids].join("\n");
     },
     (key) => {
-      if (!key) return;
-      const [agentId = "", ...ids] = key.split("\n");
-      for (const id of ids) tasks.openTask(agentId, id);
+      const [agentId = "", ...ids] = key?.split("\n") ?? [];
+      for (const id of ids) if (!reading.has(id)) tasks.openTask(agentId, id);
+      reading = new Set(ids);
     },
   );
 

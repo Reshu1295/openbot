@@ -74,6 +74,11 @@ export function ConversationSideThread(props: { threadId: string }) {
     const key = draftKey();
     return key ? threadComposer.draft(key) : undefined;
   };
+  /** Sends the draft of this thread. Without its key, a send would take the draft of the chat's thread. */
+  function sendSide(side: SideThread, text: string): Promise<boolean> {
+    const key = draftKey();
+    return key ? threadComposer.send(side, text, key) : Promise.resolve(false);
+  }
   /** The thread waits for an answer to a question or a takeover, which the chat tab of the thread shows. */
   const waitsForAnswer = () => {
     const status = item()?.status;
@@ -108,7 +113,7 @@ export function ConversationSideThread(props: { threadId: string }) {
                 ? void previewAttachment(attachment)
                 : attachmentAction(attachment, "open")
             }
-            onSend={(text) => threadComposer.send(current().thread, text, draftKey())}
+            onSend={(text) => sendSide(current().thread, text)}
             onStop={() => current().thread.onStop()}
             onOpenLink={(url) => void openExternalMessageUrl(url)}
             onPreview={(attachment) => void previewAttachment(attachment)}

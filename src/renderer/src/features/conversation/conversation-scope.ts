@@ -506,6 +506,25 @@ export function createConversationViewScope(props: ConversationProps) {
     props.threads?.side.onToSide(id);
     openPanelThread(id);
   }
+  // A side thread that shows can also leave the side panel from outside it: the thread list or a
+  // notification opens it in the chat, or it is archived. The side thread next to it then shows, else
+  // the last pane, as when its tab closes. A thread that is not in the list yet, as before the threads
+  // load after a start, did not show, so the panel keeps it.
+  createEffect(
+    () => ({
+      shown: activeRightPanel() === "thread" ? shownPanelThreadId() : null,
+      requested: activeRightPanel() === "thread" ? panelThreadId() : null,
+      ids: sideThreadIds(),
+      pane: sidePanel().panes.at(-1),
+    }),
+    (next, previous) => {
+      if (next.shown !== null || !previous?.shown || next.requested !== previous.shown) return;
+      const index = previous.ids.indexOf(previous.shown);
+      const thread = next.ids[Math.min(Math.max(index, 0), next.ids.length - 1)];
+      if (thread) openPanelThread(thread);
+      else if (next.pane) openSidePanelPane(next.pane);
+    },
+  );
   /** The subagent that the side panel shows now, or null. */
   const shownSubagentId = () => (activeRightPanel() === "subagent" ? panelSubagentId() : null);
   /** A click on a subagent opens it on the side; a click on the subagent that shows closes its pane. */
