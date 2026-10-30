@@ -2899,6 +2899,7 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       exportDiagnostics: async () => ({ saved: true }),
     },
     servers: mockTeam.servers,
+    localServers: mockTeam.localServers,
     plugins: {
       // The preview is never opened by a link, so there is nothing pending and nothing to push.
       takePendingListing: async () => null,

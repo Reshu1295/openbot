@@ -939,7 +939,8 @@ export class HostService extends EventEmitter<HostEvents> {
     return this.getStatus();
   });
 
-  readonly startDevelopmentLocal = Effect.fn("HostService.startDevelopmentLocal")(
+  /** Starts the Team API on loopback only, with no Signal: the development host and a local server. */
+  readonly startLoopbackOnly = Effect.fn("HostService.startLoopbackOnly")(
     function* (this: HostService): Effect.fn.Return<HostStatus, RemoteWorkflowError, HostApiRuntime> {
       if (!this.#options.store.configured)
         return yield* new RemoteWorkflowError({
