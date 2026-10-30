@@ -2779,6 +2779,21 @@ export class BrowserCdpEngine {
       }
       blockerId ||= hitId;
     }
+    // A pointer-disabled target can still be activated by its descendant or associated label.
+    const pointerEvents = yield* this.#callOnNode(
+      send,
+      backendNodeId,
+      "function() { return getComputedStyle(this).pointerEvents; }",
+      [],
+      sessionId,
+    );
+    if (pointerEvents === "none")
+      return yield* browserFailure(
+        new BrowserTargetNotReady({
+          message:
+            "Target has pointer-events:none and no checked hit activates it. No mouse click was sent. Take a fresh snapshot and choose a directly clickable control, or request user takeover.",
+        }),
+      );
     if (!blockerId)
       return yield* browserFailure(new BrowserTargetNotReady({ message: "Element has no visible clickable point." }));
     const blocker = yield* send("DOM.describeNode", { backendNodeId: blockerId, depth: 0 }, sessionId);
@@ -2786,7 +2801,7 @@ export class BrowserCdpEngine {
     const name = stringValue(node?.nodeName).toLowerCase() || "element";
     return yield* browserFailure(
       new BrowserTargetNotReady({
-        message: `Target is covered by ${name} (backendNodeId ${blockerId}). Dismiss the covering layer or choose a visible point.`,
+        message: `Target is covered by ${name} (backendNodeId ${blockerId}). Inspect the page and dismiss a visible covering layer if present, or take a fresh snapshot and choose a directly clickable control.`,
       }),
     );
   });

@@ -21,6 +21,10 @@
   and images for pages with few controls remain available.
 - Stop targeted typing when a page moves focus to another field or replaces the target. Text and
   submit keys no longer continue into the other field after these changes.
+- Keep the same tab when its main frame replaces an unfinished load and the replacement finishes.
+  A cancelled load or failed replacement still reports failure. No navigation or input is replayed.
+- Distinguish pointer-disabled accessibility targets from covering layers. Keep checked child clicks
+  and explicit overlay dismissal, without clicking an unrelated visual sibling.
 
 ### Changed
 

@@ -22,8 +22,10 @@ import {
 import { BrowserUploads } from "../src/backend/agent/browser-uploads";
 import { attachmentCall } from "../src/backend/attachment-effects";
 import { BrowserHost } from "../src/backend/browser-host";
+import { navigateAndWait } from "../src/backend/browser-navigation";
 import { runCauseEffect } from "../src/backend/effect-boundary";
 import { type DynamicToolResult, getString } from "../src/backend/protocol";
+import { TimeoutError } from "../src/backend/with-timeout";
 import { runSecretHandoffScenario } from "./browser-secret-smoke";
 import { waitForPresentedFrame } from "./browser-smoke-frames";
 
@@ -158,6 +160,27 @@ const server = createServer((request, response) => {
   }
   if (url.pathname === "/abort") {
     response.destroy();
+    return;
+  }
+  if (url.pathname === "/navigation-pending") {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.write("<!doctype html><main>pending navigation</main>");
+    return;
+  }
+  if (url.pathname === "/redirect-http") {
+    response.writeHead(302, { location: "/redirect-end" }).end();
+    return;
+  }
+  if (url.pathname === "/frame-redirect-parent") {
+    response.setHeader("content-type", "text/html; charset=utf-8");
+    response.end("<script>parent.location.replace('/redirect-end')</script>");
+    return;
+  }
+  if (url.pathname === "/reload-redirect") {
+    response.setHeader("content-type", "text/html; charset=utf-8");
+    response.end(
+      "<script>if (sessionStorage.getItem('reload-redirect')) location.replace('/redirect-end');</script><img src='/redirect-image'>",
+    );
     return;
   }
   if (url.pathname === "/identity-frame") {
@@ -356,8 +379,13 @@ const server = createServer((request, response) => {
   // The slow image keeps the first load open until the redirect starts.
   if (url.pathname === "/redirect-start") {
     response.setHeader("content-type", "text/html; charset=utf-8");
+    if (url.search === "?frame") {
+      response.end('<iframe src="/frame-redirect-parent"></iframe><img src="/redirect-image">');
+      return;
+    }
+    const destination = url.search === "?failed" ? "/abort" : `/redirect-end${url.search}`;
     response.end(
-      `<!doctype html><script>setTimeout(() => location.replace('/redirect-end${url.search}'), 0)</script><img src="/redirect-image">`,
+      `<!doctype html><script>setTimeout(() => location.replace(${JSON.stringify(destination)}), 0)</script><img src="/redirect-image">`,
     );
     return;
   }
@@ -367,7 +395,9 @@ const server = createServer((request, response) => {
   }
   if (url.pathname === "/redirect-end") {
     response.setHeader("content-type", "text/html; charset=utf-8");
-    if (url.search === "?slow") {
+    if (url.search === "?pending") {
+      response.write("<!doctype html><main>pending successor</main>");
+    } else if (url.search === "?slow") {
       response.write("<!doctype html><main>loading</main>");
       setTimeout(() => response.end("<script>document.querySelector('main').textContent='redirected'</script>"), 200);
     } else response.end("<!doctype html><main>redirected</main>");
@@ -2087,8 +2117,33 @@ async function runFocusScenario(browser: BrowserHost, origin: string): Promise<v
  * redirected page.
  */
 async function runRedirectNavigationScenario(browser: BrowserHost, origin: string): Promise<void> {
-  const tab = await runCauseEffect(browser.open(origin, "smoke-thread", "smoke-bot"));
   const outcomes: { via: string; url: string; success: boolean; error?: string }[] = [];
+  for (const suffix of ["", "?slow"]) {
+    const url = `${origin}/redirect-start${suffix}`;
+    const redirected = await runCauseEffect(browser.open(url, "smoke-thread", "smoke-bot"));
+    try {
+      assert.equal(redirected.url, `${origin}/redirect-end${suffix}`);
+      assert.equal(redirected.loading, false);
+      const snapshot = await runCauseEffect(browser.snapshot(redirected.id));
+      assert.equal(snapshot.url, `${origin}/redirect-end${suffix}`);
+      assert(snapshot.text.includes("redirected"), snapshot.text);
+      outcomes.push({ via: "open", url, success: true });
+    } finally {
+      await runCauseEffect(browser.close(redirected.id));
+    }
+  }
+  const tabsBeforeFailure = browser.listTabs().map((tab) => tab.id);
+  const httpRedirect = await runCauseEffect(browser.open(`${origin}/redirect-http`, "smoke-thread", "smoke-bot"));
+  assert.equal(httpRedirect.url, `${origin}/redirect-end`);
+  await runCauseEffect(browser.close(httpRedirect.id));
+  outcomes.push({ via: "http-redirect", url: `${origin}/redirect-http`, success: true });
+  await expectFailure(() => runCauseEffect(browser.open(`${origin}/abort`, "smoke-thread", "smoke-bot")));
+  assert.deepEqual(
+    browser.listTabs().map((tab) => tab.id),
+    tabsBeforeFailure,
+  );
+  outcomes.push({ via: "failed-open-cleanup", url: `${origin}/abort`, success: true });
+  const { tab, contents } = await openTabWithContents(browser, origin, "smoke-thread", "smoke-bot");
   try {
     for (let attempt = 0; attempt < 10; attempt += 1) {
       for (const url of [`${origin}/redirect-start`, `${origin}/redirect-start?slow`]) {
@@ -2099,6 +2154,8 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
           success: result.success,
           ...(result.success ? {} : { error: toolError(result) }),
         });
+        assert(result.success, toolError(result));
+        assert.equal(toolTextPayload(result)?.url, url.replace("redirect-start", "redirect-end"));
         const exit = await Effect.runPromiseExit(browser.loadUrl(tab.id, url));
         outcomes.push({
           via: "loadUrl",
@@ -2106,6 +2163,7 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
           success: exit._tag === "Success",
           ...(exit._tag === "Success" ? {} : { error: String(exit.cause) }),
         });
+        assert.equal(exit._tag, "Success", JSON.stringify(exit));
       }
     }
     await waitFor(
@@ -2116,6 +2174,72 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
           ?.url.includes("/redirect-end") === true,
       "redirected tab URL",
     );
+    await expectFailure(() =>
+      runCauseEffect(browser.open(`${origin}/redirect-start?failed`, "smoke-thread", "smoke-bot")),
+    );
+    assert.deepEqual(
+      browser.listTabs().map((candidate) => candidate.id),
+      [...tabsBeforeFailure, tab.id],
+    );
+    outcomes.push({ via: "successor-failure", url: `${origin}/redirect-start?failed`, success: true });
+    await expectFailure(() =>
+      runCauseEffect(browser.open(`${origin}/redirect-start?frame`, "smoke-thread", "smoke-bot")),
+    );
+    assert.deepEqual(
+      browser.listTabs().map((candidate) => candidate.id),
+      [...tabsBeforeFailure, tab.id],
+    );
+    outcomes.push({ via: "other-frame-refusal", url: `${origin}/redirect-start?frame`, success: true });
+
+    for (const action of ["stop", "replace", "cancel", "timeout"]) {
+      const pendingUrl = `${origin}/navigation-pending`;
+      const controller = new AbortController();
+      let replacement: Promise<unknown> | undefined;
+      const changeNavigation = (_event: unknown, url: string, _inPlace: boolean, mainFrame: boolean) => {
+        if (!mainFrame || url !== pendingUrl || action === "timeout") return;
+        setImmediate(() => {
+          if (action === "stop") contents.stop();
+          else if (action === "cancel") controller.abort();
+          else replacement = contents.loadURL(`${origin}/redirect-end`).catch(() => undefined);
+        });
+      };
+      contents.on("did-start-navigation", changeNavigation);
+      const beforeListeners = contents.listenerCount("did-finish-load");
+      try {
+        const exit = await Effect.runPromiseExit(
+          navigateAndWait(contents, () => contents.loadURL(pendingUrl), 1_000),
+          { signal: controller.signal },
+        );
+        assert.equal(exit._tag, "Failure", `${action} unexpectedly succeeded`);
+        if (replacement) await replacement;
+        await waitFor(async () => !contents.isLoading(), `${action} navigation stopped`);
+        await waitFor(
+          async () => contents.listenerCount("did-finish-load") === beforeListeners,
+          `${action} navigation listener cleanup`,
+        );
+        outcomes.push({ via: `refused-${action}`, url: pendingUrl, success: true });
+      } finally {
+        contents.off("did-start-navigation", changeNavigation);
+      }
+    }
+    const timedOut = await Effect.runPromise(
+      navigateAndWait(contents, () => contents.loadURL(`${origin}/redirect-start?pending`), 1_000).pipe(Effect.flip),
+    );
+    assert(timedOut.cause instanceof TimeoutError, String(timedOut.cause));
+    await waitFor(async () => !contents.isLoading(), "successor deadline stopped navigation");
+    outcomes.push({ via: "successor-deadline", url: `${origin}/redirect-start?pending`, success: true });
+    await contents.loadURL(`${origin}/reload-redirect`);
+    await contents.executeJavaScript("sessionStorage.setItem('reload-redirect', 'yes'); true");
+    await runCauseEffect(
+      navigateAndWait(contents, () => {
+        contents.reload();
+        return true;
+      }),
+    );
+    assert.equal(contents.getURL(), `${origin}/redirect-end`);
+    assert((await contents.executeJavaScript("document.body.textContent")).includes("redirected"));
+    outcomes.push({ via: "boolean-reload-successor", url: `${origin}/reload-redirect`, success: true });
+    await contents.executeJavaScript("sessionStorage.removeItem('reload-redirect'); true");
   } finally {
     await runCauseEffect(browser.close(tab.id));
   }
@@ -2167,6 +2291,7 @@ async function runHitTesting(browser: BrowserHost, tabId: string, contents: WebC
   const checks: string[] = [];
   let mode = "first_miss";
   let misses = 0;
+  let mouseDispatches = 0;
   const setup = async () => {
     await contents.executeJavaScript(
       `document.body.innerHTML = '<a href="#" style="display:block;width:200px;height:60px">Hit fixture</a>'; globalThis.hits = 0; document.querySelector('a').onclick = event => { event.preventDefault(); if (event.isTrusted) globalThis.hits++; }; true`,
@@ -2178,6 +2303,7 @@ async function runHitTesting(browser: BrowserHost, tabId: string, contents: WebC
   try {
     await setup();
     contents.debugger.sendCommand = (method, params, sessionId) => {
+      if (method === "Input.dispatchMouseEvent") mouseDispatches++;
       if (method === "DOM.getNodeForLocation" && (mode === "all_miss" || (mode === "first_miss" && misses === 0))) {
         misses++;
         // Ask Chromium for a real empty hit; later points still use their original coordinates.
@@ -2232,6 +2358,82 @@ async function runHitTesting(browser: BrowserHost, tabId: string, contents: WebC
     checks.push("stage logs record numeric durations and exclude page targets and URLs");
 
     mode = "normal";
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<section style="position:relative;width:400px;height:80px"><div role="link" tabindex="0" aria-label="Virtual flight" style="position:absolute;inset:0;pointer-events:none"></div><button style="width:400px;height:80px">Visual sibling</button></section>'; globalThis.hits = 0; globalThis.wrongHits = 0; document.querySelector('[role=link]').onkeydown = event => { if (event.isTrusted && event.key === 'Enter') globalThis.hits++; }; document.querySelector('button').onclick = event => { if (event.isTrusted) globalThis.wrongHits++; }; true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    const virtualSnapshot = await runCauseEffect(browser.snapshot(tabId));
+    const virtualTarget = virtualSnapshot.elements.find((element) => element.name === "Virtual flight");
+    assert(virtualTarget);
+    const beforeVirtualClick = mouseDispatches;
+    const virtualClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "ref", ref: virtualTarget.ref, revision: virtualSnapshot.revision },
+      timeoutMs: 700,
+    });
+    const virtualFailure = toolTextPayload(virtualClick);
+    assert(!virtualClick.success && virtualFailure?.inputState === "not_started");
+    assert(String(virtualFailure.message).includes("pointer-events"), JSON.stringify(virtualFailure));
+    assert.equal(await contents.executeJavaScript("globalThis.hits + globalThis.wrongHits"), 0);
+    assert.equal(mouseDispatches, beforeVirtualClick);
+    checks.push("virtual pointer-disabled link returns a precise failure without clicking its visual sibling");
+    const keyboardSnapshot = await runCauseEffect(browser.snapshot(tabId));
+    const keyboardTarget = keyboardSnapshot.elements.find((element) => element.name === "Virtual flight");
+    assert(keyboardTarget);
+    const keyboardActivation = await callBrowserTool(browser, "press", {
+      tabId,
+      target: { kind: "ref", ref: keyboardTarget.ref, revision: keyboardSnapshot.revision },
+      key: "Enter",
+    });
+    assert(keyboardActivation.success, toolError(keyboardActivation));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    assert.equal(await contents.executeJavaScript("globalThis.wrongHits"), 0);
+    checks.push("separate targeted trusted keyboard activation works for a keyboard-enabled virtual link");
+
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button aria-label="Pointer-enabled child" style="pointer-events:none"><span style="display:block;width:200px;height:60px;pointer-events:auto">Clickable child</span></button>'; globalThis.hits = 0; document.querySelector('button').onclick = event => { if (event.isTrusted) globalThis.hits++; }; true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    await runCauseEffect(browser.snapshot(tabId));
+    const childClick = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Pointer-enabled child", exact: true },
+    });
+    assert(childClick.success, toolError(childClick));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    checks.push("pointer-disabled target keeps its genuinely activating pointer-enabled descendant");
+
+    await contents.executeJavaScript(
+      `document.body.innerHTML = '<button aria-label="Covered result" style="width:200px;height:80px">Result</button><div role="dialog" aria-label="Cookie choices" style="position:fixed;inset:0;z-index:10;background:white"><button aria-label="Reject cookies">Reject cookies</button></div>'; globalThis.hits = 0; document.querySelector('[aria-label="Covered result"]').onclick = event => { if (event.isTrusted) globalThis.hits++; }; document.querySelector('[aria-label="Reject cookies"]').onclick = () => document.querySelector('[role=dialog]').remove(); true`,
+      true,
+    );
+    await waitForPresentedFrame(contents);
+    await runCauseEffect(browser.snapshot(tabId));
+    const beforeCookieClick = mouseDispatches;
+    const cookieBlocked = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Covered result", exact: true },
+      timeoutMs: 700,
+    });
+    assert(!cookieBlocked.success && toolTextPayload(cookieBlocked)?.inputState === "not_started");
+    assert(toolError(cookieBlocked).includes("covered by"), toolError(cookieBlocked));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 0);
+    assert.equal(mouseDispatches, beforeCookieClick);
+    const rejectCookies = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Reject cookies", exact: true },
+    });
+    assert(rejectCookies.success, toolError(rejectCookies));
+    const uncoveredResult = await callBrowserTool(browser, "click", {
+      tabId,
+      target: { kind: "role", role: "button", name: "Covered result", exact: true },
+    });
+    assert(uncoveredResult.success, toolError(uncoveredResult));
+    assert.equal(await contents.executeJavaScript("globalThis.hits"), 1);
+    checks.push("real consent overlay blocks input until an explicit dismissal, then the result activates once");
+
     await contents.executeJavaScript(
       `document.body.innerHTML = '<nav>' + Array.from({length: 450}, (_, i) => '<button style="display:block;height:32px">Earlier ' + i + '</button>').join('') + '</nav><main id="choices"><a href="#destination">Repeated destination</a><br><a href="#destination">Repeated destination</a><button hidden>Hidden choice</button><div inert><button>Inert choice</button></div></main>'; globalThis.chosen = 0; document.querySelectorAll('#choices a').forEach((link, i) => link.onclick = event => { event.preventDefault(); if (event.isTrusted) globalThis.chosen = i + 1; }); document.querySelector('#choices').scrollIntoView(); true`,
       true,

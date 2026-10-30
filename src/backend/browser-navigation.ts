@@ -68,10 +68,19 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
       let settled = false;
       let timedOut = false;
       let initiationPending = false;
+      let pendingAborts = 0;
+      let successor = false;
+      let unrelatedNavigation = false;
+      let navigationUrl: string | undefined;
+      let finished = false;
+      let recoveredAbort: Error | undefined;
       let timer: NodeJS.Timeout;
       const cleanup = () => {
+        settled = true;
         clearTimeout(timer);
         contents.off("did-start-navigation", didStartNavigation);
+        contents.off("did-redirect-navigation", didRedirectNavigation);
+        contents.off("did-finish-load", didFinishLoad);
         contents.off("did-stop-loading", didStopLoading);
         contents.off("did-navigate-in-page", didNavigateInPage);
         contents.off("did-fail-load", didFailLoad);
@@ -85,13 +94,35 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
         else resume(Effect.void);
       };
       const complete = () => {
-        finish(timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : undefined);
+        if ((initiationPending || pendingAborts > 0) && !timedOut) return;
+        const recoveryFailed = recoveredAbort && (!successor || unrelatedNavigation || !finished);
+        finish(timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : recoveryFailed ? recoveredAbort : undefined);
       };
-      const didStartNavigation = (_event: unknown, _url: string, isInPlace: boolean, isMainFrame: boolean) => {
+      const didStartNavigation = (
+        event: Electron.Event<Electron.WebContentsDidStartNavigationEventParams>,
+        url: string,
+        isInPlace: boolean,
+        isMainFrame: boolean,
+      ) => {
         if (!isMainFrame) return;
+        if (initiate && !isInPlace) {
+          if (started) {
+            // An API call or another tab is not evidence that this page replaced its own load.
+            successor = event.initiator === contents.mainFrame && event.frame === contents.mainFrame;
+            unrelatedNavigation ||= !successor;
+          }
+          navigationUrl = url;
+          finished = false;
+        }
         // A page that calls `pushState` while it loads must not end the wait for that load.
         inPlace = started ? inPlace && isInPlace : isInPlace;
         started = true;
+      };
+      const didRedirectNavigation = (_event: unknown, url: string, _isInPlace: boolean, isMainFrame: boolean) => {
+        if (initiate && isMainFrame) navigationUrl = url;
+      };
+      const didFinishLoad = () => {
+        finished = true;
       };
       const didStopLoading = () => {
         if (started && !inPlace) complete();
@@ -99,16 +130,37 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
       const didNavigateInPage = (_event: unknown, _url: string, isMainFrame: boolean) => {
         if (started && inPlace && isMainFrame) complete();
       };
-      const didFailLoad = (_event: unknown, code: number, description: string, _url: string, isMainFrame: boolean) => {
+      const didFailLoad = (_event: unknown, code: number, description: string, url: string, isMainFrame: boolean) => {
         if (!started || !isMainFrame) return;
-        finish(
-          timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : new Error(`Navigation failed (${code}): ${description}`),
-        );
+        const fail = () => {
+          if (settled) return;
+          if (initiate && code === -3 && successor && !unrelatedNavigation && url !== navigationUrl) {
+            recoveredAbort ??= new Error(`Navigation failed (${code}): ${description}`);
+            if (!contents.isLoading()) complete();
+            return;
+          }
+          finish(
+            timedOut
+              ? new TimeoutError(NAVIGATION_TIMED_OUT)
+              : new Error(`Navigation failed (${code}): ${description}`),
+          );
+        };
+        if (initiate && code === -3) {
+          pendingAborts += 1;
+          setImmediate(() => {
+            pendingAborts -= 1;
+            fail();
+          });
+        } else fail();
       };
       const destroyed = () => {
         finish(new Error(TAB_CLOSED));
       };
       contents.on("did-start-navigation", didStartNavigation);
+      if (initiate) {
+        contents.on("did-redirect-navigation", didRedirectNavigation);
+        contents.on("did-finish-load", didFinishLoad);
+      }
       contents.on("did-stop-loading", didStopLoading);
       contents.on("did-navigate-in-page", didNavigateInPage);
       contents.on("did-fail-load", didFailLoad);
@@ -118,7 +170,8 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
         try {
           const navigationWasActive = started || contents.isLoading();
           contents.stop();
-          if (!navigationWasActive && !initiationPending) complete();
+          if (initiate) setImmediate(complete);
+          else if (!navigationWasActive && !initiationPending) complete();
         } catch (error) {
           finish(error);
         }
@@ -126,11 +179,12 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
       timer.unref();
       if (!initiate) return Effect.sync(cleanup);
       try {
+        initiationPending = true;
         const initiation = initiate();
-        if (initiation === false) {
-          complete();
-        } else if (initiation !== true) {
-          initiationPending = true;
+        if (typeof initiation === "boolean") {
+          initiationPending = false;
+          if (!initiation || (started && !contents.isLoading())) complete();
+        } else {
           // Electron rejects `loadURL` inside its `did-start-navigation` event when the page starts
           // another navigation. Code that runs from there and calls `contents.stop()` cancels a
           // navigation while Chromium starts it, and Chromium then stops the whole process. Settle
@@ -145,7 +199,20 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
             (error) =>
               setImmediate(() => {
                 initiationPending = false;
-                finish(timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : error);
+                if (settled) return;
+                if (
+                  !timedOut &&
+                  successor &&
+                  !unrelatedNavigation &&
+                  error instanceof Error &&
+                  "code" in error &&
+                  error.code === "ERR_ABORTED" &&
+                  "errno" in error &&
+                  error.errno === -3
+                ) {
+                  recoveredAbort = error;
+                  if (!contents.isLoading()) complete();
+                } else finish(timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : error);
               }),
           );
         }

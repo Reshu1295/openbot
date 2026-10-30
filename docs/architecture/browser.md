@@ -444,6 +444,12 @@ the dialog interception event is internal to that pinned runtime.
 
 ### Hit testing and local timing logs
 
+An initiated navigation can recover an Electron `ERR_ABORTED` only when a subsequent main-frame
+navigation was initiated by that same main frame. The successor must finish loading under the
+original deadline. An unrelated API or frame navigation, failed successor, stop, or cancellation
+does not turn the aborted load into success. Initial `open`, `navigate`, and `loadUrl` use the same
+watcher; the passive loading wait keeps its existing behavior. Recovery does not repeat a request.
+
 A `DOM.getNodeForLocation` miss (`No node found at given location`) is an empty candidate, not an
 action failure. The engine checks the remaining points and still requires a native hit on the target
 or its activating child. If all points miss, normal bounded readiness applies. Other protocol errors
@@ -455,6 +461,13 @@ to each validated point for `DOM.getNodeForLocation`, while dispatched input kee
 coordinates. Without this conversion, a scrolled link could be checked against an unrelated element
 or an empty location. The native hit-testing scenario checks vertical and horizontal scrolling,
 viewport controls beyond 450 earlier controls, ambiguous-target refusal, and stale-ref refusal.
+
+If no checked hit activates a target with `pointer-events:none`, report that specific limitation
+instead of treating the visual sibling as a covering layer. Check activating descendants and labels
+first: a pointer-disabled parent can still have a pointer-enabled child. Never infer permission to
+click a sibling from a common ancestor. A real overlay still requires explicit dismissal before a
+new checked click. The native fixture also proves a separate targeted keyboard action for a
+keyboard-enabled virtual link; the click operation does not use a keyboard fallback.
 
 Local `logs/main/main.log` now includes `browser-actions` and `browser-dialogs`. Action records
 separate target resolution, input, settling, snapshot, and total duration; non-zero queue waits are

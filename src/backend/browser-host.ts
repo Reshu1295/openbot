@@ -744,7 +744,7 @@ export class BrowserHost {
 
       const loadGeneration = tab.loadGeneration;
       yield* Effect.gen({ self: this }, function* () {
-        yield* browserCall(() => tab.contents.loadURL(normalizedUrl, browserLoadOptions()));
+        yield* navigateAndWait(tab.contents, () => tab.contents.loadURL(normalizedUrl, browserLoadOptions()));
         if (focus) {
           this.#focusTab(tab);
           setImmediate(() => this.#focusTab(tab));
