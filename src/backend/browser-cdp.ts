@@ -75,6 +75,7 @@ import {
 import { describeBrowserTarget, stopLoadingAndWait, waitForLoading } from "./browser-navigation";
 import { createFramePacer } from "./browser-screencast-pacing";
 import type { VaultCardSecret } from "./vault-items";
+import { TimeoutError } from "./with-timeout";
 
 const ACTION_TIMEOUT_MS = 10_000;
 const WAIT_TIMEOUT_MS = 30_000;
@@ -754,13 +755,100 @@ export class BrowserCdpEngine {
     yield* this.#leaseEffect((send) =>
       Effect.gen({ self: this }, function* () {
         const resolved = yield* this.#resolveTargetEffect(send, target, deadline);
-        if (!resolved.backendNodeId) return yield* browserFailure(new Error("Typing requires an element target."));
+        const backendNodeId = resolved.backendNodeId;
+        if (!backendNodeId) return yield* browserFailure(new Error("Typing requires an element target."));
+        const frames = new Map<string, { parentId: string | undefined; sessionId: string | undefined }>();
+        let rootFrameId = "";
+        const sessions = new Set([
+          resolved.sessionId,
+          undefined,
+          ...[...this.#targetSessions.values()].map((frame) => frame.sessionId),
+        ]);
+        for (const sessionId of sessions) {
+          const frameTree = yield* send("Page.getFrameTree", {}, sessionId);
+          const root = recordValue(frameTree.frameTree);
+          rootFrameId ||= stringValue(recordValue(root?.frame)?.id);
+          const pending: Array<{ tree: CdpResult | undefined; parentId: string | undefined }> = [
+            { tree: root, parentId: undefined },
+          ];
+          for (const entry of pending) {
+            if (!entry.tree) continue;
+            const frame = recordValue(entry.tree.frame);
+            const frameId = stringValue(frame?.id);
+            if (!frameId) return yield* browserFailure(new Error("The typing frame is unavailable."));
+            frames.set(frameId, {
+              parentId: stringValue(frame?.parentId) || entry.parentId,
+              sessionId: this.#targetSessions.get(frameId)?.sessionId ?? sessionId,
+            });
+            if (Array.isArray(entry.tree.childFrames))
+              pending.push(...entry.tree.childFrames.map((tree) => ({ tree: recordValue(tree), parentId: frameId })));
+          }
+          let ancestorId: string | undefined = rootFrameId;
+          while (ancestorId && frames.has(ancestorId)) ancestorId = frames.get(ancestorId)?.parentId;
+          if (!ancestorId) break;
+        }
+        const focusTargets: Array<{ backendNodeId: number; contextId: number; sessionId: string | undefined }> = [];
+        let targetFrameId = "";
+        for (const [frameId, frame] of frames) {
+          if (frame.sessionId !== resolved.sessionId) continue;
+          yield* browserSync(() => assertBeforeDeadline(deadline));
+          const contextId = yield* frameAutomationContextId(send, frameId, frame.sessionId);
+          const ownsTarget = yield* this.#callOnNode(
+            send,
+            backendNodeId,
+            "function() { return this.ownerDocument === document; }",
+            [],
+            frame.sessionId,
+            contextId,
+          );
+          if (ownsTarget !== true) continue;
+          targetFrameId = frameId;
+          focusTargets.push({ backendNodeId, contextId, sessionId: frame.sessionId });
+          break;
+        }
+        if (!targetFrameId) return yield* browserFailure(new Error("The typing frame is unavailable."));
+        // Native frame owners remain reachable when a parent's shadow root is closed.
+        for (let frame = frames.get(targetFrameId); frame?.parentId; frame = frames.get(frame.parentId)) {
+          const parent = frames.get(frame.parentId);
+          if (!parent) return yield* browserFailure(new Error("The typing frame owner is unavailable."));
+          const owner = yield* send("DOM.getFrameOwner", { frameId: targetFrameId }, parent.sessionId);
+          const ownerId = numberValue(owner.backendNodeId);
+          if (!ownerId) return yield* browserFailure(new Error("The typing frame owner is unavailable."));
+          const contextId = yield* frameAutomationContextId(send, frame.parentId, parent.sessionId);
+          focusTargets.push({ backendNodeId: ownerId, contextId, sessionId: parent.sessionId });
+          targetFrameId = frame.parentId;
+        }
+        const checkTarget = () =>
+          Effect.gen({ self: this }, function* () {
+            for (const node of focusTargets)
+              yield* this.#callOnNode(
+                send,
+                node.backendNodeId,
+                `function() {
+                  if (!this.isConnected || this.ownerDocument !== document)
+                    throw new Error('Typing target changed or lost focus. Read the page before continuing.');
+                  for (let node = this; node;) {
+                    const root = node.getRootNode();
+                    if (root.activeElement !== node)
+                      throw new Error('Typing target changed or lost focus. Read the page before continuing.');
+                    if (root === document) return;
+                    node = root.host;
+                  }
+                  throw new Error('Typing target changed or lost focus. Read the page before continuing.');
+                }`,
+                [],
+                node.sessionId,
+                node.contextId,
+              );
+          });
         yield* browserSync(() => assertBeforeDeadline(deadline));
         onDispatch?.();
         yield* send("DOM.focus", { backendNodeId: resolved.backendNodeId }, resolved.sessionId);
+        // Focus and input handlers can redirect the next native command to another field.
+        yield* checkTarget();
         const useEndKey = yield* this.#callOnNode(
           send,
-          resolved.backendNodeId,
+          backendNodeId,
           `function(mode) {
           if (!('value' in this) && !this.isContentEditable) throw new Error('Target does not accept text.');
           if (mode === 'replace') {
@@ -784,7 +872,11 @@ export class BrowserCdpEngine {
           [mode],
           resolved.sessionId,
         );
-        if (useEndKey === true) yield* dispatchShortcut(send, "End", resolved.sessionId);
+        if (useEndKey === true) {
+          yield* checkTarget();
+          yield* dispatchShortcut(send, "End", resolved.sessionId);
+        }
+        yield* checkTarget();
         yield* browserSync(() => assertBeforeDeadline(deadline));
         yield* send("Input.insertText", { text }, resolved.sessionId);
         // Submitting is part of typing rather than a second action, because it has to reach the node
@@ -792,6 +884,7 @@ export class BrowserCdpEngine {
         // against its pre-typing text, so a contenteditable would fail with "The target changed after
         // the snapshot" and `submit: true` would insert the text without ever submitting it.
         if (options.submit === true) {
+          yield* checkTarget();
           yield* browserSync(() => assertBeforeDeadline(deadline));
           yield* dispatchShortcut(send, "Enter", resolved.sessionId);
         }
@@ -2149,8 +2242,8 @@ export class BrowserCdpEngine {
               Effect.catch((failure) =>
                 browserSync(() => {
                   const error = failure.cause;
-                  if (error instanceof Error && error.message === "DOM did not become quiet.") {
-                    throw new Error("Browser wait condition timed out.");
+                  if (error instanceof TimeoutError) {
+                    throw new TimeoutError("Browser wait condition timed out.");
                   }
                   throw error;
                 }),
@@ -2159,7 +2252,7 @@ export class BrowserCdpEngine {
             if (yield* matches()) return;
           }
           const remaining = deadline - Date.now();
-          if (remaining <= 0) return yield* browserFailure(new Error("Browser wait condition timed out."));
+          if (remaining <= 0) return yield* browserFailure(new TimeoutError("Browser wait condition timed out."));
           yield* waitForPageSignal(this.#contents, Math.min(remaining, 500));
         }
       }),
@@ -2238,7 +2331,7 @@ export class BrowserCdpEngine {
             Effect.catch((failure) =>
               browserSync(() => {
                 const error = failure.cause;
-                if (error instanceof Error && error.message === "DOM did not become quiet.") return true;
+                if (error instanceof TimeoutError) return true;
                 if (navigationGeneration !== this.#navigationGeneration || this.#contents.isLoading()) return false;
                 throw error;
               }),
@@ -2705,8 +2798,9 @@ export class BrowserCdpEngine {
     declaration: string,
     args: unknown[],
     sessionId?: string,
+    contextId?: number,
   ): Effect.fn.Return<unknown, BrowserOperationError> {
-    const executionContextId = yield* automationContextId(send, sessionId);
+    const executionContextId = contextId ?? (yield* automationContextId(send, sessionId));
     const resolved = yield* send("DOM.resolveNode", { backendNodeId, executionContextId }, sessionId);
     const objectId = stringValue(recordValue(resolved.object)?.objectId);
     if (!objectId) return yield* browserFailure(new Error("Element is no longer attached to the document."));
@@ -2907,7 +3001,7 @@ export class BrowserCdpEngine {
 
 function assertTypingProgressBeforeDeadline(deadline: number | undefined, sent: number, total: number): void {
   if (deadline === undefined || Date.now() < deadline) return;
-  throw new Error(
+  throw new TimeoutError(
     `Browser typing timed out after ${sent} of ${total} characters reached the page. The page kept them. Read the page before sending the rest, or the repeated part is entered twice.`,
   );
 }
@@ -2986,7 +3080,7 @@ const waitForDomQuietAcrossTargets = Effect.fn("Browser.waitForDomQuietAcrossTar
   captures: SnapshotTarget[],
   timeoutMs: number,
 ) {
-  if (timeoutMs <= 0) return yield* browserFailure(new Error("DOM did not become quiet."));
+  if (timeoutMs <= 0) return yield* browserFailure(new TimeoutError("DOM did not become quiet."));
   const deadlineMs = Math.max(1, Math.floor(timeoutMs));
   const results = yield* Effect.all(
     captures.map((capture) =>
@@ -3065,7 +3159,7 @@ const waitForDomQuietAcrossTargets = Effect.fn("Browser.waitForDomQuietAcrossTar
     { concurrency: "unbounded" },
   );
   if (results.some((result) => recordValue(result.result)?.value !== true)) {
-    return yield* browserFailure(new Error("DOM did not become quiet."));
+    return yield* browserFailure(new TimeoutError("DOM did not become quiet."));
   }
 });
 

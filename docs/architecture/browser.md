@@ -134,6 +134,14 @@ Agent input tools keep their successful snapshot response. A failed input return
 report input delivery, not the site's booking, cancellation, or payment result. Legacy IPC actions
 retain their existing error behavior.
 
+Targeted typing checks that the resolved native node remains connected and holds focus before
+selection, text insertion, and any End or submit key. It checks each shadow root through the retained
+node and checks frame ownership through the focused CDP world and each local frame owner. A focus
+handler that redirects input, or an input handler that replaces the node or moves focus before submit,
+stops the remaining input.
+The operation does not search for a replacement, compare formatted field values, or replay input.
+Focus remains emulated through CDP, so background typing does not require native application focus.
+
 A pre-dispatch failure can include one recovery snapshot. Its two-second response limit includes
 queue waiting. The capture checks tool ownership, authentication, and takeover before and after
 inspection. Dispatched work and transport cleanup still drain before later tab operations run.
@@ -165,8 +173,11 @@ existing character limit and frame limit. Automatic images require canvas/video 
 document viewport; a fully offscreen surface does not trigger a screenshot. Low semantic coverage,
 explicit image requests, and `image=never` keep their existing behavior.
 
-Explicit agent snapshots add `pageEvidence`: observed HTTP denial codes (401, 403, 429), sign-in
-text, and challenge text. These are observations, not proof of an expired session or bot protection.
+Explicit agent snapshots add `pageEvidence` only when they observe HTTP denial codes (401, 403, 429),
+sign-in text, or challenge text. A nonempty record keeps all three fields. Sign-in observations
+include English, Czech `přihlášení`, `přihlásit` and `prihlasit`, and German `Anmelden` as whole words.
+Czech text is normalized to NFC before matching. These are observations, not proof of authentication,
+an expired session, or bot protection.
 The identity checks keep the installed Chromium and the Google account exception. Automatic images
 use visible canvas/video or low semantic coverage; the presence of an iframe alone does not add one.
 
@@ -182,9 +193,13 @@ provider latency or live-site performance.
 `--scenario=snapshot-coverage` writes `.openbot-build/browser-snapshot-coverage.json`. The same
 checks also run in the CI-selected `input-recovery` scenario. They cover later-frame text with 200
 parent controls, offscreen and viewport canvas/video, explicit image modes, and low semantic coverage.
-`--scenario=typing-audit` is a separate native diagnostic. It writes
-`.openbot-build/browser-typing-audit.json` before it fails on an unsafe typing result. It tests focus
-redirection, readonly input, ordinary append, and empty replacement without changing typing policy.
+`--scenario=typing-audit` writes `.openbot-build/browser-typing-audit.json` before it fails on an
+unsafe typing result. The same native checks run in the default CI smoke flow and `controls`.
+They cover focus redirection before input and after text entry, node replacement, refusal of redirected
+text and Enter, focus changes during End, ordinary fields, open and closed shadow roots, same-origin
+and cross-origin frames, focus transfer from a frame to its parent, contenteditable, append, replace,
+empty text, readonly fields, formatting, and submit.
+The `focus` scenario also checks typing while an unrelated renderer keeps native focus.
 
 ### Fill inspected ordinary fields
 
@@ -296,7 +311,7 @@ refusal in `AgentService` stays beside it rather than being folded in: it also c
 | Event | Tabs |
 | --- | --- |
 | Turn succeeds | Stay open unless the agent called `close_tab`. |
-| Cancelled, interrupted, or failed | Stay open. Completion clears the control session only. |
+| Cancelled, interrupted, or failed | Stay open. Completion clears the control session and gives a pending agent dialog to the native handler. |
 | Retry | Same thread and agent, so the same tabs are still reachable. |
 | Restart | Restored from the browser's own state file. |
 | Idle 30 min (5 min when memory is low) | Stays open, but its page unloads. The next use loads the page again. |
@@ -378,14 +393,53 @@ tab queue while the dialog decision uses its callback outside that queue.
 `BrowserDialogs` replaces only the managed tab's native `-run-dialog` listener while agent input
 runs. CDP alone still opens Electron's native sheet. The adapter follows the
 [Electron 44.9.3 native handler](https://github.com/electron/electron/blob/v44.9.3/lib/browser/api/web-contents.ts#L733).
-The constructor requires one original handler and retains it for human actions and unsupported
-modal types. Prompts and before-unload behavior remain native. The interception gate uses the
+The adapter intercepts only when it finds one original handler, which it retains for human actions
+and unsupported modal types. If the listener layout differs, it logs a fixed warning and leaves all listeners intact;
+tab construction and native handling continue. The normal native test still requires working
+interception, so an unsupported runtime cannot silently pass that test. The interception gate uses the
 existing connected-page secret protection; dialog text cannot expose a page that received a secret.
 Close, shutdown, takeover, and manual user control cancel a pending agent dialog before queue drains.
 
+Each pending decision retains its thread and turn independently of the short-lived control indicator.
+When that turn ends or stops after receiving a dialog result, `endControl` gives the pending alert or
+confirmation to the original native handler. It makes no decision for the user. Stale turn IDs have
+no effect. Shutdown-only `clearControls` cancels pending agent decisions without opening native UI.
+Handoff retains the thread and turn for native continuations, including later alerts and confirmations.
+Each sheet gets a new metadata-only pending ID. Native answers clear that sheet, not the handed-off
+action's ownership. This state survives the action deadline, queued wrappers, and `clearControls`;
+only a later action that reaches the queue head can claim new managed ownership. It cannot claim
+ownership while a native decision is pending. Follow-up sheets stay native and are never answered
+automatically by agent or shutdown control cleanup.
+After handoff, Electron owns the native sheet and its abort controller. The adapter does not answer
+that user decision. Explicit Close and host destruction first emit Electron's `-cancel-dialogs`
+event to abort its native sheet, then close contents with a pending native decision before they wait
+for the tab queue. Content destruction releases its blocked work without selecting a response or
+detaching an external debugger. Other tab cleanup still follows the existing queue order.
+Shutdown control cleanup keeps the native decision
+tracked so later host destruction can cancel it through that lifecycle.
+
+Electron 44.9.3 replaces `window.prompt` with a function that throws before a native dialog event.
+There is no native sheet, pending dialog ID, or prompt result to return. The adapter preserves this
+limit and does not patch page functions or infer a dialog from page exception text. The native
+fixture catches the renderer exception and checks one call, no returned answer, no sheet, and no
+waiting signal. See the
+[pinned renderer implementation](https://github.com/electron/electron/blob/v44.9.3/lib/renderer/window-setup.ts#L17).
+
+Before unload uses the native `will-prevent-unload` event, not `-run-dialog`. The adapter observes
+the final event decision without changing it and reports `type: beforeunload`, `handledBy: user`, and
+`status: prevented` or `allowed`. The default native behavior prevents navigation without a sheet.
+Input tools and `navigate` report that decision with `doNotReplay: true` and request user help without
+page text or `handle_dialog` support. The agent must inspect the page before a new action. See the
+[pinned native implementation](https://github.com/electron/electron/blob/v44.9.3/shell/browser/api/electron_api_web_contents.cc#L4628).
+
 `bun run test:browser --scenario=dialogs` writes `.openbot-build/browser-dialogs.json`. It drives
 real renderer confirmations and checks accept, dismiss, stale IDs, chained dialogs, action deadline,
-takeover, alert handling, and native human fallback. Keep this scenario when upgrading Electron:
+takeover, alert handling, end-turn and stop handoff, degraded listener layouts, native prompt refusal,
+Close after handoff with owned and external debuggers, and before-unload decisions for input and
+navigation. Native chain checks cover a human accepting the first confirmation, follow-up alerts
+and confirmations, `clearControls` before that response, and continuation after the original action
+deadline. Close must abort only the current sheet and drain without an extra human decision or an
+external debugger detach. Keep this scenario when upgrading Electron:
 the dialog interception event is internal to that pinned runtime.
 
 ### Hit testing and local timing logs
@@ -404,7 +458,9 @@ viewport controls beyond 450 earlier controls, ambiguous-target refusal, and sta
 
 Local `logs/main/main.log` now includes `browser-actions` and `browser-dialogs`. Action records
 separate target resolution, input, settling, snapshot, and total duration; non-zero queue waits are
-recorded separately. Input time can include waiting for a dialog; it is not model response time.
+recorded separately at 100 ms or more, with only tab ID and duration. Input time can include waiting
+for a dialog; it is not model response time. Owned deadlines use `TimeoutError`; page and CDP error
+text cannot select a timeout reason.
 Dialog records distinguish an agent-tool answer, a native-handler answer, app cancellation, and
 native lifecycle closure. They contain IDs, fixed type/source fields, acceptance, and duration, never
 dialog text, origins, URLs, target names, arguments, or field values. Native-handler logging does not

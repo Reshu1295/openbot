@@ -69,7 +69,7 @@ export const enqueueTabOperation = Effect.fn("BrowserTab.enqueue")(function* <A>
         Effect.gen(function* () {
           yield* Deferred.await(previous);
           const queueWaitMs = Math.round(performance.now() - queuedAt);
-          if (queueWaitMs > 0) logger.info("Browser queue ready", { tabId: tab.id, queueWaitMs });
+          if (queueWaitMs >= 100) logger.info("Browser queue ready", { tabId: tab.id, queueWaitMs });
           if (cancelled) return yield* Effect.interrupt;
           // An operation that was queued before the person took the tab must not act on it.
           if (heldByUser(tab.id)) return yield* browserFailure(new BrowserUserControlHeld(tab.id));
@@ -330,21 +330,19 @@ export const runTabAction = Effect.fn("BrowserTab.action")(
                 });
               if (reportFailure) {
                 const cause = error.cause;
-                const message = cause instanceof Error ? cause.message : "";
                 return yield* browserFailure(
                   new BrowserActionFailure({
                     tabId: tab.id,
                     message: cause instanceof Error ? cause.message : "Browser action failed.",
                     inputState: inputCompleted ? "completed" : dispatched ? "attempted" : "not_started",
                     stage,
-                    reason:
-                      isTimeoutError(cause) || message.includes("timed out")
-                        ? "deadline"
-                        : stage === "snapshot"
-                          ? "snapshot_failed"
-                          : stage === "target_resolution"
-                            ? "target_unavailable"
-                            : "operation_failed",
+                    reason: isTimeoutError(cause)
+                      ? "deadline"
+                      : stage === "snapshot"
+                        ? "snapshot_failed"
+                        : stage === "target_resolution"
+                          ? "target_unavailable"
+                          : "operation_failed",
                   }),
                 );
               }
@@ -560,11 +558,11 @@ const finishesWithin = <A, E>(work: Effect.Effect<A, E>, milliseconds: number) =
   );
 
 export function isTimeoutError(error: unknown): boolean {
-  return error instanceof Error && /timed out/i.test(error.message);
+  return error instanceof TimeoutError;
 }
 
 export function remainingTime(deadline: number, message: string): number {
   const remaining = deadline - Date.now();
-  if (remaining <= 0) throw new Error(message);
+  if (remaining <= 0) throw new TimeoutError(message);
   return remaining;
 }

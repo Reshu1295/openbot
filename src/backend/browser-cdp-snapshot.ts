@@ -17,6 +17,7 @@ import {
   textMatches,
 } from "./browser-cdp-values";
 import { browserFailure, browserSync } from "./browser-effects";
+import { TimeoutError } from "./with-timeout";
 
 const MAX_SNAPSHOT_ELEMENTS = 200;
 const MAX_SNAPSHOT_CANDIDATES = MAX_SNAPSHOT_ELEMENTS * 2;
@@ -84,7 +85,6 @@ export const collectBoundedSnapshot = Effect.fn("Browser.collectBoundedSnapshot"
   const textParts: string[] = [];
   let textLength = 0;
   let hasVisualSurface = false;
-  let hasFrame = captures.length > 1;
   let truncated = false;
   for (const capture of captures) {
     yield* browserSync(() => assertBeforeDeadline(deadline));
@@ -100,7 +100,6 @@ export const collectBoundedSnapshot = Effect.fn("Browser.collectBoundedSnapshot"
         }
         truncated ||= summary.truncated;
         hasVisualSurface ||= summary.hasVisualSurface;
-        hasFrame ||= summary.hasFrame;
       }
     }
     const remainingElements = MAX_SNAPSHOT_ELEMENTS - elements.length;
@@ -151,7 +150,6 @@ export const collectBoundedSnapshot = Effect.fn("Browser.collectBoundedSnapshot"
     text: text.slice(0, MAX_SNAPSHOT_TEXT),
     truncated: truncated || text.length > MAX_SNAPSHOT_TEXT || elements.length >= MAX_SNAPSHOT_ELEMENTS,
     hasVisualSurface,
-    hasFrame,
   };
 });
 
@@ -176,7 +174,6 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
         let truncated = false;
         let scanned = 0;
         let hasVisualSurface = false;
-        let hasFrame = false;
         const visibleRects = node => {
           let element = node.parentElement;
           while (element) {
@@ -240,7 +237,6 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
               if (style?.visibility === 'visible' && style.opacity !== '0' && visibleRects(node)?.some(rect => rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 && rect.top < (view?.innerHeight ?? 0) && rect.left < (view?.innerWidth ?? 0))) hasVisualSurface = true;
             }
             if (tag === 'iframe' || tag === 'frame') {
-              hasFrame = true;
               try { if (node.contentDocument) roots.push(node.contentDocument); } catch {}
             }
             if (node.shadowRoot) roots.push(node.shadowRoot);
@@ -249,7 +245,7 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
         if (scanned >= maxNodes) truncated = true;
         const text = [...inView.parts, ...outside.parts].join(' ');
         if (text.length > maxText) truncated = true;
-        return { text: text.slice(0, maxText), truncated, hasVisualSurface, hasFrame };
+        return { text: text.slice(0, maxText), truncated, hasVisualSurface };
       })()`,
       contextId,
       returnByValue: true,
@@ -261,7 +257,6 @@ const collectPageSummaryEffect = Effect.fn("Browser.collectPageSummary")(functio
     text: stringValue(value?.text),
     truncated: value?.truncated === true,
     hasVisualSurface: value?.hasVisualSurface === true,
-    hasFrame: value?.hasFrame === true,
   };
 });
 
@@ -386,7 +381,7 @@ export const pageContainsText = Effect.fn("Browser.pageContainsText")(function* 
     ).pipe(Effect.catch(() => Effect.succeed(null)));
     yield* browserSync(() => assertBeforeDeadline(deadline));
     const value = recordValue(recordValue(result?.result)?.value);
-    if (value?.expired === true) return yield* browserFailure(new Error("Browser wait condition timed out."));
+    if (value?.expired === true) return yield* browserFailure(new TimeoutError("Browser wait condition timed out."));
     if (value?.matched === true) return true;
   }
   return false;

@@ -2,6 +2,7 @@ import type { BrowserTarget } from "@openbot/contracts/ipc";
 import { Effect } from "effect";
 import type { WebContents } from "electron";
 import { type BrowserOperationError, browserFailure, browserSync } from "./browser-effects";
+import { TimeoutError } from "./with-timeout";
 
 const NAVIGATION_TIMED_OUT = "Navigation timed out.";
 const TAB_CLOSED = "Browser tab was closed during navigation.";
@@ -84,7 +85,7 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
         else resume(Effect.void);
       };
       const complete = () => {
-        finish(timedOut ? new Error(NAVIGATION_TIMED_OUT) : undefined);
+        finish(timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : undefined);
       };
       const didStartNavigation = (_event: unknown, _url: string, isInPlace: boolean, isMainFrame: boolean) => {
         if (!isMainFrame) return;
@@ -100,7 +101,9 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
       };
       const didFailLoad = (_event: unknown, code: number, description: string, _url: string, isMainFrame: boolean) => {
         if (!started || !isMainFrame) return;
-        finish(new Error(timedOut ? NAVIGATION_TIMED_OUT : `Navigation failed (${code}): ${description}`));
+        finish(
+          timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : new Error(`Navigation failed (${code}): ${description}`),
+        );
       };
       const destroyed = () => {
         finish(new Error(TAB_CLOSED));
@@ -142,7 +145,7 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
             (error) =>
               setImmediate(() => {
                 initiationPending = false;
-                finish(timedOut ? new Error(NAVIGATION_TIMED_OUT) : error);
+                finish(timedOut ? new TimeoutError(NAVIGATION_TIMED_OUT) : error);
               }),
           );
         }
