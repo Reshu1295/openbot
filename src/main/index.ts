@@ -1508,8 +1508,9 @@ if (!hasSingleInstanceLock) {
       // The Windows error box ends the text at a NUL character, so control characters are replaced.
       const message = (error instanceof Error ? error.message : String(error)).replace(/[^\P{Cc}\n\t]/gu, "�");
       logger.error("OpenBot failed to start:", toLogValue(error));
-      // A server has nobody at its virtual display to close the box, and the box blocks the quit.
-      if (!serverMode && !hostedServer) {
+      // A server has nobody at its virtual display to close the box, and the box blocks the quit. A
+      // server on this computer has no window: the app that started it reports the failed start.
+      if (!serverMode && !hostedServer && !localServerChild) {
         // The services, and with them the saved language, may not exist yet. Then the system language applies.
         const locale = services?.language.locale ?? resolveLocale("system", app.getLocale());
         const translate = services?.language.translate ?? translateFor(locale);

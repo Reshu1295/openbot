@@ -112,19 +112,22 @@ export function RestartServerDialog(props: {
 
   /**
    * The server goes offline when it stops, and comes back online when it starts again. The client that
-   * waits for the start sets a hosted issue when the start fails or takes too long.
+   * waits for the start sets a hosted issue when the start fails or takes too long. A server on this
+   * computer goes offline and comes back before its request returns.
    */
   function follow(server: Pick<RestartServer, "state" | "hostedIssue"> | null): void {
-    if (!requestDone || !restarting() || !server) return;
+    if (!restarting() || !server) return;
+    // An incompatible server runs; only its version differs from this app.
+    const down = server.state !== "online" && server.state !== "incompatible";
+    if (down) wentDown = true;
+    if (!requestDone) return;
     const issue = server.hostedIssue ?? null;
     if (issue !== null && issue !== lastIssue) {
       finish("failed");
       return;
     }
     lastIssue = issue;
-    // An incompatible server runs; only its version differs from this app.
-    if (server.state !== "online" && server.state !== "incompatible") {
-      wentDown = true;
+    if (down) {
       if (phase() === "stopping") setPhase("starting");
     } else if (wentDown) finish("online");
   }

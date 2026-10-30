@@ -1255,12 +1255,16 @@ export async function createApplicationServices({
     join(app.getPath("userData"), PROVIDER_CLI_APP_VERSION_FILE),
   );
   await runCauseEffect(providerCliAppVersion.load());
-  const providerRuntimes = new ProviderRuntimeManager({
-    isProviderOn: (provider) => !providerUse.off().includes(provider),
-    root: providerRuntimeRoot({
+  // A server on this computer has its own user data, but uses the CLI store of the app that started it.
+  const providerRuntimesRoot =
+    localServerChild?.runtimeRoot ??
+    providerRuntimeRoot({
       appData: app.getPath("appData"),
       userDataOverride: app.commandLine.getSwitchValue("user-data-dir"),
-    }),
+    });
+  const providerRuntimes = new ProviderRuntimeManager({
+    isProviderOn: (provider) => !providerUse.off().includes(provider),
+    root: providerRuntimesRoot,
     downloadRoot: join(app.getPath("userData"), "provider-runtimes", ".downloads"),
     updateRuntime: (runtime, install, signal, onWait) => {
       if (isManagedToolRuntime(runtime)) return install().pipe(Effect.asVoid);
@@ -2025,10 +2029,7 @@ export async function createApplicationServices({
         join(userData, "logs", "agents"),
         join(userData, "logs", "main"),
       ],
-      runtimes: providerRuntimeRoot({
-        appData: app.getPath("appData"),
-        userDataOverride: app.commandLine.getSwitchValue("user-data-dir"),
-      }),
+      runtimes: providerRuntimesRoot,
       data: userData,
     },
     database: () => store.database.connection,
@@ -2689,6 +2690,33 @@ export async function createApplicationServices({
   teamWebRtcBridge.on("accountServersChanged", () => void Effect.runPromise(remoteServers.invalidateDirectory()));
   teardown.push(TEARDOWN_ORDER.remoteServers, "the remote servers", () => runCauseEffect(remoteServers.stop()));
   performance.mark("openbot:services.plugin-catalog");
+  // Not on a server: a local server is a workspace of the desktop app.
+  const localServers =
+    localServerChild || serverModeEnvironment || hostedServer
+      ? null
+      : new LocalServers({
+          registryPath: join(app.getPath("userData"), LOCAL_SERVERS_FILE),
+          userDataRoot: join(app.getPath("userData"), "local-servers"),
+          agentRoot: join(homedir(), "OpenBot", "Servers"),
+          runtimeRoot: providerRuntimesRoot,
+          cipher: safeStorageCipher("error.app.macSecureStorageUnavailable"),
+          remoteServers,
+          command: { executable: process.execPath, args: app.isPackaged ? [] : [app.getAppPath()] },
+          trash: (path) => shell.trashItem(path),
+          log: {
+            info: (message) => logger.info(message),
+            warn: (message, detail) => logger.warn(message, detail === undefined ? "" : toLogValue(detail)),
+          },
+          platform: process.platform,
+        });
+  if (localServers) {
+    teardown.push(TEARDOWN_ORDER.localServers, "the servers on this computer", () =>
+      Effect.runPromise(localServers.stop()),
+    );
+    // Before `remoteServers.initialize()`: the account's directory sync keeps only the entries of the
+    // servers on this computer that it knows.
+    await Effect.runPromise(localServers.load());
+  }
   await runCauseEffect(remoteServers.initialize());
   performance.mark("openbot:services.remote-servers");
   criticalActionTargets = { agents: service, host, remoteServers };
@@ -2706,30 +2734,7 @@ export async function createApplicationServices({
       }),
     );
   }
-  // Not on a server: a local server is a workspace of the desktop app.
-  const localServers =
-    localServerChild || serverModeEnvironment || hostedServer
-      ? null
-      : new LocalServers({
-          registryPath: join(app.getPath("userData"), LOCAL_SERVERS_FILE),
-          userDataRoot: join(app.getPath("userData"), "local-servers"),
-          agentRoot: join(homedir(), "OpenBot", "Servers"),
-          cipher: safeStorageCipher("error.app.macSecureStorageUnavailable"),
-          remoteServers,
-          command: { executable: process.execPath, args: app.isPackaged ? [] : [app.getAppPath()] },
-          trash: (path) => shell.trashItem(path),
-          log: {
-            info: (message) => logger.info(message),
-            warn: (message, detail) => logger.warn(message, detail === undefined ? "" : toLogValue(detail)),
-          },
-          platform: process.platform,
-        });
-  if (localServers) {
-    teardown.push(TEARDOWN_ORDER.localServers, "the servers on this computer", () =>
-      Effect.runPromise(localServers.stop()),
-    );
-    await Effect.runPromise(localServers.initialize());
-  }
+  if (localServers) await Effect.runPromise(localServers.initialize());
   if (localServerChild) {
     await runCauseEffect(
       startLocalServerChild({

@@ -100,8 +100,13 @@ export class LocalServerRegistry {
     return this.#servers.find((server) => server.serverId === serverId);
   }
 
-  add(server: StoredLocalServer): Effect.Effect<void, LocalServerRegistryError> {
-    return this.#write((servers) => [...servers, server]);
+  /** The check of the limit and the write hold one permit, so two creates cannot both pass the check. */
+  add(server: StoredLocalServer, limit: number): Effect.Effect<void, LocalServerRegistryError> {
+    return this.#write((servers) =>
+      servers.length < limit
+        ? [...servers, server]
+        : new LocalServerRegistryError({ cause: new Error(sourceText("error.remote.localServerLimit", { limit })) }),
+    );
   }
 
   update(id: string, change: Partial<Omit<StoredLocalServer, "id">>): Effect.Effect<void, LocalServerRegistryError> {
@@ -113,7 +118,7 @@ export class LocalServerRegistry {
   }
 
   #write(
-    change: (servers: readonly StoredLocalServer[]) => readonly StoredLocalServer[],
+    change: (servers: readonly StoredLocalServer[]) => readonly StoredLocalServer[] | LocalServerRegistryError,
   ): Effect.Effect<void, LocalServerRegistryError> {
     return this.#writes.withPermit(
       Effect.suspend(() => {
@@ -122,6 +127,7 @@ export class LocalServerRegistry {
             new LocalServerRegistryError({ cause: new Error(sourceText("error.remote.localServersReadOnly")) }),
           );
         const servers = change(this.#servers);
+        if (servers instanceof LocalServerRegistryError) return Effect.fail(servers);
         return writeJsonFileAtomically(this.#path, { version: 1, servers }, { createDirectory: true }).pipe(
           Effect.mapError(({ cause }) => new LocalServerRegistryError({ cause })),
           Effect.tap(() => Effect.sync(() => (this.#servers = servers))),

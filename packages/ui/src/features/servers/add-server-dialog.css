@@ -54,16 +54,16 @@
 /* The inline padding keeps the title clear of the close button of the shell. */
 .add-server-intro .ui-heading {
   padding-inline: calc(var(--openbot-control-md) + var(--openbot-space-2));
+  font-size: var(--openbot-text-3xl);
+  font-weight: var(--openbot-weight-bold);
+  line-height: var(--openbot-leading-3xl);
+  letter-spacing: var(--openbot-tracking-tight);
 }
 
 /* The "Other options" button is wider than the close button. The same padding on the two sides keeps
  * the title in the centre, with space for the longest translation of the button. */
 .add-server-dialog:has(.add-server-other) .add-server-intro .ui-heading {
   padding-inline: 160px;
-  font-size: var(--openbot-text-3xl);
-  font-weight: var(--openbot-weight-bold);
-  line-height: var(--openbot-leading-3xl);
-  letter-spacing: var(--openbot-tracking-tight);
 }
 
 .add-server-intro .ui-text {

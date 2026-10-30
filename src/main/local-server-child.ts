@@ -12,6 +12,7 @@
 import { isAbsolute } from "node:path";
 import { Effect } from "effect";
 import type { HostService } from "./host-service";
+import { RemoteWorkflowError } from "./remote-service-effects";
 import type { TeamStore } from "./team-store";
 
 /** The username of the one member of a local server. The desktop app logs in as it. */
@@ -24,6 +25,7 @@ export const LOCAL_SERVER_ENVIRONMENT = {
   agentRoot: "OPENBOT_LOCAL_SERVER_ROOT",
   name: "OPENBOT_LOCAL_SERVER_NAME",
   secret: "OPENBOT_LOCAL_SERVER_SECRET",
+  runtimeRoot: "OPENBOT_LOCAL_SERVER_RUNTIMES",
 } as const;
 
 export interface LocalServerChildEnvironment {
@@ -32,6 +34,8 @@ export interface LocalServerChildEnvironment {
   /** The name of the server when it is made. A rename later goes through the Team API. */
   serverName: string;
   ownerSecret: string;
+  /** The provider CLI store of the desktop app. The servers of one computer share one copy of each CLI. */
+  runtimeRoot: string | null;
 }
 
 export interface LocalServerReady {
@@ -55,9 +59,10 @@ export function takeLocalServerChildEnvironment(
   const agentRoot = environment[LOCAL_SERVER_ENVIRONMENT.agentRoot]?.trim() ?? "";
   const serverName = environment[LOCAL_SERVER_ENVIRONMENT.name]?.trim() ?? "";
   const ownerSecret = environment[LOCAL_SERVER_ENVIRONMENT.secret] ?? "";
+  const runtimeRoot = environment[LOCAL_SERVER_ENVIRONMENT.runtimeRoot]?.trim() ?? "";
   for (const name of Object.values(LOCAL_SERVER_ENVIRONMENT)) delete environment[name];
   if (flag !== "1" || !userDataDirectory || !isAbsolute(agentRoot) || !serverName || !ownerSecret) return null;
-  return { agentRoot, serverName, ownerSecret };
+  return { agentRoot, serverName, ownerSecret, runtimeRoot: isAbsolute(runtimeRoot) ? runtimeRoot : null };
 }
 
 /** The ready line holds no secret: the parent knows the password, and the session is made later. */
@@ -86,7 +91,10 @@ export const startLocalServerChild = Effect.fn("LocalServerChild.start")(functio
     yield* teamStore.configure(environment.serverName, LOCAL_SERVER_OWNER_USERNAME, environment.ownerSecret);
   const status = yield* host.startLoopbackOnly();
   const identity = teamStore.getIdentity();
-  if (!identity || !status.apiUrl) return;
+  // The parent waits for the ready line. An error ends this process now, so the parent does not wait
+  // for its time limit.
+  if (!identity || !status.apiUrl)
+    return yield* new RemoteWorkflowError({ cause: new Error("The local server has no identity or API address.") });
   writeReady(
     formatLocalServerReady({
       serverId: identity.serverId,

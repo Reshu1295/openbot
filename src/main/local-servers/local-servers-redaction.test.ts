@@ -81,6 +81,7 @@ function servers(
     registryPath: join(root, LOCAL_SERVERS_FILE),
     userDataRoot: join(root, "local-servers"),
     agentRoot: join(root, "OpenBot", "Servers"),
+    runtimeRoot: join(root, "provider-runtimes"),
     cipher: {
       encrypt: (value) => Buffer.from(`sealed:${value}`).reverse(),
       decrypt: (value) => Buffer.from(value).reverse().toString().slice("sealed:".length),
@@ -114,6 +115,7 @@ describe("servers on this computer", () => {
       (line) => lines.push(line),
       spawned,
     );
+    await Effect.runPromise(first.load());
     await Effect.runPromise(first.initialize());
     await Effect.runPromise(first.create(READY.serverName));
     await Effect.runPromise(first.stop());
@@ -133,6 +135,7 @@ describe("servers on this computer", () => {
       },
       spawned,
     );
+    await Effect.runPromise(second.load());
     await Effect.runPromise(second.initialize());
     await failed;
     await Effect.runPromise(second.stop());

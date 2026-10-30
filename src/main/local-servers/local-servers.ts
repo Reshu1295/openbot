@@ -25,7 +25,7 @@ import {
   LOCAL_SERVER_READY_PREFIX,
   type LocalServerReady,
 } from "../local-server-child";
-import type { RemoteServerManager } from "../remote-server-manager";
+import type { LocalServerAttachInput, RemoteServerManager } from "../remote-server-manager";
 import type { TokenCipher } from "../remote-server-store";
 import { isLocalDevelopmentApi } from "../remote-server-urls";
 import { validateServerName } from "../team-store";
@@ -44,13 +44,21 @@ const STOP_GRACE_MS = 6_000;
 const RESTART_DELAY = Duration.seconds(5);
 const RESTART_WINDOW_MS = 10 * 60_000;
 const RESTART_LIMIT = 3;
+/** A team session lasts 30 days, and use does not extend it. The desktop logs in again well before. */
+const SESSION_RENEW_AFTER_MS = 7 * 24 * 60 * 60_000;
+const SESSION_CHECK_INTERVAL = Duration.hours(1);
 
 /**
  * Variables that the child must not take from this process: they choose the Node mode, the profile,
  * the debugging port and the role of a development stack, and a child with them would open another
  * profile or take a port that this process holds.
  */
-function childEnvironment(entry: StoredLocalServer, agentRoot: string, secret: string): NodeJS.ProcessEnv {
+function childEnvironment(
+  entry: StoredLocalServer,
+  agentRoot: string,
+  runtimeRoot: string,
+  secret: string,
+): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = {};
   for (const [name, value] of Object.entries(process.env)) {
     if (name === "ELECTRON_RUN_AS_NODE" || name.startsWith("OPENBOT_DEV_")) continue;
@@ -58,6 +66,7 @@ function childEnvironment(entry: StoredLocalServer, agentRoot: string, secret: s
   }
   environment[LOCAL_SERVER_ENVIRONMENT.child] = "1";
   environment[LOCAL_SERVER_ENVIRONMENT.agentRoot] = agentRoot;
+  environment[LOCAL_SERVER_ENVIRONMENT.runtimeRoot] = runtimeRoot;
   environment[LOCAL_SERVER_ENVIRONMENT.name] = entry.name;
   environment[LOCAL_SERVER_ENVIRONMENT.secret] = secret;
   return environment;
@@ -99,6 +108,8 @@ export interface LocalServersOptions {
   userDataRoot: string;
   /** One agent root for each server, named by its id: `~/OpenBot/Servers`. */
   agentRoot: string;
+  /** The provider CLI store of this app. A child has its own user data, but not its own copy of each CLI. */
+  runtimeRoot: string;
   cipher: TokenCipher;
   remoteServers: Pick<RemoteServerManager, "setThisComputerServers" | "attachLocalServer" | "detachLocalServer">;
   /** This executable, and the app path when it is not packaged. */
@@ -135,12 +146,8 @@ export class LocalServers {
     return pids;
   }
 
-  /**
-   * After `remoteServers.initialize()` and before the event connections start. The entries that the
-   * last run left are made safe first: a run that crashed left the old port and session in them.
-   * Then every server starts, in the background.
-   */
-  readonly initialize = Effect.fn("LocalServers.initialize")(function* (this: LocalServers) {
+  /** Before `remoteServers.initialize()`, so that the account's directory sync keeps these servers. */
+  readonly load = Effect.fn("LocalServers.load")(function* (this: LocalServers) {
     yield* this.#registry
       .load()
       .pipe(
@@ -149,6 +156,14 @@ export class LocalServers {
         ),
       );
     this.#announce();
+  });
+
+  /**
+   * After `remoteServers.initialize()` and before the event connections start. The entries that the
+   * last run left are made safe first: a run that crashed left the old port and session in them.
+   * Then every server starts, in the background.
+   */
+  readonly initialize = Effect.fn("LocalServers.initialize")(function* (this: LocalServers) {
     for (const entry of this.#registry.servers) {
       if (entry.serverId)
         yield* this.#options.remoteServers
@@ -178,7 +193,7 @@ export class LocalServers {
       fingerprint: null,
       publicKey: null,
     };
-    yield* this.#registry.add(entry).pipe(toLocalServerFailure);
+    yield* this.#registry.add(entry, LOCAL_SERVER_LIMIT).pipe(toLocalServerFailure);
     return yield* this.#start(entry, true).pipe(
       Effect.tapError(() =>
         // A server that never started holds nothing of the user's yet.
@@ -265,7 +280,7 @@ export class LocalServers {
         this.#options.command.executable,
         [...this.#options.command.args, `--user-data-dir=${paths.userData}`],
         {
-          env: childEnvironment(entry, paths.agentRoot, secret),
+          env: childEnvironment(entry, paths.agentRoot, this.#options.runtimeRoot, secret),
           // Nothing is written to standard input. It stays open only so that it closes when OpenBot ends.
           stdio: ["pipe", "pipe", "pipe"],
           windowsHide: true,
@@ -297,20 +312,20 @@ export class LocalServers {
       );
       const pinned = yield* this.#pin(entry, value);
       this.#announce();
-      const summary = yield* this.#options.remoteServers
-        .attachLocalServer({
-          serverId: value.serverId,
-          apiUrl: value.apiUrl,
-          fingerprint: pinned.fingerprint,
-          publicKey: pinned.publicKey,
-          username: LOCAL_SERVER_OWNER_USERNAME,
-          password: secret,
-          select,
-        })
-        .pipe(toLocalServerFailure);
+      const attach: LocalServerAttachInput = {
+        serverId: value.serverId,
+        apiUrl: value.apiUrl,
+        fingerprint: pinned.fingerprint,
+        publicKey: pinned.publicKey,
+        username: LOCAL_SERVER_OWNER_USERNAME,
+        password: secret,
+        select,
+      };
+      const summary = yield* this.#options.remoteServers.attachLocalServer(attach).pipe(toLocalServerFailure);
       this.#options.log.info(`A server on this computer started (pid ${child.pid ?? "unknown"}).`);
+      this.#background(this.#renewSession(entry, running, { ...attach, select: false }));
       return summary;
-    }).pipe(Effect.tapError(() => this.#stopChild(entry)));
+    }).pipe(Effect.tapError(() => this.#stopChild(entry, running)));
   });
 
   /** The first start pins the identity. A later start must report the same one. */
@@ -359,14 +374,52 @@ export class LocalServers {
     );
   }
 
-  /** Ends the child: its standard input closes, then a kill after the grace time. */
-  readonly #stopChild = Effect.fn("LocalServers.stopChild")(function* (this: LocalServers, entry: StoredLocalServer) {
-    const running = this.#running.get(entry.id);
+  /**
+   * The computer can run for longer than a session lasts: it sleeps, and the app does not quit. The
+   * check uses the wall clock, because a timer does not count the time that the computer sleeps.
+   */
+  readonly #renewSession = Effect.fn("LocalServers.renewSession")(function* (
+    this: LocalServers,
+    entry: StoredLocalServer,
+    running: RunningChild,
+    attach: LocalServerAttachInput,
+  ) {
+    let loggedInAt = Date.now();
+    yield* Effect.sleep(SESSION_CHECK_INTERVAL);
+    while (this.#running.get(entry.id) === running) {
+      if (Date.now() - loggedInAt >= SESSION_RENEW_AFTER_MS)
+        yield* this.#options.remoteServers.attachLocalServer(attach).pipe(
+          Effect.tap(() =>
+            Effect.sync(() => {
+              loggedInAt = Date.now();
+            }),
+          ),
+          Effect.catch(({ cause }) =>
+            Effect.sync(() => this.#options.log.warn("A server on this computer did not renew its session.", cause)),
+          ),
+        );
+      yield* Effect.sleep(SESSION_CHECK_INTERVAL);
+    }
+  });
+
+  /**
+   * Ends the child: its standard input closes, then a kill after the grace time. A failed start names
+   * its own child in `only`: a restart can already have stopped it, or started a newer child that now
+   * holds the entry.
+   */
+  readonly #stopChild = Effect.fn("LocalServers.stopChild")(function* (
+    this: LocalServers,
+    entry: StoredLocalServer,
+    only?: RunningChild,
+  ) {
+    const running = only ?? this.#running.get(entry.id);
     if (running) {
+      if (only?.stopping) return;
       running.stopping = true;
       yield* terminate(running.child, this.#options.platform);
       if (this.#running.get(entry.id) === running) this.#running.delete(entry.id);
     }
+    if (only && this.#running.has(entry.id)) return;
     const serverId = this.#registry.find(entry.id)?.serverId;
     if (serverId)
       yield* this.#options.remoteServers.detachLocalServer(serverId, false).pipe(Effect.catch(() => Effect.void));
