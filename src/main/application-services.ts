@@ -207,6 +207,9 @@ import { InterfaceSizeService } from "./interface-size-service";
 import { prepareToolRuntimeForTest } from "./ipc/mcp-server-handlers";
 import { LanguageService } from "./language-service";
 import { localRoutineFeedDocument } from "./local-routine-calendar";
+import { type LocalServerChildEnvironment, startLocalServerChild } from "./local-server-child";
+import { LOCAL_SERVERS_FILE } from "./local-servers/local-server-registry";
+import { LocalServers } from "./local-servers/local-servers";
 import { createLoginItem } from "./login-item";
 import { LogoColorService } from "./logo-color-service";
 import type { MacHapticFeedback } from "./mac-haptic-feedback";
@@ -425,6 +428,8 @@ const TEARDOWN_ORDER = {
   providerDetection: 48,
   providerRuntimes: 50,
   cuaDriver: 55,
+  /** Before the remote servers: each child detaches from its entry when it stops. */
+  localServers: 57,
   remoteServers: 60,
   voice: 70,
   speech: 71,
@@ -490,6 +495,8 @@ export interface ApplicationServiceContext {
   serverMode: ServerModeEnvironment | null;
   /** Set only by `bun run dev --hosting=test`. */
   hostingDeveloperKey: string | null;
+  /** Set only in a local server that the desktop app started as its child. See `local-server-child.ts`. */
+  localServerChild: LocalServerChildEnvironment | null;
   macHapticFeedback: MacHapticFeedback;
   teardown: TeardownRegistry;
   forwardCentralAuth: (state: CentralAuthState) => void;
@@ -571,6 +578,8 @@ export interface ApplicationServices {
   host: HostService;
   remoteDesktop: RemoteDesktopManager;
   remoteServers: RemoteServerManager;
+  /** Null in a local server, in server mode and on a hosted server. */
+  localServers: LocalServers | null;
   centralAuth: CentralAuthManager;
   skills: SkillMarketplaceService;
   hostedSites: HostedSiteDesktopService;
@@ -854,6 +863,7 @@ export async function createApplicationServices({
   hostedServer,
   serverMode: serverModeEnvironment,
   hostingDeveloperKey,
+  localServerChild,
   macHapticFeedback,
   teardown,
   forwardCentralAuth,
@@ -986,8 +996,12 @@ export async function createApplicationServices({
     join(app.getPath("userData"), AGENT_DEFAULTS_PREFERENCE_FILE),
   );
   await runCauseEffect(agentDefaults.load());
-  const store = new AgentStore(app.getPath("userData"), homedir(), new OpenBotDatabase(app.getPath("userData")), () =>
-    agentDefaults.get(),
+  const store = new AgentStore(
+    app.getPath("userData"),
+    homedir(),
+    new OpenBotDatabase(app.getPath("userData")),
+    () => agentDefaults.get(),
+    localServerChild?.agentRoot,
   );
   // Phase marks for `dev:bench`, so a slow start shows which group of awaits it waited on. They
   // change nothing.
@@ -1182,9 +1196,12 @@ export async function createApplicationServices({
   await runCauseEffect(remoteNetworkRoute.load());
   const appBehavior = new AppBehaviorService({
     path: join(app.getPath("userData"), APP_BEHAVIOR_PREFERENCE_FILE),
-    loginItem: createLoginItem({ appVariant, server: Boolean(hostedServer || serverModeEnvironment) }),
-    offersBackground: process.platform !== "darwin" && !hostedServer && !serverModeEnvironment,
-    offersKeepAwake: process.platform !== "linux" && !hostedServer && !serverModeEnvironment,
+    loginItem: createLoginItem({
+      appVariant,
+      server: Boolean(hostedServer || serverModeEnvironment || localServerChild),
+    }),
+    offersBackground: process.platform !== "darwin" && !hostedServer && !serverModeEnvironment && !localServerChild,
+    offersKeepAwake: process.platform !== "linux" && !hostedServer && !serverModeEnvironment && !localServerChild,
   });
   await runCauseEffect(appBehavior.load());
   void Effect.runPromise(appBehavior.refreshLoginItem()).catch((error) =>
@@ -2503,7 +2520,10 @@ export async function createApplicationServices({
   });
   teardown.push(TEARDOWN_ORDER.host, "the local host", () => runCauseEffect(host.shutdown()));
   const signedInState = centralAuth.getState();
-  if (signedInState.status === "signed_in") {
+  if (localServerChild) {
+    // A local server has no account. Its owner is a password member, and binding an account here
+    // would unbind that host.
+  } else if (signedInState.status === "signed_in") {
     await runCauseEffect(host.applySignedInAccount(signedInState.user));
   } else if (signedInState.status === "signed_out") {
     // Sign-out can settle before this service exists, leaving `forwardCentralAuth`
@@ -2686,6 +2706,40 @@ export async function createApplicationServices({
       }),
     );
   }
+  // Not on a server: a local server is a workspace of the desktop app.
+  const localServers =
+    localServerChild || serverModeEnvironment || hostedServer
+      ? null
+      : new LocalServers({
+          registryPath: join(app.getPath("userData"), LOCAL_SERVERS_FILE),
+          userDataRoot: join(app.getPath("userData"), "local-servers"),
+          agentRoot: join(homedir(), "OpenBot", "Servers"),
+          cipher: safeStorageCipher("error.app.macSecureStorageUnavailable"),
+          remoteServers,
+          command: { executable: process.execPath, args: app.isPackaged ? [] : [app.getAppPath()] },
+          trash: (path) => shell.trashItem(path),
+          log: {
+            info: (message) => logger.info(message),
+            warn: (message, detail) => logger.warn(message, detail === undefined ? "" : toLogValue(detail)),
+          },
+          platform: process.platform,
+        });
+  if (localServers) {
+    teardown.push(TEARDOWN_ORDER.localServers, "the servers on this computer", () =>
+      Effect.runPromise(localServers.stop()),
+    );
+    await Effect.runPromise(localServers.initialize());
+  }
+  if (localServerChild) {
+    await runCauseEffect(
+      startLocalServerChild({
+        environment: localServerChild,
+        teamStore,
+        host,
+        writeReady: (line) => process.stdout.write(line),
+      }),
+    );
+  }
   configureAttachmentProtocol({ mailbox, agents: service, remoteServers });
   configureServerLogoProtocols({ teamStore, remoteServers });
   // After the servers: the view it opens belongs to one of them, and it has to stop before they do.
@@ -2779,7 +2833,9 @@ export async function createApplicationServices({
       process.platform === "linux" &&
       (process.env.OPENBOT_HOSTED_SERVER === "1" || installationMode === "self") &&
       existsSync(HOSTED_UPDATE_TRIGGER));
+  // A local server is the same application as its parent, which installs the update for both.
   const updatesEnabled =
+    !localServerChild &&
     app.isPackaged &&
     !isNixStoreInstall() &&
     (hostedInstaller || (supportsInstalledUpdates(process.platform) && updateMetadataAvailable)) &&
@@ -2828,6 +2884,7 @@ export async function createApplicationServices({
               executablePath: app.getPath("exe"),
               currentPid: process.pid,
               platform: process.platform,
+              ...(localServers ? { excludedPids: () => localServers.pids() } : {}),
             }).pipe(
               Effect.tap((siblings) =>
                 Effect.sync(() => {
@@ -2985,7 +3042,7 @@ export async function createApplicationServices({
     teardown.push(TEARDOWN_ORDER.hostedServerActivity, "the hosted server activity report", () =>
       Effect.runPromise(hostedServerActivity.stop()),
     );
-  } else if (!serverModeEnvironment) {
+  } else if (!serverModeEnvironment && !localServerChild) {
     // A server that was published at the last quit is published again at launch, once (`index.ts`).
     // That start can fail when the network is not ready yet, such as at login after an update, and
     // the server then stayed private until the user published it again. A published server that a
@@ -3107,6 +3164,7 @@ export async function createApplicationServices({
     host,
     remoteDesktop,
     remoteServers,
+    localServers,
     centralAuth,
     skills,
     hostedSites,

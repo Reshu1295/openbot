@@ -909,6 +909,11 @@ const openbotApi: OpenBotDesktopApi = {
     wake: decodeHostedServer,
     restart: decodeHostedServer,
   }),
+  localServers: bridgeGroup(IPC_ENDPOINTS.localServers, {
+    create: decodeServer,
+    restart: decodeVoid,
+    delete: decodeVoid,
+  }),
   customProviders: bridgeGroup(IPC_ENDPOINTS.customProviders, {
     list: decodeCustomProviders,
     save: decodeCustomProviderResult,

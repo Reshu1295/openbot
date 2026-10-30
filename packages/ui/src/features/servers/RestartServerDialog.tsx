@@ -69,10 +69,12 @@ export function RestartServerDialog(props: {
   }
 
   // A new request opens the confirmation. A request for the server that restarts shows its progress.
+  // The effect also runs when a new summary of the same server arrives; that is not a new request, and
+  // must not reset a finished restart to the confirmation.
   createEffect(
     () => props.server?.id ?? null,
-    (id) => {
-      if (id === null) return;
+    (id, previous) => {
+      if (id === null || id === previous) return;
       untrack(() => {
         if (!restarting()) return reset();
         if (id === restartId()) {

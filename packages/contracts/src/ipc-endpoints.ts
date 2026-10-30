@@ -1236,6 +1236,14 @@ export const IPC_ENDPOINTS = {
     // Owner only. Stops a running server and starts it again; a server that does not run starts.
     restart: request<string, HostedServerSummary>()("hosted-servers:restart"),
   },
+  // Servers that the desktop app starts on this computer, each with its own data. Each one is in the
+  // server list as a joined server with `thisComputer`. `create` takes the name; the others take the
+  // server id. A server, in server mode or hosted, has none and refuses these.
+  localServers: {
+    create: request<string, ServerSummary>()("local-servers:create"),
+    restart: request<string, void>()("local-servers:restart"),
+    delete: request<string, void>()("local-servers:delete"),
+  },
   marketplaceAgents: {
     list: request<MarketplaceAgentQuery | undefined, MarketplaceAgentPage>()("marketplace-agents:list"),
     get: request<string, MarketplaceAgentDetail>()("marketplace-agents:get"),
@@ -1837,6 +1845,7 @@ export const IPC_GROUP_PATHS = {
   billing: "billing",
   license: "license",
   hostedServers: "hostedServers",
+  localServers: "localServers",
   marketplaceAgents: "marketplaceAgents",
   agentTemplates: "agentTemplates",
   auth: "auth",
