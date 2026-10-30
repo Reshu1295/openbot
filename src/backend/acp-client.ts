@@ -1278,10 +1278,20 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
       const initialization = yield* this.#initializeConnection(connection).pipe(startTimeout);
       yield* (this.options.authenticate?.(connection, initialization) ?? Effect.void).pipe(startTimeout);
     }).pipe(
+      // Read before the stop: a stopped process no longer says how it ended.
+      Effect.catch((failure) => this.#explainSessionEnd(transport, failure.cause).pipe(Effect.flatMap(Effect.fail))),
       Effect.onExit((exit) => (Exit.isSuccess(exit) ? Effect.void : transport.stop(Effect.void).pipe(Effect.ignore))),
     );
     return transport;
   });
+
+  /** The failure of a session's own process, with how that process ended when it ended. */
+  #explainSessionEnd(transport: AcpConnection, error: unknown): Effect.Effect<ProviderClientOperationError> {
+    return transport.explainEnd(error, transport.ended).pipe(
+      Effect.catch(() => Effect.succeed(error)),
+      Effect.map(providerFailure),
+    );
+  }
 
   /** Opens a held session again, with its own settings, in place of the one that needs a resume. */
   #reopenThread(thread: AcpThread): Effect.Effect<{ thread: { id: string } }, ProviderClientOperationError> {
@@ -1517,7 +1527,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
             retained = true;
             return { thread: { id } };
           } catch (error) {
-            return yield* providerFailure(error);
+            return yield* transport ? yield* this.#explainSessionEnd(transport, error) : providerFailure(error);
           }
         }),
       (mcp) =>
@@ -2074,10 +2084,7 @@ export class AcpAgentClient extends EventEmitter<ClientEvents> {
     } catch (error) {
       // A session's own process that ended names how it ended, as the agent's process does.
       const transport = thread.transport;
-      const failure =
-        transport && !turn.stopped
-          ? yield* transport.explainEnd(error, transport.ended).pipe(Effect.catch(() => Effect.succeed(error)))
-          : error;
+      const failure = transport && !turn.stopped ? (yield* this.#explainSessionEnd(transport, error)).cause : error;
       yield* this.#completeTurn(thread, turn, turn.stopped ? "interrupted" : "failed", turn.stopped ? null : failure);
     }
   });
