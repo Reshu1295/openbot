@@ -420,15 +420,16 @@
    badge stays the strongest mark. The tint is an image layer, so it also shows over the selection
    fill and on a moving tab. */
 .agent-threads-tab[data-attention],
-.agent-threads-switcher[data-attention] {
+.agent-threads-switcher[data-attention],
+.side-panel-thread-tab[data-attention] {
   background-image: linear-gradient(var(--agent-threads-tint), var(--agent-threads-tint));
 }
 
-:is(.agent-threads-tab, .agent-threads-switcher)[data-attention="waiting"] {
+:is(.agent-threads-tab, .agent-threads-switcher, .side-panel-thread-tab)[data-attention="waiting"] {
   --agent-threads-tint: color-mix(in srgb, var(--openbot-warning-soft) 40%, var(--openbot-transparent));
 }
 
-:is(.agent-threads-tab, .agent-threads-switcher)[data-attention="failed"] {
+:is(.agent-threads-tab, .agent-threads-switcher, .side-panel-thread-tab)[data-attention="failed"] {
   --agent-threads-tint: color-mix(in srgb, var(--openbot-danger-soft) 40%, var(--openbot-transparent));
 }
 

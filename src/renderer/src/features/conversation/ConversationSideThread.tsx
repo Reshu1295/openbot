@@ -4,6 +4,7 @@ import { classifyFailure } from "@openbot/telemetry";
 import type { AgentMessage } from "@openbot/ui/data";
 import { contextUsageView } from "@openbot/ui/features/conversation/ContextUsage";
 import { AgentThreadView } from "@openbot/ui/features/conversation/threads/AgentThreadView";
+import { TaskAnswerCard } from "@openbot/ui/features/tasks/TaskPanel";
 import { useText } from "@openbot/ui/text";
 import { createEffect, createProjection, Show } from "solid-js";
 import { actionToast } from "../../action-toast";
@@ -17,7 +18,8 @@ import { createTurnSteps } from "./turn-steps";
 
 /**
  * A side thread in the side panel, beside the agent's own chat. Its message box takes text only:
- * files, and the question and takeover cards of the thread, stay in the chat tab of the thread.
+ * files, and the question and takeover cards of the thread, stay in the chat. A thread that waits
+ * for an answer shows a card that moves it to the chat.
  */
 export function ConversationSideThread(props: { threadId: string }) {
   const {
@@ -29,6 +31,7 @@ export function ConversationSideThread(props: { threadId: string }) {
     installedSkillsLoadFailed,
     mcpServers,
     threadComposer,
+    movePanelThreadToChat,
   } = useConversationViewScope();
   const { t, errorMessage } = useText();
   const failureToast = (fallback: AppTextKey) => ({
@@ -84,6 +87,10 @@ export function ConversationSideThread(props: { threadId: string }) {
     const status = item()?.status;
     return status?.kind === "waiting" && status.reason !== "approval";
   };
+  const answerCard = () =>
+    waitsForAnswer() ? (
+      <TaskAnswerCard agentName={view.agent?.name ?? ""} onAnswer={() => movePanelThreadToChat(props.threadId)} />
+    ) : undefined;
   const shown = () => {
     const agent = view.agent;
     const current = thread();
@@ -125,6 +132,7 @@ export function ConversationSideThread(props: { threadId: string }) {
             context={contextUsageView(current().thread.contextState)}
             onCompactContext={current().thread.onCompactContext}
             waitsForAnswer={waitsForAnswer()}
+            attention={answerCard()}
             stepsAbove={turnSteps.stepsAbove}
             factsAbove={turnSteps.factsAbove}
             activeSteps={turnSteps.activeSteps()}

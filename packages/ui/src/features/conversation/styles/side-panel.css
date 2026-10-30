@@ -318,18 +318,6 @@
   text-align: start;
 }
 
-.side-panel-thread-tab[data-attention] {
-  background-image: linear-gradient(var(--agent-threads-tint), var(--agent-threads-tint));
-}
-
-.side-panel-thread-tab[data-attention="waiting"] {
-  --agent-threads-tint: color-mix(in srgb, var(--openbot-warning-soft) 40%, var(--openbot-transparent));
-}
-
-.side-panel-thread-tab[data-attention="failed"] {
-  --agent-threads-tint: color-mix(in srgb, var(--openbot-danger-soft) 40%, var(--openbot-transparent));
-}
-
 /* A thread tab that the pointer moves follows the pointer and wears the selection fill, so it covers
  * the tabs that it passes. The dividers and the X hide until the drop. Over the chat, the tab goes
  * back to its place, faded, and a copy follows the pointer. */
