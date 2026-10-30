@@ -446,9 +446,14 @@ the dialog interception event is internal to that pinned runtime.
 
 An initiated navigation can recover an Electron `ERR_ABORTED` only when a subsequent main-frame
 navigation was initiated by that same main frame. The successor must finish loading under the
-original deadline. An unrelated API or frame navigation, failed successor, stop, or cancellation
+original deadline. The requested document must commit before it can initiate a qualifying successor;
+a redirect from the previous document during a provisional load does not qualify. An unrelated API
+or frame navigation, failed successor, stop, or cancellation
 does not turn the aborted load into success. Initial `open`, `navigate`, and `loadUrl` use the same
 watcher; the passive loading wait keeps its existing behavior. Recovery does not repeat a request.
+An initial-open timeout retains a normal tab for inspection and reports failure. Private sign-in
+failures keep their cleanup because their controller does not receive a failed open's tab ID.
+Other failed opens keep their existing cleanup; interruption still closes the owned tab.
 
 A `DOM.getNodeForLocation` miss (`No node found at given location`) is an empty candidate, not an
 action failure. The engine checks the remaining points and still requires a native hit on the target

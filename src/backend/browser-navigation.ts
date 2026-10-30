@@ -70,6 +70,7 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
       let initiationPending = false;
       let pendingAborts = 0;
       let successor = false;
+      let committed = false;
       let unrelatedNavigation = false;
       let navigationUrl: string | undefined;
       let finished = false;
@@ -80,6 +81,7 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
         clearTimeout(timer);
         contents.off("did-start-navigation", didStartNavigation);
         contents.off("did-redirect-navigation", didRedirectNavigation);
+        contents.off("did-navigate", didNavigate);
         contents.off("did-finish-load", didFinishLoad);
         contents.off("did-stop-loading", didStopLoading);
         contents.off("did-navigate-in-page", didNavigateInPage);
@@ -108,9 +110,10 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
         if (initiate && !isInPlace) {
           if (started) {
             // An API call or another tab is not evidence that this page replaced its own load.
-            successor = event.initiator === contents.mainFrame && event.frame === contents.mainFrame;
+            successor = committed && event.initiator === contents.mainFrame && event.frame === contents.mainFrame;
             unrelatedNavigation ||= !successor;
           }
+          committed = false;
           navigationUrl = url;
           finished = false;
         }
@@ -120,6 +123,9 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
       };
       const didRedirectNavigation = (_event: unknown, url: string, _isInPlace: boolean, isMainFrame: boolean) => {
         if (initiate && isMainFrame) navigationUrl = url;
+      };
+      const didNavigate = (_event: unknown, url: string) => {
+        if (started && !inPlace && url === navigationUrl) committed = true;
       };
       const didFinishLoad = () => {
         finished = true;
@@ -159,6 +165,7 @@ const watchNavigation = Effect.fn("Browser.watchNavigation")(
       contents.on("did-start-navigation", didStartNavigation);
       if (initiate) {
         contents.on("did-redirect-navigation", didRedirectNavigation);
+        contents.on("did-navigate", didNavigate);
         contents.on("did-finish-load", didFinishLoad);
       }
       contents.on("did-stop-loading", didStopLoading);

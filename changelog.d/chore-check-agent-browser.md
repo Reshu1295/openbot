@@ -22,7 +22,9 @@
 - Stop targeted typing when a page moves focus to another field or replaces the target. Text and
   submit keys no longer continue into the other field after these changes.
 - Keep the same tab when its main frame replaces an unfinished load and the replacement finishes.
-  A cancelled load or failed replacement still reports failure. No navigation or input is replayed.
+  A cancelled load or failed replacement still reports failure. A redirect from the previous page
+  before the requested page commits cannot report success. Initial-open timeouts retain the tab
+  for inspection. No navigation or input is replayed.
 - Distinguish pointer-disabled accessibility targets from covering layers. Keep checked child clicks
   and explicit overlay dismissal, without clicking an unrelated visual sibling.
 

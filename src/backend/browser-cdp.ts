@@ -2791,7 +2791,7 @@ export class BrowserCdpEngine {
       return yield* browserFailure(
         new BrowserTargetNotReady({
           message:
-            "Target has pointer-events:none and no checked hit activates it. No mouse click was sent. Take a fresh snapshot and choose a directly clickable control, or request user takeover.",
+            "Target has pointer-events:none and no checked hit activates it. No mouse click was sent. Inspect the page and dismiss a visible covering layer if present, then take a fresh snapshot and choose a directly clickable control, or request user takeover.",
         }),
       );
     if (!blockerId)

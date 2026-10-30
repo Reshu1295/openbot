@@ -31,6 +31,9 @@ import { waitForPresentedFrame } from "./browser-smoke-frames";
 
 let cachedPageVersion = 1;
 let slowDocumentVersion = 0;
+let uncommittedNavigationRequests = 0;
+let previousDocumentGates = 0;
+let releasePreviousDocumentRedirect = (): void => {};
 // `/slow-document?action` stays open until the smoke releases it, so the navigation that the timed
 // click starts is still pending when the click reaches its deadline.
 let actionNavigationRequests = 0;
@@ -165,6 +168,16 @@ const server = createServer((request, response) => {
   if (url.pathname === "/navigation-pending") {
     response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     response.write("<!doctype html><main>pending navigation</main>");
+    return;
+  }
+  if (url.pathname === "/navigation-uncommitted") {
+    uncommittedNavigationRequests++;
+    releasePreviousDocumentRedirect();
+    return;
+  }
+  if (url.pathname === "/previous-document-gate") {
+    releasePreviousDocumentRedirect = () => response.end("continue");
+    previousDocumentGates++;
     return;
   }
   if (url.pathname === "/redirect-http") {
@@ -2174,6 +2187,41 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
           ?.url.includes("/redirect-end") === true,
       "redirected tab URL",
     );
+    const requestsBefore = uncommittedNavigationRequests;
+    const gatesBefore = previousDocumentGates;
+    let previousDocumentStarted = false;
+    const observePreviousDocument = (_event: unknown, url: string, _inPlace: boolean, mainFrame: boolean) => {
+      if (mainFrame && url === `${origin}/redirect-end?previous-document`) previousDocumentStarted = true;
+    };
+    contents.on("did-start-navigation", observePreviousDocument);
+    await contents.executeJavaScript(
+      "fetch('/previous-document-gate').then(() => location.replace('/redirect-end?previous-document')); true",
+    );
+    await waitFor(async () => previousDocumentGates > gatesBefore, "previous document redirect gate");
+    const provisionalNavigation = callBrowserTool(browser, "navigate", {
+      tabId: tab.id,
+      url: `${origin}/navigation-uncommitted`,
+      timeoutMs: 5_000,
+    });
+    await waitFor(async () => uncommittedNavigationRequests > requestsBefore, "uncommitted requested navigation");
+    await waitFor(async () => previousDocumentStarted, "previous document started a new load");
+    const previousDocumentResult = await provisionalNavigation;
+    contents.off("did-start-navigation", observePreviousDocument);
+    await writeFile(
+      ".openbot-build/browser-previous-document-refusal.json",
+      JSON.stringify(
+        {
+          success: previousDocumentResult.success,
+          error: previousDocumentResult.success ? null : toolError(previousDocumentResult),
+        },
+        null,
+        2,
+      ),
+    );
+    assert(!previousDocumentResult.success, JSON.stringify(previousDocumentResult));
+    assert(!toolError(previousDocumentResult).includes("timed out"), toolError(previousDocumentResult));
+    await waitFor(async () => !contents.isLoading(), "previous-document navigation stopped");
+    outcomes.push({ via: "previous-document-refusal", url: `${origin}/navigation-uncommitted`, success: true });
     await expectFailure(() =>
       runCauseEffect(browser.open(`${origin}/redirect-start?failed`, "smoke-thread", "smoke-bot")),
     );
@@ -2240,6 +2288,23 @@ async function runRedirectNavigationScenario(browser: BrowserHost, origin: strin
     assert((await contents.executeJavaScript("document.body.textContent")).includes("redirected"));
     outcomes.push({ via: "boolean-reload-successor", url: `${origin}/reload-redirect`, success: true });
     await contents.executeJavaScript("sessionStorage.removeItem('reload-redirect'); true");
+    const existingTabs = new Set(browser.listTabs().map((candidate) => candidate.id));
+    await expectFailure(() =>
+      runCauseEffect(browser.open(`${origin}/navigation-pending`, "smoke-thread", "smoke-bot")),
+    );
+    const retainedOpen = browser.listTabs().filter((candidate) => !existingTabs.has(candidate.id));
+    assert.equal(retainedOpen.length, 1);
+    const retainedTab = retainedOpen[0];
+    assert(retainedTab);
+    assert.equal(retainedTab.url, `${origin}/navigation-pending`);
+    const retainedSnapshot = await runCauseEffect(browser.snapshot(retainedTab.id));
+    assert(retainedSnapshot.text.includes("pending navigation"), retainedSnapshot.text);
+    await runCauseEffect(browser.close(retainedTab.id));
+    assert.deepEqual(new Set(browser.listTabs().map((candidate) => candidate.id)), existingTabs);
+    outcomes.push({ via: "open-timeout-retains-tab", url: `${origin}/navigation-pending`, success: true });
+    await expectFailure(() => runCauseEffect(browser.openPrivate(`${origin}/navigation-pending`)));
+    assert.deepEqual(new Set(browser.listTabs().map((candidate) => candidate.id)), existingTabs);
+    outcomes.push({ via: "private-open-timeout-cleanup", url: `${origin}/navigation-pending`, success: true });
   } finally {
     await runCauseEffect(browser.close(tab.id));
   }
